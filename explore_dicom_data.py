@@ -20,6 +20,12 @@ The DICOM elements that are of interest (for now) are as follows:
 - Image Orientation (Patient)
 - Frame of Reference UID
 
+
+Revisions:
+
+05/12/2019:
+Revisions section added to comments section while in new branch.
+
 """
 
 
