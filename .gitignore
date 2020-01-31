@@ -1,11 +1,8 @@
-/Notepad files
-
 # Ignore any files in any directory called:
-# .ipynb_checkpoints
-# __pycache__
-# MIRTK python_examples(MA) (Mo's MIRTK python scripts)
-# NCITA coding task
 .ipynb_checkpoints/
 __pycache__/
+Archive/
 MIRTK python_examples(MA)/
 NCITA coding task/
+*.log
+*.txt
