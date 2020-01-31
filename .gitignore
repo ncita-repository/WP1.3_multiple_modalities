@@ -6,3 +6,4 @@ MIRTK python_examples(MA)/
 NCITA coding task/
 *.log
 *.txt
+*.[0-9].txt
