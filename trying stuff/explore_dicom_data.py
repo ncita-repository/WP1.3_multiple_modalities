@@ -29,6 +29,58 @@ Revisions section added to comments section while in new branch.
 """
 
 
+def load_dicoms_natsort(rootDir):
+    # This function loads DICOM data from rootDir.
+    
+    # Input: rootDir = filepath of root folder where DICOM data is located
+    
+    # Output: data = list of DICOM data for each DICOM file found in rootDir; 
+    #               each row in data for a different .dcm file.
+    
+    # Import packages:
+    import pydicom 
+    import os
+    import natsort
+    
+    # Generate list of DICOM file names (fnames), base directories (fdirs),
+    # and full file paths (fpaths):
+    # (Note: Only fpaths is used but others may be useful later..)
+    
+    Nfiles = 0
+    fpaths = [] # (full) file paths
+    fdirs = [] # file directories (base directories) for each path in fpaths
+    fnames = [] # file names for each path in fpaths
+    
+    for root, dirs, files in os.walk(rootDir):
+        for file in files:
+    
+            fpath = os.path.join(root, file)
+    
+            filepath_no_ext, file_ext = os.path.splitext(fpath)
+    
+            if 'dcm' in file_ext:
+                fpaths.append(fpath) # append file path to fpaths
+    
+                dir_basename = os.path.basename(root) # get the dir basename
+                fdirs.append(dir_basename) # append the directory name to fdirs
+    
+                fname = os.path.split(fpath)[1] # get the file name only
+                fnames.append(fname) # append file name to fnames
+        
+    
+    # Sort files in natural way:
+    fpaths = natsort.natsorted(fpaths)
+    
+     # Read in all DICOM data using fpaths:
+    data = []
+    
+    for fpath in fpaths:
+        #data.append(pydicom.read_file(fpath))  
+        data.append(pydicom.dcmread(fpath))  
+        
+    return data
+
+
 
 def load_dicom(rootDir):
     # This function loads DICOM data from rootDir.
