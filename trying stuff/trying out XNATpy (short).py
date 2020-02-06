@@ -47,7 +47,7 @@ scanNo = 0 # 0 -> T1post
 
 # # Define the directory to download files from XNAT:
 
-# In[27]:
+# In[5]:
 
 
 #downloadDir = r'C:\Users\ctorti\Documents\GitHub\WP1.3_multiple_modalities\trying stuff\XNAT downloads'
@@ -92,7 +92,7 @@ plotsDir = r'C:\Code\WP1.3_multiple_modalities\trying stuff\plots'
 
 # # Download the DICOM-RTStruct file to newPath:
 
-# In[43]:
+# In[6]:
 
 
 # Download the DICOM-RTStruct file to newPath:
@@ -102,7 +102,7 @@ ROIobject.download_dir(newPath)
 
 # # Download the DICOM scans to newPath:
 
-# In[51]:
+# In[7]:
 
 
 # Download the DICOM scans to newPath:
@@ -111,7 +111,7 @@ session.projects[projectLabel].subjects[subjectLabel].experiments[experimentNo].
 
 # # Define the paths to the exported DICOM and DICOM-RTStruct files:
 
-# In[7]:
+# In[8]:
 
 
 # The DICOM files were exported here:
@@ -123,7 +123,7 @@ roiPath = r'C:\Users\ctorti\Documents\GitHub\WP1.3_multiple_modalities\trying st
 
 # # Get the filepaths of the DICOM scans:
 
-# In[8]:
+# In[9]:
 
 
 dicomsFpaths = dicom_functions.dc_filepaths(dicomsPath)
@@ -132,29 +132,30 @@ dicomsFpaths = dicom_functions.dc_filepaths(dicomsPath)
 
 # # Create a dictionary dicomsDict to store the pixel array, image origin, and pixel spacing, using the UIDs as keys:
 
-# In[9]:
+# In[10]:
 
-
-# Store the UID (as the key), imaging origin, pixel spacing, pixel array and
-# "Frame number" (an arbitrary counter starting from 1 to help make things clear):  
 
 dicomsDict = dict()
 
 for f in range(len(dicomsFpaths)):
     fpath = dicomsFpaths[f]
     dicom = pydicom.read_file(fpath)
-    sopInstanceUid = dicom.SOPInstanceUID
-    origin = np.array(dicom.ImagePositionPatient).astype(np.float)
+    uid = dicom.SOPInstanceUID
+    #position = float(dicom.ImagePositionPatient) # TypeError: float() argument must be a string or a number, not 'MultiValue'
+    position = np.array(dicom.ImagePositionPatient).astype(np.float)
+    orientation = np.array(dicom.ImageOrientationPatient).astype(np.float)
     pixSpacing = np.array(dicom.PixelSpacing).astype(np.float)
     pixelArray = dicom.pixel_array
-    dicomsDict[sopInstanceUid] = {'Frame number':f+1, 'Origin':origin,                                   'Pixel spacing':pixSpacing, 'Pixel array':pixelArray}
-    
+
+    dicomsDict[uid] = {'Frame number':f+1,                        'Position':position,                        'Orientation':orientation,                        'Pixel spacing':pixSpacing,                        'Pixel array':pixelArray
+                      }
+
 #dicomsDict
 
 
 # # Load the DICOM-RTStruct file:
 
-# In[10]:
+# In[11]:
 
 
 # Load the DICOM-RTStruct file:
@@ -168,7 +169,7 @@ roi = roi[0]
 
 # # Create a dictionary contoursDict to store the contour data and number of contour points, using the UIDs as keys:
 
-# In[11]:
+# In[12]:
 
 
 # Since the contour number, number of contour points and the contour data elements are all strings,
@@ -177,84 +178,144 @@ roi = roi[0]
 
 contoursDict = dict()
 
+# For any given UID...
+# count the number of contours:
+# Ncontours = 0 # initial value
+# create a list of the contour number(s):
+# contourNo = [] 
+# create a list of the number of contour points:
+# NcontourPts = []
+# create a list of contour data:
+# contourData = []
+
+# Loop for each contour sequence:
 for sequence in roi.ROIContourSequence[0].ContourSequence:
-    refSopInstanceUid = sequence.ContourImageSequence[0].ReferencedSOPInstanceUID
-    contourNo = int(sequence.ContourNumber)
-    NcontourPts = int(sequence.NumberOfContourPoints)
-    contourData = np.array(sequence.ContourData).astype(np.float)
+    uid = sequence.ContourImageSequence[0].ReferencedSOPInstanceUID
     
-    contoursDict[refSopInstanceUid] = {'Contour number':contourNo,                                        'Number of contour points':NcontourPts, 'Contour data':contourData}
+    # Get the keys (UIDs) in contoursDict so far:
+    keys = list(contoursDict.keys())
+    
+    # Check if this uid is in keys. If it isn't this is the first time
+    # for this uid.  Initialise the values:
+    if uid not in keys:
+        Ncontours = 0
+        contourNo = [] 
+        NcontourPts = []
+        contourData = []
+        
+    # Append the values for this sequence:
+    Ncontours = Ncontours + 1 # increment
+    contourNo.append(int(sequence.ContourNumber))
+    NcontourPts.append(int(sequence.NumberOfContourPoints))
+    contourData.append(np.array(sequence.ContourData).astype(np.float))
+     
+    # Store the values for this uid. Values will be over-written if there's more than
+    # one contour for this uid, but the lists have been appended already:
+    contoursDict[uid] = {'Number of contours':Ncontours,                          'Contour number':contourNo,                          'Number of contour points':NcontourPts,                          'Contour data':contourData
+                        }
     
 #contoursDict
 
 
 # # Combine contoursDict and dicomsDict into a new dictionary called dataDict:
 
-# In[12]:
+# In[13]:
 
 
 Ckeys = list(contoursDict.keys())
 Dkeys = list(dicomsDict.keys())
 
-# Create a new dictionary called dataDict that combines both dictionaries. Start by copying dicomsDict:
+# Create a new dictionary called dataDict that combines both dictionaries. 
+# Start by copying dicomsDict:
 dataDict = dicomsDict.copy()
 
-for Ckey in Ckeys: # cycle through each key in contoursDict
-    ind = Dkeys.index(Ckey) # find index of matching key in dicomsDict
-    Dkey = Dkeys[ind] # the matching key in dicomsDict
+for Dkey in Dkeys: # cycle through each key in dicomsDict
+    # Check if Dkey is in Ckeys:
+    if Dkey in Ckeys:
+        # There is contour data for this Dkey, so update dataDict[Dkey]
+        # with contoursDict[Ckey]:
+        ind = Ckeys.index(Dkey) # find index of matching key in contoursDict
+        dataDict[Dkey].update(contoursDict[Dkey]) # Note: Dkey=Ckey
     
-    dataDict[Dkey].update(contoursDict[Ckey]) # update the entry in dataDict for key Dkey with contoursDict
+    else:
+        # There is no contour data for this Dkey, so fill in the missing
+        # values:
+        dataDict[Dkey].update({'Number of contours':0,                               'Contour number':[],                               'Number of contour points':0,                               'Contour data':[]
+                              })
 
 #dataDict
 
 
 # # Create a new array "contourPts" containing the (x,y) image coordinates of each contour point and save it in dataDict:
 
-# In[15]:
+# In[14]:
 
 
 for uid, values in dataDict.items():
-    if not 'Contour data' in values:
-        # Add 0 for 'Number of contour points' and [] for 'Contour data' for this uid (key):
-        dataDict[uid].update({'Number of contour points':0})
-        dataDict[uid].update({'Contour data':[]})
-    else: # if 'Contour data' in values:
-        #print(values)
-        
-        origin = values['Origin']
-        pixSpacing = values['Pixel spacing']
-        NcontourPts = values['Number of contour points']
-        contourData = values['Contour data']
-        
-        # Create an array of (x,y) points from the flattened contour data:
-        contourPts = []
-        
-        x0 = origin[0]
-        y0 = origin[1]
-        dx = pixSpacing[0]
-        dy = pixSpacing[1]
-        
-        # Iterate for all countour data elements in threes:
-        for i in range(0, len(contourData), 3):
-            #print('\n', i)
-            x = contourData[i]   # x-coordinate in image coords
-            y = contourData[i+1] # y-coordinate in image coords
-            X = int((x - x0)/dx) # x-coordinate in pix coords
-            Y = int((y - y0)/dy) # y-coordinate in pix coords
+    # Get the values for this uid:
+    # Note that for any given uid, NcontourPts and contourData could
+    # be lists of values, if multiple contours existed for that uid.  
+    # Even if there was only one contour, the single value (or single 
+    # list) will be enclosed in [].
+    position = values['Position'] # e.g. [x, y, z]
+    orientation = values['Orientation'] # e.g. [row_x, row_y, row_z, col_x, col_y, col_z]
+    pixSpacing = values['Pixel spacing'] # e.g. [dx, dy]
+    Ncontours = values['Number of contours'] # e.g. 1 or 2, etc.
+    #contourNo = values['Contour number'] # e.g. [4] or [4, 5], etc.
+    #NcontourPts = values['Number of contour points'] # e.g. [200] or [200, 300], etc.
+    contourData = values['Contour data'] # e.g. [[x1,y1,z1,...]] or [[x1,y1,z1,...], [x1,y1,z1,...]], etc.
+
+    # The patient coordinates:
+    x0 = position[0]
+    y0 = position[1]
+    z0 = position[2]
+    
+    # The direction cosines along rows and columns:
+    #row_x, row_y, row_z, col_x, col_y, col_z = orientation
+    row = orientation[0:3]
+    col = orientation[3:6]
+    
+    # The indeces of the largest direction cosines along rows and columns:
+    rowMaxInd = np.where(row==max(row))[0][0]
+    colMaxInd = np.where(col==max(col))[0][0]
+    
+    # The pixel spacings:
+    dx = pixSpacing[0]
+    dy = pixSpacing[1]
+    
+    # Create an array of (x,y) points from the flattened contour data:
+    contourPts = []
+    
+    # Iterate for each contour for this uid:
+    for c in range(Ncontours):
+        # Also store the contour points for each contour within any given uid:
+        contourPts_c = []
+    
+        # Iterate for all countour points in threes:
+        #for i in range(0, NcontourPts, 3): # this would need to be range(0, 3*NcontourPts, 3)!!
+        for p in range(0, len(contourData[c]), 3):
+            # Define vector v as the the patient position subtracted from the contour coordinates:
+            v = contourData[c][p] - x0, contourData[c][p+1] - y0, contourData[c][p+2] - z0
             
-            contourPts.append([X,Y])
-            #contourPts.append((X,Y))
+            # Convert from patient coord system to image coord system:          
+            i = (v[rowMaxInd] - col[rowMaxInd]*v[colMaxInd]/col[colMaxInd]) /             (row[rowMaxInd]*dx * (1 - (col[rowMaxInd]*row[colMaxInd])/(row[rowMaxInd]*col[colMaxInd])))
             
-        # Add contourPts to dictData for this uid (key):
-        dataDict[uid].update({'Contour points':contourPts})
+            j = (v[colMaxInd] - row[colMaxInd]*i*dx) / (col[colMaxInd]*dy)
+
+            contourPts_c.append([i,j])
             
-        #print('\n')
+        # Append contourPts with contourPts_c:
+        contourPts.append(contourPts_c)
+
+    # Add contourPts to dictData for this uid (key):
+    dataDict[uid].update({'Contour points':contourPts})
+
 #dataDict
 
 
 # # Plot the DICOM scans with contours overlayed:
 
-# In[51]:
+# In[15]:
 
 
 # Configure plot:
@@ -265,66 +326,42 @@ fontSize=4
 Nuids = len(dataDict.keys())
 
 # Set the number of subplot rows and columns:
-if 1:
-    rows = np.int8(np.round(np.sqrt(Nuids)))
-    cols = np.int8(np.round(np.sqrt(Nuids)))
-if 0:
-    cols = 3
-    cols = 2
-    rows = np.int8(np.ceil(Nuids/cols))
+rows = np.int8(np.round(np.sqrt(Nuids)))
+cols = np.int8(np.round(np.sqrt(Nuids)))
 
-if cols == 3:
-    plt.figure(figsize=(5,15), dpi=300); # cols = 3
-elif cols == 2:
-    plt.figure(figsize=(5,30), dpi=300); # cols = 2
-else:
-    plt.figure(figsize=(15,15), dpi=300);
+plt.figure(figsize=(15,15), dpi=300);
 
 i = 0 # for subplot pos
 
 for uid, values in dataDict.items(): 
     frameNo = values['Frame number']
     pixArray = values['Pixel array']
+    Ncontours = values['Number of contours']
+    contourPts = values['Contour points']
     
-    # Plot:
+    # Plot the pixel array:
     i = i + 1    
     plt.subplot(rows,cols,i, aspect='equal')
     plt.pcolormesh(pixArray);
     plt.title(f'Frame {frameNo}', size=fontSize);
     plt.axis('off');
     
-    if 'Contour data' in values:       
-        contourPts = values['Contour points']
-        #print('contourPts =', contourPts, '\n')
-        #plt.contour(contourPts); # TypeError: Input z must be at least a 2x2 array.
-        #plt.tricontour(contourPts); 
-        
-        #print('Contour points = ', values['Contour points'], '\n')
-        #X, Y = values['Contour points']
-        #X, Y = np.array(values['Contour points'])
-        
-        # Unpack tuple and store each x,y tuple in arrays xList and yList:
-        xList = []
-        yList = []
-        for x, y in contourPts:
-            xList.append(x)
-            yList.append(y)
-        
-        # Create a Z array with values 255:
-        #zList = np.ones(len(xList))*255
-        
-        
-        # Create 2D arrays for the X and Y values using meshgrid:
-        #X, Y = np.meshgrid(xList, yList)
-        X = xList[:]
-        Y = yList[:]
-                
-        #print('\nX =', X)
-        #print('\nY =', Y, '\n')
-        #plt.contour(X, Y, Z);
-        
-        #plt.scatter(X, Y, s=0.01, c='red');
-        plt.plot(X, Y, linewidth=0.5, c='red');
+    # Plot the contours:
+    if Ncontours > 0:   
+        for c in range(Ncontours):
+            # Unpack tuple and store each x,y tuple in arrays xList and yList:
+            xList = []
+            yList = []
+            for x, y in contourPts[c]:
+                xList.append(x)
+                yList.append(y)
+
+            # Create 2D arrays for the X and Y values using meshgrid:
+            #X, Y = np.meshgrid(xList, yList)
+            X = xList[:]
+            Y = yList[:]
+
+            plt.plot(X, Y, linewidth=0.5, c='red');
 
 
 seriesDescription = dicom.SeriesDescription
