@@ -27,7 +27,7 @@ from myshow import myshow
 import importlib
 
 
-# # Connect to XNAT server:
+# #### Connect to XNAT server:
 
 # In[3]:
 
@@ -52,7 +52,7 @@ session = xnat.connect(xnatAddress, user='admin', password='admin', debug=True)
 session
 
 
-# # Define the REST path variables:
+# #### Define the REST path variables:
 
 # In[5]:
 
@@ -64,7 +64,7 @@ experimentNo = 0 # (= 1 in XNAT web app; e.g. ‘PGM-002_MR_1’)
 scanNo = 0 # 0 -> T1post
 
 
-# # Location of previously downloaded DICOM and DICOM-RTSTRUCT files:
+# #### Location of previously downloaded DICOM and DICOM-RTSTRUCT files:
 
 # In[6]:
 
@@ -82,7 +82,7 @@ roiPath = r'C:\Users\ctorti\Documents\GitHub\WP1.3_multiple_modalities\trying st
 
 
 
-# # Try uploading data to XNAT
+# #### Try uploading data to XNAT
 
 # In[243]:
 
@@ -160,7 +160,7 @@ newProjectName
 # 
 # https://groups.google.com/forum/#!msg/xnat_discussion/vYJuSZ6MbmI/dTnKfU5_BQAJ
 
-# # Create a new project in XNAT:
+# #### Create a new project in XNAT:
 
 # In[9]:
 
@@ -176,10 +176,12 @@ newProject
 
 # It worked!  And I confirmed in XNAT web interface.
 
-# # Create a new subject for the new project:
+# #### Create a new subject for the new project:
 
 # In[11]:
 
+
+newSubjectName = 'PGM-002_copy'
 
 newSubject = session.classes.SubjectData(label='PGM-002_copy', parent=newProject)
 
@@ -192,17 +194,11 @@ newSubject
 
 # It worked!  And I confirmed in XNAT web interface.
 
-# # Create a new experiment for the new subject:
+# #### Create a new experiment for the new subject:
+# 
+# ##### Note:  Spaces are not permitted for labels!
 
-# In[313]:
-
-
-newExperiment = session.classes.MrSessionData(label='MR Session', parent=newSubject)
-
-
-# Not sure why this hasn't worked.  I was able to create a CR experiment and a MR experiment in XNAT web interface...
-
-# In[17]:
+# In[55]:
 
 
 # Charlie Moore has replied to my question here:
@@ -212,24 +208,20 @@ newExperiment = session.classes.MrSessionData(label='MR Session', parent=newSubj
 # saying that "I believe XNAT prohibits use of the space character in experiment labels. 
 # Could you try this again without the space in your “label” value?"
 
-newExperiment = session.classes.MrSessionData(label='MR_Session', parent=newSubject)
+newExperimentName = 'PGM-002_copy_MR_2'
+
+newExperiment = session.classes.MrSessionData(label=newExperimentName, parent=newSubject)
 
 
-# In[18]:
+# In[56]:
 
 
 newExperiment
 
 
-# # SUCCESS!  Seems I was confusing "Label" with "Experiment".  I thought I was supposed to assign the label "MR Session" in the same way that in the web interface I would need to select the type of experiment, e.g. "MR Session", "CT Session", etc.
+# #### SUCCESS!  Seems I was confusing "Label" with "Experiment".  I thought I was supposed to assign the label "MR Session" in the same way that in the web interface I would need to select the type of experiment, e.g. "MR Session", "CT Session", etc.
 
-# # Need to continue from here now that I've managed to create an experiment without using the WI.  Need to make sense of what I've done so far..
-
-# In[ ]:
-
-
-
-
+# #### Need to continue from here now that I've managed to create an experiment without using the WI.  Need to make sense of what I've done so far..
 
 # In[ ]:
 
@@ -237,199 +229,681 @@ newExperiment
 
 
 
-# # Using the web interface I created a new experiment called "PGM-002_copy_MR_2" selecting "MR Session" as type.  
+# In[ ]:
+
+
+
+
 
 # Then I found this thread:
 # https://groups.google.com/forum/#!topic/xnat_discussion/dmM9_cwbn38
 # 
 # So will try using .classes.ResourceCatalog():
 
-# In[283]:
+# In[21]:
 
 
-newExperiment = session.classes.ResourceCatalog(parent=newSubject, label='PGM-002_copy_MR_1')
+newExperiment2 = session.classes.ResourceCatalog(parent=newSubject, label='PGM-002_copy_MR_2_2')
 
 
-# In[284]:
+# In[22]:
 
 
-newExperiment
+newExperiment2
 
 
-# I didn't get an error, so I thought it worked.  But I didn't see any change in the web interface.  Then I realised that it was probably not correct since I need to create an MR Session.  Trying label='MR Session' this time:
+# I didn't get an error, so I thought it worked.  But I didn't see any change in the web interface.  So not sure what it has done.
 
-# In[285]:
+# #### Returning to the MR Session that I created above, I'll see if I can upload an assessor to it.
 
-
-newExperiment = session.classes.ResourceCatalog(parent=newSubject, label='MR Session')
-
-
-# In[314]:
-
-
-newExperiment
-
-
-# Although I didn't get an error when I re-defined newExperiment I did when I evaluated the variable itself.  And I also didn't see a new MR Session in the web interface.  So not sure what I've done.
-
-# # Returning to the MR Session that I created using the web interface (WI), I'll see if I can upload an assessor to it.
-
-# In[292]:
+# In[23]:
 
 
 session.projects
 
 
-# In[294]:
+# In[24]:
 
 
 session.projects[newProjectName]
 
 
-# In[13]:
+# In[25]:
 
-
-newSubjectName = 'PGM-002_copy'
-newExperimentName1 = 'PGM-002_copy_MR_1' # the name of the exp I tried to create in XNATpy
-newExperimentName2 = 'PGM-002_copy_MR_2' # the name of the exp I create in the WI
 
 session.projects[newProjectName].subjects[newSubjectName]
 
 
-# In[14]:
+# In[29]:
 
 
-newExperiment2 = session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName2]
-newExperiment2
+session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName]
 
 
-# In[304]:
+# In[57]:
 
 
-newExperiment2.scans
+newExperiment.resources
 
 
-# In[305]:
+# In[34]:
 
 
-newExperiment2.accessors
+dir(session.classes)
 
 
-# In[306]:
+# #### Following example of "Object creation" in XNATpy tutorial, I'll try to create a new RoiCollectionData:
+
+# In[71]:
 
 
-newExperiment2.resources
+ROIcollection = session.classes.RoiCollectionData(parent=newExperiment, label='ROI_tumour')
 
+
+# #### The above command didn't work previously (status 500 error).  So maybe that is a GET command rather than a PUT command, and worked this time because I've since created an assessor with the label ROI_tumour (see below). 
+
+# In[72]:
+
+
+ROIcollection
+
+
+# In[78]:
+
+
+# ROIcollection.items() # AttributeError: 'RoiCollectionData' object has no attribute 'items'
+# ROIcollection.values() # AttributeError: 'RoiCollectionData' object has no attribute 'values'
+# ROIcollection.elements() # AttributeError: 'RoiCollectionData' object has no attribute 'elements'
+
+
+# In[ ]:
+
+
+
+
+
+# #### The following cells were executed previously:
 
 # Create an assessor following Hakim's guidance here:
 # https://groups.google.com/forum/#!searchin/xnat_discussion/xnatpy$20status$20500|sort:date/xnat_discussion/N7i2tS5MleE/7Sxlr7JIBAAJ
 
-# In[15]:
+# In[59]:
 
 
-assessorLabel2 = 'ROI_tumour'
-newExperiment2.create_assessor(assessorLabel2, type_='xnat:qcAssessmentData')  # Note the xsi_type here, this can be something else if you need it to be
+assessorLabel = 'ROI_tumour'
+newExperiment.create_assessor(assessorLabel, type_='xnat:qcAssessmentData')  
+# Note the xsi_type here, this can be something else if you need it to be
 
 
 # This has created an Assessment with the Experiment label "Auto QC" in the WI.
 
-# In[16]:
+# In[62]:
+
+
+session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName].accessors[assessorLabel]
+
+
+# In[63]:
+
+
+session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName].accessors
+
+
+# #### I don't understand why I got those outputs..
+
+# In[60]:
 
 
 # Now see if I can add files:
 
-newExperiment2.create_assessor(assessorLabel2, type_='xnat:qcAssessmentData', files=roiFpathDL)  # Note the xsi_type here, this can be something else if you need it to be
+newExperiment.create_assessor(assessorLabel, type_='xnat:qcAssessmentData', files=roiFpathDL)  # Note the xsi_type here, this can be something else if you need it to be
 
 
 # Clearly not like that.
 
-# In[308]:
+# In[64]:
 
 
-assessorLabel2 = 'ROI_tumour'
-newExperiment2.create_assessor(assessorLabel2, type_='xnat:qcAssessmentData', label=assessorLabel2)
+assessor = session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName]
+assessor
 
 
-# So can't add a label using .create_assessor().  Next will try the "Alternative strategy (more generic)" provided by Hakim:
+# #### Next will try the "Alternative strategy (more generic)" provided by Hakim:
 
-# In[309]:
+# In[65]:
 
 
-assessor = session.projects[newProjectName].subjects[newSubjectName].experiments[newExperimentName2]
-assessor = session.classes.QcAssessmentData(parent=newExperiment2, label=assessorLabel2)
+assessorLabel2 = 'ROI_tumour_2'
+
+assessor = session.classes.QcAssessmentData(parent=newExperiment, label=assessorLabel2)
+
+
+# This has created another Assessment with the Experiment label "Auto QC" in the WI.
+
+# ## To summarise both of the following commands created an assessment with label "Auto QC":
+# 
+# ### newExperiment.create_assessor(assessorLabel, type_='xnat:qcAssessmentData')  
+# 
+# ### session.classes.QcAssessmentData(parent=newExperiment, label=assessorLabel2)
+
+# In[81]:
+
+
+# Try:
+assessorLabel3 = 'ROI_tumour_3' # doesn't work (Received response with status code: 400)
+#assessorLabel3 = 'ROI_tumour_2' # works (<RoiCollectionData ROI_tumour_2 (XNAT_E00026)>)
+
+
+session.classes.RoiCollectionData(parent=newExperiment, label=assessorLabel3)
+
+
+# In[82]:
+
+
+# Try:
+#xuassessorLabel3 = 'ROI_tumour_3' # doesn't work (Received response with status code: 400)
+assessorLabel3 = 'ROI_tumour_2' # works (<RoiCollectionData ROI_tumour_2 (XNAT_E00026)>)
+
+
+session.classes.RoiCollectionData(parent=newExperiment, label=assessorLabel3)
+
+
+# #### see comment above (I think this is a GET rather than PUT command)
+
+# In[66]:
+
+
+# Continuing with the alternative strategy:
 resource = session.classes.ResourceCatalog(parent=assessor, label='RESOURCE_LABEL') # was connection.classes... 
 # but might have been a typo?
 
 
-# In[310]:
+# #### I'm not sure what this has done.  The WI looks the same other than perhaps a "+ Session QC Status" above Scans that may or may not have been present before.
+
+# In[67]:
 
 
 assessor
 
 
-# In[311]:
+# In[68]:
 
 
 resource
 
 
-# I'm not sure what this has done.  The WI looks the same other than perhaps a "+ Session QC Status" above Scans that may or may not have been present before.
-# 
-# So now need to figure out how to upload the DICOM-RTSTRUCT file to assessor.  Try importing via the prearchive:
+# #### So now need to figure out how to upload the DICOM-RTSTRUCT file to assessor.  Try importing via the prearchive:
 
-# In[1]:
+# #### Should project be the object (e.g. newProject) or the label (e.g. newProjectName)?
 
+# In[83]:
+
+
+# Setting project = newProjectName:
 
 prearchive_session = session.services.import_(roiFpathDL,                                               project=newProjectName,                                               destination='/prearchive')
 
 
+# #### Looking at the log files:
+# 
+# ##### access.log (tail /data/xnat/home/logs/access.log):
+# 
+# 2020-02-12 16:13:30,178 - admin 127.0.0.1 POST http://10.1.1.17/data/services/import?dest=%2Fprearchive&project=BrainTumorProg_copy
+# 
+# ##### dicom.log (tail /data/xnat/home/logs/dicom.log):
+# 
+# 2020-02-12 16:13:31,811 [pool-2-thread-1] ERROR org.nrg.dcm.xnat.DICOMSessionBuilder - Session builder not implemented for SOP class [1.2.840.10008.5.1.4.1.1.481.3] or modality [RTSTRUCT]
+# 
+# 
+
+# In[84]:
+
+
+# Setting project = newProject:
+
+prearchive_session = session.services.import_(roiFpathDL,                                               project=newProject,                                               destination='/prearchive')
+
+
+# #### Looking at the log files:
+# 
+# ##### access.log (tail /data/xnat/home/logs/access.log):
+# 
+# 2020-02-12 16:14:28,221 - admin 0:0:0:0:0:0:0:1 POST http://10.1.1.17/data/services/import?dest=%2Fprearchive&project=%3CProjectData+BrainTumorProg_copy+%28BrainTumorProg_copy%29%3E
+# 
+# This one looks more suspicious than the previous one (with project=newProjectName) because of "0:0:0:0:0:0:0:1" (as opposed to "127.0.0.1")
+# 
+# 
+# ##### dicom.log (tail /data/xnat/home/logs/dicom.log):
+# 
+# 2020-02-12 16:14:28,565 [pool-2-thread-2] ERROR org.nrg.dcm.xnat.DICOMSessionBuilder - Session builder not implemented for SOP class [1.2.840.10008.5.1.4.1.1.481.3] or modality [RTSTRUCT]
+# 
+# 
+
+# In[85]:
+
+
+# This time trying without the pre-archive destination input:
+
+prearchive_session = session.services.import_(roiFpathDL, project=newProjectName)
+
+
+# #### Looking at the log files:
+# 
+# ##### access.log (tail /data/xnat/home/logs/access.log):
+# 
+# 2020-02-12 16:23:36,863 - admin 127.0.0.1 POST http://10.1.1.17/data/services/import?project=BrainTumorProg_copy
+# 
+# 
+# ##### dicom.log (tail /data/xnat/home/logs/dicom.log):
+# 
+# 2020-02-12 16:23:37,206 [pool-2-thread-3] ERROR org.nrg.dcm.xnat.DICOMSessionBuilder - Session builder not implemented for SOP class [1.2.840.10008.5.1.4.1.1.481.3] or modality [RTSTRUCT]
+# 
+# 
+
+# #### Trying to follow the advice by Hakim here:
+# 
+# ##### https://groups.google.com/forum/#!topic/xnat_discussion/dmM9_cwbn38
+
+# In[44]:
+
+
+assessorLabel = 'ROI_tumour'
+
+assessor = session.classes.ResourceCatalog(parent=newExperiment, label=assessorLabel)
+
+
+# In[42]:
+
+
+accessorLabel = 'DICOM'
+
+assessor = session.classes.ResourceCatalog(parent=newExperiment, label=assessorLabel)
+
+
+# In[46]:
+
+
+# This seems to have worked before:
+#newExperiment.create_assessor(assessorLabel, type_='xnat:qcAssessmentData')  
+
+# Tried others:
+# newExperiment.create_assessor(assessorLabel) # <-- TypeError: create_assessor() missing 1 required positional argument: 'type_'
+# newExperiment.create_assessor(assessorLabel, type_='xnat:RoiCollectionData')  # <-- XNATResponseError
+
+
+# In[49]:
+
+
+newExperiment.create_assessor(assessorLabel, type_='xnat:qcAssessmentData')
+
+
+# In[51]:
+
+
+resourceLabel = 'ROI_tumour'
+
+#resource = session.classes.ResourceCatalog(parent=assessor, label='RESOURCE_LABEL') # was connection.classes... 
+# but might have been a typo?
+resource = session.classes.ResourceCatalog(parent=assessor, label=resourceLabel) 
+
+
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[92]:
 
 
+# Instead of newProject try newExperiment (probably won't work...): 
+
+prearchive_session = session.services.import_(roiFpathDL,                                               project=newExperiment,                                               destination='/prearchive')
 
 
+# #### Looking at the log files:
+# 
+# ##### access.log (tail /data/xnat/home/logs/access.log):
+# 
+# 2020-02-12 17:01:23,921 - admin 127.0.0.1 POST http://10.1.1.17/data/services/import?dest=%2Fprearchive&project=%3CMrSessionData+PGM-002_copy_MR_2+%28XNAT_E00015%29%3E
+# 
+# 
+# 
+# ##### dicom.log (tail /data/xnat/home/logs/dicom.log):
+# 
+# 2020-02-12 17:01:24,206 [pool-2-thread-4] ERROR org.nrg.dcm.xnat.DICOMSessionBuilder - Session builder not implemented for SOP class [1.2.840.10008.5.1.4.1.1.481.3] or modality [RTSTRUCT]
+# 
+# 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
+# In[93]:
 
 
-# In[ ]:
+# Instead of newProject try newExperiment (probably won't work...): 
+
+prearchive_session = session.services.import_(roiFpathDL,                                               project=newExperimentName,                                               destination='/prearchive')
 
 
+# #### Looking at the log files:
+# 
+# ##### access.log (tail /data/xnat/home/logs/access.log):
+# 
+# 2020-02-12 17:01:43,974 - admin 0:0:0:0:0:0:0:1 POST http://10.1.1.17/data/services/import?dest=%2Fprearchive&project=PGM-002_copy_MR_2
+# 
+# 
+# 
+# ##### dicom.log (tail /data/xnat/home/logs/dicom.log):
+# 
+# 2020-02-12 17:01:44,245 [pool-2-thread-1] ERROR org.nrg.dcm.xnat.DICOMSessionBuilder - Session builder not implemented for SOP class [1.2.840.10008.5.1.4.1.1.481.3] or modality [RTSTRUCT]
+# 
+
+# # 13/02/20:
+# 
+# #### While trying to upload a DICOM scan to the prearchive I've noticed that there are two entries in the prearchive showing errors on Feb 6 and 7.  
+# 
+# ##### Details:
+# 
+# ##### XNAT has encountered an error with your request:
+# ##### Exception: org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 1; Premature end of file.
+# ##### If this error continues to occur, please contact your system administrator with information about how to recreate the problem.
+
+# # Giving up on trying to upload ROIs for now.  I'll try to upload DICOMs instead..
+
+# In[86]:
 
 
-
-# In[ ]:
-
+dicomsPath
 
 
+# In[88]:
 
 
-# In[ ]:
+os.listdir(dicomsPath)
 
 
+# In[90]:
 
 
+dicomsFpaths = dicom_functions.dc_filepaths(dicomsPath)
+dicomsFpaths
+
+
+# In[95]:
+
+
+dicomsFpaths[0]
+
+
+# In[91]:
+
+
+newExperimentName
+
+
+# In[96]:
+
+
+# Try uploading the first DICOM file in dicomsFpaths to the prearchive:
+
+prearchive_session = session.services.import_(dicomsFpaths[0],                                               project=newProjectName,                                               destination='/prearchive')
+
+
+# #### There's now a "MR Session" under Experiment for subject PGM-002_copy.  I went to the prearchive, then clicked on "Review and Archieve" and noticed that the subject was not identified.  I was able to select PGM-002_copy from the pull-down list.  I wonder if I can add a subject name to the list of inputs to .services.import_()...
+
+# #### Actually I can see that the archiving process including the assignment of a subject can be done as shown here:
+# 
+# ##### https://xnat.readthedocs.io/en/latest/static/tutorial.html#importing-data-into-xnat
+
+# In[97]:
+
+
+# Try uploading the second DICOM scan to the prearchive:
+
+prearchive_session = session.services.import_(dicomsFpaths[1],                                               project=newProjectName,                                               destination='/prearchive')
+
+
+# In[98]:
+
+
+print(prearchive_session)
+
+
+# In[99]:
+
+
+# Get a list of sessions waiting for archiving:
+
+session.prearchive.sessions()
+
+
+# In[103]:
+
+
+# The first two items are the errors mentioned above.  So archive the third entry only:
+
+prearchive_session = session.prearchive.sessions()[2]
+
+experiment = prearchive_session.archive(subject=newSubjectName, experiment=newExperimentName)
+
+
+# #### The prearchive using the web interface is showing that there's a conflict.
+# 
+# ##### Details:
+# 
+# Current Warnings
+# FAIL-4: Invalid modification of session subject via archive process.: PGM-002_MR_1 Already Exists for another Subject
+# CONFLICT-14: Session already exists with matching files.
+# CONFLICT-16: Session already contains a scan (11) with the same UID and number.
+# 
+# History
+# 
+# 02/12/2020 20:48:18
+# Session already exists, retry with overwrite enabled
+
+# In[104]:
+
+
+session.prearchive.sessions()
+
+
+# #### Seems that the scan I'm trying to archive is now listed at the top (the first entry) whereas previously it was the third item.  
+# 
+# #### This inconsistency is confusing..
+
+# In[105]:
+
+
+session.prearchive.sessions()[0]
+
+
+# In[105]:
+
+
+session.prearchive.sessions()[0]
+
+
+# In[106]:
+
+
+# That's the one I want to archive. So archive the first entry only:
+
+prearchive_session = session.prearchive.sessions()[0]
+
+experiment = prearchive_session.archive(subject=newSubjectName, experiment=newExperimentName)
+
+
+# #### I got the same conflict mesesage
+
+# In[107]:
+
+
+prearchive_session
+
+
+# In[108]:
+
+
+# Try again but this time using the overwrite input
+
+experiment = prearchive_session.archive(subject=newSubjectName, experiment=newExperimentName, overwrite='append')
+
+
+# #### So that seems to have avoided the conflict error but I was expecting the second scan to be included in the same collection as the first one that I uploaded.
+# 
+# #### Instead it's been added to a new experiment with a different label (PGM-002_copy_MR_2).  
+# 
+# ##### Experiments 
+
+# Date          Experiment        Project                Label 
+# 
+# 1996-08-13    MR Session        BrainTumorProg_copy    PGM-002_copy_MR_2
+#               Auto QC           BrainTumorProg_copy    ROI_tumour
+#               Auto QC           BrainTumorProg_copy    ROI_tumour_2
+# 1996-08-13    MR Session        BrainTumorProg_copy    PGM-002_MR_1
+
+# In[111]:
+
+
+newProjectName
+
+
+# In[109]:
+
+
+newSubjectName
+
+
+# In[110]:
+
+
+newExperimentName
+
+
+# #### So it seems that the scan that I moved to the archive using the web interface was assigned to a different experiment (PGM-002_MR_1) instead of the one defined by newExperimentName (PGM-002_copy_MR_2).
+
+# In[112]:
+
+
+# Try again with uploading the second DICOM scan to the prearchive:
+
+prearchive_session = session.services.import_(dicomsFpaths[1],                                               project=newProjectName,                                               destination='/prearchive')
+
+
+# In[113]:
+
+
+# Try again but this time using the overwrite input but this time adding it to the experiment PGM-002_MR_1:
+
+experiment = prearchive_session.archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='append')
+
+
+# #### I received another conflict error:
+# 
+# FAIL-4: Invalid modification of session subject via archive process.: PGM-002_MR_1 Already Exists for another Subject
+# CONFLICT-14: Session already exists with matching files.
+# CONFLICT-16: Session already contains a scan (11) with the same UID and number.
+# 
+# History
+# 
+# 02/12/2020 21:35:16
+# Session already exists with matching files.
+# 
+# #### Maybe because I forgot to select which file in the prearchive to archive!
+
+# In[115]:
+
+
+# Get a list of sessions waiting for archiving:
+
+session.prearchive.sessions()
+
+
+# In[116]:
+
+
+session.prearchive.sessions()[2]
+
+
+# In[117]:
+
+
+# Try again this time selecting the correct file to archive:
+
+session.prearchive.sessions()[2].archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='append')
+
+
+# #### I got the same conflict error!
+
+# In[118]:
+
+
+# Get a list of sessions waiting for archiving:
+
+session.prearchive.sessions()
+
+
+# #### This time its the first entry!
+
+# In[119]:
+
+
+# Try again this time selecting the correct file to archive:
+
+session.prearchive.sessions()[0].archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='append')
+
+
+# In[120]:
+
+
+# Get a list of sessions waiting for archiving:
+
+session.prearchive.sessions()
+
+
+# #### And now it's the 3rd entry again..
+
+# In[121]:
+
+
+# This time select the 3rd file and use 'delete' for overwrite:
+
+session.prearchive.sessions()[2].archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='delete')
+
+
+# In[122]:
+
+
+# Try again this time using a noticeably different scan:
+
+prearchive_session = session.services.import_(dicomsFpaths[20],                                               project=newProjectName,                                               destination='/prearchive')
+
+prearchive_session
+
+
+# In[123]:
+
+
+session.prearchive.sessions()
+
+
+# In[124]:
+
+
+session.prearchive.sessions()[0].archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='append')
+
+
+# In[125]:
+
+
+session.prearchive.sessions()
+
+
+# In[126]:
+
+
+session.prearchive.sessions()[2].archive(subject=newSubjectName, experiment='PGM-002_MR_1', overwrite='delete')
+
+
+# #### It seems it didn't work despite no errors.  The original (first) scan should have been replaced with the 21st scan but I see no evidence of this with the web interface!
 
 # In[ ]:
 
