@@ -14,8 +14,26 @@ Purpose:
     Modify ROIs created for one series of DICOMs so they can be overlaid on
     a different series of DICOMs.  
     
-    *** NOTE: ***
-    It is assumed that there are equal scan numbers (equal file numbers) in 
+Details:
+    The function requires that the DICOMs and DICOM-RTSTRUCT files are already 
+    stored on disc.  
+    
+    The function "CopyROIs" calls this function so that only the REST variables 
+    of:
+    i) The ROI to be copied and modified, i.e. project, subject, session 
+    (experiment) and RTSTRUCT file name); and  
+    
+    ii) The DICOMs that the ROI is to be applied to, i.e. project, subject,
+    session (experiment) and scan label.
+    
+    are required.
+    
+    The above files will be downloaded to a temporary folder, the data
+    read in, ROI copied, modified and saved, then the temporary files will 
+    be deleted.
+        
+    *** NOTES: ***
+    1) It is assumed that there are equal scan numbers (equal file numbers) in 
     the two DICOM series.
 
 Input:
@@ -38,21 +56,22 @@ Returns:
 
 
 
-import numpy as np
+#import numpy as np
 import pydicom
-import DICOMhelperFunctions
+#import DicomHelperFuncs
+from DicomHelperFuncs import GetDicomFpaths
 import copy
 import os, time
 
 def ModifyROIs(origDicomsDir, origRoiFpath, newDicomsDir, newRoiDir):
     # The filepaths of the original DICOMs:
-    fpaths1 = DICOMhelperFunctions.GetDICOMfilepaths(origDicomsDir)
+    fpaths1 = GetDicomFpaths(origDicomsDir)
     
     # The ROIs that belong to the DICOMs in fpaths1 is:
     roi1 = pydicom.dcmread(origRoiFpath)
     
     # The filepaths of the new DICOMs:
-    fpaths2 = DICOMhelperFunctions.GetDICOMfilepaths(newDicomsDir)
+    fpaths2 = GetDicomFpaths(newDicomsDir)
     
     
     # Load each DICOM in fpaths1, reading in the SOP Instance UIDs and store
@@ -159,17 +178,51 @@ def ModifyROIs(origDicomsDir, origRoiFpath, newDicomsDir, newRoiDir):
     # Load the first DICOM from the new series:
     dicom2 = pydicom.read_file(fpaths2[0])
     
-    # Study Instance UIDs:
+    # Change the Study Date and Time:
+    roi2.StudyDate = copy.deepcopy(dicom2.StudyDate)
+    #roi2.StudyTime = copy.deepcopy(dicom2.StudyTime) # <-- some DICOM Study
+    # Times seem to have a decimal with trailing zeros,e.g. '164104.000000',
+    # so convert to float, then integer, then back to string:
+    roi2.StudyTime = str(int(float(copy.deepcopy(dicom2.StudyTime))))
+    
+    # Change the Patient's Name, ID, Birth Date and Sex:
+    roi2.PatientName = copy.deepcopy(dicom2.PatientName)
+    roi2.PatientID = copy.deepcopy(dicom2.PatientID)
+    roi2.PatientBirthDate = copy.deepcopy(dicom2.PatientBirthDate)
+    roi2.PatientSex = copy.deepcopy(dicom2.PatientSex)
+    
+    # Change the Study Instance UIDs:
     roi2.StudyInstanceUID = copy.deepcopy(dicom2.StudyInstanceUID)
     roi2.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].ReferencedSOPInstanceUID = copy.deepcopy(dicom2.StudyInstanceUID)
     
-    # Series Instance UID:
+    # Change the Series Instance UID:
     roi2.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID = copy.deepcopy(dicom2.SeriesInstanceUID)
     
-    # Frame of Reference UIDs:
+    # Change the Frame of Reference UIDs:
     roi2.FrameOfReferenceUID = copy.deepcopy(dicom2.FrameOfReferenceUID)
     roi2.ReferencedFrameOfReferenceSequence[0].FrameOfReferenceUID = copy.deepcopy(dicom2.FrameOfReferenceUID)
     roi2.StructureSetROISequence[0].ReferencedFrameOfReferenceUID = copy.deepcopy(dicom2.FrameOfReferenceUID)
+    
+    # Change the Structure Set label.  Assume that the characters before the 
+    # first "_" is always the Patient Name:
+    roiValue = roi2.StructureSetLabel
+    # Find the first "_":
+    ind = roiValue.index('_')
+    # Modify the Structure Set Label using the Patient Name from the DICOM 
+    # followed by the characters including and following the first "_" in 
+    # roiValue:
+    roi2.StructureSetLabel = str(copy.deepcopy(dicom2.PatientName)) \
+    + roiValue[ind::]  
+    
+    # Change the ROI Name in the Structure Set ROI Sequence.  Assume that the 
+    # characters before the first "_" is always the Patient Name:
+    roiValue = roi2.StructureSetROISequence[0].ROIName
+    # Find the first "_":
+    ind = roiValue.index('_')
+    # Modify the ROI Name using the Patient Name from the DICOM followed by
+    # the characters including and following the first "_" in roiValue:
+    roi2.StructureSetROISequence[0].ROIName = str(copy.deepcopy(dicom2.PatientName)) \
+    + roiValue[ind::]
     
     # Loop through each Contour Image Sequence and each corresponding DICOM:
     for i in range(len(imageInds)):
@@ -200,7 +253,22 @@ def ModifyROIs(origDicomsDir, origRoiFpath, newDicomsDir, newRoiDir):
     roi2.StructureSetTime = time.strftime("%H%M%S", time.gmtime())
     
     # Create a new filename for the DICOM-RTSTRUCT file:
-    newRoiFname = 'AIM_' + roi2.StructureSetDate + '_' \
+    #newRoiFname = 'AIM_' + roi2.StructureSetDate + '_' \
+    #+ roi2.StructureSetTime + '.dcm'
+    
+    # Create a new filename for the DICOM-RTSTRUCT file:
+    # Start by getting the first part of the filename of the original RTSTRUCT 
+    # file:
+    origRoiDir, origRoiFname = os.path.split(origRoiFpath)
+    
+    # Since the format is usually something like "AIM_YYYYMMDD_HHMMSS.dcm" or
+    # "RTSTRUCT_YYYYMMDD_HHMMSS.dcm".  Assuming the format will be one of these
+    # or similar, find the first "_" character and use the characters that 
+    # precede it in the new file name:
+    ind = origRoiFname.index('_')
+    
+    # The new filename:
+    newRoiFname = origRoiFname[0:ind+1] + roi2.StructureSetDate + '_' \
     + roi2.StructureSetTime + '.dcm'
     
     # The full filepath of the new DICOM-RTSTRUCT file:

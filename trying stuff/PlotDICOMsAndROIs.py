@@ -33,13 +33,13 @@ Returns:
 import numpy as np
 import matplotlib.pyplot as plt
 import pydicom
-import DICOMhelperFunctions
+from DicomHelperFuncs import GetDicomFpaths
 import copy
 import os
 
 def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
     # First get the filepaths of the DICOMs:
-    dicomsFpaths = DICOMhelperFunctions.GetDICOMfilepaths(dicomsPath)
+    dicomsFpaths = GetDicomFpaths(dicomsPath)
     
     
     # Create a dictionary, dicomsDict to store the pixel array, image origin,
@@ -173,12 +173,12 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
         
         # The direction cosines along rows and columns:
         #row_x, row_y, row_z, col_x, col_y, col_z = orientation
-        row = orientation[0:3]
-        col = orientation[3:6]
+        theta_r = orientation[0:3]
+        theta_c = orientation[3:6]
         
         # The indeces of the largest direction cosines along rows and columns:
-        Rind = np.where(row==max(row))[0][0]
-        Cind = np.where(col==max(col))[0][0]
+        ind_r = np.where(theta_r==max(theta_r))[0][0]
+        ind_c = np.where(theta_c==max(theta_c))[0][0]
         
         # The pixel spacings:
         dx = pixSpacing[0]
@@ -201,10 +201,10 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
                 contourData[c][p+2] - z0
                 
                 # Convert from patient coord system to image coord system:          
-                i = (v[Rind] - col[Rind]*v[Cind]/col[Cind]) / \
-                (row[Rind]*dx * (1 - (col[Rind]*row[Cind])/(row[Rind]*col[Cind])))
+                i = (v[ind_r] - theta_c[ind_r]*v[ind_c]/theta_c[ind_c]) / \
+                (theta_r[ind_r]*dx * (1 - (theta_c[ind_r]*theta_r[ind_c])/(theta_r[ind_r]*theta_c[ind_c])))
                 
-                j = (v[Cind] - row[Cind]*i*dx) / (col[Cind]*dy)
+                j = (v[ind_c] - theta_r[ind_c]*i*dx) / (theta_c[ind_c]*dy)
     
                 contourPts_c.append([i,j])
                 
@@ -227,6 +227,13 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
     rows = np.int8(np.round(np.sqrt(Nuids)))
     cols = np.int8(np.round(np.sqrt(Nuids)))
     
+    # Decide whether to flip the images up-down so that the orientation is
+    # the same as shown in the OHIF-Viewer:
+    #flip = False
+    flip = True
+    
+    # Plot results:
+    
     plt.figure(figsize=(15,15), dpi=300);
     
     i = 0 # for subplot pos
@@ -240,24 +247,32 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
         # Plot the pixel array:
         i = i + 1    
         plt.subplot(rows,cols,i, aspect='equal')
-        plt.pcolormesh(pixArray);
+        if flip:
+            plt.pcolormesh(np.flipud(pixArray));
+        else:
+            plt.pcolormesh(pixArray);
+        
         plt.title(f'Frame {frameNo}', size=fontSize);
         plt.axis('off');
         
         # Plot the contours:
         if Ncontours > 0:   
             for c in range(Ncontours):
-                # Unpack tuple and store each x,y tuple in arrays xList and yList:
-                xList = []
-                yList = []
+                # Unpack tuple and store each x,y tuple in arrays X and Y:
+                X = []
+                Y = []
                 for x, y in contourPts[c]:
-                    xList.append(x)
-                    yList.append(y)
+                    X.append(x)
+                    Y.append(y)
     
                 # Create 2D arrays for the X and Y values using meshgrid:
                 #X, Y = np.meshgrid(xList, yList)
-                X = xList[:]
-                Y = yList[:]
+                
+                # Flip Y pixel coordinates if flip=True:
+                if flip:
+                    N_r, N_c = np.shape(pixArray)
+                    
+                    Y = N_c - np.array(Y)
     
                 plt.plot(X, Y, linewidth=0.5, c='red');
     
@@ -277,5 +292,5 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
         
         print('Plot exported to:\n\n', exportFpath)
     
-    #return dataDict
-    return
+    return dataDict
+    #return
