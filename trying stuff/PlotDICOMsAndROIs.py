@@ -280,7 +280,13 @@ def PlotDICOMsAndROIs(dicomsPath, roiPath, exportPlot, exportDir):
     
     if exportPlot:
         # Set up details for exporting of plot:
-        seriesDescription = dicom.SeriesDescription
+        #seriesDescription = dicom.SeriesDescription
+        
+        
+        print('Study description =', dicom.StudyDescription)
+        print('Patient ID =', dicom.PatientID)
+        print('Series description =', dicom.SeriesDescription)
+        
         
         exportFname = dicom.StudyDescription + ' ' + dicom.PatientID + ' ' \
         + dicom.SeriesDescription + '.jpg'

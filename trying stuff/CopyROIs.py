@@ -11,8 +11,12 @@ Created on Fri Feb 28 12:08:42 2020
     CopyROIs()
     
 Purpose:
-    Copy ROIs created for one series of DICOMs to a different series, so they 
-    can be overlaid onto that different series.
+    Download from XNAT:
+        1) The ROIs from a DICOM-RTSTRUCT file (to be copied), 
+        2) All DICOMs from the same scan as the ROIs
+        3) All DICOMs from a different scan for which the ROIs are to be
+        overlaid onto 
+
     
 Details:
     This function requires the REST variables of:
@@ -41,24 +45,28 @@ Input:
                             'xnatAddress':'http://10.1.1.17',\
                             'username':'admin',\
                             'password':'password',\
+                            
                             # Define the REST variables that point to the ROIs 
                             # to be copied:
-                            'RoiProjLab':'BrainTumorProg',\
-                            'RoiSubjLab':'PGBM-002',\
-                            'RoiExpLab':'PGBM-002_MR_1',\
-                            'RoiLab':'RTSTRUCT_20200123_145731',\
+                            'roiProjLab':'BrainTumorProg',\
+                            'roiSubjLab':'PGBM-002',\
+                            'roiExpLab':'PGBM-002_MR_1',\
+                            'roiLab':'RTSTRUCT_20200123_145731',\
+                            
                             # Define the REST variables that point to the DICOM 
                             # files that the ROI applies to:
                             'fromDicomProjLab':'BrainTumorProg',\
                             'fromDicomSubjLab':'PGBM-002',\
                             'fromDicomExpLab':'PGBM-002_MR_1',\
                             'fromDicomScanLab':'T1post',\
+                            
                             # Define the REST variables that point to the DICOM 
                             # files that the ROI is to be applied to:
                             'toDicomProjLab':'BrainTumorProg',\
                             'toDicomSubjLab':'PGM-002',\
                             'toDicomExpLab':'PGM-002_MR_1',\
                             'toDicomScanLab':'T1post',\
+                            
                             # Define the directories to download files to:
                             'fromDicomDir':r'C:\Temp\From DICOM',\
                             'fromRoiDir':r'C:\Temp\From RTSTRUCT',\
@@ -66,7 +74,9 @@ Input:
                             'toRoiDir':r'C:\Temp\To RTSTRUCT'
                            }
     
-    debug    - Print results if True
+    del_dicoms - Delete downloaded DICOMs if True
+    
+    debug      - Print results if True
     
 Returns:
     xnatDict - with the added full filepath of a new DICOM-RTSTRUCT file in the 
@@ -79,13 +89,17 @@ import xnat
 #import pydicom
 #import DicomHelperFuncs
 #from DicomHelperFuncs import GetDicomFpaths
-from ModifyROIs import ModifyROIs
+#from ModifyROIs import ModifyROIs
 #import copy
 import os, shutil
 import json
+import importlib
+import ModifyROIs
+importlib.reload(ModifyROIs)
+from ModifyROIs import ModifyROIs
 
 
-def CopyROIs(xnatDict, debug):
+def CopyROIs(xnatDict, del_dicoms, debug):
     if debug:
         print('The input variables (xnatDict):\n\n')
         print(xnatDict)
@@ -97,6 +111,7 @@ def CopyROIs(xnatDict, debug):
                            user=xnatDict['username'], \
                            password=xnatDict['password'])
     
+    """
     # Get the REST variables that point to the DICOM-RTSTRUCT file to be copied:
     RoiProjLab = xnatDict['RoiProjLab'] # e.g. 'BrainTumorProg'
     RoiSubjLab = xnatDict['RoiSubjLab'] # e.g. 'PGBM-002'
@@ -114,15 +129,17 @@ def CopyROIs(xnatDict, debug):
     toDicomSubjLab = xnatDict['toDicomSubjLab'] # e.g. 'PGM-002'
     toDicomExpLab = xnatDict['toDicomExpLab']   # e.g. 'PGM-002_MR_1'
     toDicomScanLab = xnatDict['toDicomScanLab'] # e.g. 'T1post'
+    """
     
     # Get the directories to download files to:
-    fromDicomDir = xnatDict['fromDicomDir'] # e.g. r'C:\Temp\From DICOM'
-    fromRoiDir = xnatDict['fromRoiDir']     # e.g. r'C:\Temp\From RTSTRUCT' 
-    toDicomDir = xnatDict['toDicomDir']     # e.g. r'C:\Temp\To DICOM'
-    toRoiDir = xnatDict['toRoiDir']         # e.g. r'C:\Temp\To RTSTRUCT'  
+    rootDir = xnatDict['rootDir']           # e.g. r'C:\Temp\2020-02-28'
+    fromDicomDir = xnatDict['fromDicomDir'] # e.g. r'C:\Temp\2020-02-28\From DICOM'
+    fromRoiDir = xnatDict['fromRoiDir']     # e.g. r'C:\Temp\2020-02-28\From RTSTRUCT' 
+    toDicomDir = xnatDict['toDicomDir']     # e.g. r'C:\Temp\2020-02-28\To DICOM'
+    toRoiDir = xnatDict['toRoiDir']         # e.g. r'C:\Temp\2020-02-28\To RTSTRUCT'  
     
     # Combine all directory paths:
-    allDirs = [fromRoiDir, fromDicomDir, toRoiDir, toDicomDir]
+    allDirs = [rootDir, fromRoiDir, fromDicomDir, toRoiDir, toDicomDir]
     
     # Create directories if they don't exist:
     for dirPath in allDirs:
@@ -139,7 +156,13 @@ def CopyROIs(xnatDict, debug):
     so instead will use .download(full_file_path) """
     
     # Get the DICOM-RTSTRUCT object:
-    roi = session.projects[RoiProjLab].subjects[RoiSubjLab].experiments[RoiExpLab].assessors[RoiLab].resources['RTSTRUCT'].files[0]
+    #roi = session.projects[RoiProjLab].subjects[RoiSubjLab].experiments[RoiExpLab].assessors[RoiLab].resources['RTSTRUCT'].files[0]
+    roiProj = session.projects[xnatDict['roiProjLab']]
+    roiSubj = roiProj.subjects[xnatDict['roiSubjLab']]
+    roiExp = roiSubj.experiments[xnatDict['roiExpLab']]
+
+    # The ROI object:
+    roi = roiExp.assessors[xnatDict['roiLab']].resources['RTSTRUCT'].files[0]
     
     # Get the filename:
     roiId = roi.id
@@ -154,7 +177,11 @@ def CopyROIs(xnatDict, debug):
     
     # Get the DICOM objects of the series the ROIs relate to:
     #dicoms = session.projects[DicomProjLab].subjects[DicomSubjLab].experiments[DicomExpLab].scans[DicomScanLab].files
-    dicoms = session.projects[fromDicomProjLab].subjects[fromDicomSubjLab].experiments[fromDicomExpLab].scans[fromDicomScanLab]
+    #dicoms = session.projects[fromDicomProjLab].subjects[fromDicomSubjLab].experiments[fromDicomExpLab].scans[fromDicomScanLab]
+    dicomsProj = session.projects[xnatDict['fromDicomProjLab']]
+    dicomsSubj = dicomsProj.subjects[xnatDict['fromDicomSubjLab']] 
+    dicomsExp = dicomsSubj.experiments[xnatDict['fromDicomExpLab']]
+    dicoms = dicomsExp.scans[xnatDict['fromDicomScanLab']]
     
     # Iterate for each file in dicomObjects:
     print('\nDownloading the DICOM files that the DICOM-RTSTRUCT file relate to..')
@@ -170,7 +197,11 @@ def CopyROIs(xnatDict, debug):
         
     # Get the DICOM objects of the series the ROIs are to be overlaid to:
     #dicoms = session.projects[DicomProjLab].subjects[DicomSubjLab].experiments[DicomExpLab].scans[DicomScanLab].files
-    dicoms = session.projects[toDicomProjLab].subjects[toDicomSubjLab].experiments[toDicomExpLab].scans[toDicomScanLab]
+    #dicoms = session.projects[toDicomProjLab].subjects[toDicomSubjLab].experiments[toDicomExpLab].scans[toDicomScanLab]
+    dicomsProj = session.projects[xnatDict['toDicomProjLab']]
+    dicomsSubj = dicomsProj.subjects[xnatDict['toDicomSubjLab']] 
+    dicomsExp = dicomsSubj.experiments[xnatDict['toDicomExpLab']]
+    dicoms = dicomsExp.scans[xnatDict['toDicomScanLab']]
     
     # Download each DICOM by iterating for each file in dicomObjects:
     print('\nDownloading the DICOM files that the DICOM-RTSTRUCT file is to be overlaid on..')
@@ -220,13 +251,14 @@ def CopyROIs(xnatDict, debug):
     
     # Do some housekeeping - delete the DICOM files in fromDicomDir and 
     # toDicomDir:
-    print('Deleting temporary DICOM files..')
-    for directory in [fromDicomDir, toDicomDir]:
-        for root, dirs, files in os.walk(directory):
-            for f in files:
-                os.unlink(os.path.join(root, f))
-            for d in dirs:
-                shutil.rmtree(os.path.join(root, d))
+    if del_dicoms:
+        print('Deleting temporary DICOM files..')
+        for directory in [fromDicomDir, toDicomDir]:
+            for root, dirs, files in os.walk(directory):
+                for f in files:
+                    os.unlink(os.path.join(root, f))
+                for d in dirs:
+                    shutil.rmtree(os.path.join(root, d))
     
     
     return xnatDict
