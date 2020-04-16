@@ -2,8 +2,8 @@
 .ipynb_checkpoints/
 __pycache__/
 Archive/
-MIRTK python_examples(MA)/
-NCITA coding task/
+MIRTK_python_examples(MA)/
+NCITA_coding_task/
 *.log
 *.txt
 *.[0-9].txt
