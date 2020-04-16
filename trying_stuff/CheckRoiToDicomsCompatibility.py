@@ -177,9 +177,32 @@ def CheckRoiToDicomsCompatibility(DataDict, CheckKey):
             errors = errors + 1
             
     
+    """ 
+    Check whether there are any sequences in Contour Image Sequence:
+    """
+    
+    if CISs==[]:
+        print('There are 0 items in Contour Image Sequence.')
+        
+        # Increment errors:
+        errors = errors + 1
+        
+        
+    """ 
+    Check whether there are any sequences in Contour Sequence:
+    """
+    
+    if CSs==[]:
+        print('There are 0 items in Contour Sequence.')    
+        
+        # Increment errors:
+        errors = errors + 1
+        
+        
+    
     # Final report:
     if errors > 0:
-        print(f'\n--> There were {errors} tag mismatches!!')
+        print(f'--> There were {errors} tag mismatches!!')
     else:
         print('--> OK.')
             

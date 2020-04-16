@@ -759,7 +759,8 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     CopyToKey = 'Target'
     CopyToDicoms = copy.deepcopy(TargetDicoms)
         
-    print('\nROIs will be copied from', CopyFromKey, 'to', CopyToKey, '.')
+    print('\nROIs will be copied from ' + CopyFromKey + ' to ' + CopyToKey \
+          + '...')
     
     """ COPY THE ROI COLLECTION: """
     SourceRois, \

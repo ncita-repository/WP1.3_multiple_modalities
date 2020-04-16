@@ -86,6 +86,8 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         SourceToTargetMapping = DataDict['SourceToTargetMapping']['MappingInds']
         TargetToSourceMapping = DataDict['TargetToSourceMapping']['MappingInds']
         
+        print('\nSourceToTargetMapping =', SourceToTargetMapping)
+        
         # The key of the series that was remapped:
         RemappedKey = DataDict['RemappedKey']
         
@@ -117,17 +119,41 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     """ Use SourceRoi as a template for TargetRoi: """
     TargetRoi = copy.deepcopy(SourceRoi)
     
+    """ April 16:
+        This next section is redundant since the SOP Instance UIDs are now
+        stored in DataDict.  Reverting to this is even worse as it results in
+        ValueError since the SourceRefSopUid is not found in SourceSopUid!. 
+    """
     if False:
-        # Get the SOP Instance UIDs from the SourceDicoms and TargetDicoms.  If the key
-        # 'Mapping' is in DataDict.keys(), replace SourceDicoms with MappedDicoms:
-        #if 'Mapping' in DataDict.keys():
-        #    print('\nMapping in DataDict.keys()')
-        #    MappedDicoms = [SourceDicoms[ind] for ind in MappingInds]
-        #    SourceSopUids = [item.SOPInstanceUID for item in MappedDicoms]
-        #else:
-        #    SourceSopUids = [item.SOPInstanceUID for item in SourceDicoms]
+        ## Get the SOP Instance UIDs from the SourceDicoms and TargetDicoms.  If the key
+        ## 'Mapping' is in DataDict.keys(), replace SourceDicoms with MappedDicoms:
+        ##if 'Mapping' in DataDict.keys():
+        ##    print('\nMapping in DataDict.keys()')
+        ##    MappedDicoms = [SourceDicoms[ind] for ind in MappingInds]
+        ##    SourceSopUids = [item.SOPInstanceUID for item in MappedDicoms]
+        ##else:
+        ##    SourceSopUids = [item.SOPInstanceUID for item in SourceDicoms]
+        """ These two lines result in ValueErrors: """
         SourceSopUids = [item.SOPInstanceUID for item in SourceDicoms]
         TargetSopUids = [item.SOPInstanceUID for item in TargetDicoms]
+        
+        """ Doing so has brought back the ValueError "1.3.6.... is not in list
+        when searching for the index of the matching SourceSopUid.
+        I can't understand why...
+        So see how the the SOP UIDs stored in DataDict that the ones fetched
+        in the above lines differ:
+        """
+        SourceSopUidsNew = [item.SOPInstanceUID for item in SourceDicoms]
+        TargetSopUidsNew = [item.SOPInstanceUID for item in TargetDicoms]
+        
+        #print('\nSourceSopUids from DataDict:\n', SourceSopUids)
+        #print('\nSourceSopUids from line 143:\n', SourceSopUidsNew)
+        #print('\nTargetSopUids from DataDict:\n', TargetSopUids)
+        #print('\nTargetSopUids from line 143:\n', TargetSopUidsNew)
+        print('\nlen(SourceSopUids) from DataDict:\n', len(SourceSopUids))
+        print('\nlen(SourceSopUids) from line 143:\n', len(SourceSopUidsNew))
+        print('\nlen(TargetSopUids) from DataDict:\n', len(TargetSopUids))
+        print('\nlen(TargetSopUids) from line 143:\n', len(TargetSopUidsNew))
     
     if False:
         print(f'\nlen(SourceDicoms)  = {len(SourceDicoms)}')
@@ -332,9 +358,9 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     #SourceCISRefSopUidToSourceSopUidMapping = []
     
     # Get the Source Contour Image Sequences:
-    Sequences = SourceRoi.ReferencedFrameOfReferenceSequence[0]\
-                .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]\
-                .ContourImageSequence
+    #Sequences = SourceRoi.ReferencedFrameOfReferenceSequence[0]\
+    #            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]\
+    #            .ContourImageSequence
 
 
     """ For debugging: """
@@ -342,45 +368,44 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         print('\nSource SOP UIDs:\n')
         [print(item) for item in SourceSopUids]
         print('\n\nSource CIS Ref SOP UIDs:\n')
-        [print(item) for item in [Sequences[i].ReferencedSOPInstanceUID for i in range(len(Sequences))]]
+        #[print(item) for item in [Sequences[i].ReferencedSOPInstanceUID for i in range(len(Sequences))]]
     
     
     
     # Get the Source Contour Image Sequences:
-    SourceCISsequences = SourceRoi.ReferencedFrameOfReferenceSequence[0]\
-                                  .RTReferencedStudySequence[0]\
-                                  .RTReferencedSeriesSequence[0]\
-                                  .ContourImageSequence
+    SourceCIS = SourceRoi.ReferencedFrameOfReferenceSequence[0]\
+                         .RTReferencedStudySequence[0]\
+                         .RTReferencedSeriesSequence[0]\
+                         .ContourImageSequence
                                
     # Initialise the Source Contour Image Sequence to Source Dicom Mapping,
     # Target Contour Image Sequences, and Target Referenced SOP Instance UIDs:
     SourceCISToSourceDicomMapping = []
-    TargetCISsequences = []
+    TargetCIS = []
     TargetCISRefSopUids = []
                 
     # Cycle through each Source Contour Image Sequence:
-    for i in range(len(SourceCISsequences)):
-        #print(f'\nContour Image Sequence #{i}:\n')
+    for i in range(len(SourceCIS)):
+        print(f'\nContour Image Sequence #{i}:')
         
         # This Source Contour Image Sequence:
-        SourceCISsequence = SourceCISsequences[i]
+        SourceCIs = SourceCIS[i]
               
         # Get the Referenced SOP Instance UID for this SourceSequence:
-        RefSopUid = SourceCISsequence.ReferencedSOPInstanceUID
+        RefSopUid = SourceCIs.ReferencedSOPInstanceUID
         
         # Store this RefSopUid:
         SourceCISRefSopUids.append(RefSopUid)
     
         # Find the index of the matching SourceSopUid:
-        ind = SourceSopUids.index(RefSopUid)
+        #ind = SourceSopUids.index(RefSopUid) # April 16
+        SourceInd = SourceSopUids.index(RefSopUid)
         
-        """ April 6:
-        I'll probably need to add some logic above to deal with the case 
-        where there isn't a match (for example, if the original SourceDicoms
-        had greater length than the original TargetDicoms) """
+        print(f'   SourceInd = {i}')
         
-        # Store this ind:
-        SourceCISToSourceDicomMapping.append(ind)
+        # Store this index:
+        #SourceCISToSourceDicomMapping.append(ind) # April 16
+        SourceCISToSourceDicomMapping.append(SourceInd)
         
         """ 
         Note:
@@ -388,31 +413,46 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
             Contour Image Sequence to the Source DICOM it belongs to.
             
             This DICOM may not be included in SourceToTargetMapping, if, for
-            example, there were many more DICOMs in the original SourceDicoms
+            example, there are more DICOMs in the original SourceDicoms
             than the number of DICOMs in the original TargetDicoms.
         """
-        # If this ind is SourceToTargetMapping, get the SOP UID of this 
-        # TargetDicom, and copy this SourceSequence to TargetSequence:
-        if ind in SourceToTargetMapping:
+        # If this SourceInd is in SourceToTargetMapping, get the SOP UID of 
+        # this TargetDicom, and copy this SourceSequence to TargetSequence:
+        #if ind in SourceToTargetMapping: # April 16
+        if SourceInd in SourceToTargetMapping:
+            """ April 16:  I seem to have missed this crucial next step: """
+            # Get the corresponding index for the target series:
+            TargetInd = SourceToTargetMapping[SourceInd]
+            
+            print(f'   TargetInd = {i}')
+            
             # Copy this sequence:
-            TargetCISsequence = copy.deepcopy(SourceCISsequence)
+            TargetCIs = copy.deepcopy(SourceCIs)
             
             # Modify the Referenced SOP Instance UID for this sequence, using
             # the TargetSopUid (the SOP Instance that best matches this 
             # SourceDicom):
-            TargetCISsequence.ReferencedSOPInstanceUID = TargetSopUids[ind]
+            #TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
+            TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
             
             # Store this TargetCISRefSopUid:
-            TargetCISRefSopUids.append(TargetSopUids[ind])
+            #TargetCISRefSopUids.append(TargetSopUids[ind]) # April 16
+            TargetCISRefSopUids.append(TargetSopUids[TargetInd])
             
             # Append this TargetSequence:
-            TargetCISsequences.append(TargetCISsequence)
+            TargetCIS.append(TargetCIs)
+        else:
+            print('   This SourceInd not in SourceToTargetMapping.')
             
+    
+    """ April 16: Debugging... """
+    print('\nTargetCIS:\n', TargetCIS)    
+    
     # Modify the Contour Image Sequences of TargetRoi:
     TargetRoi.ReferencedFrameOfReferenceSequence[0]\
              .RTReferencedStudySequence[0]\
              .RTReferencedSeriesSequence[0]\
-             .ContourImageSequence = copy.deepcopy(TargetCISsequences)
+             .ContourImageSequence = copy.deepcopy(TargetCIS)
     
     """ ***************************************************************** """
     
@@ -438,38 +478,37 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     """
        
     # Get the Source Contour Sequences:
-    SourceCSsequences = SourceRoi.ROIContourSequence[0].ContourSequence
+    SourceCS = SourceRoi.ROIContourSequence[0].ContourSequence
                                
     # Initialise the Source Contour Sequence to Source Dicom Mapping,
     # Target Contour Sequences, and Target Referenced SOP Instance UIDs:
     SourceCSToSourceDicomMapping = []
-    TargetCSsequences = []
+    TargetCS = []
     TargetCSRefSopUids = []
                 
     # Cycle through each Source Contour Sequence:
-    for i in range(len(SourceCSsequences)):
-        #print(f'\nContour Sequence #{i}:\n')
+    for i in range(len(SourceCS)):
+        print(f'\nContour Sequence #{i}:')
         
         # This Source Contour Sequence:
-        SourceCSsequence = SourceCSsequences[i]
+        SourceCs = SourceCS[i]
               
         # Get the Referenced SOP Instance UID for this SourceSequence:
-        RefSopUid = SourceCSsequence.ContourImageSequence[0]\
-                                    .ReferencedSOPInstanceUID
+        RefSopUid = SourceCs.ContourImageSequence[0]\
+                            .ReferencedSOPInstanceUID
         
         # Store this RefSopUid:
         SourceCISRefSopUids.append(RefSopUid)
     
         # Find the index of the matching SourceSopUid:
-        ind = SourceSopUids.index(RefSopUid)
+        #ind = SourceSopUids.index(RefSopUid) # April 16
+        SourceInd = SourceSopUids.index(RefSopUid)
         
-        """ April 6:
-        I'll probably need to add some logic above to deal with the case 
-        where there isn't a match (for example, if the original SourceDicoms
-        had greater length than the original TargetDicoms) """
+        print(f'   SourceInd = {i}')
         
         # Store this ind:
-        SourceCSToSourceDicomMapping.append(ind)
+        #SourceCSToSourceDicomMapping.append(ind) # April 16
+        SourceCSToSourceDicomMapping.append(SourceInd)
         
         """ 
         Note:
@@ -477,30 +516,45 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
             Contour Sequence to the Source DICOM it belongs to.
             
             This DICOM may not be included in SourceToTargetMapping, if, for
-            example, there were many more DICOMs in the original SourceDicoms
+            example, there are more DICOMs in the original SourceDicoms
             than the number of DICOMs in the original TargetDicoms.
         """
-        # If this ind is SourceToTargetMapping, get the SOP UID of this 
+        # If this SourceInd is SourceToTargetMapping, get the SOP UID of this 
         # TargetDicom, and copy this SourceSequence to TargetSequence:
-        if ind in SourceToTargetMapping:
+        #if ind in SourceToTargetMapping: # April 16
+        if SourceInd in SourceToTargetMapping:
+            """ April 16:  I seem to have missed this crucial next step: """
+            # Get the corresponding index for the target series:
+            TargetInd = SourceToTargetMapping[SourceInd]
+            
+            print(f'   TargetInd = {i}')
+            
             # Copy this sequence:
-            TargetCSsequence = copy.deepcopy(SourceCSsequence)
+            TargetCs = copy.deepcopy(SourceCs)
             
             # Modify the Referenced SOP Instance UID for this sequence, using
             # the TargetSopUid (the SOP Instance that best matches this 
             # SourceDicom):
-            TargetCSsequence.ContourImageSequence[0]\
-                            .ReferencedSOPInstanceUID = TargetSopUids[ind]
+            #TargetCs.ContourImageSequence[0]\
+            #        .ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
+            TargetCs.ContourImageSequence[0]\
+                    .ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
             
             # Store this TargetCSRefSopUid:
-            TargetCSRefSopUids.append(TargetSopUids[ind])
+            #TargetCSRefSopUids.append(TargetSopUids[ind]) # April 16
+            TargetCSRefSopUids.append(TargetSopUids[TargetInd])
             
             # Append this TargetSequence:
-            TargetCSsequences.append(TargetCSsequence)
-            
+            TargetCS.append(TargetCs)
+        else:
+            print('   This SourceInd not in SourceToTargetMapping.')
+     
+    """ April 16: Debugging... """
+    print('\nTargetCS:\n', TargetCS) 
+    
     # Modify the Contour Sequences of TargetRoi:
     TargetRoi.ROIContourSequence[0]\
-             .ContourSequence = copy.deepcopy(TargetCSsequences)
+             .ContourSequence = copy.deepcopy(TargetCS)
     
     """ ***************************************************************** """
     
