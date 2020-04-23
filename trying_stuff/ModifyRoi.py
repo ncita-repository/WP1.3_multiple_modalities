@@ -86,10 +86,15 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         SourceToTargetMapping = DataDict['SourceToTargetMapping']['MappingInds']
         TargetToSourceMapping = DataDict['TargetToSourceMapping']['MappingInds']
         
+        print('\nlen(SourceToTargetMapping) =', len(SourceToTargetMapping))
         print('\nSourceToTargetMapping =', SourceToTargetMapping)
+        #print('\n   type(SourceToTargetMapping) =', str(type(SourceToTargetMapping)))
+        #print('\n   type(SourceToTargetMapping[0]) =', str(type(SourceToTargetMapping[0])))
         
         # The key of the series that was remapped:
         RemappedKey = DataDict['RemappedKey']
+        
+        print('\nRemappedKey =', RemappedKey)
         
     else:
         print('\n\nNo remapped data found.')
@@ -118,6 +123,66 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """ Use SourceRoi as a template for TargetRoi: """
     TargetRoi = copy.deepcopy(SourceRoi)
+    
+    
+    # Get the Image Position Patient of the Source and Target DICOMs:
+    SourceImPos = SourceDicoms[0].ImagePositionPatient
+    TargetImPos = TargetDicoms[0].ImagePositionPatient
+    
+    # Get the Image Orientation Patient of the Source and Target DICOMs:
+    SourceImOrient = SourceDicoms[0].ImageOrientationPatient
+    TargetImOrient = TargetDicoms[0].ImageOrientationPatient
+    
+    # Get the Pixel Spacing of the Source and Target DICOMs:
+    SourcePixSpacing = SourceDicoms[0].PixelSpacing
+    TargetPixSpacing = TargetDicoms[0].PixelSpacing
+    
+    
+    """ 
+    Note:
+        If the Image Position Patient or or Image Orientation Patient or
+        Pixel Spacing of the Source and Target DICOMs are not the same, the 
+        Contour Data that was copied from SourceRoi to TargetRoi will have to 
+        be modified.
+    """
+    
+    
+    """
+    ***********************************************************************
+    STEP 1:
+        Make changes to the Contour Data in TargetRoi if required.
+    ***********************************************************************
+    """
+    
+    if SourceImPos!=TargetImPos or SourceImOrient!=TargetImOrient \
+    or SourcePixSpacing!=TargetPixSpacing:
+        if SourceImPos!=TargetImPos:
+            print('\nImage Position Patient of Source and Target do not match!')
+        
+        if SourceImOrient!=TargetImOrient:
+            print('\nImage Orientation Patient of Source and Target do not match!')
+            
+        if SourcePixSpacing!=TargetPixSpacing:
+            print('\nPixel Spacing of Source and Target do not match!')
+    
+    else:
+        print('\nThe Image Position Patient, Image Orientation Patient', \
+              'and Pixel Spacing of Source and Target match.')
+            
+        
+    
+    
+    
+    """
+    ***********************************************************************
+    END OF STEP #1.
+    ***********************************************************************
+    """
+    
+    
+    
+    
+    
     
     """ April 16:
         This next section is redundant since the SOP Instance UIDs are now
@@ -172,7 +237,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    STEP 1:
+    STEP 2:
         Make changes to TargetRoi that only need to be made once (don't need
         to be made for each contour).
     ***********************************************************************
@@ -277,7 +342,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
 
     """
     ***********************************************************************
-    END OF STEP #1.
+    END OF STEP #2.
     ***********************************************************************
     """
     
@@ -325,14 +390,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         
     """
     ***********************************************************************
-    STEP 2:
+    STEP 3:
         Make essential changes to the multi-itemed attributes that are not
         currently dealt with in WalkThroughAttributes().
     ***********************************************************************
     
     
     ***********************************************************************
-    STEP 2a:
+    STEP 3a:
         Modify the Referenced SOP Instance UID in each Contour Image Sequence. 
     ***********************************************************************
     
@@ -401,7 +466,9 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         #ind = SourceSopUids.index(RefSopUid) # April 16
         SourceInd = SourceSopUids.index(RefSopUid)
         
-        print(f'   SourceInd = {i}')
+        print(f'   SourceInd = {SourceInd}')
+        #print('   type(SourceInd) =', str(type(SourceInd)))
+        #print('   type(SourceInd in SourceToTargetMapping) =', type(SourceInd in SourceToTargetMapping))
         
         # Store this index:
         #SourceCISToSourceDicomMapping.append(ind) # April 16
@@ -419,34 +486,44 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         # If this SourceInd is in SourceToTargetMapping, get the SOP UID of 
         # this TargetDicom, and copy this SourceSequence to TargetSequence:
         #if ind in SourceToTargetMapping: # April 16
-        if SourceInd in SourceToTargetMapping:
-            """ April 16:  I seem to have missed this crucial next step: """
-            # Get the corresponding index for the target series:
-            TargetInd = SourceToTargetMapping[SourceInd]
-            
-            print(f'   TargetInd = {i}')
-            
-            # Copy this sequence:
-            TargetCIs = copy.deepcopy(SourceCIs)
-            
-            # Modify the Referenced SOP Instance UID for this sequence, using
-            # the TargetSopUid (the SOP Instance that best matches this 
-            # SourceDicom):
-            #TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
-            TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
-            
-            # Store this TargetCISRefSopUid:
-            #TargetCISRefSopUids.append(TargetSopUids[ind]) # April 16
-            TargetCISRefSopUids.append(TargetSopUids[TargetInd])
-            
-            # Append this TargetSequence:
-            TargetCIS.append(TargetCIs)
-        else:
-            print('   This SourceInd not in SourceToTargetMapping.')
+        """ April 17: 
+            I think the line commented below, i.e.
+            if SourceInd in SourceToTargetMapping:
+            is completely unnecessary and wrong, since the indeces in 
+            SourceToTargetMapping are in no way related to the source indeces!
+            So commenting the if statement and adjusting the indentation 
+            accordingly:
+        """
+        #if SourceInd in SourceToTargetMapping:
+        """ April 16:  I seem to have missed this crucial next step: """
+        # Get the corresponding index for the target series:
+        TargetInd = SourceToTargetMapping[SourceInd]
+        
+        print(f'   TargetInd = {TargetInd}')
+        
+        # Copy this sequence:
+        TargetCIs = copy.deepcopy(SourceCIs)
+        
+        # Modify the Referenced SOP Instance UID for this sequence, using
+        # the TargetSopUid (the SOP Instance that best matches this 
+        # SourceDicom):
+        #TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
+        TargetCIs.ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
+        
+        # Store this TargetCISRefSopUid:
+        #TargetCISRefSopUids.append(TargetSopUids[ind]) # April 16
+        TargetCISRefSopUids.append(TargetSopUids[TargetInd])
+        
+        # Append this TargetSequence:
+        TargetCIS.append(TargetCIs)
+        #else:
+        #    print('   This SourceInd not in SourceToTargetMapping.')
             
     
     """ April 16: Debugging... """
-    print('\nTargetCIS:\n', TargetCIS)    
+    #print('\nTargetCIS:\n', TargetCIS)    
+    print(f'\n{len(TargetCIS)} out of {len(SourceCIS)} Contour Image',\
+          'Sequences were copied from Source to Target') 
     
     # Modify the Contour Image Sequences of TargetRoi:
     TargetRoi.ReferencedFrameOfReferenceSequence[0]\
@@ -460,7 +537,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 2a.
+    END OF STEP 3a.
     ***********************************************************************                
     """
     
@@ -468,7 +545,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    STEP 2b:
+    STEP 3b:
         Modify the Referenced SOP Instance UID in each Contour Sequence.
     ***********************************************************************
     
@@ -504,7 +581,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         #ind = SourceSopUids.index(RefSopUid) # April 16
         SourceInd = SourceSopUids.index(RefSopUid)
         
-        print(f'   SourceInd = {i}')
+        print(f'   SourceInd = {SourceInd}')
         
         # Store this ind:
         #SourceCSToSourceDicomMapping.append(ind) # April 16
@@ -522,35 +599,45 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         # If this SourceInd is SourceToTargetMapping, get the SOP UID of this 
         # TargetDicom, and copy this SourceSequence to TargetSequence:
         #if ind in SourceToTargetMapping: # April 16
-        if SourceInd in SourceToTargetMapping:
-            """ April 16:  I seem to have missed this crucial next step: """
-            # Get the corresponding index for the target series:
-            TargetInd = SourceToTargetMapping[SourceInd]
-            
-            print(f'   TargetInd = {i}')
-            
-            # Copy this sequence:
-            TargetCs = copy.deepcopy(SourceCs)
-            
-            # Modify the Referenced SOP Instance UID for this sequence, using
-            # the TargetSopUid (the SOP Instance that best matches this 
-            # SourceDicom):
-            #TargetCs.ContourImageSequence[0]\
-            #        .ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
-            TargetCs.ContourImageSequence[0]\
-                    .ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
-            
-            # Store this TargetCSRefSopUid:
-            #TargetCSRefSopUids.append(TargetSopUids[ind]) # April 16
-            TargetCSRefSopUids.append(TargetSopUids[TargetInd])
-            
-            # Append this TargetSequence:
-            TargetCS.append(TargetCs)
-        else:
-            print('   This SourceInd not in SourceToTargetMapping.')
+        """ April 17: 
+            I think the line commented below, i.e.
+            if SourceInd in SourceToTargetMapping:
+            is completely unnecessary and wrong, since the indeces in 
+            SourceToTargetMapping are in no way related to the source indeces!
+            So commenting the if statement and adjusting the indentation 
+            accordingly:
+        """
+        #if SourceInd in SourceToTargetMapping:
+        """ April 16:  I seem to have missed this crucial next step: """
+        # Get the corresponding index for the target series:
+        TargetInd = SourceToTargetMapping[SourceInd]
+        
+        print(f'   TargetInd = {TargetInd}')
+        
+        # Copy this sequence:
+        TargetCs = copy.deepcopy(SourceCs)
+        
+        # Modify the Referenced SOP Instance UID for this sequence, using
+        # the TargetSopUid (the SOP Instance that best matches this 
+        # SourceDicom):
+        #TargetCs.ContourImageSequence[0]\
+        #        .ReferencedSOPInstanceUID = TargetSopUids[ind] # April 16
+        TargetCs.ContourImageSequence[0]\
+                .ReferencedSOPInstanceUID = TargetSopUids[TargetInd]
+        
+        # Store this TargetCSRefSopUid:
+        #TargetCSRefSopUids.append(TargetSopUids[ind]) # April 16
+        TargetCSRefSopUids.append(TargetSopUids[TargetInd])
+        
+        # Append this TargetSequence:
+        TargetCS.append(TargetCs)
+        #else:
+        #    print('   This SourceInd not in SourceToTargetMapping.')
      
     """ April 16: Debugging... """
-    print('\nTargetCS:\n', TargetCS) 
+    #print('\nTargetCS:\n', TargetCS) 
+    print(f'\n{len(TargetCS)} out of {len(SourceCS)} Contour Sequences were',\
+          'copied from Source to Target')
     
     # Modify the Contour Sequences of TargetRoi:
     TargetRoi.ROIContourSequence[0]\
@@ -560,30 +647,46 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     
     
-    
-    
-    
+    """
+    ***********************************************************************
+    END OF STEP 3b.
+    ***********************************************************************                
+    """
     
     
     """
     ***********************************************************************
-    END OF STEP 2b.
+    STEP 3c: (NEW ON APRIL 17)
+        Generate a new Series Instance UID if needed.
+    ***********************************************************************
+    
+    Generate a unique Series Instance UID so it is not repeated from the ROI
+    Collection that was copied.
+    
+    """
+    
+    
+    """
+    ***********************************************************************
+    END OF STEP 3c.
     ***********************************************************************                
     """
     
     
     
     
+    
+    
     """
     ***********************************************************************
-    STEP 3:
+    STEP 4:
         Make non-essential changes that cannot be implemented in an iterative
         fashion but are still useful.
     ***********************************************************************
     
     
     ***********************************************************************
-    STEP 3a:
+    STEP 4a:
         Modify the Structure Set Label.
     ***********************************************************************
     """
@@ -609,7 +712,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
             NewLabel = NewLabel + '_' + RegMethod + '-Reg'
     
     
-    NewLabel = SourceRoi.StructureSetLabel + '(Series_no_' + SourceSeriesNo \
+    NewLabel = SourceRoi.StructureSetLabel + '_(Series_no_' + SourceSeriesNo \
                 + ')_copied_for_' + TargetKey + 'Dicoms_(Series_no_' \
                 + TargetSeriesNo + ')_' + NewDate + '_' + NewTime
                
@@ -628,14 +731,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 3a.
+    END OF STEP 4a.
     ***********************************************************************
     """
     
 
     """
     ***********************************************************************
-    STEP 3b:
+    STEP 4b:
         Modify the ROI Name in the Structure Set ROI Sequence
     ***********************************************************************
     """
@@ -659,14 +762,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
                     
     """
     ***********************************************************************
-    END OF STEP 3b.
+    END OF STEP 4b.
     ***********************************************************************
     """
     
     
     """
     ***********************************************************************
-    STEP 3c:
+    STEP 4c:
         Modify the Structure Set Date and Time to help identify the new ROI
         Collection from others.
     ***********************************************************************
@@ -708,14 +811,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 3c.
+    END OF STEP 4c.
     ***********************************************************************
     """
     
     
     """
     ***********************************************************************
-    STEP 3d:
+    STEP 4d:
         Create a new filename for the DICOM-RTSTRUCT file.
     ***********************************************************************
     """
@@ -792,14 +895,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 3d.
+    END OF STEP 4d.
     ***********************************************************************
     """
     
     
     """
     ***********************************************************************
-    STEP 4:
+    STEP 5:
         Create the TargetRoiDir, the JSON filepath and update DataDict.
     ***********************************************************************
     
@@ -833,7 +936,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 4.
+    END OF STEP 5.
     ***********************************************************************
     """
     
@@ -841,7 +944,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    STEP 5:
+    STEP 6:
         Print some useful info.
     ***********************************************************************
     
@@ -934,14 +1037,14 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
         
     """
     ***********************************************************************
-    END OF STEP 5.
+    END OF STEP 6.
     ***********************************************************************
     """
     
     
     """
     ***********************************************************************
-    STEP 6:
+    STEP 7:
         Export the new RTSTRUCT and JSON files.
     ***********************************************************************
     """ 
@@ -957,7 +1060,7 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     """
     ***********************************************************************
-    END OF STEP 6.
+    END OF STEP 7.
     ***********************************************************************
     """
     

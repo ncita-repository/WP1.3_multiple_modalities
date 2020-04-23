@@ -7,7 +7,7 @@ Created on Wed Apr  1 22:05:11 2020
 
 
 
-def CreateDirsForShifts(DataDict, ToShiftKey):
+def CreateDirsForShifts(DataDict):
     # Import packages:
     import os
     
@@ -15,6 +15,8 @@ def CreateDirsForShifts(DataDict, ToShiftKey):
     # Get some necessary info from dataDict:
     RootDir = DataDict['RootDir']
     Shift = DataDict['Shift']
+    ShiftFeature = DataDict['ShiftFeature']
+    ToShiftKey = DataDict['ToShiftKey']
     #searchBy = dataDict['SearchBy']
     #RegMethod = DataDict['RegMethod']
     Debug = DataDict['Debug']
@@ -54,8 +56,10 @@ def CreateDirsForShifts(DataDict, ToShiftKey):
         """
         
         # DICOMs whose scan positions are shifted:
-        ShiftedSeriesNo = PreShiftedSeriesNo + '0' + '1'
-        ShiftedSeriesDesc = 'Shifted ' + PreShiftedSeriesDesc
+        #ShiftedSeriesNo = PreShiftedSeriesNo + '0' + '1'
+        ShiftedSeriesNo = PreShiftedSeriesNo + '1'
+        #ShiftedSeriesDesc = 'Shifted ' + PreShiftedSeriesDesc
+        ShiftedSeriesDesc = PreShiftedSeriesDesc + ' Shifted using ' + ShiftFeature
         ShiftedDirName = ShiftedSeriesNo + ' ' + ShiftedSeriesDesc
         ShiftedDicomDir = os.path.join(RootDir, ShiftedDirName + ' DICOMs')
         ShiftedRoiDir = os.path.join(RootDir, ShiftedDirName + ' ROIs')
@@ -69,7 +73,7 @@ def CreateDirsForShifts(DataDict, ToShiftKey):
         
         
         # Create a new key for DataDict that indicates which key was shifted:
-        ShiftedKey = 'Shifted' + ToShiftKey
+        ShiftedKey = 'Shifted' + ToShiftKey # e.g. 'ShiftedTarget'
         
         # Update DataDict:     
         DataDict.update({'ToShiftKey':ToShiftKey, \

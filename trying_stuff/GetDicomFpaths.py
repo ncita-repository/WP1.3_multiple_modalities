@@ -12,10 +12,10 @@ Function:
     GetDicomFpaths()
     
 Purpose:
-    To get list of full file paths for all DICOM files in a given directory
+    To get list of full file paths for all Dicom files in a given directory
     sorted using natsort.
     
-    11/03/20 Note: Even though the DICOMs are sorted in a natural way (e.g.
+    11/03/20 Note: Even though the Dicoms are sorted in a natural way (e.g.
     0000.dcm, 0001.dcm, 0002.dcm) it doesn't guarantee that the files are
     sorted in the sequence of the slices!  So rather than relying on the 
     file names I will need to use the Image Position (Patient) to sort. In the
@@ -24,73 +24,83 @@ Purpose:
     
 
 Input:
-    dirPath    - path to directory containing DICOM files
+    DirPath    - path to directory containing Dicom files
     
-    sortMethod - method to use for sorting of files with acceptable values:
+    SortMethod - method to use for sorting of files with acceptable values:
                 -- 'none' (or 'None' or any other strings) = no sorting
                 -- 'natural' (or 'Natural') = using natsort
                 -- 'slices' (or 'Slices') = sorted along the slice direction 
     
 Returns:
-    filePaths - full file paths of all DICOM files in dirPath either:
+    FilePaths - full file paths of all Dicom files in DirPath either:
                 -- without sorting
                 -- sorted in a natural way (e.g. 3-1, 3-2, ..., 3-10, 3-11, ...
                 rather than 3-1, 3-10, 3-11, ... , 3-2, 3-20, ...)
                 -- sorted along the scan direction (The slice direction
-                will be inferred by considering the min/max positions along the 
+                will be inferred by considering the min/max Positions along the 
                 x, y and z directions.)
 """
 
 
-def GetDicomFpaths(dirPath, sortMethod):
+def GetDicomFpaths(DirPath, SortMethod):
     
     # Import packages:
     import os
     
-    # Create an empty list of all DICOM file paths:
-    filePaths = []
-
-    # Use os to get list of file paths of DICOM-only files:
-    for dirName, subdirList, fileList in os.walk(dirPath):
-        for fileName in fileList:
-            if '.dcm' in fileName.lower():  # check for DICOM files only
-                filePaths.append(os.path.join(dirName,fileName))
+    #print('\nSortMethod (input for GetDicomFpaths()) =', SortMethod)
     
-    if sortMethod in ['natural', 'Natural']:
+    # Create an empty list of all Dicom file paths:
+    FilePaths = []
+
+    # Use os to get list of file paths of Dicom-only files:
+    for DirName, SubDirList, FileList in os.walk(DirPath):
+        for FileName in FileList:
+            if '.dcm' in FileName.lower():  # check for Dicom files only
+                FilePaths.append(os.path.join(DirName,FileName))
+    
+    if SortMethod in ['natural', 'Natural']:
         # Import natsort:
         import natsort
         
         # Sort files in natural way:
-        filePaths = natsort.natsorted(filePaths)
+        FilePaths = natsort.natsorted(FilePaths)
         
-    if sortMethod in ['slices', 'Slices']:
+    if SortMethod in ['slices', 'Slices']:
         # Import packages:
         import pydicom
         import numpy as np
         
-        # Create an empty array to store the positions:
-        positions = []
+        # Create an empty array to store the Positions:
+        Positions = []
         
-        for filePath in filePaths:
-            #print('\nfilePath =', filePath)
+        for FilePath in FilePaths:
+            #print('\nFilePath =', FilePath)
             
-            # Read in DICOM:
-            dicom = pydicom.read_file(filePath)
+            # Read in Dicom:
+            Dicom = pydicom.read_file(FilePath)
             
             # Parse the Image Position (Patient):
-            position = [float(item) for item in dicom.ImagePositionPatient]
+            Position = [float(item) for item in Dicom.ImagePositionPatient]
             
-            # Add position for this DICOM to positions:
-            positions.append(position)
+            # Add Position for this Dicom to Positions:
+            Positions.append(Position)
             
         # Convert to numpy array:
-        positions = np.array(positions)
+        Positions = np.array(Positions)
 
-        # Get the maximum change of positions along x, y and z:
-        dPositions = np.max(positions, axis=0) - np.min(positions, axis=0)
+        # Get the maximum change of Positions along x, y and z:
+        dPositions = np.max(Positions, axis=0) - np.min(Positions, axis=0)
 
-        # Get the index of the axis with the greatest change of position:
+        # Get the index of the axis with the greatest change of Position:
         ind = np.where(dPositions==np.max(dPositions))[0][0]
+        
+        # Convert ind to 'x', 'y' or 'z':
+        if ind == 0:
+            SortAxis = 'x'
+        if ind == 1:
+            SortAxis = 'y'
+        if ind == 2:
+            SortAxis = 'z'
         
         """
         Solution on how to sort along a specific column:
@@ -99,19 +109,22 @@ def GetDicomFpaths(dirPath, sortMethod):
         
         The following are equivalent:
         
-        positions[positions[:, 2].argsort()]
-        positions[np.argsort(positions[:, 1])]
+        Positions[Positions[:, 2].argsort()]
+        Positions[np.argsort(Positions[:, 1])]
         
         """
         
-        sortInds = positions[:, ind].argsort()
+        SortInds = Positions[:, ind].argsort()
         
-        #positionsSorted = positions[sortInds]
+        #PositionsSorted = Positions[SortInds]
         
-        # Sort filepaths with sortInds:
-        #filePaths = filePaths[sortInds] # <-- TypeError: list indices must be 
+        print('\n   The Dicom FilePaths will be sorted along the', SortAxis, \
+              'positions.')
+        
+        # Sort FilePaths with SortInds:
+        #FilePaths = FilePaths[SortInds] # <-- TypeError: list indices must be 
         # integers or slices, not list
-        filePaths = [filePaths[i] for i in sortInds]
+        FilePaths = [FilePaths[i] for i in SortInds]
         
     
-    return filePaths
+    return FilePaths

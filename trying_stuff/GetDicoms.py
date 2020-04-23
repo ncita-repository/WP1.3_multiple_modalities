@@ -33,8 +33,13 @@ def GetDicoms(DirPath, SortMethod):
     
     # Import packages:
     import pydicom
+    import importlib
     #from DicomHelperFuncs import GetDicomFpaths
+    import GetDicomFpaths
+    importlib.reload(GetDicomFpaths)
     from GetDicomFpaths import GetDicomFpaths
+    
+    #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
     
     # Get the filepaths of the DICOM files:
     fpaths = GetDicomFpaths(DirPath, SortMethod)

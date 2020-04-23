@@ -197,15 +197,15 @@ def GetClosestSlices(SourceDicoms, TargetDicoms, DataDict):
         
 
     if True:#Debug:
-        print(f'\nThere were {len(SourceDicoms)} in SourceDicoms,', \
+        print(f'\nThere are {len(SourceDicoms)} slices in SourceDicoms,', \
               f'and {len(TargetDicoms)} in TargetDicoms.')
-        print(f'\nSourceToTargetMapping (N = {len(SourceToTargetMapping)}) =',\
+        print(f'\nSourceToTargetMapping (N = {len(SourceToTargetMapping)}):\n\n',\
               SourceToTargetMapping)
-        print(f'\nSourceToTargetScanPosDiffs (N = {len(SourceToTargetScanPosDiffs)}) =',\
+        print(f'\nSourceToTargetScanPosDiffs (N = {len(SourceToTargetScanPosDiffs)}):\n\n',\
               [round(item,2) for item in SourceToTargetScanPosDiffs])
-        print(f'\nTargetToSourceMapping (N = {len(TargetToSourceMapping)}) =',\
+        print(f'\nTargetToSourceMapping (N = {len(TargetToSourceMapping)}):\n\n',\
               TargetToSourceMapping)
-        print(f'\nTargetToSourceScanPosDiffs (N = {len(TargetToSourceScanPosDiffs)}) =',\
+        print(f'\nTargetToSourceScanPosDiffs (N = {len(TargetToSourceScanPosDiffs)}):\n\n',\
               [round(item,2) for item in TargetToSourceScanPosDiffs])
       
         

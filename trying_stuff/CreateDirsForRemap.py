@@ -7,13 +7,15 @@ Created on Thu Apr  2 14:52:34 2020
 
 
 
-def CreateDirsForRemap(DataDict, ToRemapKey):
+def CreateDirsForRemap(DataDict):
     # Import packages:
     import os
     
     
     # Get some necessary info from dataDict:
     RootDir = DataDict['RootDir']
+    ToRemapKey = DataDict['ToRemapKey']
+    ForRemapKey = DataDict['ForRemapKey']
     #Shift = DataDict['Shift']
     #searchBy = dataDict['SearchBy']
     #RegMethod = DataDict['RegMethod']
@@ -26,6 +28,10 @@ def CreateDirsForRemap(DataDict, ToRemapKey):
     PreRemappedSeriesDesc = DataDict[ToRemapKey]['SeriesDesc']
     PreRemappedSliceNos = DataDict[ToRemapKey]['SliceNos']
     
+    # Use ForRemapKey to get details of the series that the remapping is to
+    # match in slice number:
+    RemapForSeriesNo = DataDict[ForRemapKey]['SeriesNo']
+    RemapForSeriesDesc = DataDict[ForRemapKey]['SeriesDesc']
     
   
     """
@@ -48,9 +54,12 @@ def CreateDirsForRemap(DataDict, ToRemapKey):
     
     # DICOMs whose scan positions are shifted:
     #RemappedSeriesNo = PreRemappedSeriesNo + '0' + '1'
-    RemappedSeriesNo = PreRemappedSeriesNo + '1'
+    #RemappedSeriesNo = PreRemappedSeriesNo + '1'
+    #RemappedSeriesNo = PreRemappedSeriesNo + '010' + RemapForSeriesNo
+    RemappedSeriesNo = PreRemappedSeriesNo + '0' + RemapForSeriesNo
     #RemappedSeriesDesc = PreRemappedSeriesDesc + ' Remapped' 
-    RemappedSeriesDesc = 'Remapped ' + PreRemappedSeriesDesc
+    #RemappedSeriesDesc = 'Remapped ' + PreRemappedSeriesDesc
+    RemappedSeriesDesc = PreRemappedSeriesDesc + ' Remapped for ' + RemapForSeriesDesc
     RemappedDirName = RemappedSeriesNo + ' ' + RemappedSeriesDesc
     RemappedDicomDir = os.path.join(RootDir, RemappedDirName + ' DICOMs')
     RemappedRoiDir = os.path.join(RootDir, RemappedDirName + ' ROIs')

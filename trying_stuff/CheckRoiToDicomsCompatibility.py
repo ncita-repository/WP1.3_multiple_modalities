@@ -42,6 +42,7 @@ def CheckRoiToDicomsCompatibility(DataDict, CheckKey):
     Roi = pydicom.dcmread(DataDict[CheckKey]['RoiFpath'])
     
     
+    
     # Count the number of tags that do not match:
     errors = 0
     
@@ -199,6 +200,18 @@ def CheckRoiToDicomsCompatibility(DataDict, CheckKey):
         errors = errors + 1
         
         
+        
+    # Print some tag values:
+    print('\nDICOM Study Instance UID                              =', Dicoms[0].StudyInstanceUID)
+    print('ROI Study Instance UID                                =', Roi.StudyInstanceUID)
+    print('ROI Referenced SOP Instance UID                       =', RefSopUid)
+    print('\nDICOM Series Instance UID                             =', Dicoms[0].SeriesInstanceUID)
+    print('ROI Series Instance UID                               =', Roi.SeriesInstanceUID)
+    print('ROI RT Referenced Series Sequence Series Instance UID =', RTRefSeriesSeqSeriesUid)
+    print('\nDICOM Frame Of Reference UID                          =', Dicoms[0].FrameOfReferenceUID)
+    print('ROI Frame Of Reference UID                            =', Roi.FrameOfReferenceUID)
+    print('ROI Referenced Frame Of Reference UID                 =', RefFORUid)
+    
     
     # Final report:
     if errors > 0:

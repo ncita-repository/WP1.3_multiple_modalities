@@ -7,7 +7,7 @@ Created on Thu Apr  2 10:46:00 2020
 
 
 
-def CreateDirsForReg(DataDict, FixedKey, MovingKey, RegisteredKey):
+def CreateDirsForReg(DataDict):
     # Import packages:
     import os
     
@@ -17,6 +17,9 @@ def CreateDirsForReg(DataDict, FixedKey, MovingKey, RegisteredKey):
     Shift = DataDict['Shift']
     #searchBy = dataDict['SearchBy']
     RegMethod = DataDict['RegMethod']
+    FixedKey = DataDict['FixedKey']
+    MovingKey = DataDict['MovingKey']
+    RegisteredKey = DataDict['RegisteredKey']
     Debug = DataDict['Debug']
     
     if False:
@@ -95,10 +98,13 @@ def CreateDirsForReg(DataDict, FixedKey, MovingKey, RegisteredKey):
         # where N = 1/2/3 for RegMethod = 'fixed'/'affine'/'non-rigid':
         if RegMethod=='rigid':
             N = '010'
+            #N = '333'
         elif RegMethod=='affine':
             N = '020'
+            #N = '444'
         elif RegMethod=='non-rigid':
             N = '030'
+            #N = '555'
             
         RegisteredSeriesNo = MovingSeriesNo + N + FixedSeriesNo
         

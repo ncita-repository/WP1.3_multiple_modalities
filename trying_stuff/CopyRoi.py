@@ -64,6 +64,10 @@ Input:
                            SearchBy.
                            Acceptable values are any float.  Note that if
                            SearchBy='r' the correction will not be applied.
+                           
+    ShiftFeature           - The feature that was used to manually determine
+                           the required Shift (e.g. 'lens of eye', 
+                           'peak of nose', 'butterfly-like structure in brain')
                         
     RegMethod              - Type of registration to perform on the DICOM scan
                            (collection) that the ROI Collection is to be copied
@@ -140,12 +144,12 @@ Returns:
 
 
     
-def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
+def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, \
             SourceRoiProjLabel, SourceRoiSubjLabel, SourceRoiExpLabel, \
             SourceRoiLabelDateTime, SourceSeriesNo, SourceSeriesDesc, \
             TargetDicomProjLabel, TargetDicomSubjLabel, TargetDicomExpLabel, \
             TargetSeriesNo, TargetSeriesDesc, \
-            SearchBy, Shift, RegMethod, DelDicoms, RerunReg, Debug):
+            SearchBy, Shift, ShiftFeature, RegMethod, DelDicoms, RerunReg, Debug):
     
     # IMPORT PACKAGES AND FUNCTIONS:
     import time, os, shutil
@@ -164,6 +168,10 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     importlib.reload(DownloadFilesForRoiCopy)
     from DownloadFilesForRoiCopy import DownloadFilesForRoiCopy
     
+    import GetDicomFpaths
+    importlib.reload(GetDicomFpaths)
+    from GetDicomFpaths import GetDicomFpaths
+    
     import GetDicoms
     importlib.reload(GetDicoms)
     from GetDicoms import GetDicoms
@@ -171,6 +179,10 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     import GetSopUids
     importlib.reload(GetSopUids)
     from GetSopUids import GetSopUids
+    
+    import GetScanPositions
+    importlib.reload(GetScanPositions)
+    from GetScanPositions import GetScanPositions
     
     import CreateDirsForShifts
     importlib.reload(CreateDirsForShifts)
@@ -235,7 +247,9 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     # Assign the root directory:
     #RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel \
     #                       + ' - ' + SourceRoiExpLabel + ' - ' + TargetDicomExpLabel)
-    RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel)
+    #RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel)
+    RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel \
+                           + ' ' + CopyFrom + ' to ' + CopyTo)
     
     """
     If registration is to be applied to the second DICOM scan, the ROIs from
@@ -269,6 +283,7 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
                 # Add the other variables:
                 'RootDir':RootDir, \
                 'Shift':Shift, \
+                'ShiftFeature':ShiftFeature, \
                 'SearchBy':SearchBy, \
                 'RegMethod':RegMethod, \
                 'Debug':Debug, \
@@ -412,15 +427,18 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
 
     
     
-    """ GET THE SOP INSTANCE UIDs OF THE SOURCE DICOMs: """
+    """ GET THE SOP INSTANCE UIDs AND SCAN POSITIONS OF THE SOURCE DICOMs: """
     
-    print('\n\nGetting the SOP Instance UIDs for', \
+    print('\n\nGetting the SOP Instance UIDs and scan positions for', \
           DataDict['Source']['SeriesDesc'], '...')
     
     SourceSopUids = GetSopUids(SourceDicoms)
+    
+    SourceScanPos = GetScanPositions(SourceDicoms, SearchBy)
         
-    # ADD SourceSopUids TO dataDict:
+    # ADD SourceSopUids and SourceScanPositions TO dataDict:
     DataDict['Source'].update({'SopUids':SourceSopUids})
+    DataDict['Source'].update({'ScanPos':SourceScanPos})
                 
 
     
@@ -438,15 +456,18 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
 
     
     
-    """ GET THE SOP INSTANCE UIDs OF THE TARGET DICOMs: """
+    """ GET THE SOP INSTANCE UIDs AND SCAN POSITIONS OF THE TARGET DICOMs: """
     
-    print('\n\nGetting the SOP Instance UIDs for', \
+    print('\n\nGetting the SOP Instance UIDs and scan positions for', \
           DataDict['Target']['SeriesDesc'], '...')
     
     TargetSopUids = GetSopUids(TargetDicoms)
+    
+    TargetScanPos = GetScanPositions(TargetDicoms, SearchBy)
         
     # ADD TargetSopUids TO dataDict:
     DataDict['Target'].update({'SopUids':TargetSopUids})
+    DataDict['Target'].update({'ScanPos':TargetScanPos})
                 
 
     
@@ -474,7 +495,10 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
         # The key of the series to be shifted:
         ToShiftKey = 'Target'
         
-        DataDict = CreateDirsForShifts(DataDict, ToShiftKey)
+        # Store ToShiftKey in DataDict:
+        DataDict.update({'ToShiftKey':ToShiftKey})
+        
+        DataDict = CreateDirsForShifts(DataDict)
         
         if Debug:
             print('\nKeys in DataDict after running CreateDirsForShifts:\n', \
@@ -490,6 +514,17 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
         if Debug:
             print('\nSeries Description of ShiftedTarget after ShiftDicoms() =', \
                   DataDict['ShiftedTarget']['SeriesDesc'])
+              
+            
+        print('\nThe source scan positions are:\n\n', \
+              DataDict['Source']['ScanPos'])
+            
+        print('\nThe pre-shifted scan positions were:\n\n', \
+              DataDict['Target']['ScanPos'])
+        
+        print('\nThe post-shifted scan positions are:\n\n', \
+              DataDict['ShiftedTarget']['ScanPos'])
+        
     else:
         ShiftedDicoms = []
 
@@ -512,13 +547,21 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     (using the z-coordinate to find the nearest slice): """
     
     print('\n\nGetting the indeces that map each slice in', \
-              DataDict['Target']['DicomExpLabel'], 'to each slice in ', \
-              DataDict['Source']['RoiExpLabel'], '...')
+          DataDict['Target']['DicomExpLabel'], '\nto each slice in', \
+          DataDict['Source']['RoiExpLabel'], '...')
     
     if Shift:
+        #print('\n\nGetting the indeces that map each slice in', \
+        #      DataDict['ShiftedTarget']['DicomExpLabel'], 'to each slice in ', \
+        #      DataDict['Source']['RoiExpLabel'], '...')
+        
         DataDict = GetClosestSlices(SourceDicoms, ShiftedDicoms, DataDict)
         
     else:
+        #print('\n\nGetting the indeces that map each slice in', \
+        #      DataDict['Target']['DicomExpLabel'], 'to each slice in ', \
+        #      DataDict['Source']['RoiExpLabel'], '...')
+        
         DataDict = GetClosestSlices(SourceDicoms, TargetDicoms, DataDict)
     
     #return SourceDicoms, 0, TargetDicoms, 0, PosCorrDicoms, MappedDicoms, 0, DataDict
@@ -538,43 +581,96 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     """ (This will be useful for performing registrations) """
     if len(SourceDicoms) != len(TargetDicoms):
         if len(SourceDicoms) > len(TargetDicoms):
-            # The key of the series to be remapped:
-            ToRemapKey = 'Source'
-            
-            print('\nThere are more slices SourceDicoms than in TargetDicoms', \
-                  'so', ToRemapKey, 'will be remapped.')
-            
-            """ CREATE DIRECTORIES FOR REMAPPED DICOMS AND ROIS: """   
-            DataDict = CreateDirsForRemap(DataDict, ToRemapKey)
-            
-            """ RE-MAP SourceDicoms: """
-            RemappedDicoms, DataDict = RemapDicoms(SourceDicoms, DataDict)
+            """ April 23:  Added if Shift statement. """
+            if Shift:
+                """ April 23:  This section is new (i.e. case where Shift != 0
+                was not previously accounted for). """
+                # The key of the series to be remapped:
+                ToRemapKey = 'Source'
+                ForRemapKey = DataDict['ShiftedKey']
+                
+                # Store ToRemapKey and ForRemapKey in DataDict:
+                DataDict.update({'ToRemapKey':ToRemapKey})
+                DataDict.update({'ForRemapKey':ForRemapKey})
+                
+                print('\nThere are more slices SourceDicoms than in TargetDicoms', \
+                      'so', ToRemapKey, 'will be remapped.')
+                
+                """ CREATE DIRECTORIES FOR REMAPPED DICOMS AND ROIS: """   
+                DataDict = CreateDirsForRemap(DataDict)
+                
+                """ RE-MAP SourceDicoms: """
+                RemappedDicoms, DataDict = RemapDicoms(SourceDicoms, DataDict)
+                
+            else:
+                """ April 23: This section below was present only (i.e. the
+                following was being run even if Shift != 0). """
+                # The key of the series to be remapped:
+                ToRemapKey = 'Source'
+                ForRemapKey = 'Target'
+                
+                # Store ToRemapKey and ForRemapKey in DataDict:
+                DataDict.update({'ToRemapKey':ToRemapKey})
+                DataDict.update({'ForRemapKey':ForRemapKey})
+                
+                print('\nThere are more slices SourceDicoms than in TargetDicoms', \
+                      'so', ToRemapKey, 'will be remapped.')
+                
+                """ CREATE DIRECTORIES FOR REMAPPED DICOMS AND ROIS: """   
+                DataDict = CreateDirsForRemap(DataDict)
+                
+                """ RE-MAP SourceDicoms: """
+                RemappedDicoms, DataDict = RemapDicoms(SourceDicoms, DataDict)
         
         elif len(SourceDicoms) < len(TargetDicoms):
             if Shift:
                 # The key of the series to be remapped:
                 ToRemapKey = DataDict['ShiftedKey']
+                ForRemapKey = 'Source'
+                
+                # Store ToRemapKey and ForRemapKey in DataDict:
+                DataDict.update({'ToRemapKey':ToRemapKey})
+                DataDict.update({'ForRemapKey':ForRemapKey})
                 
                 print('\nThere are fewer slices in SourceDicoms than in', \
                   'TargetDicoms so', ToRemapKey, 'will be remapped.')
                 
                 """ CREATE DIRECTORIES FOR REMAPPED DICOMS AND ROIS: """   
-                DataDict = CreateDirsForRemap(DataDict, ToRemapKey)
+                DataDict = CreateDirsForRemap(DataDict)
             
                 """ RE-MAP ShiftedTargetDicoms: """
                 RemappedDicoms, DataDict = RemapDicoms(ShiftedDicoms, DataDict)
             else:
                 # The key of the series to be remapped:
                 ToRemapKey = 'Target'
+                ForRemapKey = 'Source'
+                
+                # Store ToRemapKey and ForRemapKey in DataDict:
+                DataDict.update({'ToRemapKey':ToRemapKey})
+                DataDict.update({'ForRemapKey':ForRemapKey})
                 
                 print('\nThere are fewer slices in SourceDicoms than in', \
                   'TargetDicoms so', ToRemapKey, 'will be remapped.')
                 
                 """ CREATE DIRECTORIES FOR REMAPPED DICOMS AND ROIS: """   
-                DataDict = CreateDirsForRemap(DataDict, ToRemapKey)
+                DataDict = CreateDirsForRemap(DataDict)
                 
                 """ RE-MAP TargetDicoms: """
                 RemappedDicoms, DataDict = RemapDicoms(TargetDicoms, DataDict)
+                
+          
+        
+        
+        print('\nThe pre-remapped', ToRemapKey, 'scan positions were:\n\n', \
+              DataDict[ToRemapKey]['ScanPos'])
+        
+        print('\nThe post-remapped', ToRemapKey, 'scan positions are:\n\n', \
+              DataDict[DataDict['RemappedKey']]['ScanPos'])
+        
+        print('\nThe scan positions of the DICOMs that the remapping was', \
+              'for (' + ForRemapKey + ') are:\n\n', \
+              DataDict[ForRemapKey]['ScanPos'])
+                
     else:
         print('\nThere are equal numbers of slices in SourceDicoms and', \
               'TargetDicoms so no DICOMs will be remapped.')
@@ -585,6 +681,8 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
     
     #return FromDicoms, 0, ToDicoms, 0, ShiftedDicoms, 0, \
     #       RemappedDicoms, 0, 0, 0, DataDict
+    
+           
     
     print('\n***********************************************************' \
           + '************************************************************' \
@@ -626,9 +724,9 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
                     # And the corresponding DICOMs:
                     MovingDicoms = copy.deepcopy(MovingDicoms)
                     
-                print('\nThere are more slices SourceDicoms than in', \
-                      'TargetDicoms so FixedKey =', FixedKey, \
-                      ', and MovingKey =', MovingKey, '.')
+                print('\nThere are more slices in SourceDicoms than in ' \
+                      + 'TargetDicoms so FixedKey = ' + FixedKey \
+                      + ', and MovingKey = ' + MovingKey, '.')
             
             elif len(SourceDicoms) < len(TargetDicoms):
                 # The key of the series to be fixed:
@@ -643,9 +741,9 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
                 # And the corresponding DICOMs:
                 MovingDicoms = copy.deepcopy(RemappedDicoms)
                     
-                print('\nThere are fewer slices in SourceDicoms than in', \
-                  'TargetDicoms so FixedKey =', FixedKey, \
-                  ', and MovingKey =', MovingKey, '.')
+                print('\nThere are fewer slices in SourceDicoms than in ' \
+                  + 'TargetDicoms, so FixedKey = ' + FixedKey \
+                  + ', and MovingKey = ' + MovingKey + '.')
                 
         else:
             # The key of the series to be fixed:
@@ -667,18 +765,41 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
                 # And the corresponding DICOMs:
                 MovingDicoms = copy.deepcopy(TargetDicoms)
                 
-            print('\nThere are equal numbers of slices in SourceDicoms and', \
-                  'TargetDicoms so FixedKey =', FixedKey, \
-                  ', and MovingKey =', MovingKey, '.')
+            print('\nThere are equal numbers of slices in SourceDicoms and ' \
+                  + 'TargetDicoms, so FixedKey = ' + FixedKey \
+                  + ', and MovingKey = ' + MovingKey + '.')
             
+            
+        # Store FixedKey, MovingKey and RegisteredKey in DataDict:
+        DataDict.update({'FixedKey':FixedKey})
+        DataDict.update({'MovingKey':MovingKey})
+        DataDict.update({'RegisteredKey':RegisteredKey})
             
         """ CREATE DIRECTORIES FOR REGISTERED DICOMS AND ROIS: """  
-        DataDict = CreateDirsForReg(DataDict, FixedKey, MovingKey, RegisteredKey)
+        DataDict = CreateDirsForReg(DataDict)
         
         
-        print('\nKeys in DataDict after running CreateDirsForReg:\n', \
+        print('\nKeys in DataDict after running CreateDirsForReg:\n\n', \
                   DataDict.keys())
         
+        
+        """ GET THE POSITIONAL DIFFERENCES BETWEEN THE SLICES IN FixedDicoms
+        AND MovingDicoms: """
+        
+        FixedToMovingScanPosDiffs = [DataDict[MovingKey]['ScanPos'][i] \
+                                     - DataDict[FixedKey]['ScanPos'][i] \
+                                     for i in range(len(FixedDicoms))]
+        
+        # Add to DataDict:
+        DataDict.update({'FixedToMovingScanPosDiffs':FixedToMovingScanPosDiffs}) 
+        
+        
+        """ APRIL 23:  Return before Registration for debugging: """
+        #return SourceDicoms, SourceRois, TargetDicoms, TargetRois, \
+        #   ShiftedDicoms, ShiftedRois, RemappedDicoms, RemappedRois, \
+        #   FixedDicoms, FixedRois, MovingDicoms, MovingRois, \
+        #   RegisteredDicoms, RegisteredRois, DataDict 
+           
         
         """ APPLY REGISTRATION: """
         
@@ -973,7 +1094,7 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, \
             # Plot the registration results:            
             DataDict = PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms,\
                                       FixedRois, MovingRois, RegisteredRois,\
-                                      DataDict, FixedKey, MovingKey, RegisteredKey)
+                                      DataDict)
         
 
 

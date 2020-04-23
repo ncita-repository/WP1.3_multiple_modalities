@@ -9,7 +9,7 @@ Created on Wed Apr  1 13:44:00 2020
 
 
 
-def ShiftDicoms(PreShifteddDicoms, DataDict):
+def ShiftDicoms(PreShiftedDicoms, DataDict):
     
     # Import packages:
     import copy
@@ -23,7 +23,7 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
     Shift = DataDict['Shift']
     Debug = DataDict['Debug']
     #OldFpaths = DataDict['Target']['DicomFpaths'] # assume shift will always be
-    # applied to PreShifteddDicoms in 'To' key
+    # applied to PreShiftedDicoms in 'To' key
     #ShiftedDicomDir = DataDict['Shifted']['DicomDir']
     #ShiftedDicomDir = DataDict['To']['DicomDir'] # this will be modified later
     #""" actually ShiftedDicomDir is not modified later """
@@ -47,9 +47,12 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
     ShiftedDicomDir = DataDict[ShiftedKey]['DicomDir']
     ShiftedSeriesNo = DataDict[ShiftedKey]['SeriesNo']
     
+    # Get the number of DICOMs:
+    N = len(PreShiftedDicoms)
     
-    # Get the Image Position (Patient) for all PreShifteddDicoms:
-    PreShiftedPositions = [PreShifteddDicoms[i].ImagePositionPatient for i in range(len(PreShifteddDicoms))]
+    # Get the Image Position (Patient) for all PreShiftedDicoms:
+    PreShiftedPositions = [PreShiftedDicoms[i].ImagePositionPatient for i in range(N)]
+    
     
     # Copy the old positions:
     #ShiftedPositions = copy.deepcopy(PreShiftedPositions)
@@ -61,20 +64,24 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
     if SearchBy=='x':
         ShiftedPositions = [[PreShiftedPositions[i][0] + Shift, \
                              PreShiftedPositions[i][1], \
-                             PreShiftedPositions[i][2]
-                             ] for i in range(len(PreShiftedPositions))]
+                             PreShiftedPositions[i][2]] for i in range(N)]
+        
+        ShiftedScanPositions = [float(ShiftedPositions[i][0]) for i in range(N)]
     
     if SearchBy=='y':
         ShiftedPositions = [[PreShiftedPositions[i][0], \
                              PreShiftedPositions[i][1] + Shift, \
-                             PreShiftedPositions[i][2]
-                             ] for i in range(len(PreShiftedPositions))]
+                             PreShiftedPositions[i][2]] for i in range(N)]
+
+        ShiftedScanPositions = [float(ShiftedPositions[i][1]) for i in range(N)]
 
     if SearchBy=='z':
         ShiftedPositions = [[PreShiftedPositions[i][0], \
                              PreShiftedPositions[i][1], \
-                             PreShiftedPositions[i][2] + Shift
-                             ] for i in range(len(PreShiftedPositions))]
+                             PreShiftedPositions[i][2] + Shift] for i in range(N)]
+        
+        ShiftedScanPositions = [float(ShiftedPositions[i][2]) for i in range(N)]
+
     
     
     if Debug:
@@ -83,7 +90,7 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
             
         
     # Create new list of DICOM objects by copying the original list:
-    ShiftedDicoms = copy.deepcopy(PreShifteddDicoms)
+    ShiftedDicoms = copy.deepcopy(PreShiftedDicoms)
         
     """
     The Study Instance UID and Frame of Reference UID of the scan-position-
@@ -99,7 +106,7 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
     ShiftedSeriesUid = pydicom.uid.generate_uid()
     
     # Get the Series Description of the first DICOM:
-    #OldSeriesDesc = PreShifteddDicoms[0].SeriesDescription
+    #OldSeriesDesc = PreShiftedDicoms[0].SeriesDescription
     
     # Create a new Series Description by appending info about the shift that
     # was applied to the original Series Description:
@@ -179,6 +186,7 @@ def ShiftDicoms(PreShifteddDicoms, DataDict):
     #DataDict[ShiftedKey]['SeriesDesc'] = NewSeriesDesc
     DataDict[ShiftedKey]['SeriesDesc'] = ShiftedSeriesDesc
     DataDict[ShiftedKey]['SliceNos'] = DataDict[ToShiftKey]['SliceNos'] # make ='ToShiftKey'
+    DataDict[ShiftedKey]['ScanPos'] = ShiftedScanPositions
     
     
     return ShiftedDicoms, DataDict

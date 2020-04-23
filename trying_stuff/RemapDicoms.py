@@ -26,9 +26,11 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
     #import numpy as np
     #import importlib
     from CreateDir import CreateDir
+    from GetScanPositions import GetScanPositions
     
     
     # Get some necessary info from DataDict:
+    SearchBy = DataDict['SearchBy']
     Debug = DataDict['Debug']
     #MappingInds = DataDict['Mapping']['MappingInds']
     
@@ -53,10 +55,17 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
     RemappedDicoms = [PreRemappedDicoms[ind] for ind in MappingInds]
     RemappedSliceNos = [PreRemappedSliceNos[ind] for ind in MappingInds]
     
-    print('\nPreRemappedSliceNos =', PreRemappedSliceNos)
-    print('\nlen(PreRemappedSliceNos) =', len(PreRemappedSliceNos))
-    print('\nRemappedSliceNos =', RemappedSliceNos)
-    print('\nlen(RemappedSliceNos) =', len(RemappedSliceNos))
+    # Get the scan positions of the remapped DICOMs:
+    RemappedScanPos = GetScanPositions(RemappedDicoms, SearchBy)
+    
+    
+    if Debug:
+        print('\nPreRemappedSliceNos =', PreRemappedSliceNos)
+        print('\nlen(PreRemappedSliceNos) =', len(PreRemappedSliceNos))
+        print('\nRemappedSliceNos =', RemappedSliceNos)
+        print('\nlen(RemappedSliceNos) =', len(RemappedSliceNos))
+        print('\nRemappedScanPos =', RemappedScanPos)
+        print('\nlen(RemappedScanPos) =', len(RemappedScanPos))
     
     
     # The key of the remapped series:
@@ -182,6 +191,8 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
     DataDict[RemappedKey].update({'DicomFpaths':RemappedFpaths})
     DataDict[RemappedKey].update({'SopUids':RemappedSopUids})
     DataDict[RemappedKey].update({'SliceNos':RemappedSliceNos})
+    DataDict[RemappedKey].update({'ScanPos':RemappedScanPos})
+    
     
     
     return RemappedDicoms, DataDict 

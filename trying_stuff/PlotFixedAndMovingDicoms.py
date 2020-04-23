@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 27 17:32:03 2020
+Created on Thu Apr 23 11:21:53 2020
 
 @author: ctorti
 """
 
 
+
+
 """
 Function:
-    PlotRegResults()
+    PlotFixedAndMovingDicoms()
     
 Purpose:
-    Plot registration results.  The plot will contain an R x C array of 
-    sub-plots for all R DICOMs contained in the arrays of DICOMs FixedDicoms,
-    MovingDicoms and RegisteredDicoms (C = 3), with contours overlaid from 
-    their corresponding ROI objects FixedRois, MovingRois and RegisteredRois.
+    Plot the DICOMs that will be inputted to the function RegisterDicoms().  
+    The plot will contain an R x C array of sub-plots for all R DICOMs 
+    contained in the arrays of DICOMs FixedDicoms and MovingDicoms (C = 2).
 
 Input:
     FixedDicoms      - array of DICOM objects used as "fixed" DICOMs in the
@@ -23,14 +24,6 @@ Input:
     MovingDicoms     - array of DICOM objects used as "moving" DICOMs in the
                        registration
     
-    RegisteredDicoms - array of registered DICOM objects
-    
-    FixedRois        - ROI object for FixedDicoms
-    
-    MovingRois       - ROI object for MovingDicoms
-    
-    RegisteredRois   - ROI object for RegisteredDicoms
-    
     DataDict         - dictionary of variables passed from previous functions
     
     FixedKey         - the key in DataDict that contains info of the data used
@@ -38,66 +31,59 @@ Input:
     
     MovingKey        - the key in DataDict that contains info of the data used
                        as moving input to the registration
-    
+                       
     RegisteredKey    - the key in DataDict that contains info of the registered
                        data
     
-
     
 Returns:
-    DataDict         - updated dictionary
+    N/A
     
 """
 
 
 
-def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
-                   FixedRois, MovingRois, RegisteredRois, DataDict):
+def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
     
     # Import packages:
     #import pydicom
     import matplotlib.pyplot as plt
     import numpy as np
     import time, os
-    import importlib
-    import GetContourPoints
-    importlib.reload(GetContourPoints)
-    from GetContourPoints import GetContourPoints
+    #import importlib
+    #import GetContourPoints
+    #importlib.reload(GetContourPoints)
+    #from GetContourPoints import GetContourPoints
     import textwrap
+    
     
     # Get the keys for the fixed, moving and registered DICOMs:
     FixedKey = DataDict['FixedKey']
     MovingKey = DataDict['MovingKey']
     RegisteredKey = DataDict['RegisteredKey']
     
-    
     # Combine all DICOMs into an array:
-    AllDicoms = [FixedDicoms, MovingDicoms, RegisteredDicoms]
-    
-    # Combine all ROIs into an array:
-    AllRois = [FixedRois, MovingRois, RegisteredRois]
+    AllDicoms = [FixedDicoms, MovingDicoms]
     
     # Get the slice numbers:
     FixedSliceNos = DataDict[FixedKey]['SliceNos']
     MovingSliceNos = DataDict[MovingKey]['SliceNos']
-    RegisteredSliceNos = DataDict[RegisteredKey]['SliceNos']
             
     # Combine all SliceNos into an array:
-    AllSliceNos = [FixedSliceNos, MovingSliceNos, RegisteredSliceNos]
+    AllSliceNos = [FixedSliceNos, MovingSliceNos]
     
     # Get the scan positions:
     FixedScanPos = DataDict[FixedKey]['ScanPos']
     MovingScanPos = DataDict[MovingKey]['ScanPos']
-    RegisteredScanPos = DataDict[RegisteredKey]['ScanPos']
-            
-    # Combine all scan positions into an array:
-    AllScanPos = [FixedScanPos, MovingScanPos, RegisteredScanPos]
     
     # Get the scan position differences:
     FixedToMovingScanPosDiffs = DataDict['FixedToMovingScanPosDiffs']
+            
+    # Combine all scan positions into an array:
+    AllScanPos = [FixedScanPos, MovingScanPos]
     
     # Create array of string for plotting purposes:
-    AllNames = ['Fixed', 'Moving', 'Registered']
+    AllNames = ['Fixed', 'Moving']
     
     
     # Create the filepath for the exported plot:
@@ -109,7 +95,7 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
     ShiftFeature = DataDict['ShiftFeature']
     
     # Create the filename for the exported plot:
-    PlotFname = 'Registration results using ' + ShiftFeature + ' ' \
+    PlotFname = 'Fixed and Moving DICOMs using ' + ShiftFeature + ' ' \
                 + CurrentDateTime + '.jpg'
     
     # Define the directory to export the plot:
@@ -164,11 +150,10 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
             #print(f'   This Dicom has {len(AllDicoms[c])} slices.')
             #print(f'\nPlotting {r}th row in {c}th col:' \
             #      + AllNames[c] + ' objects..')
-                        
-            # Get the DICOM, ROI, slice number, scan position and scan  
-            # positionaldifference for this row and column:
+            
+            # Get the DICOM, slice number, scan position and scan positional 
+            # difference for this row and column:
             Dicom = AllDicoms[c][r]
-            Roi = AllRois[c]
             SliceNo = AllSliceNos[c][r]
             ScanPos = AllScanPos[c][r]
             ScanPosDiff = FixedToMovingScanPosDiffs[r]
@@ -178,12 +163,6 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
                 positional difference is -FixedToMovingScanPosDiffs. """
             if c == 0:
                 ScanPosDiff = - ScanPosDiff
-            
-            # Get the array of flattened Contour Points:
-            ContourPoints = GetContourPoints(Dicom, Roi)
-            
-            # The number of contours:
-            Ncontours = len(ContourPoints)
             
             # Get the pixel array:
             PixArray = Dicom.pixel_array
@@ -207,6 +186,8 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
                 plt.pcolormesh(np.flipud(PixArray));
             else:
                 plt.pcolormesh(PixArray);
+                
+            
             
             plt.title(f'Slice number = {SliceNo} in\n' 
                       #+ SeriesDesc \
@@ -216,30 +197,6 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
             plt.axis('off');
             
             
-            """ April 7:  Need to check this """
-            
-            # Plot the contour(s):
-            """ Only plot the contours over the Fixed DICOMs and their copies
-            over the registered DICOMs (so only for c=0 or c=2). """
-            if Ncontours > 0 and c in [0, 2]:   
-                for c in range(Ncontours):
-                    # Unpack tuple and store each x,y tuple in arrays X and Y:
-                    X = []
-                    Y = []
-                    for x, y in ContourPoints[c]:
-                        X.append(x)
-                        Y.append(y)
-            
-                    # Flip Y pixel coordinates if flip=True:
-                    if flip:
-                        N_r, N_c = np.shape(PixArray)
-            
-                        Y = N_c - np.array(Y)
-            
-                    plt.plot(X, Y, linewidth=0.5, c='red');
-            #else:
-            #    print(f'\nNo countours available for slice no. {r}')
-            
        
     # Export the plot:
     plt.savefig(PlotFpath, bbox_inches='tight')
@@ -248,8 +205,7 @@ def PlotRegResults(FixedDicoms, MovingDicoms, RegisteredDicoms, \
     
     
     # Update the dictionary:
-    DataDict.update({'PlotFpath':PlotFpath})
+    #DataDict.update({'PlotFpath':PlotFpath})
     
-    return DataDict
- 
-            
+    #return DataDict
+    return

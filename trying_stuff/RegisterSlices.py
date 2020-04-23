@@ -79,6 +79,7 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
     # Get some necessary info from DataDict:
     RerunReg = DataDict['RerunReg']
     RegMethod = DataDict['RegMethod']
+    SearchBy = DataDict['SearchBy']
     Debug = DataDict['Debug']
     #MappingInds = DataDict['Mapping']['MappingInds']
     
@@ -155,7 +156,7 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
     MovingPixArrayShape = np.shape(MovingDicom.pixel_array)
     
     #print(f'\nPre-registered pixel array dims = {np.shape(MovingPixArray)}')
-    print(f'\n--- Pre-registered pixel array dims = {MovingPixArrayShape}')
+    print(f'\n\n--- Pre-registered pixel array dims = {MovingPixArrayShape}')
     #print(f'Pre-registered no of rows = {preRegRows}')
     #print(f'Pre-registered no of columns = {preRegColumns}')
     if Debug:
@@ -191,6 +192,7 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
     # exported registered DICOMs:
     RegFpaths = []
     RegSopUids = []
+    RegScanPos = []
     
     # Initialise a list to store the fixed, moving and registered DICOMs:
     FixedDicoms = []
@@ -324,6 +326,8 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
                 imFilter.SetFixedImage(FixedIm)
                 imFilter.SetMovingImage(MovingIm)
                 imFilter.SetParameterMap(sitk.GetDefaultParameterMap(RegMethod))
+                imFilter.LogToConsoleOn()
+                imFilter.LogToFileOn()
                 RegIm = imFilter.Execute()
             
             else:
@@ -415,14 +419,76 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
             RegDicom.PixelData = RegImNdaConverted.tostring()
             
             """
-            Since the array dimensions have changed, update the relevant 
-            metadata
+            Update the other metadata: 
             """
-            #dicomReg.Rows, dicomReg.Columns = imRegNda.shape
-            RegPixArrayShape = RegImNdaConverted.shape
-            RegDicom.Rows, RegDicom.Columns = RegPixArrayShape
-
-            print(f'\n--- Registered pixel array dims = {RegPixArrayShape}')
+            
+            # Update the Image Position Patient and Image Orientation Patient:
+            """ Note that since the SimpleITK object RegIm is a 2D image, the
+            Origin (equivalent to Image Position Patient) only has two items 
+            (whereas IPP has three).  Likewise, the Direction (equivalent to 
+            Image Orientation Patient) only has four items (whereas IOP has
+            six).  
+            So modify the first two items in IPP to be the two items in the 
+            Origin tuple, and modify the first, second, fourth and fifth items 
+            in IOP to be the four items in the Orientation tuple. """
+            RegDicom.ImagePositionPatient[0:2] = [str(item) for item in RegIm.GetOrigin()]
+            
+            print(f'\n--- Moving Image Position Patient =', MovingDicom.ImagePositionPatient)
+            print(f'--- Registered Origin             = {RegIm.GetOrigin()}')
+            
+            # Store the scan position:
+            if SearchBy == 'x':
+                RegScanPos.append(float(RegDicom.ImagePositionPatient[0]))
+            if SearchBy == 'y':
+                RegScanPos.append(float(RegDicom.ImagePositionPatient[1]))
+            if SearchBy == 'z':
+                RegScanPos.append(float(RegDicom.ImagePositionPatient[2]))
+            
+            
+            """ The line below doesn't work (TypeError: float() argument must 
+            be a string or a number, not 'list'): """
+            #RegDicom.ImageOrientationPatient[0:2,3:5] = [str(item) for item in RegIm.GetDirection()]
+            
+            # Create a list of indeces from 0 to 4:
+            inds = list(range(5))
+            
+            # Remove the 3rd index:
+            inds.pop(2)
+            
+            # Use inds to slice RegDicom.ImageOrientationPatient:
+            #RegDicom.ImageOrientationPatient[inds] = [str(item) for item in RegIm.GetDirection()]
+            
+            """ The above line doesn't work either! So do it in a less elegant
+            way: """
+            RegDicom.ImageOrientationPatient[0] = str(RegIm.GetDirection()[0])
+            RegDicom.ImageOrientationPatient[1] = str(RegIm.GetDirection()[1])
+            RegDicom.ImageOrientationPatient[3] = str(RegIm.GetDirection()[2])
+            RegDicom.ImageOrientationPatient[4] = str(RegIm.GetDirection()[3])
+            
+            print(f'\n--- Moving Image Orientation Patient =', MovingDicom.ImageOrientationPatient)
+            print(f'--- Registered Direction             = {RegIm.GetDirection()}')
+            
+            
+            # Update the pixel spacing:
+            RegDicom.PixelSpacing = [str(item) for item in RegIm.GetSpacing()]
+            
+            print(f'\n--- Moving pixel spacing     = {MovingDicom.PixelSpacing}')
+            print(f'--- Registered pixel spacing = {RegIm.GetSpacing()}')
+            
+            
+            # Since the array dimensions have changed, update the Rows and 
+            # Columns metadata:
+            ##dicomReg.Rows, dicomReg.Columns = imRegNda.shape
+            #RegPixArrayShape = RegImNdaConverted.shape
+            #RegDicom.Rows, RegDicom.Columns = RegPixArrayShape
+            #print(f'\n--- Registered pixel array dims = {RegPixArrayShape}')
+            
+            RegDicom.Rows = RegIm.GetWidth()
+            RegDicom.Columns = RegIm.GetHeight()
+            
+            print(f'\n--- Moving pixel array dims     = ({MovingDicom.Rows}, {MovingDicom.Columns})')
+            print(f'--- Registered pixel array dims = {RegIm.GetSize()}')
+            
             
             # Get the original (pre-registered) SOP Instance UID:
             ##preRegSOPUID = dicomDict1_to_2[key]['Closest Dicom SOP UID']
