@@ -51,7 +51,10 @@ Note 2:
     Although the DICOMs are available it seems that SimpleITK needs to read 
     in the image directly from a DICOM file.
     
-                  
+
+April 23:
+    Need to skip registration of slices for which the positional differences 
+    are greater than a threshold distance.               
 """
 
 
@@ -107,14 +110,66 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
         # The key of the series that was remapped:
         RemappedKey = DataDict['RemappedKey']
     
-        # Get the mapping indeces:
+        
         if 'Source' in RemappedKey:
+            # Get the mapping indeces:
             MappingInds = DataDict['TargetToSourceMapping']['MappingInds']
+            
+            # Get the scan positional differences:
+            ScanPosDiffs = DataDict['TargetToSourceMapping']['ScanPosDiffs']
+            
+            N = len(MappingInds)
+            
+            """ Reslice MappingInds and ScanPosDiffs omitting the elements that
+            correspond to scan positional differences that exceed some 
+            threshold distance: """
+            
+            # Set the threshold distance:
+            ThreshDist = 1 # mm
+            
+            # Reslice MappingInds:
+            MappingInds = [MappingInds[i] for i in range(N) if abs(ScanPosDiffs[i]) < ThreshDist]
+            
+            # Reslice ScanPosDiffs:
+            ScanPosDiffs = [ScanPosDiffs[i] for i in range(N) if abs(ScanPosDiffs[i]) < ThreshDist]
+            
+            # Store these new lists in DataDict in a new key analogous to 
+            # 'TargetToSourceMapping':
+            DataDict.update({'MovingToFixedMapping':{'MappingInds':MappingInds, \
+                                                     'ScanPosDiffs':ScanPosDiffs
+                                                     }
+                            })
             
             # Modify the list FixedFpaths:
             FixedFpaths = [FixedFpaths[ind] for ind in MappingInds]
         else:
+            # Get the mapping indeces:
             MappingInds = DataDict['SourceToTargetMapping']['MappingInds']
+            
+            # Get the scan positional differences:
+            ScanPosDiffs = DataDict['SourceToTargetMapping']['ScanPosDiffs']
+            
+            N = len(MappingInds)
+            
+            """ Reslice MappingInds and ScanPosDiffs omitting the elements that
+            correspond to scan positional differences that exceed some 
+            threshold distance: """
+            
+            # Set the threshold distance:
+            ThreshDist = 1 # mm
+            
+            # Reslice MappingInds:
+            MappingInds = [MappingInds[i] for i in range(N) if abs(ScanPosDiffs[i]) < ThreshDist]
+            
+            # Reslice ScanPosDiffs:
+            ScanPosDiffs = [ScanPosDiffs[i] for i in range(N) if abs(ScanPosDiffs[i]) < ThreshDist]
+            
+            # Store these new lists in DataDict in a new key analogous to 
+            # 'SourceToTargetMapping':
+            DataDict.update({'FixedToMovingMapping':{'MappingInds':MappingInds, \
+                                                     'ScanPosDiffs':ScanPosDiffs
+                                                     }
+                            })
             
             # Modify the list MovingFpaths:
             MovingFpaths = [MovingFpaths[ind] for ind in MappingInds]
@@ -599,6 +654,7 @@ def RegisterSlices(DataDict, FixedKey, MovingKey, RegisteredKey):
         """
         
     # Update the dictionary DataDict:
+    """ Note: Prior to this, DataDict['Fixed'] and DataDict['Moving'] = []. """
     DataDict['Fixed'] = {'DicomFpaths':FixedFpaths, \
                          'SopUids':FixedSopUids, \
                          'SeriesNo':FixedSeriesNo, \

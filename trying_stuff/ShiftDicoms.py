@@ -32,13 +32,19 @@ def ShiftDicoms(PreShiftedDicoms, DataDict):
     # The key of the series that was shifted:
     ToShiftKey = DataDict['ToShiftKey']
     
+    # The key of the shifted series:
+    ShiftedKey = DataDict['ShiftedKey']
+    
+    # Get the Series Description for the shifted series:
+    ShiftedSeriesDesc = DataDict[ShiftedKey]['SeriesDesc']
+    
     # The directory of the series to be shifted:
     #SourceDicomDir = DataDict[ShiftKey]['DicomDir']
     
     # The filepaths of the DICOMs to be shifted:
     PreShiftedFpaths = DataDict[ToShiftKey]['DicomFpaths']
     #PreShiftedSeriesNo = DataDict[ToShiftKey]['SeriesNo']
-    PreShiftedSeriesDesc = DataDict[ToShiftKey]['SeriesDesc']
+    #PreShiftedSeriesDesc = DataDict[ToShiftKey]['SeriesDesc']
     
     # The key for the shifted series:
     ShiftedKey = DataDict['ShiftedKey']
@@ -111,7 +117,7 @@ def ShiftDicoms(PreShiftedDicoms, DataDict):
     # Create a new Series Description by appending info about the shift that
     # was applied to the original Series Description:
     #NewSeriesDesc = OldSeriesDesc + ' - ' + SearchBy + '-Shifted'
-    ShiftedSeriesDesc = 'Shifted ' + PreShiftedSeriesDesc
+    #ShiftedSeriesDesc = 'Shifted ' + PreShiftedSeriesDesc
     
     # Modify ShiftedDicomDir to include the Series Description in 
     # parentheses:

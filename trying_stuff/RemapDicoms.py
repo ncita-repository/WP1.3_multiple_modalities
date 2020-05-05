@@ -1,62 +1,168 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr  2 14:43:08 2020
+Created on Fri Apr 24 12:44:12 2020
 
 @author: ctorti
 """
 
 
 
-"""
-April 2:  
-    Consider setting to zero all pixels in the pixel arrays of the DICOMs 
-    that have large positional differences (say > 0.5 mm or > 1 mm).
-"""
 
 
-
-def RemapDicoms(PreRemappedDicoms, DataDict):
+def RemapDicoms(PreRemappedDicoms, DataDict, KeyToRemap):
     
     # Import packages and functions:
     
     import os
-    #import copy
+    import copy
     import pydicom
     #import time
     #import numpy as np
     #import importlib
     from CreateDir import CreateDir
-    from GetScanPositions import GetScanPositions
+    #from GetScanPositions import GetScanPositions
     
     
     # Get some necessary info from DataDict:
-    SearchBy = DataDict['SearchBy']
+    #SearchBy = DataDict['SearchBy']
     Debug = DataDict['Debug']
-    #MappingInds = DataDict['Mapping']['MappingInds']
-    
-    # The key of the series to be remapped:
-    ToRemapKey = DataDict['ToRemapKey']
+    #KeyToRemap = DataDict['KeyToRemap']
     
     # The filepaths and slice numbers of the DICOMs to be remapped: 
-    PreRemappedFpaths = DataDict[ToRemapKey]['DicomFpaths']
-    PreRemappedSliceNos = DataDict[ToRemapKey]['SliceNos']
-    PreRemappedSeriesDesc = DataDict[ToRemapKey]['SeriesDesc']
+    PreRemappedFpaths = DataDict[KeyToRemap]['DicomFpaths']
+    PreRemappedSliceNos = DataDict[KeyToRemap]['SliceNos']
+    PreRemappedSeriesDesc = DataDict[KeyToRemap]['SeriesDesc']
+    PreRemappedScanPos = DataDict[KeyToRemap]['ScanPos']
+
     
-    # Get the mapping indeces:
-    if 'Source' in ToRemapKey:
-        MappingInds = DataDict['TargetToSourceMapping']['MappingInds']
-    else:
-        MappingInds = DataDict['SourceToTargetMapping']['MappingInds']
+    """ Note April 27:
+       Previously RemapDicoms() was only used to remap the longer series, i.e.
+       if there were more slices in SourceDicoms than in TargetDicoms,
+       KeyToRemap = 'Source' and the indeces in 
+       DataDict['SourceToTarget']['MappingInds'] was used.
+       
+       Problems occured with the registration however when the two slices from
+       Source and Target were vastly different.  So the key 'SourceToTarget'
+       was replaced with 'SourceToTargetNearest' (which was equivalent to the
+       previous approach) and 'SourceToTargetNearOnly'. 
+       
+       The latter is a subset of the former where all indeces with scan
+       positional differences greater than a threshold distance (e.g. 1 mm)
+       are omitted.
+       
+       Hence, rather than only remapping the longer of SourceDicoms and 
+       TargetDicoms, now the shorter series also needs to be remapped to 
+       account for the indeces that were omitted.
+       
+       GetClosestSlices() not only outputs 'SourceToTargetNearOnly' and
+       'TargetToSourceNearOnly', but also 'SourceNearOnly' and 'TargetNearOnly'.
+       The latter two contain the indeces that the shorter series need to be
+       remapped to.
+       
+       Defining the following:
+           
+       S2Tinds = DataDict['SourceToTargetNearOnly']['MappingInds']
+       T2Sinds = DataDict['TargetToSourceNearOnly']['MappingInds']
+       
+       Sinds = DataDict['SourceNearOnly']['MappingInds']
+       Tinds = DataDict['TargetNearOnly']['MappingInds']
+        
+       S2T = len(S2Tinds)
+       T2S = len(T2Sinds)
+        
+       If KeyToRemap = 'Source' and S2T > T2S, then 
+       SourceDicoms needs to be remapped using T2Sinds, and 
+       TargetDicoms needs to be remapped using Tinds.
+       
+       If KeyToRemap = 'Source' and S2T < T2S, then
+       SourceDicoms needs to be remapped using Sinds, and
+       TargetDicoms needs to be remapped using S2Tinds.
+       
+       If KeyToRemap = 'Target' and S2T > T2S, then
+       SourceDicoms needs to be remapped using T2Sinds, and 
+       TargetDicoms needs to be remapped using Tinds.
+       
+       If KeyToRemap = 'Target' and S2T < T2S, then
+       SourceDicoms needs to be remapped using Sinds, and
+       TargetDicoms needs to be remapped using S2Tinds.
+       
+       Each operation shown under the If statement will be done by separate
+       calls to this function RemapDicoms.  So the following are the list of
+       possible inputs and outputs:
+       
+       If KeyToRemap = 'Source' and S2T > T2S, 
+       Then SourceDicoms needs to be remapped using T2Sinds.
+       
+       If KeyToRemap = 'Source' and S2T < T2S,
+       Then SourceDicoms needs to be remapped using Sinds.
+       
+       If KeyToRemap = 'Target' and S2T > T2S,
+       Then TargetDicoms needs to be remapped using Tinds.
+       
+       If KeyToRemap = 'Target' and S2T < T2S, 
+       Then TargetDicoms needs to be remapped using S2Tinds.
     
-    # Use MappingInds to get a list of remapped PreRemappedFpaths:
+    
+    """
+    
+    # Get the mapping indeces (use the "NearOnly" indeces that correspond to
+    # only slices that are within the maximum allowed scan position difference
+    # defined in GetClosestSlices()):
+    # S2Tinds = SourceToTargetInds and T2Sinds = TargetToSourceInds:
+    S2Tinds = DataDict['SourceToTargetNearOnly']['MappingInds']
+    T2Sinds = DataDict['TargetToSourceNearOnly']['MappingInds']
+    
+    Sinds = DataDict['SourceNearOnly']['MappingInds']
+    Tinds = DataDict['TargetNearOnly']['MappingInds']
+    
+    S2T = len(S2Tinds)
+    T2S = len(T2Sinds)
+    
+    # The scan positional differences are:
+    S2Tdiffs = DataDict['SourceToTargetNearOnly']['ScanPosDiffs']
+    T2Sdiffs = DataDict['TargetToSourceNearOnly']['ScanPosDiffs']
+    
+    Sdiffs = DataDict['SourceNearOnly']['ScanPosDiffs']
+    Tdiffs = DataDict['TargetNearOnly']['ScanPosDiffs']
+    
+    
+    # If SourceDicoms are to be remapped...
+    if 'Source' in KeyToRemap:
+        if S2T > T2S:
+            # ... and S2T > T2S:
+            MappingInds = copy.deepcopy(T2Sinds)
+            RemappedScanPosDiffs = copy.deepcopy(T2Sdiffs)
+        
+        else:
+            # ... and S2T < T2S:
+            MappingInds = copy.deepcopy(Sinds)
+            RemappedScanPosDiffs = copy.deepcopy(Sdiffs)
+        
+        
+    # If TargetDicoms are to be remapped...
+    if 'Target' in KeyToRemap:
+        if S2T > T2S:
+            # ... and S2T < T2S:
+            MappingInds = copy.deepcopy(Tinds)
+            RemappedScanPosDiffs = copy.deepcopy(Tdiffs)
+            
+        else:
+            # ... and S2T < T2S:
+            MappingInds = copy.deepcopy(S2Tinds)
+            RemappedScanPosDiffs = copy.deepcopy(S2Tdiffs)
+        
+    
+    
+    # Use MappingInds to get a list of remapped filepaths in PreRemappedFpaths:
     RemappedPreRemappedFpaths = [PreRemappedFpaths[ind] for ind in MappingInds]
     
     # Use MappingInds to get a list of remapped DICOMS and SliceNos:
     RemappedDicoms = [PreRemappedDicoms[ind] for ind in MappingInds]
     RemappedSliceNos = [PreRemappedSliceNos[ind] for ind in MappingInds]
+    RemappedScanPos = [PreRemappedScanPos[ind] for ind in MappingInds]
     
     # Get the scan positions of the remapped DICOMs:
-    RemappedScanPos = GetScanPositions(RemappedDicoms, SearchBy)
+    #RemappedScanPos = GetScanPositions(RemappedDicoms, SearchBy)
     
     
     if Debug:
@@ -66,10 +172,16 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
         print('\nlen(RemappedSliceNos) =', len(RemappedSliceNos))
         print('\nRemappedScanPos =', RemappedScanPos)
         print('\nlen(RemappedScanPos) =', len(RemappedScanPos))
+        print('\nRemappedScanPosDiffs =', RemappedScanPosDiffs)
+        print('\nlen(RemappedScanPosDiffs) =', len(RemappedScanPosDiffs))
     
     
     # The key of the remapped series:
-    RemappedKey = DataDict['RemappedKey']
+    #RemappedKey = DataDict['RemappedKey']
+    RemappedKey = 'Remapped' + KeyToRemap
+    
+    print('\nKeyToRemap =', KeyToRemap)
+    print('RemappedKey =', RemappedKey)
     
     # And the Series No for the remapped series, and the directory where the 
     # remapped DICOMs are to be saved:
@@ -89,11 +201,6 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
     I'm not sure if the Frame of Reference UID of RegDicoms should be changed
     from that of MovingDicoms.  For now I'll assume not.
     """
-    
-    
-    # Create a dictionary to store the changes made to the DICOM of the  
-    # registered slices:
-    #changesDict = {}
     
     # Start by using the first DICOM:
     Dicom = PreRemappedDicoms[0]
@@ -192,6 +299,7 @@ def RemapDicoms(PreRemappedDicoms, DataDict):
     DataDict[RemappedKey].update({'SopUids':RemappedSopUids})
     DataDict[RemappedKey].update({'SliceNos':RemappedSliceNos})
     DataDict[RemappedKey].update({'ScanPos':RemappedScanPos})
+    DataDict[RemappedKey].update({'ScanPosDiffs':RemappedScanPosDiffs})
     
     
     

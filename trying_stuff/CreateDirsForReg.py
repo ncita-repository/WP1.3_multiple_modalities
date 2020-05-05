@@ -51,48 +51,7 @@ def CreateDirsForReg(DataDict):
         """
         DEFINE THE SCAN LABELS AND DIRECTORY NAMES:
         """
-    
-        """ Below section in if statement simplified below.. """
-        if False:
-            """
-            Note: 
-                Format of Series Numbers will be the ToSeriesNo + '0' + a number of
-                binaries which indicate whether position-correction was done,
-                mapping, registration, etc.
-            """
-                
-            # If Shift is non-zero:
-            if Shift:
-                # Get some necessary info from DataDict:
-                ShiftedSeriesNo = DataDict['Shifted']['SeriesNo']
-                ShiftedSeriesDesc = DataDict['Shifted']['SeriesDesc']
-                ShiftedSliceNos = DataDict['Shifted']['SliceNos']
-                
-                # Add 1 after ShiftedSeriesNo then 1/2/3 for RegMethod:
-                if RegMethod=='rigid':
-                    RegisteredSeriesNo = ShiftedSeriesNo + '11'
-                elif RegMethod=='affine':
-                    RegisteredSeriesNo = ShiftedSeriesNo + '12'
-                elif RegMethod=='non-rigid':
-                    RegisteredSeriesNo = ShiftedSeriesNo + '13'
-                
-                RegisteredSeriesDesc = ShiftedSeriesDesc + ' ' + RegMethod + '-reg'
-                
-            else:
-                # Add 0 (to represent that Shift=0) after ToSeriesNo, then 1/2/3 
-                # for RegMethod:
-                if RegMethod=='rigid':
-                    RegisteredSeriesNo = ToSeriesNo + '01'
-                elif RegMethod=='affine':
-                    RegisteredSeriesNo = ToSeriesNo + '02'
-                elif RegMethod=='non-rigid':
-                    RegisteredSeriesNo = ToSeriesNo + '03'
-                
-                RegisteredSeriesDesc = ToSeriesDesc + ' - ' + RegMethod + '-reg'
-            
-            
-            
-        """ April 6:  Simplify above: """
+
         # Let RegisteredSeriesNo be = MovingSeriesNo + '0' + N + '0' + 
         # FixedSeriesNo, 
         # where N = 1/2/3 for RegMethod = 'fixed'/'affine'/'non-rigid':

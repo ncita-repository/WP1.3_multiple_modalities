@@ -14,12 +14,12 @@ def CreateDirsForShifts(DataDict):
     
     # Get some necessary info from dataDict:
     RootDir = DataDict['RootDir']
-    Shift = DataDict['Shift']
-    ShiftFeature = DataDict['ShiftFeature']
-    ToShiftKey = DataDict['ToShiftKey']
+    Shift = DataDict['Shift'] # e.g. -158.199231349734
+    ShiftFeature = DataDict['ShiftFeature'] # e.g. 'using lens of eye'
+    ToShiftKey = DataDict['ToShiftKey'] # e.g. 'Target'
     #searchBy = dataDict['SearchBy']
     #RegMethod = DataDict['RegMethod']
-    Debug = DataDict['Debug']
+    Debug = DataDict['Debug'] # e.g. False
     
     #FromSeriesNo = DataDict['From']['SeriesNo']
     #ToSeriesNo = DataDict['To']['SeriesNo']
@@ -57,7 +57,7 @@ def CreateDirsForShifts(DataDict):
         
         # DICOMs whose scan positions are shifted:
         #ShiftedSeriesNo = PreShiftedSeriesNo + '0' + '1'
-        ShiftedSeriesNo = PreShiftedSeriesNo + '1'
+        ShiftedSeriesNo = PreShiftedSeriesNo + '0'
         #ShiftedSeriesDesc = 'Shifted ' + PreShiftedSeriesDesc
         ShiftedSeriesDesc = PreShiftedSeriesDesc + ' Shifted using ' + ShiftFeature
         ShiftedDirName = ShiftedSeriesNo + ' ' + ShiftedSeriesDesc
@@ -73,7 +73,7 @@ def CreateDirsForShifts(DataDict):
         
         
         # Create a new key for DataDict that indicates which key was shifted:
-        ShiftedKey = 'Shifted' + ToShiftKey # e.g. 'ShiftedTarget'
+        ShiftedKey = 'Shifted' + ToShiftKey # e.g. 'Shifted' + 'Target' = 'ShiftedTarget'
         
         # Update DataDict:     
         DataDict.update({'ToShiftKey':ToShiftKey, \

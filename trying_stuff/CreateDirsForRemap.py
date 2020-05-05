@@ -1,37 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr  2 14:52:34 2020
+Created on Fri Apr 24 12:32:20 2020
 
 @author: ctorti
 """
 
 
 
-def CreateDirsForRemap(DataDict):
+def CreateDirsForRemap(DataDict, KeyToRemap):
     # Import packages:
     import os
     
     
     # Get some necessary info from dataDict:
     RootDir = DataDict['RootDir']
-    ToRemapKey = DataDict['ToRemapKey']
-    ForRemapKey = DataDict['ForRemapKey']
-    #Shift = DataDict['Shift']
-    #searchBy = dataDict['SearchBy']
-    #RegMethod = DataDict['RegMethod']
     Debug = DataDict['Debug']
+    #KeyToRemap = DataDict['KeyToRemap']
     
-    #ToRemapKey = DataDict['ToRemapKey']
-    
-    # Use ToRemapKey to index the series that will be remapped:
-    PreRemappedSeriesNo = DataDict[ToRemapKey]['SeriesNo']
-    PreRemappedSeriesDesc = DataDict[ToRemapKey]['SeriesDesc']
-    PreRemappedSliceNos = DataDict[ToRemapKey]['SliceNos']
-    
-    # Use ForRemapKey to get details of the series that the remapping is to
-    # match in slice number:
-    RemapForSeriesNo = DataDict[ForRemapKey]['SeriesNo']
-    RemapForSeriesDesc = DataDict[ForRemapKey]['SeriesDesc']
+    # Use KeyToRemap to index the series that will be remapped:
+    PreRemappedSeriesNo = DataDict[KeyToRemap]['SeriesNo']
+    PreRemappedSeriesDesc = DataDict[KeyToRemap]['SeriesDesc']
     
   
     """
@@ -48,18 +36,14 @@ def CreateDirsForRemap(DataDict):
 
     """
     Note: 
-        Format of Series Numbers will be the PreRemappedSeriesNo + '0' + '1' to 
+        Format of Series Numbers will be the PreRemappedSeriesNo + '1' to 
         indicate that a remapping was applied:
     """
     
-    # DICOMs whose scan positions are shifted:
-    #RemappedSeriesNo = PreRemappedSeriesNo + '0' + '1'
-    #RemappedSeriesNo = PreRemappedSeriesNo + '1'
-    #RemappedSeriesNo = PreRemappedSeriesNo + '010' + RemapForSeriesNo
-    RemappedSeriesNo = PreRemappedSeriesNo + '0' + RemapForSeriesNo
-    #RemappedSeriesDesc = PreRemappedSeriesDesc + ' Remapped' 
-    #RemappedSeriesDesc = 'Remapped ' + PreRemappedSeriesDesc
-    RemappedSeriesDesc = PreRemappedSeriesDesc + ' Remapped for ' + RemapForSeriesDesc
+    # Define the Series number and Series description, Directory name, DICOM
+    # directory and ROI directory for the remapped DICOMs:
+    RemappedSeriesNo = PreRemappedSeriesNo + '1'
+    RemappedSeriesDesc = PreRemappedSeriesDesc + ' Remapped'
     RemappedDirName = RemappedSeriesNo + ' ' + RemappedSeriesDesc
     RemappedDicomDir = os.path.join(RootDir, RemappedDirName + ' DICOMs')
     RemappedRoiDir = os.path.join(RootDir, RemappedDirName + ' ROIs')
@@ -69,35 +53,35 @@ def CreateDirsForRemap(DataDict):
     AllDirs.append(RemappedDicomDir)
     
     
-    # Create a new key for DataDict that indicates which key was shifted:
-    RemappedKey = 'Remapped' + ToRemapKey
+    # Create a new key for DataDict that indicates which key was remapped:
+    RemappedKey = 'Remapped' + KeyToRemap
     
-    # Update DataDict:     
-    DataDict.update({'ToRemapKey':ToRemapKey, \
-                     'RemappedKey':RemappedKey,})      
-
+    # Store RemappedKey in DataDict:     
+    #DataDict.update({'RemappedKey':RemappedKey})    
+    
+    # Store RoiDir, DicomDir, SeriesNo, SeriesDesc and SliceNos in DataDict for
+    # the key given by RemappedKey:
     DataDict.update({RemappedKey:{#'ScanLabel':MapPosCorrScanLabel,\
                                   'RoiDir':RemappedRoiDir,\
                                   'DicomDir':RemappedDicomDir,\
                                   'SeriesNo':RemappedSeriesNo,\
-                                  'SeriesDesc':RemappedSeriesDesc,\
-                                  'SliceNos':PreRemappedSliceNos # make ='PreRemapped' 
+                                  'SeriesDesc':RemappedSeriesDesc
                                     }
                      })
             
     
     
     # CREATE THE DIRECTORIES IF THEY DON'T EXIST:
-    for dirPath in AllDirs:
+    for DirPath in AllDirs:
         if Debug:
-            print('\nChecking if directory', dirPath, 'exists')
+            print('\nChecking if directory', DirPath, 'exists')
         try:
-            os.mkdir(dirPath)
+            os.mkdir(DirPath)
             if Debug:
-                print('\nDirectory', dirPath, 'created')
+                print('\nDirectory', DirPath, 'created')
         except FileExistsError:
             if Debug:
-                print('\nDirectory', dirPath, 'already exists')
+                print('\nDirectory', DirPath, 'already exists')
 
     
     

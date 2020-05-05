@@ -46,7 +46,7 @@ Returns:
 def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
     
     # Import packages:
-    #import pydicom
+    import pydicom
     import matplotlib.pyplot as plt
     import numpy as np
     import time, os
@@ -77,13 +77,24 @@ def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
     MovingScanPos = DataDict[MovingKey]['ScanPos']
     
     # Get the scan position differences:
-    FixedToMovingScanPosDiffs = DataDict['FixedToMovingScanPosDiffs']
+    #FixedToMovingScanPosDiffs = DataDict['FixedToMovingScanPosDiffs']
+    FixedToMovingScanPosDiffs = DataDict['SourceToTargetNearOnly']['ScanPosDiffs']
             
     # Combine all scan positions into an array:
     AllScanPos = [FixedScanPos, MovingScanPos]
     
     # Create array of string for plotting purposes:
     AllNames = ['Fixed', 'Moving']
+    
+    """ April 29: Getting the filepaths is not required but to help 
+    troubleshoot why the DICOMs appear to be loaded in reverse order for one
+    of the stacks when running the registration, read in the DICOMs using the
+    same list of filepaths as SimpleITK uses: """
+    FixedFpaths = DataDict[FixedKey]['DicomFpaths']
+    MovingFpaths = DataDict[MovingKey]['DicomFpaths']
+    
+    # Combine all filepaths into an array:
+    AllFpaths = [FixedFpaths, MovingFpaths]
     
     
     # Create the filepath for the exported plot:
@@ -99,10 +110,10 @@ def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
                 + CurrentDateTime + '.jpg'
     
     # Define the directory to export the plot:
-    PlotDir = DataDict[RegisteredKey]['RoiDir']
+    #PlotDir = DataDict[RegisteredKey]['RoiDir']
     
     # Create the filepath for the exported plot:
-    PlotFpath = os.path.join(PlotDir, PlotFname)
+    #PlotFpath = os.path.join(PlotDir, PlotFname)
             
     
     # Configure plot:
@@ -164,6 +175,11 @@ def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
             if c == 0:
                 ScanPosDiff = - ScanPosDiff
             
+            """ April 29: Rather than use the DICOM objects fed into this 
+            function, read in the DICOMs as would SimpleITK: """
+            Fpath = AllFpaths[c][r]
+            Dicom = pydicom.read_file(Fpath)
+            
             # Get the pixel array:
             PixArray = Dicom.pixel_array
             
@@ -199,9 +215,9 @@ def PlotFixedAndMovingDicoms(FixedDicoms, MovingDicoms, DataDict):
             
        
     # Export the plot:
-    plt.savefig(PlotFpath, bbox_inches='tight')
+    #plt.savefig(PlotFpath, bbox_inches='tight')
     
-    print('Plot exported to:\n\n', PlotFpath)
+    #print('Plot exported to:\n\n', PlotFpath)
     
     
     # Update the dictionary:
