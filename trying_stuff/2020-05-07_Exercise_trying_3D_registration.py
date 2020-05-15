@@ -3,7 +3,7 @@
 
 # # 3D Registration
 
-# In[4]:
+# In[2]:
 
 
 import SimpleITK as sitk
@@ -29,7 +29,7 @@ import registration_gui as rgui
 
 # ### Define utility functions:
 
-# In[220]:
+# In[3]:
 
 
 # Define utility functions:
@@ -2312,10 +2312,12 @@ file.close()
 
 # ### Import DataDict:
 
-# In[ ]:
+# In[7]:
 
 
-ImportDir = r'C:\\Temp\\2020-05-11 ACRIN MR_4 to MR_12'
+import json
+
+ImportDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12'
 JsonFpath = os.path.join(ImportDir, 'DataDict.json')
 
 file = open(JsonFpath)
@@ -2342,7 +2344,7 @@ interact(display_images_v3,
 
 # ### Define FixedDir and MovingDir based on the directories contained in DataDict:
 
-# In[12]:
+# In[8]:
 
 
 FixedDir = DataDict['Source']['DicomDir']
@@ -2438,7 +2440,7 @@ print(f'\nTook {Dtime} s to register the 3D image stacks.')
 # 
 # ### Use GetDicoms() and GetContourPoints3D() to get the contour points:
 
-# In[84]:
+# In[23]:
 
 
 # Use GetDicoms() and GetContourPoints3D() to get the contour points:
@@ -2475,7 +2477,7 @@ len(FixedContourPts)
 # ### Write the points to a text file with .pts extension as used for elastix:
 # https://simpleelastix.readthedocs.io/PointBasedRegistration.html
 
-# In[103]:
+# In[26]:
 
 
 """ FixedContourPts are in the form:
@@ -2547,12 +2549,12 @@ for SliceNo in range(len(FixedContourPts)):
             FixedPtsToSliceNo.append(SliceNo)
         
 #FixedContourPtsFlat
-print(FixedNCts)
-print(FixedNPts)
+print(FixedNoCts)
+print(FixedNoPts)
 print(FixedPtsToSliceNo)
 
 
-# In[104]:
+# In[28]:
 
 
 # Define the filename for the FixedContoutPts:
@@ -2566,7 +2568,7 @@ TextFile = open(FixedContourPtsFname, 'w')
 TextFile.write('point')
 
 # Write FixedNPts to the second line:
-TextFile.write(f'\n{FixedNPts}')
+TextFile.write(f'\n{FixedNoPts}')
 
 for ContourArray in FixedContourPts:
     if ContourArray:
@@ -2610,7 +2612,7 @@ FixedIm.GetOrigin()
 
 
 
-# In[86]:
+# In[38]:
 
 
 interact(display_images_and_contours,
@@ -2677,7 +2679,7 @@ print(RegIm.GetOrigin())
 # 
 # https://simpleelastix.readthedocs.io/PointBasedRegistration.html
 
-# In[106]:
+# In[29]:
 
 
 TransformixImFilt = sitk.TransformixImageFilter()
@@ -2691,7 +2693,7 @@ TransformixImFilt.Execute()
 
 # ### Parse the transformed point set:
 
-# In[112]:
+# In[30]:
 
 
 import csv
@@ -2729,7 +2731,7 @@ for line in TextFile:
 list(TextFile)
 
 
-# In[185]:
+# In[31]:
 
 
 # Open the text file:
@@ -2889,7 +2891,7 @@ print(FixedPtsToSliceNo)
 FixedPtsToSliceNo.index(13)
 
 
-# In[ ]:
+# In[32]:
 
 
 # Initialise MovingContourPts:
@@ -2920,11 +2922,11 @@ for SliceNo in range(len(FixedContourPts)):
 
 # ### There might be an easier way...
 
-# In[201]:
+# In[35]:
 
 
 # The number of slices in FixedContourPts:
-NSlices = len(FixedContourPts)
+NoSlices = len(FixedContourPts)
 
 # Initialise MovingContourPts:
 MovingContourPts = []
@@ -2933,7 +2935,7 @@ MovingContourPts = []
 i = 0
 
 # Loop for each row (slice) in FixedContourPts:
-for SliceNo in range(NSlices):
+for SliceNo in range(NoSlices):
     # Get the points in FixedContourPts for this SliceNo:
     points = FixedContourPts[SliceNo]
     
@@ -2953,12 +2955,13 @@ for SliceNo in range(NSlices):
         MovingContourPts.append([])
 
 
-if not i == Nsliprint()
+if not i == NoSlices:
+    print('i = NoSlices')
 
 MovingContourPts
 
 
-# In[202]:
+# In[36]:
 
 
 # Check:
@@ -3000,17 +3003,23 @@ TransformedPts[0]
 
 # ### I doubt that the transformed points are what they should be.  There's a huge displacement in the z coordinate.
 
-# In[212]:
+# In[9]:
 
 
 print('FixedIm.GetOrigin()  =', FixedIm.GetOrigin())
 print('MovingIm.GetOrigin() =', MovingIm.GetOrigin())
 
 
-# In[ ]:
+# In[10]:
 
 
+print(FixedIm)
 
+
+# In[11]:
+
+
+print(MovingIm)
 
 
 # ### 15/05:  Use SimpleElastix to register MovingIm to FixedIm but this time resample MovingIm:
@@ -3019,7 +3028,7 @@ print('MovingIm.GetOrigin() =', MovingIm.GetOrigin())
 # 
 # https://github.com/SuperElastix/SimpleElastix/issues/261
 
-# In[232]:
+# In[13]:
 
 
 # Start timing:
@@ -3057,6 +3066,10 @@ RegIm = ElastixImFilt.GetResultImage()
 times.append(time.time())
 Dtime = round(times[-1] - times[-2], 1)
 print(f'\nTook {Dtime} s to register the 3D image stacks.')
+
+# Get the transform parameter map:
+TransformParameterMap = ElastixImFilt.GetParameterMap()
+
 
 # Trying this in response to the error:
 """
@@ -3110,7 +3123,31 @@ print('ResampledMovingIm.GetSize() =', ResampledMovingIm.GetSize())
 print('RegIm.GetSize()             =', RegIm.GetSize())
 
 
-# In[229]:
+# In[15]:
+
+
+print(ResampledMovingIm)
+
+
+# In[14]:
+
+
+print(RegIm)
+
+
+# In[18]:
+
+
+sitk.PrintParameterMap(TransformParameterMap)
+
+
+# In[19]:
+
+
+print(sitk.PrintParameterMap(TransformParameterMap))
+
+
+# In[37]:
 
 
 interact(display_images_and_contours,
