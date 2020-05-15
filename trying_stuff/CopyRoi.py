@@ -5,6 +5,15 @@ Created on Fri Apr 24 14:36:47 2020
 @author: ctorti
 """
 
+
+"""
+Changes:
+    11/05/2020: Section of code related to downloading of DICOMs and ROI 
+    Collections was taken out of CopyRoi() and a new function was created:
+    "GetXnatData()" that handles it.  
+"""
+
+
 """
 Function:
     CopyRoi()
@@ -12,40 +21,11 @@ Function:
 Purpose:
     Copy a ROI from one DICOM scan (collection) to another.
 
-Input:
-    SourceRoiProjLabel     - Project Label of the source ROI Collection
-    
-    SourceRoiSubjLabel     - Subject Label of the source ROI Collection
-    
-    SourceRoiExpLabel      - Experiment Label of the source ROI Collection
-    
-    SourceRoiLabelDateTime - DateTime within the ROI Label of the source ROI 
-                           Collection
-    
-    SourceSeriesNo         - Series number of the DICOM scan (collection) with
-                           source ROI Collection
-    
-    SourceSeriesDesc       - Series description of the DICOM scan (collection) 
-                           with source ROI Collection (Note: This is only used
-                           for directory names of downloaded and new created
-                           DICOM and ROI Collections)
-    
-    TargetDicomProjLabel   - Project Label of the target DICOM scan 
-                             (collection) the ROI Collection is to be copied to
-    
-    TargetDicomSubjLabel   - Subject Label of the target DICOM scan 
-                            (collection) the ROI Collection is to be copied to
-    
-    TargetDicomExpLabel    - Experiment Label of the target DICOM scan 
-                            (collection) the ROI Collection is to be copied to
-    
-    TargetSeriesNo         - Series number of the target DICOM scan (collection) 
-                            the ROI Collection is to be copied to
-                            
-    TargetSeriesDesc       - Series description of the target DICOM scan 
-                           (collection) the ROI Collection is to be copied to
-                           (Note: This is only used for directory names of 
-                           downloaded and new created DICOM and ROI Collections)
+Inputs:
+    DataDict               - Dictionary containing XNAT login details, REST  
+                            path variables, directory paths, file paths, and 
+                            other details populated from output of 
+                            GetXnatData().
                         
     SearchBy               - How to define the closest slice with possible 
                             values:
@@ -144,12 +124,8 @@ Returns:
 
 
     
-def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, \
-            SourceRoiProjLabel, SourceRoiSubjLabel, SourceRoiExpLabel, \
-            SourceRoiLabelDateTime, SourceSeriesNo, SourceSeriesDesc, \
-            TargetDicomProjLabel, TargetDicomSubjLabel, TargetDicomExpLabel, \
-            TargetSeriesNo, TargetSeriesDesc, \
-            SearchBy, Shift, ShiftFeature, RegMethod, DelDicoms, RerunReg, Debug):
+def CopyRoi(DataDict, SearchBy, Shift, ShiftFeature, 
+            RegMethod, DelDicoms, RerunReg):
     
     # IMPORT PACKAGES AND FUNCTIONS:
     import time, os, shutil
@@ -160,17 +136,17 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, 
     importlib.reload(CreateDir)
     from CreateDir import CreateDir
     
-    import CreateDirsForDownloads
-    importlib.reload(CreateDirsForDownloads)
-    from CreateDirsForDownloads import CreateDirsForDownloads
+    #import CreateDirsForDownloads
+    #importlib.reload(CreateDirsForDownloads)
+    #from CreateDirsForDownloads import CreateDirsForDownloads
     
-    import DownloadFilesForRoiCopy
-    importlib.reload(DownloadFilesForRoiCopy)
-    from DownloadFilesForRoiCopy import DownloadFilesForRoiCopy
+    #import DownloadFilesForRoiCopy
+    #importlib.reload(DownloadFilesForRoiCopy)
+    #from DownloadFilesForRoiCopy import DownloadFilesForRoiCopy
     
-    import GetDicomFpaths
-    importlib.reload(GetDicomFpaths)
-    from GetDicomFpaths import GetDicomFpaths
+    #import GetDicomFpaths
+    #importlib.reload(GetDicomFpaths)
+    #from GetDicomFpaths import GetDicomFpaths
     
     import GetDicoms
     importlib.reload(GetDicoms)
@@ -236,44 +212,14 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, 
     # times[0] = start time:
     times.append(time.time())
     
+    """ 
     # Get the current date:
     todaysDate = time.strftime("%Y-%m-%d", time.gmtime())
     
-    """
-    Define the root directory (RootDir) to be a sub-directory of C:\Temp with
-    todaysDate + SourceRoiProjLabel + SourceRoiSubjLabel + SourceRoiExpLabel 
-    + ' copied to ' + TargetDicomExpLabel.
-    """
     # Assign the root directory:
-    #RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel \
-    #                       + ' - ' + SourceRoiExpLabel + ' - ' + TargetDicomExpLabel)
-    #RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel)
     RootDir = os.path.join(r'C:\Temp', todaysDate + ' ' + SourceRoiProjLabel \
                            + ' ' + CopyFrom + ' to ' + CopyTo)
     
-    """
-    If registration is to be applied to the second DICOM scan, the ROIs from
-    the first DICOM scan will be copied and modified so that they will overlay
-    onto the registered series. To help make things clear, the exported 
-    RTSTRUCT file will be stored in a folder with the e.g. directory structure:
-        10 zPosCorr affineReg ROIs
-        
-    where 10 is the Series Number, 'zPosCorr' indicates that the Image 
-    Positions of the second scan were corrected, and affineReg indicates that 
-    an affine registration method was applied.
-    
-    If no position correction needs to be made, or no registration applied, the
-    structure will be simpler, e.g.:
-        10 ROIs
-    """
-    
-    
-    # Create a dictionary to store various variables:
-    #"""
-    #Only run the following if DataDict doesn't already exist:
-    #"""
-    #if not 'DataDict' in locals(): 
-    ##if not 'DataDict' in globals(): 
     
     DataDict = {# Define the XNAT login details:
                 'XnatAddress':XnatAddress,\
@@ -311,6 +257,17 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, 
                       'SeriesDesc':TargetSeriesDesc
                       }
                 }
+    """
+    
+    # Get some info from DataDict:
+    SourceSeriesNo = DataDict['Source']['SeriesNo']
+    TargetSeriesNo = DataDict['Target']['SeriesNo']
+    Shift = DataDict['Shift']
+    #ShiftFeature = DataDict['ShiftFeature']
+    SearchBy = DataDict['SearchBy']
+    RegMethod = DataDict['RegMethod']
+    Debug = DataDict['Debug']
+    #RerunReg = DataDict['RerunReg']
 
     
     # Initialise variables that will be updated below:
@@ -328,34 +285,7 @@ def CopyRoi(XnatAddress, XnatUsername, XnatPassword, RootDir, CopyFrom, CopyTo, 
     RegisteredDicoms = []
     RegisteredRois = []
     
-  
-    """ CREATE DIRECTORIES WHERE FILES WILL BE DOWNLOADED FROM XNAT: """   
-    #DataDict = AddToDataDict(DataDict)
-    DataDict = CreateDirsForDownloads(DataDict)
-    
-    
-    
-    """ DOWNLOAD THE DICOM-RTSTRUCT AND DICOM FILES FROM XNAT: """
-    DataDict = DownloadFilesForRoiCopy(DataDict)
 
-    #return 0, 1, 2, 3, 4, dataDict
-    
-    # times[1] = time after downloading of files from XNAT:
-    times.append(time.time())
-    
-    # The time taken to download the data from XNAT:
-    Dtime = round(times[-1] - times[-2], 1)
-    
-    print(f'\nTook {Dtime} s to download data from XNAT.')
-    
-    
-    
-    print('\n***********************************************************' \
-          + '************************************************************' \
-          '\n***********************************************************' \
-          + '************************************************************' \
-          '\n***********************************************************' \
-          + '************************************************************')
     
 
     

@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr  7 15:33:41 2020
+Created on Mon May 11 12:10:11 2020
 
 @author: ctorti
+
+Parts of code below was adapted from James Petts' Java code to convert from 
+3D coordinates in RTSTRUCTs to 2D in-image coordinates (copied from and 
+provided by James Darcy via Slack on 04/02/2020).
 """
 
 
 """
 Function:
-    GetContourPoints()
+    GetContourPoints3D()
     
 Purpose:
-    Get array of contour points from an ROI object that correspond to a given
-    DICOM object, e.g.:
+    Get array of 3D contour points from an ROI object that correspond to a
+    gven DICOM object, e.g.:
         [
-         [[x1_1, y1_1], [x2_1, y2_1], [x3_1, y3_1], ... ],
-         [[x1_2, y1_2], [x2_2, y2_2], [x3_2, y3_2], ... ],
+         [[x1_1, y1_1, z1_1], [x2_1, y2_1, z2_1], [x3_1, y3_1, z3_1], ... ],
+         [[x1_2, y1_2, z1_2], [x2_2, y2_2, x2_2], [x3_2, y3_2, x3_2], ... ],
          ...
-         [[x1_N, y1_N], [x2_N, y2_N], [x3_N, y3_N], ... ]
+         [[x1_N, y1_N, z1_N], [x2_N, y2_N, z2_N], [x3_N, y3_N, z3_N], ... ]
         ]
     
-        where each sub-array contains the [x, y] points contained in a contour,
-        of which there are N number of contours.
+        where each sub-array contains the [x, y, z] points contained in a 
+        contour, of which there are N number of contours.
         
         The contour points are converted from the patient coordinate system to
         the image coordinate system.
@@ -37,16 +41,19 @@ Returns:
 """
 
 
-def GetContourPoints(Dicom, Roi):
+def GetContourPoints3D(Dicom, Roi):
     
     #print('\nRoi:\n', Roi)
     
     # Get the SOP Instance UID, Image Position Patient, Orientation and 
     # Pixel Spacing from Dicom:
     SopUid = Dicom.SOPInstanceUID
-    Position = Dicom.ImagePositionPatient
-    Orientation = Dicom.ImageOrientationPatient
-    PixSpacing = Dicom.PixelSpacing
+    Position = Dicom.ImagePositionPatient 
+    # e.g. ['-104.92378045297', '-152.49065317178', '-9.2214860452719']
+    Orientation = Dicom.ImageOrientationPatient 
+    # e.g. ['0.99726487384986', '-0.0222629979573', '-0.070477871046', 
+    #       '1.863426e-010', '0.95355613378866', '-0.301215370979']
+    PixSpacing = Dicom.PixelSpacing # e.g. ['0.8984375', '0.8984375']
     
     # The patient coordinates:
     x0 = Position[0]
@@ -58,10 +65,8 @@ def GetContourPoints(Dicom, Roi):
     Theta_c = Orientation[3:6]
     
     # The indeces of the largest direction cosines along rows and columns:
-    #MaxTheta_r = Theta_r.index(max(Theta_r))
-    #MaxTheta_c = Theta_c.index(max(Theta_c))
-    IndMaxTheta_r = Theta_r.index(max(Theta_r))
-    IndMaxTheta_c = Theta_c.index(max(Theta_c))
+    IndMaxTheta_r = Theta_r.index(max(Theta_r)) # typically = 0
+    IndMaxTheta_c = Theta_c.index(max(Theta_c)) # typically = 1
 
     # The pixel spacings:
     dx = PixSpacing[0]
@@ -111,22 +116,10 @@ def GetContourPoints(Dicom, Roi):
                     ContourData[p+1] - y0, \
                     ContourData[p+2] - z0
                 
-                # Convert from patient coord system to image coord system:          
-                #i = (v[MaxTheta_r] - Theta_c[MaxTheta_r]*v[MaxTheta_c]/Theta_c[MaxTheta_c]) / \
-                #(
-                #Theta_r[MaxTheta_r]*dx * \
-                #(1 - (Theta_c[MaxTheta_r]*Theta_r[MaxTheta_c]) / (Theta_r[MaxTheta_r]*Theta_c[MaxTheta_c]))
-                #)
-                
-                # Equation above copied below but without line breaks:
-                ## i = (v[MaxTheta_r] - Theta_c[MaxTheta_r]*v[MaxTheta_c]/Theta_c[MaxTheta_c]) / ( Theta_r[MaxTheta_r]*dx * (1 - (Theta_c[MaxTheta_r]*Theta_r[MaxTheta_c]) / (Theta_r[MaxTheta_r]*Theta_c[MaxTheta_c])) )
-                
-                #j = (v[MaxTheta_c] - Theta_r[MaxTheta_c]*i*dx) / (Theta_c[MaxTheta_c]*dy)
-                
                 # Convert from patient coord system to image coord system:   
                 i = (v[IndMaxTheta_r] - Theta_c[IndMaxTheta_r]*v[IndMaxTheta_c]/Theta_c[IndMaxTheta_c]) / \
                 (
-                Theta_r[IndMaxTheta_r]*dx * \
+                Theta_r[IndMaxTheta_r]*dx *
                 (1 - (Theta_c[IndMaxTheta_r]*Theta_r[IndMaxTheta_c]) / (Theta_r[IndMaxTheta_r]*Theta_c[IndMaxTheta_c]))
                 )
                 
@@ -134,17 +127,26 @@ def GetContourPoints(Dicom, Roi):
                 # i = (v[IndMaxTheta_r] - Theta_c[IndMaxTheta_r]*v[IndMaxTheta_c]/Theta_c[IndMaxTheta_c]) / ( Theta_r[IndMaxTheta_r]*dx * (1 - (Theta_c[IndMaxTheta_r]*Theta_r[IndMaxTheta_c]) / (Theta_r[IndMaxTheta_r]*Theta_c[IndMaxTheta_c])) )
                 
                 j = (v[IndMaxTheta_c] - Theta_r[IndMaxTheta_c]*i*dx) / (Theta_c[IndMaxTheta_c]*dy)
+                
+                """ 11/05/2020:  Needs to be in 3D: """
+                #k = ?
+                # Try k = v[2]:
+                k = v[2]
     
-                ContourPoints_c.append([i,j])
+                #ContourPoints_c.append([i,j])
+                """ 11/05/2020:  Needs to be in 3D: """
+                ContourPoints_c.append([i,j,k])
+
                 
             # Append contourPts with ContourPts_c:
-            ContourPoints.append(ContourPoints_c)
+            #ContourPoints.append(ContourPoints_c)
+            ContourPoints.extend(ContourPoints_c)
             
             
     # If ContourPoints is [] print warning:
     if 0 and ContourPoints==[]:
-        print('No contour points were found for this DICOM (none of', \
-              'the Referenced SOP Instance UIDs in the Contour Sequence', \
+        print('No contour points were found for this DICOM (none of',
+              'the Referenced SOP Instance UIDs in the Contour Sequence',
               'match the \nDICOM SOP Instance UID).')
             
         

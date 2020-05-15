@@ -29,7 +29,7 @@ Returns:
 """
 
 
-def GetDicoms(DirPath, SortMethod):
+def GetDicoms(DirPath, SortMethod, Debug):
     
     # Import packages:
     import pydicom
@@ -42,7 +42,7 @@ def GetDicoms(DirPath, SortMethod):
     #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
     
     # Get the filepaths of the DICOM files:
-    fpaths = GetDicomFpaths(DirPath, SortMethod)
+    fpaths = GetDicomFpaths(DirPath, SortMethod, Debug)
     
     # Initialise a dictionary to store everything:
     #dicomDict = {}
