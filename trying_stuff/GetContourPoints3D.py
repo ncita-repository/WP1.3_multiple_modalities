@@ -16,7 +16,7 @@ Function:
     
 Purpose:
     Get array of 3D contour points from an ROI object that correspond to a
-    gven DICOM object, e.g.:
+    given DICOM object, e.g.:
         [
          [[x1_1, y1_1, z1_1], [x2_1, y2_1, z2_1], [x3_1, y3_1, z3_1], ... ],
          [[x1_2, y1_2, z1_2], [x2_2, y2_2, x2_2], [x3_2, y3_2, x3_2], ... ],

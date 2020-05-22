@@ -33,10 +33,9 @@ def GetDicoms(DirPath, SortMethod, Debug):
     
     # Import packages:
     import pydicom
-    import importlib
-    #from DicomHelperFuncs import GetDicomFpaths
-    import GetDicomFpaths
-    importlib.reload(GetDicomFpaths)
+    #import importlib
+    #import GetDicomFpaths
+    #importlib.reload(GetDicomFpaths)
     from GetDicomFpaths import GetDicomFpaths
     
     #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
