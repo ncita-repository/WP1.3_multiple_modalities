@@ -100,8 +100,8 @@ def CreateInputFileForElastix(DicomDir, RoiFpath):
     
     
     # Define the filename for the exported file:
-    #TextFname = 'inputpoints.txt'
-    TextFname = 'inputpoints.pcs'
+    TextFname = 'inputpoints.txt'
+    #TextFname = 'inputpoints.pcs'
     
     # Open a text file:
     TextFile = open(TextFname, 'w')
