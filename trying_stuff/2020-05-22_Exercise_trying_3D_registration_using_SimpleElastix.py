@@ -306,7 +306,7 @@ for line in TextFile:
 
 # ### Register MovingIm to FixedIm using SimpleElastix:
 
-# In[17]:
+# In[5]:
 
 
 # Start timing:
@@ -1336,6 +1336,132 @@ print('DefField Size     =', DefFieldSize)
 print('DefField Spacing  =', DefFieldSpacing)
 print('DefField Origin   =', DefFieldOrigin)
 print(f'DefField Min, Max = {np.min(DefFieldNda)}, {np.max(DefFieldNda)}')
+
+
+# ### 01/06:  New idea
+# 
+# Looking at this:
+#     
+# https://simpleelastix.readthedocs.io/PointBasedRegistration.html
+# 
+# it got me wondering if to transform points I need to set up a "bspline" parameter map, rather than an "affine" one. So will try that.
+
+# In[4]:
+
+
+# Perform the registration first (copied here since many cells up):
+
+# Start timing:
+times = []
+times.append(time.time())
+
+# Initiate ElastixImageFilter:
+ElastixImFilt = sitk.ElastixImageFilter()
+ElastixImFilt.LogToConsoleOn() # <-- no output in Jupyter
+ElastixImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+
+# Define the fixed and moving images:
+ElastixImFilt.SetFixedImage(FixedIm)
+ElastixImFilt.SetMovingImage(MovingIm)
+
+# Get the default parameter map template for affine transformation:
+#ElastixImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
+#ElastixParamMap = sitk.GetDefaultParameterMap('affine')
+
+# 01/06: Use a BSpline template instead of affine:  
+ElastixParamMap = sitk.GetDefaultParameterMap('bspline')
+
+# Re-assign some parameters:
+ElastixParamMap['AutomaticTransformInitialization'] = ['true']
+ElastixParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+ElastixParamMap['WriteIterationInfo'] = ['true']
+ElastixParamMap['MaximumNumberOfIterations'] = ['512']
+ElastixParamMap['UseDirectionCosines'] = ['true']
+ElastixParamMap['Metric'] = ['CorrespondingPointsEuclideanDistanceMetric']
+#ElastixParamMap["Metric"].append("CorrespondingPointsEuclideanDistanceMetric") # get error:
+# AttributeError: 'tuple' object has no attribute 'append'
+""" 29/05: Trying this instead of trying to change it for Transformix """
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0'] 
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['1'] 
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['2'] 
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['3'] 
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['4'] 
+#ElastixParamMap['FinalBSplineInterpolationOrder'] = ['5'] 
+
+# Print the parameters:
+for keys,values in ElastixParamMap.items():
+    print(keys, '=', values)
+    
+# Set the parameter map:
+ElastixImFilt.SetParameterMap(ElastixParamMap)
+
+# Register the 3D images:
+ElastixImFilt.Execute()
+# Get the registered image:
+RegIm = ElastixImFilt.GetResultImage()
+
+times.append(time.time())
+Dtime = round(times[-1] - times[-2], 1)
+print(f'\nTook {Dtime} s to register the 3D image stacks.')
+
+
+# Now use Transformix to transform the points:
+
+# Get the transform parameter map. Start by getting the transfer parameter map
+# used for the registration (= ElastixParamMap):
+TransformixParamMap = ElastixImFilt.GetParameterMap()
+
+""" 29/05:
+    Having read section 4.3 "The transform parameter file" in the Elastix manual 
+    I found this interesting:
+    
+    "An important parameter in the transform parameter files is the FinalBSplineInterpolationOrder.
+    Usually it is set to 3, because that produces the best quality result image after registration, see Sec 5.3.4.
+    However, if you use transformix to deform a segmentation of the moving image (so, a binary image), you
+    need to manually change the FinalBSplineInterpolationOrder to 0. This will make sure that the deformed
+    segmentation is still a binary label image. If third order interpolation is used, the deformed segmentation
+    image will contain garbage. This is related to the “overshoot-property” of higher-order B-spline interpolation."
+    
+    So perhaps because I'm looking to transform points, and points are sort of binary, maybe I need to set the
+    FinalBSplineInterpolationOrder to 0.
+"""
+# Set the FinalBSplineInterpolationOrder to 0:
+#TransformixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+""" For some reason the above line produces the error:
+
+TypeError: 'tuple' object does not support item assignment
+
+so I re-assigned the FinalBSplineInterpolationOrder parameter for ElastixParamMap instead (see previous cells).
+"""
+
+# Initiate TransformixImageFilter:
+TransformixImFilt = sitk.TransformixImageFilter()
+TransformixImFilt.LogToConsoleOn() # <-- no output in Jupyter
+TransformixImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+
+# Set the parameter map:
+TransformixImFilt.SetTransformParameterMap(ElastixImFilt.GetTransformParameterMap())
+#TransformixImFilt.SetTransformParameterMap(TransformixParamMap)
+""" For some reason the above line produces the error:
+Description: itk::ERROR: Self(00000159EFE661E0): No entry Spacing found in transformParameterMap
+"""
+
+# Set the input points:
+TransformixImFilt.SetFixedPointSetFileName('inputpoints.txt')
+
+# Need to explicitely tell elastix that the image is 3D since by default it will
+# only transform to 2D:
+TransformixImFilt.SetMovingImage(MovingIm)
+
+# Set up for computing deformation field:
+#TransformixImFilt.ComputeDeformationFieldOn()
+
+# Transform the contour points:
+TransformixImFilt.Execute()
+
+times.append(time.time())
+Dtime = round(times[-1] - times[-2], 1)
+print(f'\nTook {Dtime} s to transform the points.')
 
 
 # In[ ]:
