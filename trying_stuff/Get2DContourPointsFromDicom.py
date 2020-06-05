@@ -12,7 +12,7 @@ provided by James Darcy via Slack on 04/02/2020).
 
 """
 Function:
-    GetContourPoints2D()
+    Get2DContourPointsFromDicom()
     
 Purpose:
     Get array of contour points from an ROI object that correspond to a given
@@ -41,7 +41,7 @@ Returns:
 """
 
 
-def GetContourPoints2D(Dicom, Roi):
+def Get2DContourPointsFromDicom(Dicom, Roi):
     
     #print('\nRoi:\n', Roi)
     

@@ -11,14 +11,14 @@ provided by James Darcy via Slack on 04/02/2020).
 
 """
 Function:
-    GetAllContourPoints3D()
+    Get3DContourPointsFromDicoms()
     
 Purpose:
     Get array of 3D contour points from an ROI object that correspond to a
     series of DICOM objects contained in a directory, e.g.:
         [
          [[x1_1, y1_1, z1_1], [x2_1, y2_1, z2_1], [x3_1, y3_1, z3_1], ... ],
-         [[x1_2, y1_2, z1_2], [x2_2, y2_2, x2_2], [x3_2, y3_2, x3_2], ... ],
+         [[x1_2, y1_2, z1_2], [x2_2, y2_2, z2_2], [x3_2, y3_2, z3_2], ... ],
          ...
          [[x1_N, y1_N, z1_N], [x2_N, y2_N, z2_N], [x3_N, y3_N, z3_N], ... ]
         ]
@@ -40,7 +40,7 @@ Returns:
 """
 
 
-def GetAllContourPoints3D(DicomDir, RoiFpath):
+def Get3DContourPointsFromDicoms(DicomDir, RoiFpath):
     # Import packages:
     import pydicom
     from GetDicoms import GetDicoms
