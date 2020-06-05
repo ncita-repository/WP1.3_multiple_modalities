@@ -87,7 +87,7 @@ importlib.reload(RegUtilityFuncs)
 import RegUtilityFuncs as ruf
 
 
-# In[4]:
+# In[17]:
 
 
 # Define FixedDicomDir and MovingDicomDir:
@@ -104,18 +104,18 @@ MovingRoiFpath = os.path.join(MovingRoiDir, MovingRoiFname)
 FixedReader = sitk.ImageSeriesReader()
 FixedNames = FixedReader.GetGDCMSeriesFileNames(FixedDicomDir)
 FixedReader.SetFileNames(FixedNames)
-FixedIm = FixedReader.Execute()
-FixedIm = sitk.Cast(FixedIm, sitk.sitkFloat32)
+FixedIm_sitk = FixedReader.Execute()
+FixedIm_sitk = sitk.Cast(FixedIm_sitk, sitk.sitkFloat32)
 
 # Read in the 3D stack of Moving DICOMs:
 MovingReader = sitk.ImageSeriesReader()
 MovingNames = MovingReader.GetGDCMSeriesFileNames(MovingDicomDir)
 MovingReader.SetFileNames(MovingNames)
-MovingIm = MovingReader.Execute()
-MovingIm = sitk.Cast(MovingIm, sitk.sitkFloat32)
+MovingIm_sitk = MovingReader.Execute()
+MovingIm_sitk = sitk.Cast(MovingIm_sitk, sitk.sitkFloat32)
 
 # Get some info on FixedIm and MovingIm:
-ruf.ShowImagesInfo(FixedIm, MovingIm)
+ruf.ShowImagesInfo(FixedIm_sitk, MovingIm_sitk)
 
 # Get the contour points:
 MovingContourPts = Get3DContourPointsFromDicoms(DicomDir=MovingDicomDir,
@@ -129,36 +129,77 @@ MovingContourPts
 
 
 interact(ruf.display_images_with_contours,
-         fix_ind = (0,FixedIm.GetSize()[2]-1),
-         mov_ind = (0,MovingIm.GetSize()[2]-1),
-         fix_npa = fixed(sitk.GetArrayFromImage(FixedIm)),
-         mov_npa = fixed(sitk.GetArrayFromImage(MovingIm)),
-         fix_im = fixed(FixedIm),
-         mov_im = fixed(MovingIm),
+         fix_ind = (0,FixedIm_sitk.GetSize()[2]-1),
+         mov_ind = (0,MovingIm_sitk.GetSize()[2]-1),
+         fix_npa = fixed(sitk.GetArrayFromImage(FixedIm_sitk)),
+         mov_npa = fixed(sitk.GetArrayFromImage(MovingIm_sitk)),
+         fix_im = fixed(FixedIm_sitk),
+         mov_im = fixed(MovingIm_sitk),
          mov_contour_pts = fixed(MovingContourPts),
          fix_title = 'Fixed image',
          mov_title = 'Moving image');
 
 
-# In[7]:
+# In[23]:
+
+
+fix_npa = sitk.GetArrayFromImage(FixedIm_sitk)
+mov_npa = sitk.GetArrayFromImage(MovingIm_sitk)
+
+fix_N = len(fix_npa)
+mov_N = len(mov_npa)
+
+Nrows = max(fix_N, mov_N)
+
+print(fix_N)
+print(mov_N)
+
+
+# In[49]:
+
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+ruf.display_all_sitk_images(fix_im=FixedIm_sitk, mov_im=MovingIm_sitk, export_fig=True)
+
+
+# In[30]:
 
 
 # Read in the DICOMs as a 3D ants image:
 
-FixedIm = ants.dicom_read(FixedDicomDir)
-MovingIm = ants.dicom_read(MovingDicomDir)
+FixedIm_ants = ants.dicom_read(FixedDicomDir)
+MovingIm_ants = ants.dicom_read(MovingDicomDir)
 
 
-# In[8]:
+# In[31]:
 
 
-print(FixedIm)
+print(FixedIm_ants)
 
 
-# In[9]:
+# In[32]:
 
 
-print(MovingIm)
+print(MovingIm_ants)
+
+
+# In[38]:
+
+
+FixedIm_ants.shape
+
+
+# In[50]:
+
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+ruf.display_all_ants_images(fix_im=FixedIm_ants, mov_im=MovingIm_ants, export_fig=True)
 
 
 # In[10]:
@@ -170,13 +211,13 @@ times.append(time.time())
 
 
 # Register in 3D this time:
-reg = ants.registration(FixedIm, MovingIm, 'Affine')
+reg = ants.registration(FixedIm_ants, MovingIm_ants, 'Affine')
 
 times.append(time.time())
 Dtime = round(times[-1] - times[-2], 1)
 print(f'\nTook {Dtime} s to register the 3D image stacks.')
 
-RegIm = reg['warpedmovout']
+RegIm_ants = reg['warpedmovout']
 
 
 # ### Took only 6-9 s to register the 3D stacks.  By comparison, SimpleElastix took 23-33 s!!
@@ -190,8 +231,8 @@ print(reg)
 # In[12]:
 
 
-FixedIm.shape
-#FixedIm.numpy()
+FixedIm_ants.shape
+#FixedIm_ants.numpy()
 
 
 # In[20]:
@@ -238,50 +279,45 @@ interact(ruf.display_ants_images_and_reg_result,
 # 
 # ### It looks like the DICOM reader of ANTsPy don't order the slices along the z axis!
 # 
+# # Raised issue:
+# 
+# ## https://github.com/ANTsX/ANTsPy/issues/183
+# 
 # ### I can't see how to load the images in the correct order, or how to use .read_image in a sequential fashion, using a list of ordered filepaths, so instead, use sitk to read the DICOMs, convert to numpy, then to ants.
 
-# In[36]:
+# In[51]:
 
 
 # Read in the 3D stack of Fixed DICOMs:
 FixedReader = sitk.ImageSeriesReader()
-#FixedReader = sitk.ImageSeriesReader(sitk.sitkFloat32)
-if SwapFixedMoving:
-    FixedNames = FixedReader.GetGDCMSeriesFileNames(MovingDir)
-else:
-    FixedNames = FixedReader.GetGDCMSeriesFileNames(FixedDir)
+FixedNames = FixedReader.GetGDCMSeriesFileNames(FixedDicomDir)
 FixedReader.SetFileNames(FixedNames)
-FixedIm = FixedReader.Execute()
-FixedIm = sitk.Cast(FixedIm, sitk.sitkFloat32)
+FixedIm_itk = FixedReader.Execute()
+FixedIm_itk = sitk.Cast(FixedIm_itk, sitk.sitkFloat32)
 
 # Read in the 3D stack of Moving DICOMs:
 MovingReader = sitk.ImageSeriesReader()
-#MovingReader = sitk.ImageSeriesReader(sitk.sitkFloat32)
-if SwapFixedMoving:
-    MovingNames = MovingReader.GetGDCMSeriesFileNames(FixedDir)
-else:
-    MovingNames = MovingReader.GetGDCMSeriesFileNames(MovingDir)
+MovingNames = MovingReader.GetGDCMSeriesFileNames(MovingDicomDir)
 MovingReader.SetFileNames(MovingNames)
-MovingIm = MovingReader.Execute()
-#MovingIm = MovingReader.Execute(sitk.sitkFloat32)
-MovingIm = sitk.Cast(MovingIm, sitk.sitkFloat32)
+MovingIm_itk = MovingReader.Execute()
+MovingIm_itk = sitk.Cast(MovingIm_itk, sitk.sitkFloat32)
 
 
 # Convert from sitk image to numpy array to ants image:
-FixedImAnts = ants.from_numpy(data=sitk.GetArrayFromImage(FixedIm), 
-                              origin=FixedIm.GetOrigin(),
-                              spacing=FixedIm.GetSpacing(),
-                              direction=FixedIm.GetDirection(),
+FixedIm_ants = ants.from_numpy(data=sitk.GetArrayFromImage(FixedIm_sitk), 
+                              origin=FixedIm_sitk.GetOrigin(),
+                              spacing=FixedIm_sitk.GetSpacing(),
+                              direction=FixedIm_sitk.GetDirection(),
                               has_components=False,
                               is_rgb=False)
 
-FixedIAnts
+FixedIm_ants
 
 
-# In[34]:
+# In[52]:
 
 
-FixedIm.GetOrigin()
+FixedIm_ants.origin
 
 
 # ### 03/06: Can't figure out why I'm getting the error above, since FixedIm.GetOrigin() does have 3 dimensions...

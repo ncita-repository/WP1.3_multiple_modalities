@@ -944,3 +944,116 @@ def plot_values(registration_method):
 def update_multires_iterations():
     global metric_values, multires_iterations
     multires_iterations.append(len(metric_values))
+    
+    
+    
+def display_all_sitk_images(fix_im, mov_im, export_fig):
+    
+    fix_dz = fix_im.GetSpacing()[2]
+    mov_dz = mov_im.GetSpacing()[2]
+    
+    fix_z0 = fix_im.GetOrigin()[2]
+    mov_z0 = mov_im.GetOrigin()[2]
+
+    fix_npa = sitk.GetArrayFromImage(fix_im)
+    mov_npa = sitk.GetArrayFromImage(mov_im)
+    
+    fix_N = len(fix_npa)
+    mov_N = len(mov_npa)
+    
+    Nrows = max(fix_N, mov_N)
+    Ncols = 2
+
+    # create a figure with two subplots and the specified size
+    plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 5*Nrows))
+
+    i = 0 # sub-plot number
+    
+    for s in range(Nrows):
+        #print(f's = {s}')
+        
+        # Compute the z position:
+        fix_z = fix_z0 + fix_dz*(s+1)
+        mov_z = mov_z0 + mov_dz*(s+1)
+        
+        i = i + 1 # increment sub-plot number
+        
+        # Draw the fixed image:
+        if s <= fix_N-1:
+            plt.subplot(Nrows, Ncols, i)
+            plt.imshow(fix_npa[s,:,:], cmap=plt.cm.Greys_r);
+            #plt.title(f'Fixed slice {s+1}/{fix_N} (z = {round(fix_z,1)} mm)')
+            plt.title(f'Fixed slice {s+1}/{fix_N}')
+            plt.axis('off')
+    
+        i = i + 1 # increment sub-plot number
+        
+        # Draw the moving image:
+        if s <= mov_N-1:
+            plt.subplot(Nrows, Ncols, i)
+            plt.imshow(mov_npa[s,:,:], cmap=plt.cm.Greys_r);
+            #plt.title(f'Moving slice {s+1}/{mov_N} (z = {round(mov_z,1)} mm)')
+            plt.title(f'Moving slice {s+1}/{mov_N}')
+            plt.axis('off')
+            
+    if export_fig:
+        plt.savefig('Images_sitk.png', bbox_inches='tight')
+
+
+
+def display_all_ants_images(fix_im, mov_im, export_fig):
+    
+    fix_dz = fix_im.spacing[2]
+    mov_dz = mov_im.spacing[2]
+    
+    fix_z0 = fix_im.origin[2]
+    mov_z0 = mov_im.origin[2]
+
+    fix_npa = fix_im.numpy()
+    mov_npa = mov_im.numpy()
+    
+    #fix_N = len(fix_npa) # = 192
+    #mov_N = len(mov_npa) # = 212
+    fix_N = fix_im.shape[2]
+    mov_N = mov_im.shape[2]
+    
+    Nrows = max(fix_N, mov_N)
+    Ncols = 2
+
+    #print(f'fix_N = {fix_N}')
+    #print(f'mov_N = {mov_N}')
+    
+    # create a figure with two subplots and the specified size
+    plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 5*Nrows))
+
+    i = 0 # sub-plot number
+    
+    for s in range(Nrows):
+        #print(f's = {s}')
+        
+        # Compute the z position:
+        fix_z = fix_z0 + fix_dz*(s+1)
+        mov_z = mov_z0 + mov_dz*(s+1)
+        
+        i = i + 1 # increment sub-plot number
+        
+        # Draw the fixed image:
+        if s <= fix_N-1:
+            plt.subplot(Nrows, Ncols, i)
+            plt.imshow(np.flipud(np.rot90(fix_npa[:,:,s])), cmap=plt.cm.Greys_r);
+            #plt.title(f'Fixed slice {s+1}/{fix_N} (z = {round(fix_z,1)} mm)')
+            plt.title(f'Fixed slice {s+1}/{fix_N}')
+            plt.axis('off')
+    
+        i = i + 1 # increment sub-plot number
+        
+        # Draw the moving image:
+        if s <= mov_N-1:
+            plt.subplot(Nrows, Ncols, i)
+            plt.imshow(np.flipud(np.rot90(mov_npa[:,:,s])), cmap=plt.cm.Greys_r);
+            #plt.title(f'Moving slice {s+1}/{mov_N} (z = {round(mov_z,1)} mm)')
+            plt.title(f'Moving slice {s+1}/{mov_N}')
+            plt.axis('off')
+
+    if export_fig:
+        plt.savefig('Images_ants.png', bbox_inches='tight')
