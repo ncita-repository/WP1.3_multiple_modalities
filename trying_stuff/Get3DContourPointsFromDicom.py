@@ -117,7 +117,7 @@ def Get3DContourPointsFromDicom(Dicom, Roi):
                     ContourData[p+2] - z0
                 
                 # Convert from patient coord system to image coord system:   
-                i = (v[IndMaxTheta_r] - Theta_c[IndMaxTheta_r]*v[IndMaxTheta_c]/Theta_c[IndMaxTheta_c]) / \
+                i = (v[IndMaxTheta_r] - v[IndMaxTheta_c]*Theta_c[IndMaxTheta_r]/Theta_c[IndMaxTheta_c]) / \
                 (
                 Theta_r[IndMaxTheta_r]*dx *
                 (1 - (Theta_c[IndMaxTheta_r]*Theta_r[IndMaxTheta_c]) / (Theta_r[IndMaxTheta_r]*Theta_c[IndMaxTheta_c]))
@@ -128,13 +128,12 @@ def Get3DContourPointsFromDicom(Dicom, Roi):
                 
                 j = (v[IndMaxTheta_c] - Theta_r[IndMaxTheta_c]*i*dx) / (Theta_c[IndMaxTheta_c]*dy)
                 
-                """ 11/05/2020:  Needs to be in 3D: """
-                #k = ?
-                # Try k = v[2]:
+                """ 11/05/2020:  Add k for 3D: """
                 k = v[2]
     
+                """ For 2D: """
                 #ContourPoints_c.append([i,j])
-                """ 11/05/2020:  Needs to be in 3D: """
+                """ 11/05/2020:  For 3D: """
                 ContourPoints_c.append([i,j,k])
 
                 
