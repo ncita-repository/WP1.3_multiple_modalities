@@ -54,7 +54,7 @@
 
 # ### Import packages and functions
 
-# In[1]:
+# In[20]:
 
 
 import SimpleITK as sitk
@@ -66,6 +66,7 @@ import copy
 import importlib
 import json
 import pydicom
+import pandas as pd
 import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
 get_ipython().run_line_magic('matplotlib', 'notebook')
@@ -74,17 +75,25 @@ from IPython.display import clear_output
 
 from GetDicomFpaths import GetDicomFpaths
 from GetDicoms import GetDicoms
+import GetContourPtsForDicoms
+importlib.reload(GetContourPtsForDicoms)
 from GetContourPtsForDicoms import GetContourPtsForDicoms
+from GetInputPoints import GetInputPoints
 #import CreateInputFileForElastix
 #importlib.reload(CreateInputFileForElastix)
 from CreateInputFileForElastix import CreateInputFileForElastix
 from ParseTransformixOutput import ParseTransformixOutput
+import PCStoICS
+importlib.reload(PCStoICS)
+from PCStoICS import PCStoICS
+from RunSimpleElastixReg import RunSimpleElastixReg
+from TransformPoints import TransformPoints
 import RegUtilityFuncs
 importlib.reload(RegUtilityFuncs)
 import RegUtilityFuncs as ruf
 
 
-# In[3]:
+# In[21]:
 
 
 # Define FixedDicomDir and MovingDicomDir:
@@ -98,8 +107,12 @@ FixRoiFname = r'AIM_20200511_073405.dcm'
 FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
 
 # Get contour points into necessary arrays and dictionaries:
-FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS,FixPts_ICS, FixPtsArr_ICS, FixPtsDict_ICS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
-                                                                   RoiFpath=FixRoiFpath)
+#FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
+#                                                                   RoiFpath=FixRoiFpath)
+
+InPts_PCS, InPtsArr_PCS, InPtsDict_PCS,InPts_ICS, InPtsArr_ICS, InPtsDict_ICS = GetInputPoints(DicomDir=FixDicomDir, 
+                                                        RoiFpath=FixRoiFpath)
+
 # Read in the 3D stack of Fixed DICOMs:
 FixReader = sitk.ImageSeriesReader()
 FixNames = FixReader.GetGDCMSeriesFileNames(FixDicomDir)
@@ -118,10 +131,36 @@ MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
 ruf.ShowImagesInfo(FixIm, MovIm)
 
 
-# In[4]:
+# In[45]:
 
 
-FixPtsArr_ICS
+#MovPtsArr_PCS
+
+
+# In[22]:
+
+
+# Convert InPts_PCS from PCS to ICS:
+InPts_ICS = PCStoICS(Pts_PCS=InPts_PCS, SitkIm=MovIm)
+InPts_ICS
+
+
+# In[5]:
+
+
+InPtsArr_PCS
+
+
+# In[6]:
+
+
+InPtsArr_ICS
+
+
+# In[7]:
+
+
+InPtsArr_ICS
 
 
 # ### Display images using interactive plot:
@@ -151,33 +190,19 @@ FixPtsArr_ICS
 
 # ### Create inputpoints.txt for Elastix, containing the contour points to be transformed:
 
-# In[4]:
+# In[23]:
 
 
-#import CreateInputFileForElastix
-#importlib.reload(CreateInputFileForElastix)
-#from CreateInputFileForElastix import CreateInputFileForElastix
+import CreateInputFileForElastix
+importlib.reload(CreateInputFileForElastix)
+from CreateInputFileForElastix import CreateInputFileForElastix
 
 CoordSys = 'PCS'
 #CoordSys = 'ICS'
 
 # Create inputpoints.txt for Elastix, containing the contour points to be
 # transformed:
-AllPts_PCS, AllPtsArr_PCS, AllPtsDict_PCS,AllPts_ICS, AllPtsArr_ICS, AllPtsDict_ICS = CreateInputFileForElastix(DicomDir=FixDicomDir,
-                                                                      RoiFpath=FixRoiFpath,
-                                                                      CoordSys=CoordSys)
-
-
-# In[13]:
-
-
-#AllPts_PCS
-
-
-# In[12]:
-
-
-#AllPts_ICS
+CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, CoordSys=CoordSys)
 
 
 # ### View the created file inputpoints.pcs
@@ -194,10 +219,10 @@ AllPts_PCS, AllPtsArr_PCS, AllPtsDict_PCS,AllPts_ICS, AllPtsArr_ICS, AllPtsDict_
 
 # ### Register MovingIm to FixedIm using SimpleElastix:
 
-# In[5]:
+# In[4]:
 
 
-RegIm, ElastixImFilt = ruf.RunSimpleElastixReg(FixIm, MovIm)
+RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
 
 
 # ### Get some info on FixIm, MovIm and RegIm:
@@ -259,18 +284,18 @@ RegIm, ElastixImFilt = ruf.RunSimpleElastixReg(FixIm, MovIm)
 # 
 # https://simpleelastix.readthedocs.io/PointBasedRegistration.html
 
-# In[14]:
+# In[24]:
 
 
 # Transform MovingContourPts:
-ruf.TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
+TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
 
 
-# In[69]:
+# In[16]:
 
 
 # Parse outputpoints.txt:
-PtNos, InInds, InPts, FixOutInds, OutPts, Defs, MovOutInds = ParseTransformixOutput()
+PtNos, InInds, InPts_PCS, FixOutInds,OutPts_PCS, Defs_PCS, MovOutInds = ParseTransformixOutput()
 
 """
 Note: The relationship between the above variable names and the items in outputpoints.txt are as follows:
@@ -290,47 +315,90 @@ print('\nParsed OutputPoints.txt:\n')
 for i in range(len(PtNos)):
     print(f'\nPoint {PtNos[i]}:')
     print(f'InputIndex        = {InInds[i]}')
-    print(f'InputPoint        = {InPts[i]}')
+    print(f'InputPoint_PCS    = {InPts_PCS[i]}')
     print(f'FixedOutputIndex  = {FixOutInds[i]}')
-    print(f'OutputPoint       = {OutPts[i]}')
-    print(f'Deformation       = {Defs[i]}')
+    print(f'OutputPoint_PCS   = {OutPts_PCS[i]}')
+    print(f'Deformation_PCS   = {Defs_PCS[i]}')
     print(f'MovingOutputIndex = {MovOutInds[i]}')
 
 
-# In[38]:
+# ### Convert output points from PCS to ICS
 
+# In[22]:
+
+
+OutPts_PCS[0]
+
+
+# In[23]:
+
+
+[OutPts_PCS[0]]
+
+
+# In[25]:
+
+
+from PCStoICS import PCStoICS
+
+PCStoICS(Pts_PCS=[OutPts_PCS[0]], SitkIm=MovIm)
+
+
+# In[23]:
+
+
+PCStoICS(Pts_PCS=[OutPts_PCS[0]], SitkIm=MovIm)[0]
+
+
+# In[25]:
+
+
+import GetOutputPoints
+importlib.reload(GetOutputPoints)
+from GetOutputPoints import GetOutputPoints
+
+# Convert InPts_PCS, OutPts_PCS and Defs_PCS to ICS:
+#InPts_ICS = ruf.PCStoICS(InPts_PCS, MovIm)
+#OutPts_ICS = ruf.PCStoICS(OutPts_PCS, MovIm)
+#
+#P = len(PtNos)
+#Defs_ICS = [[OutPts_ICS[p][i] - InPts_ICS[p][i] for i in range(3)] for p in range(P)]
+
+PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS, Defs_ICS, MovOutInds,OutPtsArr_PCS, OutPtsArr_ICS = GetOutputPoints(MovingIm=MovIm)
 
 # Create a dictionary to store the output:
-
-OutputDict = {'PCS':{'PointNo':PtNos,
-                     'InputIndex':InInds,
-                     'InputPoint':InPts,
-                     'FixedOutputIndex':FixOutInds,
-                     'OutputPoint':OutPts,
-                     'Deformation':Defs,
-                     'MovingOutputIndex':MovOutInds
-                    }
+OutPtsDict = {'PtNo':PtNos,
+              'InInd':InInds,
+              'InPt_PCS':InPts_PCS,
+              'InPt_ICS':InPts_ICS,
+              'FixOutInd':FixOutInds,
+              'OutPt_PCS':OutPts_PCS,
+              'OutPt_ICS':OutPts_ICS,
+              'Def_PCS':Defs_PCS,
+              'Def_ICS':Defs_ICS,
+              'MovOutInd':MovOutInds
              }
 
-OutputDict
+#OutPtsDict
+
+# Convert the dictionary to a dataframe:
+OutPtsDf = pd.DataFrame(data=OutPtsDict)
+
+OutPtsDf[0:20]
 
 
-# ### Create RegisteredContourPts in the same format as MovingContourPts
-
-# In[16]:
+# In[62]:
 
 
-import RegUtilityFuncs
-importlib.reload(RegUtilityFuncs)
-import RegUtilityFuncs as ruf
+print(151.8/13.1)
+print(130.3/11.7)
+print(0.62/1.91)
 
-# Create an array of arrays of contour points for RegIm using the same format used
-# for MovingContourPts, i.e. using the z index from MovingOutputIndex? and the OutputPoint?:
-TxPtsArr_ICS = ruf.CreateArrayOfOutputPts(MovingIm=MovIm, CoordSys=CoordSys)
 
-print('CoordSys =', CoordSys)
+# In[18]:
 
-TxPtsArr_ICS
+
+OutPtsArr_ICS
 
 
 # In[17]:
@@ -365,7 +433,113 @@ ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_
                                                               export_fname=fig_fname)
 
 
-# In[44]:
+# In[53]:
+
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+InputPoint_ICS = ruf.PCStoICS(InPts_PCS, MovIm)
+OutputPoint_ICS = ruf.PCStoICS(OutPts_PCS, MovIm)
+
+print(OutputPoint_ICS[0])
+print(InputPoint_ICS[0])
+
+[OutputPoint_ICS[0][i] - InputPoint_ICS[0][i] for i in range(3)]
+
+[[OutputPoint_ICS[p][i] - InputPoint_ICS[p][i] for i in range(3)] for p in range(len(OutputPoint_ICS))]
+
+
+# In[18]:
+
+
+OutPtsArr_PCS
+
+
+# In[26]:
+
+
+OutPtsArr_ICS
+
+
+# In[28]:
+
+
+### 17/06: Display result of:
+# 1. Created inputpoints.txt in PCS (directly from ContourData)
+# 2. Transformed points
+# 3. Converted points given by OutputPoint from PCS to ICS (using 3D conversion)
+# 4. Grouped converted points by z-index given by OutputIndexMoving
+
+### using latest equations derived on June 17 - Attempt #1.
+
+""" 
+Although the points are not overlaying correctly, at least the contours were spread 
+across a number of slices (compare to results obtained by deforming points in the ICS,
+which resulted in most of the z-indices in OutputIndexMoving = 13, with some in 12 and 
+some in 14).
+This suggests that the points need to be transformed in the PCS.
+But further work required to get the points overlayed properly.
+"""
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Choose whether to export figure:
+export_fig = True
+#export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_sitk.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname)
+
+
+# In[26]:
+
+
+### 17/06: Display result of:
+# 1. Created inputpoints.txt in PCS (directly from ContourData)
+# 2. Transformed points
+# 3. Converted points given by OutputPoint from PCS to ICS (using 3D conversion)
+# 4. Grouped converted points by z-index given by OutputIndexMoving
+
+### using latest equations derived on June 17 - Attempt #2.
+
+""" 
+Although the points are not overlaying correctly, at least the contours were spread 
+across a number of slices (compare to results obtained by deforming points in the ICS,
+which resulted in most of the z-indices in OutputIndexMoving = 13, with some in 12 and 
+some in 14).
+This suggests that the points need to be transformed in the PCS.
+But further work required to get the points overlayed properly.
+"""
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Choose whether to export figure:
+export_fig = True
+#export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_sitk.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname)
+
+
+# In[ ]:
 
 
 print('FixIm origin  =', FixIm.GetOrigin())

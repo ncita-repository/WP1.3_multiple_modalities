@@ -77,18 +77,12 @@ Returns:
 def CreateInputFileForElastix(DicomDir, RoiFpath, CoordSys):
     # Import packages:
     import os
-    #import pydicom
-    #from GetDicoms import GetDicoms
-    #import importlib
-    #import GetContourPtsForDicoms
-    #importlib.reload(GetContourPtsForDicoms)
-    from GetContourPtsForDicoms import GetContourPtsForDicoms
+    from GetInputPoints import GetInputPoints
     
     
     # Get the contour points:    
-    AllPts_PCS, AllPtsArr_PCS, AllPtsDict_PCS,\
-    AllPts_ICS, AllPtsArr_ICS, AllPtsDict_ICS = GetContourPtsForDicoms(DicomDir, 
-                                                                       RoiFpath)
+    Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
+    Pts_ICS, PtsArr_ICS, PtsDict_ICS = GetInputPoints(DicomDir, RoiFpath)
     
     """ 
     Should use the contour points in the Patient Coordinate System since it
@@ -97,10 +91,10 @@ def CreateInputFileForElastix(DicomDir, RoiFpath, CoordSys):
     """
     
     if CoordSys=='PCS':
-        Points = AllPts_PCS
+        Points = Pts_PCS
     
     if CoordSys=='ICS':
-        Points = AllPts_ICS
+        Points = Pts_ICS
         
 
     # Define the filename for the exported file:
@@ -120,10 +114,6 @@ def CreateInputFileForElastix(DicomDir, RoiFpath, CoordSys):
     # format:
     for Point in Points:
         TextFile.write(f'\n{Point[0]} {Point[1]} {Point[2]}')
-        # Round to 1 decimal to see if any effect on outputpoints.txt:
-        #TextFile.write(f'\n{round(Point[0], 1)} {round(Point[1], 1)} {round(Point[2], 1)}') 
-        """ Rounding to 1 decimal (as shown in the sample usage) did
-        not make any difference. """
                 
     TextFile.close()
     
@@ -132,5 +122,6 @@ def CreateInputFileForElastix(DicomDir, RoiFpath, CoordSys):
     
     print('\nContour points exported to', os.path.join(CWD, TextFname), '.')
     
-    return AllPts_PCS, AllPtsArr_PCS, AllPtsDict_PCS,\
-           AllPts_ICS, AllPtsArr_ICS, AllPtsDict_ICS
+    #return Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
+    #       Pts_ICS, PtsArr_ICS, PtsDict_ICS
+    return

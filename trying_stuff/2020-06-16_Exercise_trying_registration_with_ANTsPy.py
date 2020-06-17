@@ -86,7 +86,7 @@ importlib.reload(RegUtilityFuncs)
 import RegUtilityFuncs as ruf
 
 
-# In[3]:
+# In[7]:
 
 
 # Define FixedDicomDir and MovingDicomDir:
@@ -100,12 +100,12 @@ FixRoiFname = r'AIM_20200511_073405.dcm'
 FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
 
 # Get contour points into necessary arrays and dictionaries:
-FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS,FixPts_ICS, FixPtsArr_ICS, FixPtsDict_ICS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
-                                                                   RoiFpath=FixRoiFpath)
+FixPts_PCS, FixPts_PCS_Arr, FixPts_PCS_Dict,FixPts_ICS, FixPts_ICS_Arr, FixPts_ICS_Dict = GetContourPtsForDicoms(DicomDir=FixDicomDir,
+                                                                     RoiFpath=FixRoiFpath)
 
 # Convert the dictionaries to dataframes:
-FixPtsDFrame_PCS = pd.DataFrame(data=FixPtsDict_PCS)
-FixPtsDFrame_ICS = pd.DataFrame(data=FixPtsDict_ICS)
+FixPts_PCS_Df = pd.DataFrame(data=FixPts_PCS_Dict)
+FixPts_ICS_Df = pd.DataFrame(data=FixPts_ICS_Dict)
 
 
 # Read in the 3D stack of Fixed DICOMs:
@@ -160,27 +160,72 @@ verbose = True
 verbose = False
 
 # Apply the forward transformation to the FixPtsDFrame_PCS and FixPtsDFrame_ICS:
-FwdTxPts_PCS = ants.apply_transforms_to_points(dim=3, 
-                                               points=FixPtsDFrame_PCS, 
-                                               transformlist=reg['fwdtransforms'], 
-                                               verbose=verbose)
+FwdTxPts_PCS_Df = ants.apply_transforms_to_points(dim=3, 
+                                                 points=FixPtsDFrame_PCS, 
+                                                 transformlist=reg['fwdtransforms'], 
+                                                 verbose=verbose)
 
-FwdTxPts_ICS = ants.apply_transforms_to_points(dim=3, 
-                                               points=FixPtsDFrame_ICS, 
-                                               transformlist=reg['fwdtransforms'], 
-                                               verbose=verbose)
+FwdTxPts_ICS_Df = ants.apply_transforms_to_points(dim=3, 
+                                                 points=FixPtsDFrame_ICS, 
+                                                 transformlist=reg['fwdtransforms'], 
+                                                 verbose=verbose)
 
 # Apply the inverse transformation to the same inputs:
-RevTxPts_PCS = ants.apply_transforms_to_points(dim=3, 
-                                               points=FixPtsDFrame_PCS, 
-                                               transformlist=reg['invtransforms'], 
-                                               verbose=verbose)
+RevTxPts_PCS_Df = ants.apply_transforms_to_points(dim=3, 
+                                                 points=FixPtsDFrame_PCS, 
+                                                 transformlist=reg['invtransforms'], 
+                                                 verbose=verbose)
 
-RevTxPts_ICS = ants.apply_transforms_to_points(dim=3, 
-                                               points=FixPtsDFrame_ICS, 
-                                               transformlist=reg['invtransforms'], 
-                                               verbose=verbose)
+RevTxPts_ICS_Df = ants.apply_transforms_to_points(dim=3, 
+                                                 points=FixPtsDFrame_ICS, 
+                                                 transformlist=reg['invtransforms'], 
+                                                 verbose=verbose)
 
+# Convert from dataframes to lists:
+FwdTxPts_PCS = FwdTxPts_PCS_Df.values.tolist()
+
+FwdTxPts_ICS = FwdTxPts_ICS_Df.values.tolist()
+
+RevTxPts_PCS = RevTxPts_PCS_Df.values.tolist()
+
+RevTxPts_ICS = RevTxPts_ICS_Df.values.tolist()
+
+
+# In[11]:
+
+
+FwdTxPts_PCS
+
+
+# In[12]:
+
+
+FwdTxPts_ICS
+
+
+# In[13]:
+
+
+# Create a dictionary to store the output:
+OutPtsDict = {'FixPts_PCS':FixPts_PCS,
+              'FixPts_ICS':FixPts_ICS,
+              'FwdTxPts_PCS':FwdTxPts_PCS,
+              'FwdTxPts_ICS':FwdTxPts_ICS,
+              'RevTxPts_PCS':RevTxPts_PCS,
+              'RevTxPts_ICS':RevTxPts_ICS
+             }
+
+#OutPtsDict
+
+# Convert the dictionary to a dataframe:
+OutPtsDf = pd.DataFrame(data=OutPtsDict)
+
+OutPtsDf[0:20]
+
+
+# # 17/06:
+# 
+# ## The issue that I see with ANTsPy is that unlike SimpleITK, it only seems to provide the transformed points - not the indices, so working out where each point belongs on the image stack will be quite tedious.
 
 # interact(ruf.display_images_with_contours,
 #          fix_ind = (0,FixedIm_sitk.GetSize()[2]-1),
