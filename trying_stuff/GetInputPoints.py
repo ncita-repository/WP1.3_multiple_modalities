@@ -5,33 +5,36 @@ Created on Wed Jun 17 13:09:22 2020
 @author: ctorti
 """
 
-def GetInputPoints(DicomDir, RoiFpath):
+def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
     # Import packages:
     #import os
-    import SimpleITK as sitk
+    #import SimpleITK as sitk
     #import pydicom
     #from GetDicoms import GetDicoms
     import importlib
+    import PCStoICS
+    importlib.reload(PCStoICS)
     from PCStoICS import PCStoICS
     #import RegUtilityFuncs as ruf
     import GetContourPtsForDicoms
     importlib.reload(GetContourPtsForDicoms)
     from GetContourPtsForDicoms import GetContourPtsForDicoms
+    #from GetImageAttributes import GetImageAttributes
     
     
     # Get the contour points:    
     Pts_PCS, PtsArr_PCS, PtsDict_PCS = GetContourPtsForDicoms(DicomDir, 
                                                               RoiFpath)
     
-    # Read in the 3D stack of DICOMs:
-    SitkReader = sitk.ImageSeriesReader()
-    SitkNames = SitkReader.GetGDCMSeriesFileNames(DicomDir)
-    SitkReader.SetFileNames(SitkNames)
-    SitkIm = SitkReader.Execute()
-    SitkIm = sitk.Cast(SitkIm, sitk.sitkFloat32)
+    # Get the Image Attributes:
+    #Origin, Directions, Spacings = GetImageAttributes(DicomDir=DicomDir,
+    #                                                  Package=Package)
+    
 
     # Convert points in Pts_PCS from PCS to ICS:
-    Pts_ICS = PCStoICS(Pts_PCS=Pts_PCS, SitkIm=SitkIm)
+    Pts_ICS = PCStoICS(Pts_PCS=Pts_PCS, Origin=Origin, 
+                       Directions=Directions, Spacings=Spacings)
+
     
     # Convert points in PtsArr_PCS from PCS to ICS:
     PtsArr_ICS = []
@@ -39,7 +42,10 @@ def GetInputPoints(DicomDir, RoiFpath):
     for array in PtsArr_PCS:
         # If array is not empty:
         if array:
-            PtsArr_ICS.append(PCStoICS(Pts_PCS=array, SitkIm=SitkIm))
+            PtsArr_ICS.append(PCStoICS(Pts_PCS=array, Origin=Origin, 
+                                       Directions=Directions, 
+                                       Spacings=Spacings))
+            
         else:
             PtsArr_ICS.append([])
     

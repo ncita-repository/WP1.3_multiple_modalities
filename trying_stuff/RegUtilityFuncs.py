@@ -947,7 +947,8 @@ def display_all_ants_images(fix_im, mov_im, export_fig):
 def display_all_sitk_images_and_reg_results_with_all_contours(fix_im, mov_im, reg_im,
                                                               fix_pts, mov_pts,
                                                               export_fig,
-                                                              export_fname):
+                                                              export_fname,
+                                                              plot_slices):
     
     
     fix_z0 = fix_im.GetOrigin()[2]
@@ -968,16 +969,34 @@ def display_all_sitk_images_and_reg_results_with_all_contours(fix_im, mov_im, re
     
     Nrows = max(fix_N, mov_N)
     Ncols = 3
+    
+    if plot_slices == -1: # plot all slices
+        S = list(range(Nrows))
+        
+        #Nrows = len(S)
+        
+    else:
+        S = plot_slices # e.g. [14] or [14, 15, 16]
+        
+        Nrows = len(S)
+        
+        #if isinstance(S, int): # if S is an integer
+        #    Nrows = 1
+        
+        #else: # S is a list of integers
+        #    Nrows = len(S)
 
     # create a figure with two subplots and the specified size
     #plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 5*Nrows))
     #plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 2*Nrows))
     #plt.subplots(Nrows, Ncols, figsize=(17, 17*Nrows/Ncols))
-    plt.subplots(Nrows, Ncols, figsize=(15, 15*Nrows/Ncols))
+    #plt.subplots(Nrows, Ncols, figsize=(15, 15*Nrows/Ncols))
+    
+    plt.subplots(Nrows, Ncols, figsize=(15, 5*Nrows))
 
     i = 0 # sub-plot number
     
-    for s in range(Nrows):
+    for s in S:
         #print(f's = {s}')
         
         """ 15/06:  I'm not sure if these are correct - what coordinate system
@@ -992,6 +1011,7 @@ def display_all_sitk_images_and_reg_results_with_all_contours(fix_im, mov_im, re
         #print(f'Registered no. of pts = {reg_Npts}')
         
         i = i + 1 # increment sub-plot number
+        #i = i + s # increment sub-plot number
         
         # Draw the fixed image:
         if s <= fix_N-1:

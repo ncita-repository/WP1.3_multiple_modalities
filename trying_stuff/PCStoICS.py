@@ -24,14 +24,19 @@ Purpose:
      ...
      ]
     
-    The conversion uses the Image Plane Attributes from the input image (image
-    that the points belong to, as an SimpleITK image)
+    The conversion requires the image origin (ImagePositionPatient), the 
+    direction cosines along x, y and z, and the pixel spacings d = [di, dj, dk].
 
 
 Input:
-    Pts_PCS - Points in Patient Coordinate System 
+    Pts_PCS    - Points in Patient Coordinate System 
     
-    SitkIm  - SimpleITK image which the points relate to
+    Origin     - The image origin (or ImagePositionPatient) (e.g. [x0, y0, z0])
+    
+    Directions - The direction cosine along x (rows), y (columns) and z (slices)
+                 (e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz])
+    
+    Spacings   - The pixel spacings along x, y and z (e.g. [di, dj, dk])
     
     
     
@@ -75,17 +80,17 @@ where Vx = Px - Sx
       
       Vz = Pz - Sz
       
-Solving for di*i, dj*j and dk*k results in the expressions:
+Solving for i, j and k results in the expressions:
     
-    dixi = d/e
+    i = (1/di)*d/e
         
-    djxj = (a/b)*di*i + c/b
+    j = (1/dj)*( (a/b)*di*i + c/b )
     
-    dkxk = (1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
+    k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
     or
-    dkxk = (1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
+    k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
     
-    (either expression for dk*k should be fine)
+    (either expression for k should be fine)
     
 In the case where X = [1, 0, 0]
                   Y = [0, 1, 0]
@@ -103,11 +108,11 @@ The expressions simplify to:
     
     e = 1
     
-    dixi = Vx
+    i = Vx/di
     
-    djxj = Vy
+    j = Vy/dj
     
-    dkxk = Vz
+    k = Vz/dk
     
 """
 
@@ -134,28 +139,16 @@ The expressions simplify to:
 """
         
 
-def PCStoICS(Pts_PCS, SitkIm):
+def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     # Import packages:
     #import SimpleITK as sitk
     
-    """ Convert points in PCS (Pts_PCS) to points in ICS using Image Plane
-    Attributes from the Sitk image they belong to. """
-    
-    Origin = SitkIm.GetOrigin() 
-    # e.g. (-104.92378234863281, -152.4906463623047, -9.22148609161377)
-    Direction = SitkIm.GetDirection() 
-    # e.g. (0.9972648738498597, 1.8634260454120088e-10, 0.07391056342109259,
-    #       -0.022262997957353512, 0.9535561337886633, 0.3003915089278791,
-    #       -0.07047787104598309, -0.301215370979001, 0.9509480374756598)
-    Spacing = SitkIm.GetSpacing() # e.g. (0.8984375, 0.8984375, 5.0)
-
-
     # Define S, X, Y and Z:
     S = Origin # the origin
     
-    X = Direction[0:3] # the direction cosine along rows (X)
-    Y = Direction[3:6] # the direction cosine along columns (Y)
-    Z = Direction[6:9] # the direction cosine along slices (Z)
+    X = Directions[0:3] # the row (x) direction cosine vector
+    Y = Directions[3:6] # the column (y) direction cosine vector
+    Z = Directions[6:] # the slice (z) direction cosine vector
     
     # The indeces of the largest direction cosines along rows, columns and 
     # slices:
@@ -164,9 +157,9 @@ def PCStoICS(Pts_PCS, SitkIm):
     ind_k = Z.index(max(Z)) # typically = 2
 
     # The pixel spacings:
-    di = Spacing[0]
-    dj = Spacing[1]
-    dk = Spacing[2] 
+    di = Spacings[0]
+    dj = Spacings[1]
+    dk = Spacings[2] 
     
     # Simplifying expressions:
     Xx = X[ind_i]
@@ -181,6 +174,7 @@ def PCStoICS(Pts_PCS, SitkIm):
     Zy = Z[ind_j]
     Zz = Z[ind_k]
     
+    
     # Initialise Pts_ICS:
     Pts_ICS = []
     
@@ -193,8 +187,8 @@ def PCStoICS(Pts_PCS, SitkIm):
         Vx = point[0] - S[0]
         Vy = point[1] - S[1]
         Vz = point[2] - S[2]
-            
         
+            
         """ Equations from 17/06 Attempt #2: """
         # Define simplifying expressions:
         a = Xz*Zy/Zz - Xy
@@ -207,64 +201,122 @@ def PCStoICS(Pts_PCS, SitkIm):
         
         e = Xx + (a/b)*Yx - (Zx/Zz)*(Xz + (a/b)*Yz)
         
-        # Solve for di*i, dj*j and dk*k:
-        dixi = d/e
+        # Solve for i, j and k:
+        i = (1/di)*d/e
         
-        djxj = (a/b)*di*i + c/b
+        j = (1/dj)*( (a/b)*di*i + c/b )
         
-        dkxk = (1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
-        #dkxk = (1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
+        k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
+        #k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
         """ Above two expressions should be the same """
+
         
-        Pts_ICS.append([dixi, djxj, dkxk])
+        #Pts_ICS.append([di*i, dj*j, dk*k])
+        Pts_ICS.append([i, j, k])
         
     return Pts_ICS
 
 
+    """ PREVIOUS DERIVATIONS: """
 
-        """ 
-        Equations from 15/06 Attempt #3: 
-        # Define simplifying expressions:
-        a = Yz*Zy/(Yy*Zz) - 1
-        
-        b = Vz*Zy/(Vy*Zz) - 1
-        
-        c = 1 - Xz*Zy/(Xy*Zz)
-        
-        d = 1 - b*Vy*Yz/(a*Vz*Yy)
-        
-        e = 1 + c*Xy*Yz/(a*Xz*Yy)
-        
-        f = 1 + c*Xy*Yx/(a*Xx*Yy) - e*Xz*Zx/(Xx*Zz)
-        
-        g = 1 - b*Vy*Yx/(a*Vx*Yy) - d*Vz*Zx/(Vx*Zz)
-        
-        # Solve for i, j and k:
-        i = g*Vx / (f*Xx*di)
+    """ 
+    Equations from 15/06 Attempt #3 (same results as 17/06 Attempt #2): 
+    # Define simplifying expressions:
+    a = Yz*Zy/(Yy*Zz) - 1
     
-        j = 1/(a*dj*Yy) * (b*Vy + c*Xy*di*i)
-        
-        k = ( 1/(dk*Zz) ) * (Vz - Xz*di*i - Yz*dj*j)
-        """
-            
-            
-        """ 
-        Equations from 17/06 Attempt #1:
-        # Define simplifying expressions:
-        a = (Xy - Xz*Zy/Zz) / (Yz*Zy/Zz - Yy)
-                    
-        b = (Vz*Zy/Zz - Vy) / (Yz*Zy/Zz - Yy)
-        
-        c = Vx - b*Yx - (Zx/Zz)*(Vz - b*Yz)
-        
-        d = Xx + a*Yx - (Zx/Zz)*(Xz + a*Yz)
+    b = Vz*Zy/(Vy*Zz) - 1
     
-        # Solve for i, j and k:
-        i = (1/di)*c/d
-                    
-        j = (1/dj)*(a*di*i + b)
+    c = 1 - Xz*Zy/(Xy*Zz)
+    
+    d = 1 - b*Vy*Yz/(a*Vz*Yy)
+    
+    e = 1 + c*Xy*Yz/(a*Xz*Yy)
+    
+    f = 1 + c*Xy*Yx/(a*Xx*Yy) - e*Xz*Zx/(Xx*Zz)
+    
+    g = 1 - b*Vy*Yx/(a*Vx*Yy) - d*Vz*Zx/(Vx*Zz)
+    
+    # Solve for i, j and k:
+    i = g*Vx / (f*Xx*di)
+
+    j = 1/(a*dj*Yy) * (b*Vy + c*Xy*di*i)
+    
+    k = ( 1/(dk*Zz) ) * (Vz - Xz*di*i - Yz*dj*j)
+    """
         
-        k = (1/dk)*(1/Zz)*(Vz - b*Yz - (Xz + a*Yz)*di*i)
-        #k = (1/dk)*(1/Zz)*(Vz - di*Xz*i - dj*Yz*j)
-        # Above two expressions should be the same
-        """
+    
+        
+    """ 
+    (INCORRECT) Equations from 17/06 Attempt #1:
+    # Define simplifying expressions:
+    a = (Xy - Xz*Zy/Zz) / (Yz*Zy/Zz - Yy)
+                
+    b = (Vz*Zy/Zz - Vy) / (Yz*Zy/Zz - Yy)
+    
+    c = Vx - b*Yx - (Zx/Zz)*(Vz - b*Yz)
+    
+    d = Xx + a*Yx - (Zx/Zz)*(Xz + a*Yz)
+
+    # Solve for i, j and k:
+    i = (1/di)*c/d
+                
+    j = (1/dj)*(a*di*i + b)
+    
+    k = (1/dk)*(1/Zz)*(Vz - b*Yz - (Xz + a*Yz)*di*i)
+    #k = (1/dk)*(1/Zz)*(Vz - di*Xz*i - dj*Yz*j)
+    # Above two expressions should be the same
+    """
+    
+    
+    
+    """ Equations derived for 2D but with approximation for k: 
+    a = 1 - (Xy*Yx)/(Xx*Yy)
+            
+    i = (1/di)*( (Vx - Vy*Yx/Yy) / (a*Xx) )
+    
+    j = (1/dj)*( (Vy - Xy*di*i) / Yy )
+    
+    k = (1/dk)*Vz # approximation    
+    """
+    
+    
+    
+    """ Equations adapted from James Petts' equations: 
+    # The direction cosines along rows and columns:
+    Theta_r = Directions[0:3]
+    Theta_c = Directions[3:6]
+    
+    # The indeces of the largest direction cosines along rows and columns:
+    IndMaxTheta_r = Theta_r.index(max(Theta_r)) # typically = 0
+    IndMaxTheta_c = Theta_c.index(max(Theta_c)) # typically = 1
+    
+    # The pixel spacings:
+    dx = Spacings[0]
+    dy = Spacings[1]
+        
+    v = [point[0] - S[0], point[1] - S[1], point[2] - S[2]]
+         
+    i = (v[IndMaxTheta_r] - v[IndMaxTheta_c]*Theta_c[IndMaxTheta_r]/Theta_c[IndMaxTheta_c]) / \
+    (
+    Theta_r[IndMaxTheta_r]*dx *
+    (1 - (Theta_c[IndMaxTheta_r]*Theta_r[IndMaxTheta_c]) / (Theta_r[IndMaxTheta_r]*Theta_c[IndMaxTheta_c]))
+    )
+    
+    # Equation above copied below but without line breaks:
+    # i = (v[IndMaxTheta_r] - Theta_c[IndMaxTheta_r]*v[IndMaxTheta_c]/Theta_c[IndMaxTheta_c]) / ( Theta_r[IndMaxTheta_r]*dx * (1 - (Theta_c[IndMaxTheta_r]*Theta_r[IndMaxTheta_c]) / (Theta_r[IndMaxTheta_r]*Theta_c[IndMaxTheta_c])) )
+    
+    j = (v[IndMaxTheta_c] - Theta_r[IndMaxTheta_c]*i*dx) / (Theta_c[IndMaxTheta_c]*dy)
+    
+    # Use approximation for j:
+    k = v[2]/dz
+    
+    # Equations above convered to variables used in the function definition above:
+    # i = (Vx - Yx*Vy/Yy) / ( Xx*di * (1 - (Yx*Xy) / (Xx*Yy)) )
+    
+    # j = (Vy - Xy*i*di) / (Yy*dj)
+    
+    # k = Vz/dk
+    
+    # The above equations are identical to the derivations I came up with - see
+    # "Equations derived for 2D but with approximation for k" above.
+    """

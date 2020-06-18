@@ -60,12 +60,32 @@ Input:
     
     RoiFpath        - Filepath of the DICOM-RTSTRUCT ROI Collection
     
-    CoordSys        - the coordinate system of the contour points returned;
+    Origin          - The ImagePositionPatient (pydicom) or Origin (sitk)
+                
+                     e.g. [x0, y0, z0]
+    
+    Directions     - The direction cosine along x (rows), y (columns) and z 
+                     (slices)
+                 
+                     e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz]
+                
+                     SimpleITK returns all returns all direction cosines.
+                     For pydicom, the cross product of the x and y vectors are
+                     used to obtain the z vector.
+    
+    Spacings        - The pixel spacings along x, y and z 
+    
+                     e.g. [di, dj, dk]
+                
+                     SimpleITK returns all pixel spacings.
+                     For pydicom, the SliceThickness is added to the PixelSpacing.
+    
+    CoordSys        - The coordinate system of the contour points returned;
                       acceptable values are:
-                        - 'PCS' for Patient Coordinate System (i.e. ContourData
-                        in Roi is in PCS)
-                        - 'ICS' for Image Coordinate System (accounts for the
-                        Image Plane attributes)
+                       - 'PCS' for Patient Coordinate System (i.e. ContourData
+                         in Roi is in PCS)
+                       - 'ICS' for Image Coordinate System (accounts for the
+                          Image Plane attributes)
     
 Returns:
     inputpoints.pts - Text file containing points in ROI Collection in format
@@ -74,15 +94,23 @@ Returns:
 """
 
 
-def CreateInputFileForElastix(DicomDir, RoiFpath, CoordSys):
+def CreateInputFileForElastix(DicomDir, RoiFpath, 
+                              Origin, Directions, Spacings, CoordSys):
     # Import packages:
     import os
+    import importlib
+    import GetInputPoints
+    importlib.reload(GetInputPoints)
     from GetInputPoints import GetInputPoints
     
     
     # Get the contour points:    
     Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
-    Pts_ICS, PtsArr_ICS, PtsDict_ICS = GetInputPoints(DicomDir, RoiFpath)
+    Pts_ICS, PtsArr_ICS, PtsDict_ICS = GetInputPoints(DicomDir=DicomDir, 
+                                                      RoiFpath=RoiFpath,
+                                                      Origin=Origin,
+                                                      Directions=Directions,
+                                                      Spacings=Spacings)
     
     """ 
     Should use the contour points in the Patient Coordinate System since it
