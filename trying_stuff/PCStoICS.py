@@ -74,7 +74,41 @@ where Vx = Px - Sx
       Vy = Py - Sy
       
       Vz = Pz - Sz
-
+      
+Solving for di*i, dj*j and dk*k results in the expressions:
+    
+    dixi = d/e
+        
+    djxj = (a/b)*di*i + c/b
+    
+    dkxk = (1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
+    or
+    dkxk = (1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
+    
+    (either expression for dk*k should be fine)
+    
+In the case where X = [1, 0, 0]
+                  Y = [0, 1, 0]
+                  Z = [0, 0, 1]
+                  
+The expressions simplify to:
+    
+    a = 0
+    
+    b = 1
+    
+    c = Vy
+    
+    d = Vx
+    
+    e = 1
+    
+    dixi = Vx
+    
+    djxj = Vy
+    
+    dkxk = Vz
+    
 """
 
 
@@ -173,18 +207,16 @@ def PCStoICS(Pts_PCS, SitkIm):
         
         e = Xx + (a/b)*Yx - (Zx/Zz)*(Xz + (a/b)*Yz)
         
-        # Solve for i, j and k:
-        i = (1/di)*d/e
+        # Solve for di*i, dj*j and dk*k:
+        dixi = d/e
         
-        j = (1/dj)*( (a/b)*di*i + c/b )
+        djxj = (a/b)*di*i + c/b
         
-        k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
-        #k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
+        dkxk = (1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
+        #dkxk = (1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
         """ Above two expressions should be the same """
         
-        # Multiply indices i, j and k by pixel spacings di, dj and dk to get
-        # points in ICS:
-        Pts_ICS.append([di*i, dj*j, dk*k])
+        Pts_ICS.append([dixi, djxj, dkxk])
         
     return Pts_ICS
 
