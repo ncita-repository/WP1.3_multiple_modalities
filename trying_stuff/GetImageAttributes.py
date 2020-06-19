@@ -84,7 +84,9 @@ def GetImageAttributes(DicomDir, Package):
         
         """ Get the Image Plane Attributes from Pydicom image: """
         # Get the DICOMs:
-        DicomFpaths, Dicoms = GetDicoms(DicomDir, 'slices', Debug=False)
+        DicomFpaths, Dicoms = GetDicoms(DirPath=DicomDir, 
+                                        SortMethod='slices', 
+                                        Debug=False)
         
         Origin = [float(item) for item in Dicoms[0].ImagePositionPatient]
         # e.g. [-115.14457762101, -124.83148479744, -10.815127450171]

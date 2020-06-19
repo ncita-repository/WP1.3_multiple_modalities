@@ -54,7 +54,7 @@
 
 # ### Import packages and functions
 
-# In[20]:
+# In[1]:
 
 
 import SimpleITK as sitk
@@ -83,6 +83,7 @@ from GetInputPoints import GetInputPoints
 #importlib.reload(CreateInputFileForElastix)
 from CreateInputFileForElastix import CreateInputFileForElastix
 from ParseTransformixOutput import ParseTransformixOutput
+from GetImageAttributes import GetImageAttributes
 import PCStoICS
 importlib.reload(PCStoICS)
 from PCStoICS import PCStoICS
@@ -93,7 +94,7 @@ importlib.reload(RegUtilityFuncs)
 import RegUtilityFuncs as ruf
 
 
-# In[21]:
+# In[2]:
 
 
 # Define FixedDicomDir and MovingDicomDir:
@@ -106,12 +107,23 @@ FixRoiDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12\8 T1 SE AXIAL POST FS FC RO
 FixRoiFname = r'AIM_20200511_073405.dcm'
 FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
 
+# Chose which package to use to get the Image Plane Attributes:
+#package = 'pydicom'
+package = 'sitk'
+
+# Get the Image Attributes:
+Origin, Directions, Spacings, Dimensions = GetImageAttributes(DicomDir=MovDicomDir, 
+                                                              Package=package)
+
 # Get contour points into necessary arrays and dictionaries:
 #FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
 #                                                                   RoiFpath=FixRoiFpath)
 
 InPts_PCS, InPtsArr_PCS, InPtsDict_PCS,InPts_ICS, InPtsArr_ICS, InPtsDict_ICS = GetInputPoints(DicomDir=FixDicomDir, 
-                                                        RoiFpath=FixRoiFpath)
+                                                        RoiFpath=FixRoiFpath,
+                                                        Origin=Origin,
+                                                        Directions=Directions,
+                                                        Spacings=Spacings)
 
 # Read in the 3D stack of Fixed DICOMs:
 FixReader = sitk.ImageSeriesReader()
@@ -131,33 +143,27 @@ MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
 ruf.ShowImagesInfo(FixIm, MovIm)
 
 
-# In[45]:
+# In[3]:
 
 
 #MovPtsArr_PCS
 
 
-# In[22]:
+# In[3]:
 
 
 # Convert InPts_PCS from PCS to ICS:
-InPts_ICS = PCStoICS(Pts_PCS=InPts_PCS, SitkIm=MovIm)
+InPts_ICS = PCStoICS(Pts_PCS=InPts_PCS, Origin=Origin, Directions=Directions, Spacings=Spacings)
 InPts_ICS
 
 
-# In[5]:
+# In[4]:
 
 
 InPtsArr_PCS
 
 
-# In[6]:
-
-
-InPtsArr_ICS
-
-
-# In[7]:
+# In[5]:
 
 
 InPtsArr_ICS
@@ -190,7 +196,7 @@ InPtsArr_ICS
 
 # ### Create inputpoints.txt for Elastix, containing the contour points to be transformed:
 
-# In[23]:
+# In[6]:
 
 
 import CreateInputFileForElastix
@@ -202,7 +208,9 @@ CoordSys = 'PCS'
 
 # Create inputpoints.txt for Elastix, containing the contour points to be
 # transformed:
-CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, CoordSys=CoordSys)
+CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, 
+                          Origin=Origin, Directions=Directions, Spacings=Spacings,
+                          CoordSys=CoordSys)
 
 
 # ### View the created file inputpoints.pcs
@@ -219,7 +227,7 @@ CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, CoordSys=C
 
 # ### Register MovingIm to FixedIm using SimpleElastix:
 
-# In[4]:
+# In[7]:
 
 
 RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
@@ -284,14 +292,14 @@ RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
 # 
 # https://simpleelastix.readthedocs.io/PointBasedRegistration.html
 
-# In[24]:
+# In[8]:
 
 
 # Transform MovingContourPts:
 TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
 
 
-# In[16]:
+# In[9]:
 
 
 # Parse outputpoints.txt:
@@ -350,7 +358,7 @@ PCStoICS(Pts_PCS=[OutPts_PCS[0]], SitkIm=MovIm)
 PCStoICS(Pts_PCS=[OutPts_PCS[0]], SitkIm=MovIm)[0]
 
 
-# In[25]:
+# In[10]:
 
 
 import GetOutputPoints
@@ -364,7 +372,8 @@ from GetOutputPoints import GetOutputPoints
 #P = len(PtNos)
 #Defs_ICS = [[OutPts_ICS[p][i] - InPts_ICS[p][i] for i in range(3)] for p in range(P)]
 
-PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS, Defs_ICS, MovOutInds,OutPtsArr_PCS, OutPtsArr_ICS = GetOutputPoints(MovingIm=MovIm)
+PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS, Defs_ICS, MovOutInds,OutPtsArr_PCS, OutPtsArr_ICS = GetOutputPoints(Origin=Origin, Directions=Directions,
+                                              Spacings=Spacings, Dimensions=Dimensions)
 
 # Create a dictionary to store the output:
 OutPtsDict = {'PtNo':PtNos,
@@ -395,7 +404,7 @@ print(130.3/11.7)
 print(0.62/1.91)
 
 
-# In[18]:
+# In[21]:
 
 
 OutPtsArr_ICS
@@ -501,10 +510,10 @@ ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_
                                                               export_fname=fig_fname)
 
 
-# In[26]:
+# In[11]:
 
 
-### 17/06: Display result of:
+### 18/06: Display result of:
 # 1. Created inputpoints.txt in PCS (directly from ContourData)
 # 2. Transformed points
 # 3. Converted points given by OutputPoint from PCS to ICS (using 3D conversion)
@@ -538,6 +547,85 @@ ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_
                                                               export_fig=export_fig,
                                                               export_fname=fig_fname)
 
+
+# In[ ]:
+
+
+
+
+
+# ### Compare the direction cosines from Pydicom and from SimpleITK:
+
+# In[23]:
+
+
+MovDicomFpaths, MovDicoms = GetDicoms(MovDicomDir, 'slices', Debug=False)
+
+MovIPP = [float(item) for item in MovDicoms[0].ImagePositionPatient]
+MovIOP = [float(item) for item in MovDicoms[0].ImageOrientationPatient]
+MovPixSpacing = [float(item) for item in MovDicoms[0].PixelSpacing]
+MovSliceThick = float(MovDicoms[0].SliceThickness)
+MovPixSpacing.append(MovSliceThick)
+MovCols = int(MovDicoms[0].Columns)
+MovRows = int(MovDicoms[0].Rows)
+MovSlices = len(MovDicoms)
+MovDims = [MovCols, MovRows, MovSlices]
+
+MovIOPx = MovIOP[0:3]
+MovIOPy = MovIOP[3:]
+MovIOPz = np.cross(MovIOPx,MovIOPy)
+
+print(f'MovIPP        = {MovIPP}')
+print(f'MovIOPx       = {MovIOPx}')
+print(f'MovIOPy       = {MovIOPy}')
+print(f'MovIOPz       = {MovIOPz}')
+print(f'MovPixSpacing = {MovPixSpacing}')
+print(f'MovDims       = {MovDims}')
+
+print('')
+
+MovOrig = MovIm.GetOrigin()
+MovDirx = MovIm.GetDirection()[0:3]
+MovDiry = MovIm.GetDirection()[3:6]
+MovDirz = MovIm.GetDirection()[6:]
+MovSpacing = MovIm.GetSpacing()
+MovSize = MovIm.GetSize()
+ 
+
+print(f'MovOrig    = {MovOrig}')
+print(f'MovDirx    = {MovDirx}')
+print(f'MovDiry    = {MovDiry}')
+print(f'MovDirz    = {MovDirz}')
+print(f'MovSpacing = {MovSpacing}')
+print(f'MovSize    = {MovSize}')
+
+
+# In[28]:
+
+
+print(f'MovIOP        = {MovIOP}')
+print(float(MovDicoms[0].SliceThickness))
+print(np.cross(MovIOPx,MovIOPy))
+print(f'Columns = {int(MovDicoms[0].Columns)}')
+print(f'Rows = {int(MovDicoms[0].Rows)}')
+print(f'Slices = {len(MovDicoms)}')
+print(f'Dimensions = {[int(MovDicoms[0].Columns), int(MovDicoms[0].Rows), len(MovDicoms)]}')
+print(np.shape(MovDicoms[0].pixel_array))
+
+
+# In[32]:
+
+
+np.shape(MovDicoms[0].pixel_array)
+
+
+# In[26]:
+
+
+MovIm.GetSize()
+
+
+# ### sitk gives the number of columns first, then rows, then slices!
 
 # In[ ]:
 
@@ -600,28 +688,647 @@ for z_ind in range(MovSize[2]):
     print(f'z at MovIm[96,128,{z_ind}] = {MovIm.TransformIndexToPhysicalPoint((int(MovSize[0]/2), int(MovSize[2]/2), z_ind))[2]} mm')
 
 
-# In[ ]:
+# # 18/06:  Combine all necessary code into a single cell for efficiency:
+
+# In[1]:
+
+
+import SimpleITK as sitk
+print(sitk.Version())
+import numpy as np
+import time
+import os
+import copy
+import importlib
+import json
+import pydicom
+import pandas as pd
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+get_ipython().run_line_magic('matplotlib', 'notebook')
+from ipywidgets import interact, fixed
+from IPython.display import clear_output
+
+from GetDicomFpaths import GetDicomFpaths
+from GetDicoms import GetDicoms
+import GetContourPtsForDicoms
+importlib.reload(GetContourPtsForDicoms)
+from GetContourPtsForDicoms import GetContourPtsForDicoms
+from GetInputPoints import GetInputPoints
+#import CreateInputFileForElastix
+#importlib.reload(CreateInputFileForElastix)
+from CreateInputFileForElastix import CreateInputFileForElastix
+from ParseTransformixOutput import ParseTransformixOutput
+import GetImageAttributes
+importlib.reload(GetImageAttributes)
+from GetImageAttributes import GetImageAttributes
+import PCStoICS
+importlib.reload(PCStoICS)
+from PCStoICS import PCStoICS
+from RunSimpleElastixReg import RunSimpleElastixReg
+from TransformPoints import TransformPoints
+from GetOutputPoints import GetOutputPoints
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Define FixedDicomDir and MovingDicomDir:
+DicomDir = r'C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011'
+FixDicomDir = os.path.join(DicomDir, r'04-10-1960-MRI Brain wwo Contrast-69626\8-T1 SE AXIAL POST FS FC-59362')
+MovDicomDir = os.path.join(DicomDir, r'06-11-1961-MRI Brain wwo Contrast-79433\8-T1 SE AXIAL POST FS FC-81428')
+
+# Define the filepath to the ROI Collection (for the fixed) image:
+FixRoiDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12\8 T1 SE AXIAL POST FS FC ROIs (source)'
+FixRoiFname = r'AIM_20200511_073405.dcm'
+FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
+
+# Chose which package to use to get the Image Plane Attributes:
+package = 'sitk'
+package = 'pydicom'
+
+
+# Get the Image Attributes:
+Origin, Directions, Spacings, Dimensions = GetImageAttributes(DicomDir=MovDicomDir, 
+                                                              Package=package)
+
+# Get contour points into necessary arrays and dictionaries:
+#FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
+#                                                                   RoiFpath=FixRoiFpath)
+
+InPts_PCS, InPtsArr_PCS, InPtsDict_PCS,InPts_ICS, InPtsArr_ICS, InPtsDict_ICS = GetInputPoints(DicomDir=FixDicomDir, 
+                                                        RoiFpath=FixRoiFpath,
+                                                        Origin=Origin,
+                                                        Directions=Directions,
+                                                        Spacings=Spacings)
+
+# Read in the 3D stack of Fixed DICOMs:
+FixReader = sitk.ImageSeriesReader()
+FixNames = FixReader.GetGDCMSeriesFileNames(FixDicomDir)
+FixReader.SetFileNames(FixNames)
+FixIm = FixReader.Execute()
+FixIm = sitk.Cast(FixIm, sitk.sitkFloat32)
+
+# Read in the 3D stack of Moving DICOMs:
+MovReader = sitk.ImageSeriesReader()
+MovNames = MovReader.GetGDCMSeriesFileNames(MovDicomDir)
+MovReader.SetFileNames(MovNames)
+MovIm = MovReader.Execute()
+MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
+
+# Get some info on FixIm and MovIm:
+#ruf.ShowImagesInfo(FixIm, MovIm)
+
+CoordSys = 'PCS'
+#CoordSys = 'ICS'
+
+# Create inputpoints.txt for Elastix, containing the contour points to be
+# transformed:
+CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, 
+                          Origin=Origin, Directions=Directions, Spacings=Spacings,
+                          CoordSys=CoordSys)
+
+# Register:
+RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
+
+# Transform MovingContourPts:
+TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
+
+# Parse outputpoints.txt:
+#PtNos, InInds, InPts_PCS, FixOutInds,\
+#OutPts_PCS, Defs_PCS, MovOutInds = ParseTransformixOutput()
+
+PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS, Defs_ICS, MovOutInds,OutPtsArr_PCS, OutPtsArr_ICS = GetOutputPoints(Origin=Origin, Directions=Directions,
+                                              Spacings=Spacings, Dimensions=Dimensions)
+
+print('\nDone.')
+
+
+# In[2]:
+
+
+# Using package = sitk and equations from June 17 Attempt #2:
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# In[2]:
+
+
+# Using package = pydicom and equations from June 17 Attempt #2:
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_June17_Attempt2_eqs.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# In[2]:
+
+
+# Using package = pydicom from June 15 Attempt #3:
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_June15_Attempt3_eqs.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# In[31]:
+
+
+# Using package = pydicom from 2D equations (k approximation):
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_2D_eqs_with_k_approx.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# In[3]:
+
+
+# Using package = sitk from 2D equations (k approximation):
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_2D_eqs_with_k_approx.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# In[7]:
+
+
+print(isinstance(3, int))
+print(isinstance([3,4], int))
+
+
+# ### 19/06:  Try to figure out why input contour points not overlaid properly on fixed image:
+
+# In[3]:
+
+
+InPts_PCS
+
+
+# In[4]:
+
+
+InPtsArr_PCS
+
+
+# In[6]:
+
+
+InPts_ICS
+
+
+# In[7]:
+
+
+InPtsArr_ICS
+
+
+# ### I think I know what the problem is - I used the image attributes (origin, direction, etc.) of the Moving image not only to convert the transformed points (belonging to the moving image) from PCS to ICS, but also for the conversion of the input points from PCS to ICS (belonging to the fixed image)!!!
+# 
+# ### Try above code but with two sets of image attributes - for fixed and for moving image:
+
+# In[1]:
+
+
+import SimpleITK as sitk
+print(sitk.Version())
+import numpy as np
+import time
+import os
+import copy
+import importlib
+import json
+import pydicom
+import pandas as pd
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+get_ipython().run_line_magic('matplotlib', 'notebook')
+from ipywidgets import interact, fixed
+from IPython.display import clear_output
+
+from GetDicomFpaths import GetDicomFpaths
+from GetDicoms import GetDicoms
+import GetContourPtsForDicoms
+importlib.reload(GetContourPtsForDicoms)
+from GetContourPtsForDicoms import GetContourPtsForDicoms
+from GetInputPoints import GetInputPoints
+#import CreateInputFileForElastix
+#importlib.reload(CreateInputFileForElastix)
+from CreateInputFileForElastix import CreateInputFileForElastix
+from ParseTransformixOutput import ParseTransformixOutput
+import GetImageAttributes
+importlib.reload(GetImageAttributes)
+from GetImageAttributes import GetImageAttributes
+import PCStoICS
+importlib.reload(PCStoICS)
+from PCStoICS import PCStoICS
+from RunSimpleElastixReg import RunSimpleElastixReg
+from TransformPoints import TransformPoints
+from GetOutputPoints import GetOutputPoints
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Define FixedDicomDir and MovingDicomDir:
+DicomDir = r'C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011'
+FixDicomDir = os.path.join(DicomDir, r'04-10-1960-MRI Brain wwo Contrast-69626\8-T1 SE AXIAL POST FS FC-59362')
+MovDicomDir = os.path.join(DicomDir, r'06-11-1961-MRI Brain wwo Contrast-79433\8-T1 SE AXIAL POST FS FC-81428')
+
+# Define the filepath to the ROI Collection (for the fixed) image:
+FixRoiDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12\8 T1 SE AXIAL POST FS FC ROIs (source)'
+FixRoiFname = r'AIM_20200511_073405.dcm'
+FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
+
+# Chose which package to use to get the Image Plane Attributes:
+package = 'sitk'
+package = 'pydicom'
+
+
+# Get the Image Attributes for the images:
+FixOrigin, FixDirs, FixSpacings, FixDims = GetImageAttributes(DicomDir=FixDicomDir, 
+                                                              Package=package)
+
+MovOrigin, MovDirs, MovSpacings, MovDims = GetImageAttributes(DicomDir=MovDicomDir, 
+                                                              Package=package)
+
+# Get contour points into necessary arrays and dictionaries:
+#FixPts_PCS, FixPtsArr_PCS, FixPtsDict_PCS = GetContourPtsForDicoms(DicomDir=FixDicomDir,
+#                                                                   RoiFpath=FixRoiFpath)
+
+InPts_PCS, InPtsArr_PCS, InPtsDict_PCS,InPts_ICS, InPtsArr_ICS, InPtsDict_ICS = GetInputPoints(DicomDir=FixDicomDir, 
+                                                        RoiFpath=FixRoiFpath,
+                                                        Origin=FixOrigin,
+                                                        Directions=FixDirs,
+                                                        Spacings=FixSpacings)
+
+# Read in the 3D stack of Fixed DICOMs:
+FixReader = sitk.ImageSeriesReader()
+FixNames = FixReader.GetGDCMSeriesFileNames(FixDicomDir)
+FixReader.SetFileNames(FixNames)
+FixIm = FixReader.Execute()
+FixIm = sitk.Cast(FixIm, sitk.sitkFloat32)
+
+# Read in the 3D stack of Moving DICOMs:
+MovReader = sitk.ImageSeriesReader()
+MovNames = MovReader.GetGDCMSeriesFileNames(MovDicomDir)
+MovReader.SetFileNames(MovNames)
+MovIm = MovReader.Execute()
+MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
+
+# Get some info on FixIm and MovIm:
+#ruf.ShowImagesInfo(FixIm, MovIm)
+
+CoordSys = 'PCS'
+#CoordSys = 'ICS'
+
+# Create inputpoints.txt for Elastix, containing the contour points to be
+# transformed:
+CreateInputFileForElastix(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath, 
+                          Origin=FixOrigin, Directions=FixDirs, Spacings=FixSpacings,
+                          CoordSys=CoordSys)
+
+# Register:
+RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
+
+# Transform MovingContourPts:
+TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
+
+# Parse outputpoints.txt:
+#PtNos, InInds, InPts_PCS, FixOutInds,\
+#OutPts_PCS, Defs_PCS, MovOutInds = ParseTransformixOutput()
+
+PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS, Defs_ICS, MovOutInds,OutPtsArr_PCS, OutPtsArr_ICS = GetOutputPoints(Origin=MovOrigin, Directions=MovDirs,
+                                               Spacings=MovSpacings, Dimensions=MovDims)
+
+print('\nDone.')
+
+
+# In[4]:
+
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+plot_slices = [14]
+
+# Choose whether to export figure:
+export_fig = True
+export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_June17_Attempt2_eqs.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                              fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                              export_fig=export_fig,
+                                                              export_fname=fig_fname,
+                                                              plot_slices=plot_slices)
+
+
+# ## Success!
+# 
+# ## Next steps:
+# 
+# ## 1) Store the transformed points into an RTSTRUCT file for importing into the OHIF-Viewer to see how they appear there.
+# 
+# ## 2) Tidy up the contours:
+# 
+# ### i.   Some/most/all contours require "closing"
+# ### ii.  Some require removal of un-closed segments (e.g. 18th slice)
+# ### iii. Some require avoiding segments crossing through the outer boundary (e.g. 15-17th slice)
+# ### iv. Some require some akward closing (e.g. 13th slice)
+
+# ## Step 1:  Create ROI for Moving Image
+# 
+# ### This is a bit trickier than simply modifying a copy of the fixed ROI, since there are more contour sequences within the transformed points than in the original ROI.
+
+# In[82]:
+
+
+# Use the fixed ROI as a template for the moving image:
+FixRoi = pydicom.dcmread(FixRoiFpath)
+
+MovRoi = copy.deepcopy(FixRoi)
+
+MovRoi
+#MovRoi.PatientName
+
+
+# In[75]:
+
+
+print(len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].ContourImageSequence))
+
+print(len(MovRoi.ROIContourSequence[0].ContourSequence))
+
+
+# In[86]:
+
+
+# Get the z-component of the indices of the transformed points:
+MovZinds = [MovOutInds[i][2] for i in range(len(MovOutInds))]
+
+#print(set(MovZinds))
+
+# Get the number of unique values in MovInds:
+MovN = len(set(MovZinds))
+
+# Get the number of contour image sequences in the copied ROI:
+#FixN = len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].\
+#RTReferencedSeriesSequence[0].ContourImageSequence)
+FixN = len(MovRoi.ROIContourSequence[0].ContourSequence)
+
+print(f'Number of contour sequences in the original ROI  = {FixN}')
+print(f'Number of contour sequences required for new ROI = {MovN}')
+
+# Add additional or remove surplus contour image sequences and contour sequences 
+# to the ROI by appending/popping the first sequence to the sequences a number
+# of times given by the difference between MovN and FixN:
+if FixN != MovN:
+    if MovN > FixN:
+        print(f'There are {MovN - FixN} more contour sequences required in the ROI. ')
+        for i in range(MovN - FixN):
+            MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence            .append(MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence[0])
+            
+            MovRoi.ROIContourSequence[0].ContourSequence            .append(MovRoi.ROIContourSequence[0].ContourSequence[0])
+    else:
+        print(f'There are {FixN - MovN} excess contour sequences in the ROI. ')
+        for i in range(FixN - MovN):
+            MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].            RTReferencedSeriesSequence[0].ContourImageSequence.pop()
+            
+            MovRoi.ROIContourSequence[0].ContourSequence.pop()
+            
+#MovN = len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].\
+#RTReferencedSeriesSequence[0].ContourImageSequence)
+MovN = len(MovRoi.ROIContourSequence[0].ContourSequence)
+
+print(f'Number of contour sequences in new ROI           = {MovN}')
+
+
+# In[87]:
+
+
+print(len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].ContourImageSequence))
+
+print(len(MovRoi.ROIContourSequence[0].ContourSequence))
+
+
+# In[38]:
+
+
+# Read in the DICOMs:
+FixDicomFpaths, FixDicoms = GetDicoms(DirPath=FixDicomDir, SortMethod='slices', Debug=False)
+
+MovDicomFpaths, MovDicoms = GetDicoms(DirPath=MovDicomDir, SortMethod='slices', Debug=False)
+
+FixDicoms[0]
+
+
+# In[39]:
+
+
+MovDicoms[0]
+
+
+# In[92]:
+
+
+# Create a new array of arrays of transformed points,
+# similar to OutPtsArr_ICS but without empty arrays:
+OutPtsArr_ICS_nonempty = [OutPtsArr_ICS[i] for i in range(len(OutPtsArr_ICS)) if OutPtsArr_ICS[i]!=[]]
+
+len(OutPtsArr_ICS_nonempty)
+
+
+# In[36]:
+
+
+# Start modfying MovRoi:
+
+# Generate a new SOP Instance UID:
+MovRoi.SOPInstanceUID = pydicom.uid.generate_uid()
+
+# Modify the Study Date and Time:
+MovRoi.StudyDate = MovDicoms[0].StudyDate
+""" 
+For current data, the Series Time and Instance Creation Time in the DICOM 
+both match the Study Time in the ROI, whereas the DICOM's Study Time does not.
+"""
+#MovRoi.StudyTime = MovDicoms[0].StudyTime 
+MovRoi.StudyTime = MovDicoms[0].SeriesTime
+
+# Modify the Patient's Name and ID:
+MovRoi.PatientName = MovDicoms[0].PatientName
+MovRoi.PatientID = MovDicoms[0].PatientID
+
+""" Skipping other non-critical tags... """
+
+# Modify the Study Instance UID:
+MovRoi.StudyInstanceUID = MovDicoms[0].StudyInstanceUID
+
+# Generate a new Series Instance UID:
+MovRoi.SeriesInstanceUID = pydicom.uid.generate_uid()
+
+# Modify the Frame of Reference UID:
+MovRoi.FrameOfReferenceUID = MovDicoms[0].FrameOfReferenceUID
+
+# Modify the Structure Set Label:
+MovRoi.StructureSetLabel = 'Copy_of_' + MovRoi.StructureSetLabel
+
+# Modify the Structure Set Date and Time to the present:
+NewDate = time.strftime("%Y%m%d", time.gmtime())
+NewTime = time.strftime("%H%M%S", time.gmtime())
+MovRoi.StructureSetDate = NewDate
+MovRoi.StructureSetTime = NewTime
+
+# Modify the Referenced Frame of Reference Sequence:
+MovRoi.ReferencedFrameOfReferenceSequence[0].FrameOfReferenceUID = MovDicoms[0].FrameOfReferenceUID
+
+# Modify the Referenced SOP Instance UID in the RT Referenced Study Sequence:
+MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].ReferencedSOPInstanceUID = MovDicoms[0].StudyInstanceUID
+
+# Modify the Series Instance UID in the RT Referenced Series Sequence:
+MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]RTReferencedSeriesSequence[0].SeriesInstanceUID = MovDicoms[0].SeriesInstanceUID
+
+# Modify the Referenced Frame of Reference UID and ROI Name for the 
+# Structure Set ROI Sequence:
+MovRoi.StructureSetROISequence[0].ReferencedFrameOfReferenceUID = MovDicoms[0].FrameOfReferenceUID
+MovRoi.StructureSetROISequence[0].ROIName = MovRoi.StructureSetLabel
+
+
+# Modify the Contour Image Sequences: 
+
+# Get the number of Contour Sequences:
+N_CS = MovRoi.ROIContourSequence[0].ContourSequence
+
+# Cycle through each Contour Sequence and replace the tags with those of MovDicoms[0]:
+for i in range(len(N_CS)):
+    # Modify the Referenced SOP Class UID:
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPClassUID = MovDicoms[0].SOPClassUID
+    
+    # Modify the SOP Instance UID:
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPInstanceUID = MovDicoms[0].SOPInstanceUID
+    
+    # Modify the Contour Geometric Type:
+    """ Since the contours are not closed change from 'CLOSED_PLANAR' to 'OPEN_PLANAR' """
+    #print('\nBefore:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourImageSequence[0].ReferencedSOPClassUID)
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourGeometricType = 'OPEN_PLANAR'
+    #print('\nAfter:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
+    
+    #print(MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
+    
+    # Modify the Number of Contour Points:
+    MovRoi.ROIContourSequence[0].ContourSequence[0]    .NumberOfContourPoints = f"{len(OutPtsArr_ICS_nonempty)}"  
+    
+    # Modify the Contour Number:
+    """ This still has to be done - for now all sequences only have one contour"""
+    
+    # Modify the Contour Data:
+    """ This still has to be done """
+    
+
+# Modify the Contour Sequences: 
+
+
+       
+    
 
 
 
 
 
-# In[ ]:
+# In[93]:
 
 
+MovRoi.ROIContourSequence[0].ContourSequence[0]
 
 
-
-# In[ ]:
-
+# In[89]:
 
 
-
-
-# In[ ]:
-
-
-
+print(MovRoi.ROIContourSequence[0].ContourSequence[0])
+print('*************************************************************************************************************')
+print('*************************************************************************************************************')
+print(MovRoi.ROIContourSequence[0].ContourSequence[0].ContourImageSequence[0])
+print('*************************************************************************************************************')
+print('*************************************************************************************************************')
+#print(MovRoi.ROIContourSequence[0].ContourSequence[0].ContourImageSequence[0].ReferencedSOPClassUID)
+#print('*************************************************************************************************************')
+#print('*************************************************************************************************************')
+#print(MovRoi.ROIContourSequence[0].ContourSequence[0].ContourImageSequence[0].ReferencedSOPInstanceUID)
 
 
 # In[ ]:
