@@ -250,42 +250,62 @@ def ModifyRoi(SourceDicoms, TargetDicoms, DataDict, SourceKey, TargetKey):
     
     # The list of metadata to be altered with are the following in pairs with
     # the DICOM tag followed by the DICOM-RTSTRUCT tag name in each pair:
-    TagPairs = [['StudyInstanceUID', ['StudyInstanceUID']
+    """ 
+    Note:
+    For current data, the ROI's Study Time match the DICOM's Series Time 
+    and Instance Creation Time, but not the DICOM's Study Time.
+    """
+    """
+    TagPairs = [[DICOM_tag, [ROI_tag]
+                             ],
+                ]
+    """
+    TagPairs = [['StudyDate', ['StudyDate']
+                               ], \
+            
+                #['StudyTime', ['StudyTime'] 
+                #               ], \
+        
+                ['SeriesTime', ['StudyTime'] 
+                               ], \
+                
+                ['PatientName', ['PatientName']
+                                 ], \
+        
+                ['PatientID', ['PatientID']
+                               ], \
+                
+                """ Skipping other non-critical tags... """
+                
+                ['StudyInstanceUID', ['StudyInstanceUID']
                                       ], \
-    
+                
+                ['FrameOfReferenceUID', ['FrameOfReferenceUID']
+                                         ], \
+                
+                ['FrameOfReferenceUID', ['ReferencedFrameOfReferenceSequence', 0, \
+                                         'FrameOfReferenceUID']
+                                        ], \
+        
                 ['StudyInstanceUID', ['ReferencedFrameOfReferenceSequence', 0, \
                                       'RTReferencedStudySequence', 0, \
                                       'ReferencedSOPInstanceUID']
                                       ], \
-    
+                
                 ['SeriesInstanceUID', ['ReferencedFrameOfReferenceSequence', 0, \
                                       'RTReferencedStudySequence', 0, \
                                        'RTReferencedSeriesSequence', 0, \
                                        'SeriesInstanceUID']
-                                       ], \
-    
-                ['FrameOfReferenceUID', ['FrameOfReferenceUID']
-                                         ], \
-    
+                                       ], \ 
+        
                 ['FrameOfReferenceUID', ['StructureSetROISequence', 0, \
                                          'ReferencedFrameOfReferenceUID']
                                         ]#, \
-    
-                #['StudyDate', ['StudyDate']
-                #               ], \
-    
-                #['StudyTime', ['StudyTime']
-                #               ], \
-    
-                #['PatientName', ['PatientName']
-                #                 ], \
-    
-                #['PatientID', ['PatientID']
-                #               ], \
-    
+        
                 #['PatientSex', ['PatientSex']
                 #                ]
                ]
+
                 
     
     """ 
