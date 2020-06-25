@@ -104,12 +104,12 @@ def CreateMovRoi(FixRoiFpath, MovDicomDir, MovPtsArr_ICS, Debug):
                 MovRoi.ReferencedFrameOfReferenceSequence[0]\
                 .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]\
                 .ContourImageSequence\
-                .append(MovRoi.ReferencedFrameOfReferenceSequence[0]\
+                .append(copy.deepcopy(MovRoi.ReferencedFrameOfReferenceSequence[0]\
                 .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]\
-                .ContourImageSequence[-1])
+                .ContourImageSequence[-1]))
 
                 MovRoi.ROIContourSequence[0].ContourSequence\
-                .append(MovRoi.ROIContourSequence[0].ContourSequence[-1])
+                .append(copy.deepcopy(MovRoi.ROIContourSequence[0].ContourSequence[-1]))
                 
         else:
             if Debug:       
@@ -232,12 +232,13 @@ def CreateMovRoi(FixRoiFpath, MovDicomDir, MovPtsArr_ICS, Debug):
         
         # Modify the Contour Geometric Type:
         """ Since the contours are not closed change from 'CLOSED_PLANAR' to 'OPEN_PLANAR' """
-        #print('\nBefore:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourImageSequence[0].ReferencedSOPClassUID)
-        MovRoi.ROIContourSequence[0].ContourSequence[i]\
-        .ContourGeometricType = 'OPEN_PLANAR'
-        #print('\nAfter:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
-        
-        #print(MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
+        if False:
+            #print('\nBefore:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourImageSequence[0].ReferencedSOPClassUID)
+            MovRoi.ROIContourSequence[0].ContourSequence[i]\
+            .ContourGeometricType = 'OPEN_PLANAR'
+            #print('\nAfter:', MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
+            
+            #print(MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
         
         # Modify the Number of Contour Points:
         MovRoi.ROIContourSequence[0].ContourSequence[i]\

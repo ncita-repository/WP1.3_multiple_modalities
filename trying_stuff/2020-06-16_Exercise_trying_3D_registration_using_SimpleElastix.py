@@ -54,7 +54,7 @@
 
 # ### Import packages and functions
 
-# In[1]:
+# In[3]:
 
 
 import SimpleITK as sitk
@@ -94,7 +94,7 @@ importlib.reload(RegUtilityFuncs)
 import RegUtilityFuncs as ruf
 
 
-# In[2]:
+# In[4]:
 
 
 # Define FixedDicomDir and MovingDicomDir:
@@ -690,7 +690,7 @@ for z_ind in range(MovSize[2]):
 
 # # 18/06:  Combine all necessary code into a single cell for efficiency:
 
-# In[1]:
+# In[5]:
 
 
 import SimpleITK as sitk
@@ -960,7 +960,7 @@ InPtsArr_ICS
 # 
 # ### Try above code but with two sets of image attributes - for fixed and for moving image:
 
-# In[1]:
+# In[6]:
 
 
 import SimpleITK as sitk
@@ -1076,7 +1076,7 @@ PtNos, InInds, InPts_PCS, InPts_ICS,FixOutInds, OutPts_PCS, OutPts_ICS,Defs_PCS,
 print('\nDone.')
 
 
-# In[4]:
+# In[22]:
 
 
 # Chose which slices to plot:
@@ -1109,13 +1109,13 @@ ruf.display_all_sitk_images_and_reg_results_with_all_contours(fix_im=FixIm, mov_
 # ### i.   Some/most/all contours require "closing"
 # ### ii.  Some require removal of un-closed segments (e.g. 18th slice)
 # ### iii. Some require avoiding segments crossing through the outer boundary (e.g. 15-17th slice)
-# ### iv. Some require some akward closing (e.g. 13th slice)
+# ### iv. Some require some awkward closing (e.g. 13th slice)
 
 # ## Step 1:  Create ROI for Moving Image
 # 
 # ### This is a bit trickier than simply modifying a copy of the fixed ROI, since there are more contour sequences within the transformed points than in the original ROI.
 
-# In[82]:
+# In[34]:
 
 
 # Use the fixed ROI as a template for the moving image:
@@ -1127,24 +1127,133 @@ MovRoi
 #MovRoi.PatientName
 
 
-# In[75]:
+# In[131]:
 
 
-print(len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].ContourImageSequence))
+#print(len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].\
+#RTReferencedSeriesSequence[0].ContourImageSequence))
 
-print(len(MovRoi.ROIContourSequence[0].ContourSequence))
+#print(len(MovRoi.ROIContourSequence[0].ContourSequence))
+
+MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].ContourImageSequence
 
 
-# In[86]:
+# In[181]:
+
+
+print(len(OutPtsArr_ICS))
+print(MovIm.GetSize()[2])
+print(len(MovDicoms))
+print()
+
+
+# In[182]:
+
+
+set(OutPtsArr_ICS)
+
+
+# # Get the z-component of the indices of the transformed points:
+# MovZinds = [MovOutInds[i][2] for i in range(len(MovOutInds))]
+# 
+# print('MovZinds =', MovZinds)
+# 
+# # Get the unique indices in ascending order:
+# MovZindsSet = list(set(MovZinds))
+# MovN = len(MovZindsSet)
+# 
+# print('\nMovZindsSet =', MovZindsSet)
+# 
+# # Get the number of unique values in MovInds:
+# 
+
+# ordering = []
+# MovZinds_ordered = []
+# 
+# 
+# for Zind in MovZindsSet:
+#     for ind, zind in enumerate(MovZinds):
+#         print(f'ind = {ind}, zind = {zind}')
+#         if zind == Zind:
+#             ordering.append(ind)
+#             
+#             MovZinds_ordered.append(zind)
+#             
+#             
+#             
+#     
+
+# In[18]:
+
+
+# Get the indices of the non-empty arrays in OutPtsArr_ICS:
+MovInds = []
+
+for i in range(len(OutPtsArr_ICS)):
+    if OutPtsArr_ICS[i]:
+        MovInds.append(i)
+        
+MovN = len(MovInds)
+        
+print(f'MovInds = {MovInds}')
+print(f'MovN = {MovN}')
+
+# Create a new array of contour points in the format required for the ROI object:
+ContourData = []
+Npts = []
+#MovZindsSet = []
+
+for i in range(len(OutPtsArr_ICS)):
+    if OutPtsArr_ICS[i]:
+        points = OutPtsArr_ICS[i]
+
+        Npts.append(len(points))
+
+        #print(f'Number of points = {len(points)}')
+
+        PtsFlat = []
+
+        for point in points:
+            # Convert coordinates of point to strings:
+            PtsFlat.extend([str(point[p]) for p in range(3)])
+
+        ContourData.append(PtsFlat)
+        #MovZindsSet.append(i)
+        
+    else:
+        ContourData.append([])
+        
+        Npts.append(0)
+        
+
+print('Npts =', Npts)
+ContourData
+
+
+# # June 22: It seems that appending to the sequences results in the assigning of the 5th sequence the same values as that for the 6th! 
+
+# In[223]:
 
 
 # Get the z-component of the indices of the transformed points:
-MovZinds = [MovOutInds[i][2] for i in range(len(MovOutInds))]
+#MovZinds = [MovOutInds[i][2] for i in range(len(MovOutInds))]
 
 #print(set(MovZinds))
 
 # Get the number of unique values in MovInds:
-MovN = len(set(MovZinds))
+#MovN = len(set(MovZinds))
+
+# Get the indices of the non-empty arrays in OutPtsArr_ICS:
+#MovInds = []
+
+#for i in range(len(OutPtsArr_ICS)):
+#    if OutPtsArr_ICS[i]:
+#        MovInds.append(i)
+        
+#MovN = len(MovInds)
+        
+#print(f'MovInds = {MovInds}')
+#print(f'MovN = {MovN}')
 
 # Get the number of contour image sequences in the copied ROI:
 #FixN = len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].\
@@ -1154,16 +1263,17 @@ FixN = len(MovRoi.ROIContourSequence[0].ContourSequence)
 print(f'Number of contour sequences in the original ROI  = {FixN}')
 print(f'Number of contour sequences required for new ROI = {MovN}')
 
-# Add additional or remove surplus contour image sequences and contour sequences 
-# to the ROI by appending/popping the first sequence to the sequences a number
-# of times given by the difference between MovN and FixN:
+# Add/remove contour image sequences and contour sequences by 
+# appending/popping the last sequence N times, where N is the difference
+# between MovN and FixN:
 if FixN != MovN:
     if MovN > FixN:
         print(f'There are {MovN - FixN} more contour sequences required in the ROI. ')
         for i in range(MovN - FixN):
-            MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence            .append(MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence[0])
+            MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence            .append(MovRoi.ReferencedFrameOfReferenceSequence[0]            .RTReferencedStudySequence[0].RTReferencedSeriesSequence[0]            .ContourImageSequence[-1])
+
+            MovRoi.ROIContourSequence[0].ContourSequence            .append(MovRoi.ROIContourSequence[0].ContourSequence[-1])
             
-            MovRoi.ROIContourSequence[0].ContourSequence            .append(MovRoi.ROIContourSequence[0].ContourSequence[0])
     else:
         print(f'There are {FixN - MovN} excess contour sequences in the ROI. ')
         for i in range(FixN - MovN):
@@ -1178,6 +1288,80 @@ MovN = len(MovRoi.ROIContourSequence[0].ContourSequence)
 print(f'Number of contour sequences in new ROI           = {MovN}')
 
 
+# In[37]:
+
+
+#temp[5].ContourData
+
+
+# In[41]:
+
+
+if False:
+    i = 0
+
+    for item in MovRoi.ROIContourSequence[0].ContourSequence:
+        print(f'\ni = {i}:\n', item)
+        i += 1
+    
+temp = copy.deepcopy(FixRoi.ROIContourSequence[0].ContourSequence)
+
+print('\n\nLast item before append:\n\n', temp[-1])
+
+#temp.append(temp[-1])
+temp.append(copy.deepcopy(temp[-1]))
+
+print('\n\nLast two items after append:\n\n', temp[-2:])
+
+temp[5].NumberOfContourPoints = "1"
+temp[5].ContourNumber = "6"
+temp[5].ContourData = ["0", "0", "0"]
+
+print('\n\nLast two items after modification:\n\n', temp[-2:])
+
+
+# In[31]:
+
+
+list = [1, 2, 3]
+
+print('List before appending:', list)
+
+list.append(list[-1])
+
+print('\nList after appending:', list)
+
+for i in range(len(list)):
+    list[i] = (i+1)*10
+    
+print('\nList after modifying:', list)
+    
+
+
+# In[189]:
+
+
+#MovZinds
+
+
+# In[169]:
+
+
+list(set(MovZinds))
+
+
+# In[ ]:
+
+
+""" MovDicoms needs to be indexed by MovZinds after re-ordering... """
+
+
+# In[224]:
+
+
+MovRoi
+
+
 # In[87]:
 
 
@@ -1186,7 +1370,7 @@ print(len(MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence
 print(len(MovRoi.ROIContourSequence[0].ContourSequence))
 
 
-# In[38]:
+# In[13]:
 
 
 # Read in the DICOMs:
@@ -1203,17 +1387,75 @@ FixDicoms[0]
 MovDicoms[0]
 
 
-# In[92]:
+# # Create a new array of arrays of transformed points,
+# # similar to OutPtsArr_ICS but without empty arrays:
+# OutPtsArr_ICS_nonempty = [OutPtsArr_ICS[i] for i in range(len(OutPtsArr_ICS)) if OutPtsArr_ICS[i]!=[]]
+# 
+# print(f'Number of arrays in OutPtsArr_ICS_nonempty = {len(OutPtsArr_ICS_nonempty)}')
+# 
+# #OutPtsArr_ICS_nonempty[0]
+# 
+# # Flatten each array in OutPtsArr_ICS_nonempty as required for ContourData array:
+# ContourData = []
+# Npts = []
+# 
+# for i in range(len(OutPtsArr_ICS_nonempty)):
+#     points = OutPtsArr_ICS_nonempty[i]
+#     
+#     Npts.append(len(points))
+#     
+#     print(f'Number of points = {len(points)}')
+#           
+#     PtsFlat = []
+#     
+#     for point in points:
+#         # Convert coordinates of point to strings:
+#         PtsFlat.extend([str(point[p]) for p in range(3)])
+#     
+#     ContourData.append(PtsFlat)
+#     
+# print(f'Number of arrays in ContourData = {len(ContourData)}')
+# 
+# #ContourData[0]
+# 
+
+# In[16]:
 
 
-# Create a new array of arrays of transformed points,
-# similar to OutPtsArr_ICS but without empty arrays:
-OutPtsArr_ICS_nonempty = [OutPtsArr_ICS[i] for i in range(len(OutPtsArr_ICS)) if OutPtsArr_ICS[i]!=[]]
+""" This will need to be tested for cases where there's more than one contour in an image! """
 
-len(OutPtsArr_ICS_nonempty)
+if False:
+    # Create a new array of arrays of transformed points,
+    # similar to OutPtsArr_ICS but without empty arrays:
+    OutPtsArr_ICS_nonempty = [OutPtsArr_ICS[i] for i in range(len(OutPtsArr_ICS)) if OutPtsArr_ICS[i]!=[]]
 
+    #print(f'Number of arrays in OutPtsArr_ICS_nonempty = {len(OutPtsArr_ICS_nonempty)}')
 
-# In[36]:
+    #OutPtsArr_ICS_nonempty[0]
+
+    # Flatten each array in OutPtsArr_ICS_nonempty as required for ContourData array:
+    ContourData = []
+    Npts = []
+
+    for i in range(len(OutPtsArr_ICS_nonempty)):
+        points = OutPtsArr_ICS_nonempty[i]
+
+        Npts.append(len(points))
+
+        #print(f'Number of points = {len(points)}')
+
+        PtsFlat = []
+
+        for point in points:
+            # Convert coordinates of point to strings:
+            PtsFlat.extend([str(point[p]) for p in range(3)])
+
+        ContourData.append(PtsFlat)
+
+    #print(f'Number of arrays in ContourData = {len(ContourData)}')
+
+    #ContourData[0]
+
 
 
 # Start modfying MovRoi:
@@ -1261,26 +1503,60 @@ MovRoi.ReferencedFrameOfReferenceSequence[0].FrameOfReferenceUID = MovDicoms[0].
 MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].ReferencedSOPInstanceUID = MovDicoms[0].StudyInstanceUID
 
 # Modify the Series Instance UID in the RT Referenced Series Sequence:
-MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]RTReferencedSeriesSequence[0].SeriesInstanceUID = MovDicoms[0].SeriesInstanceUID
+MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID = MovDicoms[0].SeriesInstanceUID
 
 # Modify the Referenced Frame of Reference UID and ROI Name for the 
 # Structure Set ROI Sequence:
 MovRoi.StructureSetROISequence[0].ReferencedFrameOfReferenceUID = MovDicoms[0].FrameOfReferenceUID
 MovRoi.StructureSetROISequence[0].ROIName = MovRoi.StructureSetLabel
 
+# Modify the RT ROI Observations Sequence:
+""" Not sure if these need to be changed """
+#MovRoi.RTROIObservationsSequence[0].ObservationNumber = 
+#MovRoi.RTROIObservationsSequence[0].ReferencedROINumber = 
+#MovRoi.RTROIObservationsSequence[0].RTROIInterpretedType = 
+#MovRoi.RTROIObservationsSequence[0].ROIInterpreter = 
 
-# Modify the Contour Image Sequences: 
 
-# Get the number of Contour Sequences:
-N_CS = MovRoi.ROIContourSequence[0].ContourSequence
+# Modify the Contour Image Sequences in the Referenced Frame of Reference Sequence: 
 
-# Cycle through each Contour Sequence and replace the tags with those of MovDicoms[0]:
-for i in range(len(N_CS)):
+# Get the number of Contour Image Sequences:
+#N_CIS = MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]\
+#.RTReferencedSeriesSequence[0].ContourImageSequence
+
+# Cycle through each Contour Image Sequence and modify the Referenced SOP Class UID
+# and Referenced SOP Instance UID with those of MovDicoms[0]:
+#for i in range(len(N_CIS)):
+#for i in range(len(ContourData)):
+for i in range(len(MovInds)):
+    print(f'i = {i}, MovInds[i] = {MovInds[i]}')
+    
     # Modify the Referenced SOP Class UID:
-    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPClassUID = MovDicoms[0].SOPClassUID
+    MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]    .RTReferencedSeriesSequence[0].ContourImageSequence[i]    .ReferencedSOPClassUID = MovDicoms[MovInds[i]].SOPClassUID
     
     # Modify the SOP Instance UID:
-    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPInstanceUID = MovDicoms[0].SOPInstanceUID
+    MovRoi.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]    .RTReferencedSeriesSequence[0].ContourImageSequence[i]    .ReferencedSOPInstanceUID = MovDicoms[MovInds[i]].SOPInstanceUID
+    
+
+# Modify the Contour Sequences in the ROI Contour Sequence: 
+
+# Get the number of Contour Sequences:
+#N_CS = MovRoi.ROIContourSequence[0].ContourSequence
+
+# Cycle through each Contour Sequence and modify the Referenced SOP Class UID and
+# Referenced SOP Instance UID in the Contour Image Sequence with those of MovDicoms[0],
+# and modify the Contour Geometric Type, Number of Contour Points, Contour Number and
+# Contour Data:
+#for i in range(len(N_CS)):
+#for i in range(len(ContourData)):
+for i in range(len(MovInds)):
+    print(f'i = {i}, MovInds[{i}] = {MovInds[i]}')
+    
+    # Modify the Referenced SOP Class UID:
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPClassUID = MovDicoms[MovInds[i]].SOPClassUID
+    
+    # Modify the SOP Instance UID:
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourImageSequence[0].ReferencedSOPInstanceUID = MovDicoms[MovInds[i]].SOPInstanceUID
     
     # Modify the Contour Geometric Type:
     """ Since the contours are not closed change from 'CLOSED_PLANAR' to 'OPEN_PLANAR' """
@@ -1291,29 +1567,92 @@ for i in range(len(N_CS)):
     #print(MovRoi.ROIContourSequence[0].ContourSequence[s].ContourGeometricType)
     
     # Modify the Number of Contour Points:
-    MovRoi.ROIContourSequence[0].ContourSequence[0]    .NumberOfContourPoints = f"{len(OutPtsArr_ICS_nonempty)}"  
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .NumberOfContourPoints = f"{Npts[MovInds[i]]}"  
+    
     
     # Modify the Contour Number:
-    """ This still has to be done - for now all sequences only have one contour"""
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourNumber = f"{i+1}" 
     
     # Modify the Contour Data:
-    """ This still has to be done """
+    MovRoi.ROIContourSequence[0].ContourSequence[i]    .ContourData = ContourData[MovInds[i]]
     
-
-# Modify the Contour Sequences: 
-
-
        
+# Get the filename of the original RT-Struct file:
+FixRoiFname = os.path.split(FixRoiFpath)[1]
+
+# Create a new filename:
+MovRoiFname = 'AIM_' + NewDate + '_' + NewTime + '_transformed_from_' + FixRoiFname
+
+# Get the current working directory:
+CWD = os.getcwd()
+
+# Save the new DICOM-RTSTRUCT file:
+#MovRoi.save_as(os.path.join(CWD, MovRoiFname))
+
+
+# In[226]:
+
+
+ContourData
+Npts
+
+
+# In[210]:
+
+
+for i in range(len(MovInds)):
+    print(f'i = {i}, MovInds[i] = {MovInds[i]}')
     
+    print(ContourData[i])
 
 
+# In[162]:
 
 
+MovRoiFname
 
-# In[93]:
+
+# In[164]:
 
 
-MovRoi.ROIContourSequence[0].ContourSequence[0]
+os.getcwd()
+
+
+# In[161]:
+
+
+MovRoiFname = 'AIM_' + NewDate + '_' + NewTime + '_copied_from_' + FixRoiFname
+
+
+# In[122]:
+
+
+print('FixRoi:')
+FixRoi
+
+
+# In[232]:
+
+
+print('MovRoi:')
+MovRoi
+
+
+# In[221]:
+
+
+print(f'Npts = {Npts}')
+print(f'3*Npts = {[3*Npts[i] for i in range(len(Npts))]}')
+print('MovInds =', MovInds)
+
+
+# In[154]:
+
+
+print(MovRoi.StructureSetLabel)
+print(MovRoi.StructureSetROISequence[0].ROIName)
+print(MovRoi.StructureSetDate)
+print(MovRoi.StructureSetTime)
 
 
 # In[89]:
@@ -1331,10 +1670,282 @@ print('*************************************************************************
 #print(MovRoi.ROIContourSequence[0].ContourSequence[0].ContourImageSequence[0].ReferencedSOPInstanceUID)
 
 
-# In[ ]:
+# ### Test function that wraps up the above code:
+
+# In[42]:
 
 
+import CreateMovRoi
+importlib.reload(CreateMovRoi)
+from CreateMovRoi import CreateMovRoi
 
+MovRoi = CreateMovRoi(FixRoiFpath=FixRoiFpath, MovDicomDir=MovDicomDir, 
+                      MovPtsArr_ICS=OutPtsArr_ICS, Debug=False)
+
+
+# In[43]:
+
+
+MovRoi
+
+
+# In[17]:
+
+
+print(f'Npts = {Npts}')
+print(f'3*Npts = {[3*Npts[i] for i in range(len(Npts))]}')
+print('MovInds =', MovInds)
+
+
+# # Sagittal views of Fixed and Moving Images
+
+# In[189]:
+
+
+FixOrigin, FixDirs, FixSpacings, FixDims = GetImageAttributes(DicomDir=FixDicomDir, Package='pydicom')
+MovOrigin, MovDirs, MovSpacings, MovDims = GetImageAttributes(DicomDir=MovDicomDir, Package='pydicom')
+
+print('FixDims:', FixDims)
+print('\nMovDims:', MovDims)
+
+print('\nFixDirs:\n', FixDirs[0:3], '\n', FixDirs[3:6], '\n', FixDirs[6:])
+print('\nMovDirs:\n', MovDirs[0:3], '\n', MovDirs[3:6], '\n', MovDirs[6:])
+
+# Check the aspect ratios in different views:
+FixAxAR = FixSpacings[1]/FixSpacings[0]
+MovAxAR = MovSpacings[1]/MovSpacings[0]
+
+FixSagAR = FixSpacings[1]/FixSpacings[2]
+MovSagAR = MovSpacings[1]/MovSpacings[2]
+#FixSagAR = FixSpacings[2]/FixSpacings[1]
+#MovSagAR = MovSpacings[2]/MovSpacings[1]
+
+FixCorAR = FixSpacings[2]/FixSpacings[0]
+MovCorAR = MovSpacings[2]/MovSpacings[0]
+
+print('\nFixAxAR =', FixAxAR)
+print('FixSagAR =', FixSagAR)
+print('FixCorAR =', FixCorAR)
+print('\nMovAxAR =', MovAxAR)
+print('MovSagAR =', MovSagAR)
+print('MovCorAR =', MovCorAR)
+
+# Create 3D array of DICOM images:
+Fix3D = np.zeros(FixDims)
+Mov3D = np.zeros(MovDims)
+
+for i in range(len(FixDicoms)):
+    Fix3D[:, :, i] = FixDicoms[i].pixel_array
+
+for i in range(len(MovDicoms)):
+    Mov3D[:, :, i] = MovDicoms[i].pixel_array
+    
+
+
+# In[73]:
+
+
+# plot 3 orthogonal slices
+plt.subplots(1, 3, figsize=(14, 5))
+
+a1 = plt.subplot(1, 3, 1)
+plt.imshow(Fix3D[:, :, FixDims[2]//2])
+a1.set_aspect(FixAxAR)
+
+a2 = plt.subplot(1, 3, 2)
+plt.imshow(Fix3D[:, FixDims[1]//2, :])
+a2.set_aspect(FixSagAR)
+
+a3 = plt.subplot(1, 3, 3)
+plt.imshow(Fix3D[FixDims[0]//2, :, :].T)
+a3.set_aspect(FixCorAR)
+
+plt.show()
+
+
+# In[114]:
+
+
+print(FixDims[1]/FixDims[2])
+print(FixDims[1]//FixDims[2])
+print(int(np.floor(FixDims[1]/FixDims[2])))
+
+
+# In[116]:
+
+
+np.arange(0, FixDims[1]+1, dSag)
+
+
+# In[109]:
+
+
+np.arange(0, 10, 10/5)
+
+
+# In[119]:
+
+
+np.arange(0, FixDims[1], FixDims[1]/FixDims[2])
+
+
+# In[121]:
+
+
+np.arange(0, FixDims[1]+0.01, FixDims[1]//FixDims[2])
+
+
+# In[125]:
+
+
+np.linspace(0, FixDims[1]-1, num=FixDims[2], endpoint=True)
+
+
+# In[126]:
+
+
+np.linspace(0, FixDims[1]-1, num=FixDims[2], endpoint=True, retstep=False, dtype=int)
+
+
+# In[131]:
+
+
+# Sagittal plots:
+
+Nrows = FixDims[2] # same as the number of slices
+Nrows = FixDims[2]//2
+Ncols = 1
+
+# Define the slice thickness along sagital cuts:
+#dSag = int(np.floor(FixDims[0]/FixDims[2])) # same as below
+dSag = FixDims[0]//FixDims[2] # same as above
+
+# Create list of indices for the sagittal slices:
+#yInds = np.arange(0, FixDims[0]+1, dSag) # better to use linspace..
+yInds = np.linspace(0, FixDims[1]-1, num=Nrows, endpoint=True, retstep=False, dtype=int)
+
+
+Rotate = False
+Rotate = True
+
+plt.subplots(Nrows, Ncols, figsize=(5, 5*Nrows))
+#plt.subplots(Nrows, Ncols, figsize=(5, 50))
+
+i = 0
+
+for s in range(Nrows):
+    i = i + 1 # increment sub-plot number
+    
+    #print(f'\nyInd = {yInds[s]}')
+    
+    if Rotate:
+        arr = np.rot90(Fix3D[:, yInds[s], :])
+    else:
+        arr = Fix3D[:, yInds[s], :]
+    
+    ax1 = plt.subplot(Nrows, Ncols, i)
+    plt.imshow(arr, cmap=plt.cm.Greys_r);
+    plt.title(f'Fixed slice {s+1}/{Nrows}')
+    plt.axis('off')
+    if Rotate:
+        ax1.set_aspect(1/FixSagAR)
+    else:
+        ax1.set_aspect(FixSagAR)
+
+
+# In[219]:
+
+
+FixNda = sitk.GetArrayFromImage(FixIm)
+
+print('FixDims         =', FixDims)
+print('FixNda.shape    =', FixNda.shape)
+print('FixIm.GetSize() =', FixIm.GetSize())
+print('')
+print('FixDirs              =\n', FixDirs)
+print('\nFixIm.GetDirection() =\n', FixIm.GetDirection())
+print('')
+print(FixDirs[0:2])
+print([FixDirs[0], FixDirs[2]])
+print(FixDirs[1:3])
+
+print('\n', type(FixIm.GetDirection()))
+#print('\n', type(list(FixIm.GetDirection())))
+print('\n', type(FixDirs))
+
+if False:
+    #FixDirs = FixIm.GetDirection()
+    #FixDirs = list(FixIm.GetDirection())
+    FixDirs = [FixIm.GetDirection()[i] for i in range(len(FixIm.GetDirection()))]
+
+    print('\nFixDirs =\n', FixDirs)
+
+    a = [1, 2, 3, 5, 6, 7]
+    #a = list([1, 2, 3, 5, 6, 7])
+
+    for i in range(len(a)):
+        ind = a[i]
+
+        #print(ind)
+
+        FixDirs[ind] = - FixDirs[ind]
+
+    print('\nFixDirs =\n', FixDirs)
+    
+if True:
+    #FixDirs = FixIm.GetDirection()
+    #FixDirs = list(FixIm.GetDirection())
+    FixDirs = [FixIm.GetDirection()[i] for i in range(len(FixIm.GetDirection()))]
+
+    print('\nFixDirs =\n', FixDirs)
+
+    a = [1, 2, 3, 5, 6, 7]
+    #a = list([1, 2, 3, 5, 6, 7])
+
+    for i in a:
+        FixDirs[i] = - FixDirs[i]
+
+    print('\nFixDirs =\n', FixDirs)
+
+
+# In[223]:
+
+
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Chose which slices to plot:
+plot_slices = -1 # plot all
+#plot_slices = [14]
+#plot_slices = [128]
+
+# Choose the perspective:
+perspective = 'axial'
+perspective = 'sagittal'
+perspective = 'coronal'
+
+# Choose whether to export figure:
+export_fig = True
+#export_fig = False
+
+
+# Create filename for exported figure:
+fig_fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_' + CoordSys             +'_reg_result_using_' + package + '_' + perspective + '.png'
+
+ruf.display_all_sitk_images_and_reg_results_with_all_contours_v2(fix_im=FixIm, mov_im=MovIm, reg_im=RegIm,
+                                                                 fix_pts=InPtsArr_ICS, mov_pts=OutPtsArr_ICS,
+                                                                 export_fig=export_fig,
+                                                                 export_fname=fig_fname,
+                                                                 plot_slices=plot_slices,
+                                                                 perspective=perspective)
+
+
+# In[167]:
+
+
+( (14 + 1)/30 )*(256)
+( (29 + 1)/30 )*(256)
 
 
 # ## Older stuff below...

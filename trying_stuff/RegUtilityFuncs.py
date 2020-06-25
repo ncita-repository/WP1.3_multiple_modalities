@@ -22,6 +22,9 @@ import SimpleITK as sitk
 import numpy as np
 #import os
 #import re
+from plotly.subplots import make_subplots 
+import plotly.express as px
+import plotly.graph_objects as go
     
 
 
@@ -1109,3 +1112,683 @@ def display_all_sitk_images_and_reg_results_with_all_contours(fix_im, mov_im, re
         plt.savefig(export_fname, bbox_inches='tight')
         
     return
+
+
+
+def display_all_sitk_images_and_reg_results_with_all_contours_v2(fix_im, mov_im, reg_im,
+                                                                 fix_pts, mov_pts,
+                                                                 export_fig,
+                                                                 export_fname,
+                                                                 plot_slices,
+                                                                 perspective):
+    
+    
+    fix_npa = sitk.GetArrayFromImage(fix_im)
+    mov_npa = sitk.GetArrayFromImage(mov_im)
+    reg_npa = sitk.GetArrayFromImage(reg_im)
+    
+    fix_shape = fix_npa.shape # e.g. (30, 256, 212) => (z, x, y)
+    mov_shape = mov_npa.shape
+    #reg_shape = reg_npa.shape
+    
+    # Get dimensions in [x, y, z] order:
+    fix_dims = [fix_shape[i] for i in [1, 2, 0]]
+    mov_dims = [mov_shape[i] for i in [1, 2, 0]]
+    #reg_dims = [reg_shape[i] for i in [1, 2, 0]]
+    
+    #print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {reg_dims}')
+    print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {fix_dims}')
+    
+    fix_orig = fix_im.GetOrigin()
+    mov_orig = mov_im.GetOrigin()
+    #reg_orig = reg_im.GetOrigin()
+    
+    fix_spacing = fix_im.GetSpacing() # e.g. (0.8984375, 0.8984375, 5.0) => (x, y, z)
+    mov_spacing = mov_im.GetSpacing()
+    #reg_spacing = reg_im.GetSpacing()
+    
+    fix_orient = [fix_im.GetDirection()[i] for i in range(len(fix_im.GetDirection()))]
+    mov_orient = [mov_im.GetDirection()[i] for i in range(len(mov_im.GetDirection()))]
+    
+    # Reverse the sign of the cross terms so that the vectors are defined in
+    # the same way as Pydicom:
+    for i in [1, 2, 3, 5, 6, 7]:
+        fix_orient[i] = - fix_orient[i]
+        mov_orient[i] = - mov_orient[i]
+    
+    
+    # Number of columns to plot:
+    Ncols = 3
+    
+    
+    # Get the number of slices and aspect ratio (depends on the chosen 
+    # perspective):
+    if perspective == 'axial':
+        fix_S = fix_shape[0] # z
+        mov_S = mov_shape[0]
+        #reg_S = reg_shape[0]
+        
+        fix_AR = fix_spacing[1]/fix_spacing[0] # y/x
+        mov_AR = mov_spacing[1]/mov_spacing[0]
+        #reg_AR = reg_spacing[1]/reg_spacing[0]
+    
+        
+        if plot_slices == -1: # plot all slices
+            # Number of rows to plot:
+            Nrows = max(fix_S, mov_S)
+            
+            # Create list of slice indices:
+            fix_inds = list(range(fix_S))
+            mov_inds = list(range(mov_S))
+        
+        else:
+            fix_inds = plot_slices
+            mov_inds = plot_slices
+            
+            #Nrows = len(inds)
+            Nrows = len(plot_slices)
+        
+    elif perspective == 'coronal':
+        fix_S = fix_shape[1] # x
+        mov_S = mov_shape[1]
+        #reg_S = reg_shape[1]
+        
+        #fix_AR = fix_spacing[1]/fix_spacing[2] # y/z
+        #mov_AR = mov_spacing[1]/mov_spacing[2]
+        #reg_AR = reg_spacing[1]/reg_spacing[2]
+        fix_AR = fix_spacing[2]/fix_spacing[1] # z/y
+        mov_AR = mov_spacing[2]/mov_spacing[1]
+        #reg_AR = reg_spacing[2]/reg_spacing[1]
+        
+        """ It's not practical to plot all slices along x because there 
+        will be hundreds of slices, so create a list of indices with a
+        more manageable number. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(fix_shape[0], mov_shape[0])
+    
+        fix_inds = np.linspace(0, fix_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        mov_inds = np.linspace(0, mov_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        Nrows = len(fix_inds)
+            
+        if plot_slices != -1: # NOT plot all slices
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            #fix_inds = int(( (plot_slices + 1) )/Nrows*fix_S)
+            #mov_inds = int(( (plot_slices + 1) )/Nrows*mov_S)
+            fix_inds = [int( ( (plot_slices[i] + 1) )/Nslices*fix_S ) for i in range(len(plot_slices))]
+            mov_inds = [int( ( (plot_slices[i] + 1) )/Nslices*mov_S ) for i in range(len(plot_slices))]
+            
+            Nrows = len(fix_inds)
+        
+        
+    elif perspective == 'sagittal':
+        fix_S = fix_shape[2] # y
+        mov_S = mov_shape[2]
+        #reg_S = reg_shape[2]
+        
+        fix_AR = fix_spacing[2]/fix_spacing[0] # z/x
+        mov_AR = mov_spacing[2]/mov_spacing[0]
+        #reg_AR = reg_spacing[2]/reg_spacing[0]
+        
+        """ Same comment as above applies for coronal perspective. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(fix_shape[0], mov_shape[0])
+     
+        fix_inds = np.linspace(0, fix_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        mov_inds = np.linspace(0, mov_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        Nrows = len(fix_inds)
+            
+        if plot_slices != -1: # NOT plot all slices
+          
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            #fix_inds = int(( (plot_slices + 1) )/Nrows*fix_S)
+            #mov_inds = int(( (plot_slices + 1) )/Nrows*mov_S)
+            fix_inds = [int( ( (plot_slices[i] + 1) )/Nslices*fix_S ) for i in range(len(plot_slices))]
+            mov_inds = [int( ( (plot_slices[i] + 1) )/Nslices*mov_S ) for i in range(len(plot_slices))]
+            
+            Nrows = len(fix_inds)
+        
+    else:
+        print('Input "perspective" must be "axial", "sagital" or "coronal".')
+        
+        return
+    
+    
+    ##print(f'\nfix_AR = {fix_AR}\nmov_AR = {mov_AR}\nreg_AR = {reg_AR}')
+    #print(f'\nfix_inds (N = {len(fix_inds)}) =', fix_inds)
+    #print(f'\nmov_inds (N = {len(mov_inds)}) =', mov_inds)
+
+    # create a figure with two subplots and the specified size
+    #plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 5*Nrows))
+    #plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 2*Nrows))
+    #plt.subplots(Nrows, Ncols, figsize=(17, 17*Nrows/Ncols))
+    #plt.subplots(Nrows, Ncols, figsize=(15, 15*Nrows/Ncols))
+    plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+
+    i = 0 # sub-plot number
+    
+    for s in range(Nrows):
+        #print(f'ind = {ind}')
+        
+        #print(f'\nMoving no. of pts     = {mov_Npts}')
+        #print(f'Registered no. of pts = {reg_Npts}')
+        
+        i = i + 1 # increment sub-plot number
+        
+        #print(f'\nfix_ind = {fix_ind}, fix_S = {fix_S} ')
+        
+        # Plot the fixed image:
+        #if fix_ind <= fix_S - 1:
+        if s <= len(fix_inds) - 1:
+            fix_ind = fix_inds[s]
+            
+            plt.subplot(Nrows, Ncols, i)
+            if perspective=='axial':
+                arr = fix_npa[fix_ind,:,:]
+                
+                sliceAxis = 'z'
+                sliceLoc = fix_orig[2] + fix_spacing[2]*s
+                
+                slicePlane = '(X, Y)'
+                sliceOrient = fix_orient[0:2]
+                #sliceOrient = f'(X, Y) = ({fix_orient[0]}, {fix_orient[1]})'
+                
+            elif perspective=='sagittal':
+                arr = np.flipud(fix_npa[:,:,fix_ind]) # flipud to correct orientation
+                
+                sliceAxis = 'y'
+                sliceLoc = fix_orig[1] + fix_spacing[1]*s
+                
+                slicePlane = '(X, Z)'
+                sliceOrient = [fix_orient[0], fix_orient[2]]
+                #sliceOrient = f'(X, Z) = ({fix_orient[0]}, {fix_orient[2]})'
+                
+            elif perspective=='coronal':
+                arr = np.flipud(fix_npa[:,fix_ind,:]) # flipud to correct orientation
+                
+                sliceAxis = 'x'
+                sliceLoc = fix_orig[0] + fix_spacing[0]*s
+                
+                slicePlane = '(Y, Z)'
+                sliceOrient = fix_orient[1:3]
+                #sliceOrient = f'(Y, Z) = ({fix_orient[1]}, {fix_orient[2]})'
+                
+            sliceLoc = round(sliceLoc, 1)
+            
+            sliceOrient = [round(sliceOrient[i], 3) for i in range(len(sliceOrient))]
+                
+            plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=fix_AR);
+            #ax1.set_aspect(fix_AR)
+            #plt.title(f'Fixed slice {s+1}/{fix_N}\n(z = {round(fix_z,1)} mm)')
+            #plt.title(f'Fixed slice {fix_ind + 1}/{fix_S}')
+            plt.title(f'Fixed slice {fix_ind + 1}/{fix_S}' \
+                      + '\n' + sliceAxis + f'0 = {sliceLoc} mm' \
+                      + '\n' + slicePlane + f' = {sliceOrient}')
+            plt.axis('off')
+            
+            if perspective == 'axial':
+                # Get the number of contours for this slice:
+                fix_Npts = len(fix_pts[fix_ind])
+                
+                # Plot contours of fixed image if fix_Npts is not 0:
+                if fix_Npts:
+                    # Unpack tuple and store each x,y tuple in arrays X and Y:
+                    X = []
+                    Y = []
+                    for x, y, z in fix_pts[fix_ind]:
+                        X.append(x)
+                        Y.append(y)
+            
+                    # Flip Y pixel coordinates?:
+                    if False:
+                        N_r, N_c = np.shape(fix_npa[fix_ind,:,:])
+            
+                        Y = N_c - np.array(Y)
+            
+                    plt.plot(X, Y, linewidth=0.5, c='red');
+    
+        i = i + 1 # increment sub-plot number
+        
+        # Plot the moving image:
+        #if mov_ind <= mov_S - 1:
+        if s <= len(mov_inds) - 1:
+            mov_ind = mov_inds[s]
+            
+            plt.subplot(Nrows, Ncols, i)
+            if perspective=='axial':
+                arr = mov_npa[mov_ind,:,:]
+                
+                sliceAxis = 'z'
+                sliceLoc = mov_orig[2] + mov_spacing[2]*s
+                
+                slicePlane = '(X, Y)'
+                sliceOrient = mov_orient[0:2]
+                #sliceOrient = f'(X, Y) = ({mov_orient[0]}, {mov_orient[1]})'
+                
+            elif perspective=='sagittal':
+                arr = np.flipud(mov_npa[:,:,mov_ind]) # flipud to correct orientation
+                
+                sliceAxis = 'y'
+                sliceLoc = fix_orig[1] + fix_spacing[1]*s
+                
+                slicePlane = '(X, Z)'
+                sliceOrient = [mov_orient[0], mov_orient[2]]
+                #sliceOrient = f'(X, Z) = ({mov_orient[0]}, {mov_orient[2]})'
+                
+            elif perspective=='coronal':
+                arr = np.flipud(mov_npa[:,mov_ind,:]) # flipud to correct orientation
+                
+                sliceAxis = 'x'
+                sliceLoc = fix_orig[0] + fix_spacing[0]*s
+                
+                slicePlane = '(Y, Z)'
+                sliceOrient = mov_orient[1:3]
+                #sliceOrient = f'(Y, Z) = ({mov_orient[1]}, {mov_orient[2]})'
+                
+            sliceLoc = round(sliceLoc, 1)
+            
+            sliceOrient = [round(sliceOrient[i], 3) for i in range(len(sliceOrient))]
+            
+            plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=mov_AR);
+            #ax2.set_aspect(mov_AR)
+            #plt.title(f'Moving slice {s+1}/{mov_N}\n(z = {round(mov_z,1)} mm)')
+            #plt.title(f'Moving slice {mov_ind + 1}/{mov_S}')
+            plt.title(f'Moving slice {mov_ind + 1}/{mov_S}' \
+                      + '\n' + sliceAxis + f'0 = {round(sliceLoc, 1)} mm' \
+                      + '\n' + slicePlane + f' = {sliceOrient}')
+            plt.axis('off')
+            
+            if perspective == 'axial':
+                # Get the number of contours for this slice:
+                mov_Npts = len(mov_pts[mov_ind])
+                
+                # Plot contours for moving image if mov_Npts is not 0:
+                if mov_Npts:
+                    # Unpack tuple and store each x,y tuple in arrays X and Y:
+                    X = []
+                    Y = []
+                    
+                    #print(mov_pts[s])
+                    
+                    for x, y, z in mov_pts[mov_ind]:
+                        X.append(x)
+                        Y.append(y)
+            
+                    # Flip Y pixel coordinates?:
+                    if False:
+                        N_r, N_c = np.shape(mov_npa[mov_ind,:,:])
+            
+                        Y = N_c - np.array(Y)
+            
+                    plt.plot(X, Y, linewidth=0.5, c='red');
+            
+        i = i + 1 # increment sub-plot number
+        
+        # Plot the registered image with contours from fixed image:
+        #if ind <= reg_S-1:
+        #if fix_ind <= fix_S - 1:
+        if s <= len(fix_inds) - 1:
+            fix_ind = fix_inds[s]
+            
+            plt.subplot(Nrows, Ncols, i)
+            if perspective=='axial':
+                arr = reg_npa[fix_ind,:,:]
+                
+                sliceAxis = 'z'
+                sliceLoc = fix_orig[2] + fix_spacing[2]*s
+                
+                slicePlane = '(X, Y)'
+                sliceOrient = fix_orient[0:2]
+                #sliceOrient = f'(X, Y) = ({fix_orient[0]}, {fix_orient[1]})'
+                
+            elif perspective=='sagittal':
+                arr = np.flipud(reg_npa[:,:,fix_ind]) # flipud to correct orientation
+                
+                sliceAxis = 'y'
+                sliceLoc = fix_orig[1] + fix_spacing[1]*s
+                
+                slicePlane = '(X, Z)'
+                sliceOrient = [fix_orient[0], fix_orient[2]]
+                #sliceOrient = f'(X, Z) = ({fix_orient[0]}, {fix_orient[2]})'
+                
+            elif perspective=='coronal':
+                arr = np.flipud(reg_npa[:,fix_ind,:]) # flipud to correct orientation
+                
+                sliceAxis = 'x'
+                sliceLoc = fix_orig[0] + fix_spacing[0]*s
+                
+                slicePlane = '(Y, Z)'
+                sliceOrient = fix_orient[1:3]
+                #sliceOrient = f'(Y, Z) = ({fix_orient[1]}, {fix_orient[2]})'
+              
+            sliceLoc = round(sliceLoc, 1)
+            
+            sliceOrient = [round(sliceOrient[i], 3) for i in range(len(sliceOrient))]
+            
+            #plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=reg_AR);
+            plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=fix_AR);
+            #ax3.set_aspect(reg_AR)
+            #plt.title(f'Registered slice {s+1}/{reg_N}\n(z = {round(reg_z,1)} mm)')
+            #plt.title(f'Registered slice {ind+1}/{reg_S}')
+            #plt.title(f'Registered slice {fix_ind + 1}/{fix_S}')
+            plt.title(f'Registered slice {fix_ind + 1}/{fix_S}' \
+                      + '\n' + sliceAxis + f'0 = {round(sliceLoc, 1)} mm' \
+                      + '\n' + slicePlane + f' = {sliceOrient}')
+            plt.axis('off')
+            
+            if perspective == 'axial':
+                # Get the number of contours from fixed image for this slice:
+                fix_Npts = len(fix_pts[fix_ind])
+                
+                # Plot contours from fixed image if fix_Npts is not 0:
+                if fix_Npts:
+                    # Unpack tuple and store each x,y tuple in arrays X and Y:
+                    X = []
+                    Y = []
+                    for x, y, z in fix_pts[fix_ind]:
+                        X.append(x)
+                        Y.append(y)
+            
+                    # Flip Y pixel coordinates?:
+                    if False:
+                        N_r, N_c = np.shape(reg_npa[fix_ind,:,:])
+            
+                        Y = N_c - np.array(Y)
+            
+                    plt.plot(X, Y, linewidth=0.5, c='red');
+            
+    if export_fig:
+        #plt.savefig('Images_and_reg_result_sitk.png', bbox_inches='tight')
+        plt.savefig(export_fname, bbox_inches='tight')
+        
+    return
+
+
+
+""" Try to make display_all_sitk_images_and_reg_results_with_all_contours_v2
+more compact (reduced from 2627 to 249 lines = 91% reduction!): """
+def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im, reg_im,
+                                                                 fix_pts, mov_pts,
+                                                                 export_fig,
+                                                                 export_fname,
+                                                                 plot_slices,
+                                                                 perspective,
+                                                                 contours_as):
+    
+    use_matplotlib = True
+    use_plotly = False
+    
+    fix_npa = sitk.GetArrayFromImage(fix_im)
+    mov_npa = sitk.GetArrayFromImage(mov_im)
+    reg_npa = sitk.GetArrayFromImage(reg_im)
+    
+    fix_shape = fix_npa.shape # e.g. (30, 256, 212) => (z, x, y)
+    mov_shape = mov_npa.shape
+    #reg_shape = reg_npa.shape
+    
+    # Get dimensions in [x, y, z] order:
+    fix_dims = [fix_shape[i] for i in [1, 2, 0]]
+    mov_dims = [mov_shape[i] for i in [1, 2, 0]]
+    #reg_dims = [reg_shape[i] for i in [1, 2, 0]]
+    
+    #print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {reg_dims}')
+    print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {fix_dims}')
+    
+    fix_orig = fix_im.GetOrigin()
+    mov_orig = mov_im.GetOrigin()
+    #reg_orig = reg_im.GetOrigin()
+    
+    fix_spacing = fix_im.GetSpacing() # e.g. (0.8984375, 0.8984375, 5.0) => (x, y, z)
+    mov_spacing = mov_im.GetSpacing()
+    #reg_spacing = reg_im.GetSpacing()
+    
+    fix_orient = [fix_im.GetDirection()[i] for i in range(len(fix_im.GetDirection()))]
+    mov_orient = [mov_im.GetDirection()[i] for i in range(len(mov_im.GetDirection()))]
+    
+    # Reverse the sign of the cross terms so that the vectors are defined in
+    # the same way as Pydicom:
+    for i in [1, 2, 3, 5, 6, 7]:
+        fix_orient[i] = - fix_orient[i]
+        mov_orient[i] = - mov_orient[i]
+    
+    
+    # Number of columns to plot:
+    Ncols = 3
+    
+    
+    # Get the number of slices and aspect ratio (depends on the chosen 
+    # perspective):
+    if perspective == 'axial':
+        fix_S = fix_shape[0] # z
+        mov_S = mov_shape[0]
+        #reg_S = reg_shape[0]
+        
+        fix_AR = fix_spacing[1]/fix_spacing[0] # y/x
+        mov_AR = mov_spacing[1]/mov_spacing[0]
+        #reg_AR = reg_spacing[1]/reg_spacing[0]
+    
+        
+        if plot_slices == -1: # plot all slices
+            # Number of rows to plot:
+            Nrows = max(fix_S, mov_S)
+            
+            # Create list of slice indices:
+            fix_inds = list(range(fix_S))
+            mov_inds = list(range(mov_S))
+        
+        else:
+            fix_inds = plot_slices
+            mov_inds = plot_slices
+            
+            Nrows = len(plot_slices)
+        
+    elif perspective == 'coronal':
+        fix_S = fix_shape[1] # x
+        mov_S = mov_shape[1]
+        #reg_S = reg_shape[1]
+        
+        #fix_AR = fix_spacing[1]/fix_spacing[2] # y/z
+        #mov_AR = mov_spacing[1]/mov_spacing[2]
+        #reg_AR = reg_spacing[1]/reg_spacing[2]
+        fix_AR = fix_spacing[2]/fix_spacing[1] # z/y
+        mov_AR = mov_spacing[2]/mov_spacing[1]
+        #reg_AR = reg_spacing[2]/reg_spacing[1]
+        
+        """ It's not practical to plot all slices along x because there 
+        will be hundreds of slices, so create a list of indices with a
+        more manageable number. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(fix_shape[0], mov_shape[0])
+        
+        fix_inds = np.linspace(0, fix_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        mov_inds = np.linspace(0, mov_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        Nrows = len(fix_inds)
+            
+        if plot_slices != -1: # NOT plot all slices
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            fix_inds = [int( ( (plot_slices[i] + 1) )/Nslices*fix_S ) for i in range(len(plot_slices))]
+            mov_inds = [int( ( (plot_slices[i] + 1) )/Nslices*mov_S ) for i in range(len(plot_slices))]
+            
+            Nrows = len(fix_inds)
+        
+        
+    elif perspective == 'sagittal':
+        fix_S = fix_shape[2] # y
+        mov_S = mov_shape[2]
+        #reg_S = reg_shape[2]
+        
+        fix_AR = fix_spacing[2]/fix_spacing[0] # z/x
+        mov_AR = mov_spacing[2]/mov_spacing[0]
+        #reg_AR = reg_spacing[2]/reg_spacing[0]
+        
+        """ Same comment as above applies for coronal perspective. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(fix_shape[0], mov_shape[0])
+  
+        fix_inds = np.linspace(0, fix_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        mov_inds = np.linspace(0, mov_S-1, num=Nslices, endpoint=True,
+                               retstep=False, dtype=int)
+        
+        Nrows = len(fix_inds)
+            
+        if plot_slices != -1: # NOT plot all slices
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            fix_inds = [int( ( (plot_slices[i] + 1) )/Nslices*fix_S ) for i in range(len(plot_slices))]
+            mov_inds = [int( ( (plot_slices[i] + 1) )/Nslices*mov_S ) for i in range(len(plot_slices))]
+            
+            Nrows = len(fix_inds)
+        
+    else:
+        print('Input "perspective" must be "axial", "sagital" or "coronal".')
+        
+        return
+    
+    
+    # Combine the data for fixed, moving and registered images in a list:
+    inds = [fix_inds, mov_inds, fix_inds]
+    npas = [fix_npa, mov_npa, reg_npa]
+    origins = [fix_orig, mov_orig, fix_orig]
+    spacings = [fix_spacing, mov_spacing, fix_spacing]
+    orients = [fix_orient, mov_orient, fix_orient]
+    ARs = [fix_AR, mov_AR, fix_AR]
+    Ss = [fix_S, mov_S, fix_S]
+    txts = ['Fixed slice', 'Moving slice', 'Registered slice']
+    Pts = [fix_pts, mov_pts, fix_pts]
+    
+    
+    i = 0 # sub-plot number
+    
+    ##print(f'\nfix_AR = {fix_AR}\nmov_AR = {mov_AR}\nreg_AR = {reg_AR}')
+    #print(f'\nfix_inds (N = {len(fix_inds)}) =', fix_inds)
+    #print(f'\nmov_inds (N = {len(mov_inds)}) =', mov_inds)
+
+    # Create a figure with two subplots and the specified size
+    if use_matplotlib:
+        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+        
+    if use_plotly:
+        fig = make_subplots(rows=Nrows, cols=Ncols)
+    
+    for r in range(Nrows):
+        for c in range(3):
+            npa = npas[c]
+            origin = origins[c]
+            spacing = spacings[c]
+            orient = orients[c]
+            AR = ARs[c]
+            S = Ss[c]
+            txt = txts[c]
+            pts = Pts[c]
+            
+            i = i + 1 # increment sub-plot number
+            
+            # Plot the image:
+            if r <= len(inds[c]) - 1:
+                ind = inds[c][r]
+                
+                if use_matplotlib:
+                    plt.subplot(Nrows, Ncols, i)
+                    
+                if perspective=='axial':
+                    arr = npa[ind,:,:]
+                    
+                    sliceAxis = 'z'
+                    sliceLoc = origin[2] + spacing[2]*r
+                    
+                    slicePlane = '(X, Y)'
+                    sliceOrient = orient[0:2]
+                    
+                elif perspective=='sagittal':
+                    arr = np.flipud(npa[:,:,ind]) # flipud to correct orientation
+                    
+                    sliceAxis = 'y'
+                    sliceLoc = origin[1] + spacing[1]*r
+                    
+                    slicePlane = '(X, Z)'
+                    sliceOrient = [orient[0], orient[2]]
+                    
+                elif perspective=='coronal':
+                    arr = np.flipud(npa[:,ind,:]) # flipud to correct orientation
+                    
+                    sliceAxis = 'x'
+                    sliceLoc = origin[0] + spacing[0]*r
+                    
+                    slicePlane = '(Y, Z)'
+                    sliceOrient = orient[1:3]
+                    
+                sliceLoc = round(sliceLoc, 1)
+                
+                sliceOrient = [round(sliceOrient[i], 3) for i in range(len(sliceOrient))]
+                    
+                if use_matplotlib:
+                    plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=AR);
+                    #plt.title(f'Fixed slice {ind + 1}/{S}')
+                    plt.title(txt + f' {ind + 1}/{S}' \
+                              + '\n' + sliceAxis + f'0 = {sliceLoc} mm' \
+                              + '\n' + slicePlane + f' = {sliceOrient}')
+                    plt.axis('off')
+                
+                if use_plotly:
+                    fig.add_trace(px.imshow(arr, color_continuous_scale='gray'), r+1, c+1)
+                    fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
+                    fig.show()
+                
+                
+                # Plot contours (currently for axial view only):
+                if perspective == 'axial':
+                    # Get the number of contours for this slice:
+                    Npts = len(pts[ind])
+                    
+                    # Plot contours if Npts is not 0:
+                    if Npts:
+                        # Unpack tuple and store each x,y tuple in arrays X and Y:
+                        X = []
+                        Y = []
+                        for x, y, z in pts[ind]:
+                            X.append(x)
+                            Y.append(y)
+                
+                        # Flip Y pixel coordinates?:
+                        if False:
+                            N_r, N_c = np.shape(npa[ind,:,:])
+                
+                            Y = N_c - np.array(Y)
+                        
+                        if use_matplotlib:
+                            if contours_as=='lines':
+                                plt.plot(X, Y, linewidth=1, c='red');
+                            elif contours_as=='dots':
+                                plt.plot(X, Y, '.r', markersize=1);
+                            else:
+                                print('\ncontours_as argument must be either',
+                                      '"lines" or "dots".')
+            
+            
+    if export_fig:
+        #plt.savefig('Images_and_reg_result_sitk.png', bbox_inches='tight')
+        plt.savefig(export_fname, bbox_inches='tight')
+        
+    return
+
+
