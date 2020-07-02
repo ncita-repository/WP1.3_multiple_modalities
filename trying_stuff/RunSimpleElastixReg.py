@@ -44,7 +44,7 @@ def RunSimpleElastixReg(FixedIm, MovingIm):
     # Set the parameter map:
     ElastixImFilt.SetParameterMap(ElastixParamMap)
     
-    print('Performing registration...')
+    print('\nPerforming registration...')
     
     # Register the 3D images:
     ElastixImFilt.Execute()
@@ -53,6 +53,6 @@ def RunSimpleElastixReg(FixedIm, MovingIm):
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
-    print(f'\nTook {Dtime} s to register the 3D image stacks.')
+    print(f'Took {Dtime} s to register the 3D image stacks.')
     
     return RegIm, ElastixImFilt

@@ -1518,16 +1518,19 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v2(fix_im, mov_im,
 
 """ Try to make display_all_sitk_images_and_reg_results_with_all_contours_v2
 more compact (reduced from 2627 to 249 lines = 91% reduction!): """
-def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im, reg_im,
-                                                                 fix_pts, mov_pts,
+def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, 
+                                                                 mov_im, 
+                                                                 reg_im,
+                                                                 fix_pts, 
+                                                                 mov_pts,
                                                                  export_fig,
                                                                  export_fname,
                                                                  plot_slices,
                                                                  perspective,
                                                                  contours_as):
     
-    use_matplotlib = True
-    use_plotly = False
+    #use_matplotlib = True
+    #use_plotly = False
     
     fix_npa = sitk.GetArrayFromImage(fix_im)
     mov_npa = sitk.GetArrayFromImage(mov_im)
@@ -1543,7 +1546,9 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
     #reg_dims = [reg_shape[i] for i in [1, 2, 0]]
     
     #print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {reg_dims}')
-    print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {fix_dims}')
+    print(f'Fixed image dims      = {fix_dims}')
+    print(f'Moving image dims     = {mov_dims}')
+    print(f'Registered image dims = {fix_dims}')
     
     fix_orig = fix_im.GetOrigin()
     mov_orig = mov_im.GetOrigin()
@@ -1561,6 +1566,30 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
     for i in [1, 2, 3, 5, 6, 7]:
         fix_orient[i] = - fix_orient[i]
         mov_orient[i] = - mov_orient[i]
+    
+    
+    # The number of contours in fix_pts and mov_pts:
+    fix_Ncontours = 0
+    mov_Ncontours = 0
+    
+    for s in range(len(fix_pts)):
+        fix_Ncontours = fix_Ncontours + len(fix_pts[s])
+        
+    for s in range(len(fix_pts)):
+        mov_Ncontours = mov_Ncontours + len(mov_pts[s])
+    
+    
+    # Generate random colours for every contour in fix_pts and mov_pts:
+    fix_colours = [] # same colours will be used for registered
+    mov_colours = []
+    
+    for c in range(fix_Ncontours):
+        #fix_colours.append(list(np.random.choice(range(256), size=3)))
+        fix_colours.append([item/255 for item in list(np.random.choice(range(256), size=3))])
+    
+    for c in range(mov_Ncontours):
+        #mov_colours.append(list(np.random.choice(range(256), size=3)))
+        mov_colours.append([item/255 for item in list(np.random.choice(range(256), size=3))])
     
     
     # Number of columns to plot:
@@ -1683,14 +1712,21 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
     #print(f'\nfix_inds (N = {len(fix_inds)}) =', fix_inds)
     #print(f'\nmov_inds (N = {len(mov_inds)}) =', mov_inds)
 
-    # Create a figure with two subplots and the specified size
-    if use_matplotlib:
-        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
-        
-    if use_plotly:
-        fig = make_subplots(rows=Nrows, cols=Ncols)
+    # Create a figure with two subplots and the specified size:
+    plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+    #if use_matplotlib:
+    #    plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+    #    
+    #if use_plotly:
+    #    fig = make_subplots(rows=Nrows, cols=Ncols)
     
+    # Contour counters:
+    fix_c = 0 # same counter will be used for registered
+    mov_c = 0
+    
+    # Loop through each slice:
     for r in range(Nrows):
+        # Loop through each data type:
         for c in range(3):
             npa = npas[c]
             origin = origins[c]
@@ -1707,8 +1743,9 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
             if r <= len(inds[c]) - 1:
                 ind = inds[c][r]
                 
-                if use_matplotlib:
-                    plt.subplot(Nrows, Ncols, i)
+                plt.subplot(Nrows, Ncols, i)
+                #if use_matplotlib:
+                #    plt.subplot(Nrows, Ncols, i)
                     
                 if perspective=='axial':
                     arr = npa[ind,:,:]
@@ -1740,34 +1777,90 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
                 sliceLoc = round(sliceLoc, 1)
                 
                 sliceOrient = [round(sliceOrient[i], 3) for i in range(len(sliceOrient))]
-                    
-                if use_matplotlib:
-                    plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=AR);
-                    #plt.title(f'Fixed slice {ind + 1}/{S}')
-                    plt.title(txt + f' {ind + 1}/{S}' \
-                              + '\n' + sliceAxis + f'0 = {sliceLoc} mm' \
-                              + '\n' + slicePlane + f' = {sliceOrient}')
-                    plt.axis('off')
                 
-                if use_plotly:
-                    fig.add_trace(px.imshow(arr, color_continuous_scale='gray'), r+1, c+1)
-                    fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
-                    fig.show()
+                plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=AR);
+                #plt.title(f'Fixed slice {ind + 1}/{S}')
+                plt.title(txt + f' {ind + 1}/{S}' \
+                          + '\n' + sliceAxis + f'0 = {sliceLoc} mm' \
+                          + '\n' + slicePlane + f' = {sliceOrient}')
+                plt.axis('off')
+                    
+                #if use_matplotlib:
+                #    plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=AR);
+                #    #plt.title(f'Fixed slice {ind + 1}/{S}')
+                #    plt.title(txt + f' {ind + 1}/{S}' \
+                #              + '\n' + sliceAxis + f'0 = {sliceLoc} mm' \
+                #              + '\n' + slicePlane + f' = {sliceOrient}')
+                #    plt.axis('off')
+                #
+                #if use_plotly:
+                #    fig.add_trace(px.imshow(arr, color_continuous_scale='gray'), r+1, c+1)
+                #    fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
+                #    fig.show()
                 
                 
                 # Plot contours (currently for axial view only):
                 if perspective == 'axial':
                     # Get the number of contours for this slice:
-                    Npts = len(pts[ind])
+                    Ncts = len(pts[ind])
                     
-                    # Plot contours if Npts is not 0:
-                    if Npts:
-                        # Unpack tuple and store each x,y tuple in arrays X and Y:
-                        X = []
-                        Y = []
-                        for x, y, z in pts[ind]:
-                            X.append(x)
-                            Y.append(y)
+                    print('\ntxt =', txt)
+                    
+                    #print(f'\nNcts = {Ncts}')
+                    
+                    #print(f'\npts[{ind}] =\n\n', pts[ind])
+                    
+                    # Plot contours if Ncts is not 0:
+                    if Ncts:
+                        # Loop through each array of contour points:
+                        for ct in range(Ncts):
+                            # Increment the contour counters:
+                            if c == 0: # i.e. fixed
+                                fix_c = fix_c + 1
+                                
+                            if c == 1: # i.e. moving
+                                mov_c = mov_c + 1
+                                
+                            
+                            # Unpack tuple and store each x,y tuple in arrays 
+                            # X and Y:
+                            X = []
+                            Y = []
+                            
+                            #print(f'\npts[{ind}][{ct}] =\n\n', pts[ind][ct])
+                            
+                            for x, y, z in pts[ind][ct]:
+                                X.append(x)
+                                Y.append(y)
+                                    
+                        #""" 30/06: I broke this recently so use a temp fix: """
+                        #if c in [0, 2]:
+                        #    print(f'Ncts = {Ncts}')
+                        #    
+                        #    # Loop through each array of contour points:
+                        #    for ct in range(Ncts):
+                        #        # Unpack tuple and store each x,y tuple in arrays 
+                        #        # X and Y:
+                        #        X = []
+                        #        Y = []
+                        #        
+                        #        #print(f'\npts[{ind}][{ct}] =\n\n', pts[ind][ct])
+                        #        
+                        #        for x, y, z in pts[ind][ct]:
+                        #            X.append(x)
+                        #            Y.append(y)
+                        #
+                        #if c==1:
+                        #    # Unpack tuple and store each x,y tuple in arrays 
+                        #    # X and Y:
+                        #    X = []
+                        #    Y = []
+                        #    
+                        #    #print(f'\npts[{ind}] =\n\n', pts[ind])
+                        #    
+                        #    for x, y, z in pts[ind]:
+                        #        X.append(x)
+                        #        Y.append(y)
                 
                         # Flip Y pixel coordinates?:
                         if False:
@@ -1775,14 +1868,36 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im, mov_im,
                 
                             Y = N_c - np.array(Y)
                         
-                        if use_matplotlib:
-                            if contours_as=='lines':
-                                plt.plot(X, Y, linewidth=1, c='red');
-                            elif contours_as=='dots':
-                                plt.plot(X, Y, '.r', markersize=1);
-                            else:
-                                print('\ncontours_as argument must be either',
-                                      '"lines" or "dots".')
+                        if contours_as=='lines':
+                            #plt.plot(X, Y, linewidth=1, c='red');
+                            
+                            if c == 1: # i.e. moving
+                                plt.plot(X, Y, linewidth=1, c=mov_colours[mov_c]);
+                                
+                            else: # i.e. fixed or registered
+                                plt.plot(X, Y, linewidth=1, c=fix_colours[fix_c]);
+                            
+                            
+                        elif contours_as=='dots':
+                            #plt.plot(X, Y, '.r', markersize=1);
+                            
+                            if c == 1: # i.e. moving
+                                plt.plot(X, Y, '.', markersize=1, c=mov_colours[mov_c]);
+                                
+                            else: # i.e. fixed or registered
+                                plt.plot(X, Y, '.', markersize=1, c=fix_colours[fix_c]);
+                        else:
+                            print('\ncontours_as argument must be either',
+                                  '"lines" or "dots".')
+                                
+                        #if use_matplotlib:
+                        #    if contours_as=='lines':
+                        #        plt.plot(X, Y, linewidth=1, c='red');
+                        #    elif contours_as=='dots':
+                        #        plt.plot(X, Y, '.r', markersize=1);
+                        #    else:
+                        #        print('\ncontours_as argument must be either',
+                        #              '"lines" or "dots".')
             
             
     if export_fig:

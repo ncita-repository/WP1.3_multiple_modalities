@@ -143,6 +143,27 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     # Import packages:
     #import SimpleITK as sitk
     
+    """ 
+    Depending on whether Pts_PCS is a list of points or a single point things
+    will need to be dealt with differently. So first determine the number of
+    points in Pts_PCS.
+    """
+    
+    # If Pts_PCS is a list of points, the first item will be a list of 
+    # [x, y, z] coordinates:
+    if isinstance(Pts_PCS[0], list):
+        # Pts_PCS is a list of P points:
+        P = len(Pts_PCS)
+        
+    else:
+        # Pts_PCS is a single point:
+        P = 1
+        
+        # Since the for loop below is intended to act on a list of points, 
+        # convert the point into a list of length 1:
+        Pts_PCS = [Pts_PCS]
+    
+    
     # Define S, X, Y and Z:
     S = Origin # the origin
     
@@ -178,6 +199,7 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     # Initialise Pts_ICS:
     Pts_ICS = []
     
+    # Loop through each pint in Pts_PCS:
     for p in range(len(Pts_PCS)):
         # Get the point:
         point = Pts_PCS[p]
@@ -213,7 +235,13 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
         
         #Pts_ICS.append([di*i, dj*j, dk*k])
         Pts_ICS.append([i, j, k])
-        
+     
+    if P == 1:
+        # Convert Pts_ICS from a list of length 1 to a single point (as was
+        # Pts_PCS):
+        Pts_ICS = Pts_ICS[0]
+    
+    
     return Pts_ICS
 
 

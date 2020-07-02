@@ -13,6 +13,7 @@ def DownloadRoiFromXnat(ProjectLabel, SubjectLabel, ExperimentLabel,
     # Import packages and functions:
     import xnat
     import os
+    import pydicom
     #import json
     #import importlib
     
@@ -73,27 +74,31 @@ def DownloadRoiFromXnat(ProjectLabel, SubjectLabel, ExperimentLabel,
         print('\nFound ROI Collection with ID:', ThisRoiID)
         
         if DateTimeInLabel in ThisRoiID:
-            # The matching ROI object:
-            Roi = Assessors[i].resources['RTSTRUCT'].files[0]
+            # The matching ROI file:
+            RoiFile = Assessors[i].resources['RTSTRUCT'].files[0]
             
             match = True
     
     if match:
         # Get the filename:
-        Fname = Roi.id
+        Fname = RoiFile.id
         
         # The ROI filepath:
         Fpath = os.path.join(DownloadDir, Fname)
         
         # Download the DICOM-RTSTRUCT file if it hasn't already been:
         if os.path.isfile(Fpath):
-            print('\nThe DICOM-RTSTRUCT file has already been downloaded.')
+            print('\nThe DICOM-RTSTRUCT file has already been downloaded to:\n',
+                  Fpath)
         else:
-            print('\nDownloading the DICOM-RTSTRUCT file to be copied:', Fname)
+            print('\nDownloading the DICOM-RTSTRUCT file to be copied:\n', Fpath)
         
-            Roi.download(Fpath)
+            RoiFile.download(Fpath)
             
-        return Roi
+            
+        RoiObject = pydicom.dcmread(Fpath)
+            
+        return RoiObject
     
     else:
         print('\n\nNo matching ROI Collection with the DateTime provided:',

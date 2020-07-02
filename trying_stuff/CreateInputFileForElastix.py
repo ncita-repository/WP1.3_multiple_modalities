@@ -94,35 +94,30 @@ Returns:
 """
 
 
-def CreateInputFileForElastix(DicomDir, RoiFpath, 
-                              Origin, Directions, Spacings, CoordSys):
+#def CreateInputFileForElastix(DicomDir, RoiFpath, 
+#                              Origin, Directions, Spacings, 
+#                              CoordSys):
+def CreateInputFileForElastix(Points):
     # Import packages:
     import os
-    import importlib
-    import GetInputPoints
-    importlib.reload(GetInputPoints)
-    from GetInputPoints import GetInputPoints
+    #import importlib
+    #import GetInputPoints
+    #importlib.reload(GetInputPoints)
+    #from GetInputPoints import GetInputPoints
     
     
     # Get the contour points:    
-    Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
-    Pts_ICS, PtsArr_ICS, PtsDict_ICS = GetInputPoints(DicomDir=DicomDir, 
-                                                      RoiFpath=RoiFpath,
-                                                      Origin=Origin,
-                                                      Directions=Directions,
-                                                      Spacings=Spacings)
+    #Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
+    #Pts_ICS, PtsArr_ICS, PtsDict_ICS,\
+    #LUT = GetInputPoints(DicomDir=DicomDir, RoiFpath=RoiFpath,
+    #                     Origin=Origin, Directions=Directions, Spacings=Spacings)
     
-    """ 
-    Should use the contour points in the Patient Coordinate System since it
-    seems that Elastix already performs a conversion to the Image Coordinate 
-    System.
-    """
     
-    if CoordSys=='PCS':
-        Points = Pts_PCS
-    
-    if CoordSys=='ICS':
-        Points = Pts_ICS
+    #if CoordSys=='PCS':
+    #    Points = Pts_PCS
+    #
+    #if CoordSys=='ICS':
+    #    Points = Pts_ICS
         
 
     # Define the filename for the exported file:
@@ -148,7 +143,7 @@ def CreateInputFileForElastix(DicomDir, RoiFpath,
     # Get working directory:
     CWD = os.getcwd()
     
-    print('\nContour points exported to', os.path.join(CWD, TextFname), '.')
+    print('Contour points exported to', os.path.join(CWD, TextFname))
     
     #return Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
     #       Pts_ICS, PtsArr_ICS, PtsDict_ICS
