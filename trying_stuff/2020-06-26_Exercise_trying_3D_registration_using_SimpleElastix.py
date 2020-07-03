@@ -1332,7 +1332,8 @@ MovDicomDir = os.path.join(DicomDir, r'06-11-1961-MRI Brain wwo Contrast-79433\8
 
 # Define the filepath to the ROI Collection (for the fixed) image:
 FixRoiDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12\8 T1 SE AXIAL POST FS FC ROIs (source)'
-FixRoiFname = r'AIM_20200511_073405.dcm'
+#FixRoiFname = r'AIM_20200511_073405.dcm' # tumour
+FixRoiFname = r'AIM_20200626_104631.dcm' # ventricles
 FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
 
 # Chose which package to use to get the Image Plane Attributes:
@@ -1399,7 +1400,7 @@ PtNos, InInds, FixOutInds,MovPtsPCS, MovPtsICS,DefPCS, DefICS, MovOutInds,MovPts
 print('Done.')
 
 
-# In[4]:
+# In[24]:
 
 
 import RegUtilityFuncs
@@ -1411,6 +1412,9 @@ plot_slices = -1 # plot all
 plot_slices = [14]
 plot_slices = [12, 13, 14, 15]
 plot_slices = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+plot_slices = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+plot_slices = [11]
+#plot_slices = [12]
 
 
 # Choose the perspective:
@@ -1447,6 +1451,38 @@ ruf.display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im=FixIm,
                                                                  plot_slices=plot_slices,
                                                                  perspective=perspective,
                                                                  contours_as=contours_as)
+
+
+# In[25]:
+
+
+MovPtsBySliceAndContourICS
+
+
+# # July 3:  I need to figure out why some of the rows (slices) have a list of points rather than a list of lists for each contour. Even if the contour has only a single point, I expect the since point to be enclosed in []...
+
+# In[19]:
+
+
+temp =  [[95.31378038798742, 195.55980631359267, 11.464141441444557], [95.4959083469857, 196.65655503551943, 11.401376187715982], [96.56234029940799, 197.27892819804484, 11.363531954593288], [97.04728203600142, 198.12791752942536, 11.314150443320669], [97.53222366138485, 198.97690792118786, 11.264768926118064], [98.01716547159187, 199.8258972285587, 11.215387215373081], [99.36227295275786, 200.46941140292176, 11.175696716024827], [100.47697878246471, 200.55398016820672, 11.168311879882454], [101.40955566849044, 199.54180007445606, 11.223692084744432], [102.54839781527956, 199.35746712676706, 11.231537037237475], [103.1781619083929, 198.59304656067152, 11.273533712367719], [103.2747094781384, 197.5174388505824, 11.334452699870734], [103.64993341250397, 196.462974386194, 11.39352542254008], [104.07343228245043, 194.8707056376645, 11.483057555441611]]
+
+temp = np.array(temp)
+
+print(temp.shape)
+
+temp
+
+
+# In[19]:
+
+
+temp =  
+
+temp = np.array(temp)
+
+print(temp.shape)
+
+temp
 
 
 # In[13]:
