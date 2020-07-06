@@ -10,7 +10,7 @@ Created on Fri Jul  3 17:32:00 2020
 """ Plot result of interpolation """
 
 
-def PlotInterpolation(Points1, Points2, Interp1to2, Interp2to1, ExportPlot):
+def PlotInterpolation(Contour1, Contour2, Interp1to2, Interp2to1, ExportPlot):
     import matplotlib.pyplot as plt
     import time
     
@@ -22,18 +22,18 @@ def PlotInterpolation(Points1, Points2, Interp1to2, Interp2to1, ExportPlot):
     
     
     # Group all points:
-    Points = [Points1, Points2, Interp1to2, Interp2to1]
+    Contours = [Contour1, Contour2, Interp1to2, Interp2to1]
     
     # Plot colours:
     colours = ['blue', 'green', 'red', 'magenta']
     
-    for i in range(len(Points)):
+    for i in range(len(Contours)):
         # Unpack tuple and store each x,y tuple in arrays 
         # X and Y:
         X = []
         Y = []
         
-        for x, y, z in Points[i]:
+        for x, y, z in Contours[i]:
             X.append(x)
             Y.append(y)
         
