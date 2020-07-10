@@ -54,8 +54,8 @@ Returns:
     LUT - A P x 5 array (P rows for all P points, 5 columns) containing:
         
             - (col 0): the point number: integer starting from 0, 
-            - (col 1): the (fixed image) contour number it belongs to: integer starting from 0,
-            - (col 2): the (fixed image) slice number it came from: integer starting from 0,
+            - (col 1): the (fixed image) slice number it came from: integer starting from 0,    (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE NEXT ROW)
+            - (col 2): the (fixed image) contour number it belongs to: integer starting from 0, (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE PREVIOUS ROW)
             - (col 3): an empty list ([]) as a placeholder for the (fixed image) index of the point: array of integers (N=3),
             - (col 4): the (fixed image) point in PCS: array of floats (N=3)
             
@@ -74,8 +74,8 @@ Returns:
          be a P x 12 array (P rows for all P points, 12 columns) containing:
         
             - (col 0): the point number: integer starting from 0, 
-            - (col 1): the input (fixed image) contour number it belongs to: integer starting from 0,
-            - (col 2): the input (fixed image) slice number it came from: integer starting from 0,
+            - (col 1): the (fixed image) slice number it came from: integer starting from 0,    (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE NEXT ROW)
+            - (col 2): the (fixed image) contour number it belongs to: integer starting from 0, (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE PREVIOUS ROW)
             - (col 3): the input (fixed image) index of the point: array of integers (N=3),
             - (col 4): the input (fixed image) point in PCS: array of floats (N=3),
             - (col 5): the input (fixed image) point in ICS: array of floats (N=3),
@@ -169,7 +169,8 @@ def GetContourPtsForDicoms(DicomDir, RoiFpath):
                     
                     PtsThisContour.append(Pt)
         
-                    LUT.append([PtNo, CntNo, SliceNo, [], Pt])
+                    #LUT.append([PtNo, CntNo, SliceNo, [], Pt])
+                    LUT.append([PtNo, SliceNo, CntNo, [], Pt]) # Changed on 08/07/2020
                     """ Note that the empty array in the 3rd position will be
                     replaced with the point indeces later, as will the 
                     subsequent items that will finalise the LUT. """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[42]:
+# In[3]:
 
 
 # Import packages and functions
@@ -424,7 +424,7 @@ if ExportPlot:
 
 # ### Use functions:
 
-# In[51]:
+# In[2]:
 
 
 import importlib
@@ -495,41 +495,37 @@ PlotInterpolation(Contour1=Contours[0], Contour2=Contours[1],
 np.linspace(start=1, stop=2, num=6, endpoint=True)
 
 
-# In[79]:
+# In[5]:
 
 
-""" Calculate the perimeter of a contour """
+from ContourPerimeter import ContourPerimeter
+from CummulativePerimeter import CummulativePerimeter
 
-def ContourPerimeter(Contour):
-    
-    # Initialise the perimeter value:
-    Perimeter = 0
-    
-    # Loop through each point and integrate the vector lengths:
-    for i in range(len(Contour) - 1):
-        Point1 = Contour[i]
-        Point2 = Contour[i+1]
-        
-         # The vector length between Point1 and Point2:
-        VectorL = (                   (Point1[0] - Point2[0])**2                    + (Point1[1] - Point2[1])**2                    + (Point1[2] - Point2[2])**2                    )**(1/2)
-        
-        Perimeter = Perimeter + VectorL
-        
-    return Perimeter
+Slices = [14, 15]
+
+print(f'\nSlices = {Slices}')
+
+# Note this assumes that each slice has only one contour - hence 
+# indexing the 0^th contour in the s^th slice:
+#Contours.append([FixPtsBySliceAndContourPCS[s][0] for s in Slices])
+Contours = [FixPtsBySliceAndContourPCS[s][0] for s in Slices]
 
 
-L1 = len(Contours[0])
-L2 = len(Contours[1])
+N1 = len(Contours[0])
+N2 = len(Contours[1])
 
-P1 = Perimeter(Contour=Contours[0])
-P2 = Perimeter(Contour=Contours[1])
+#P1 = ContourPerimeter(Contour=Contours[0])
+#P2 = ContourPerimeter(Contour=Contours[1])
+
+CumP1 = CummulativePerimeter(Contour=Contours[0])
+CumP2 = CummulativePerimeter(Contour=Contours[1])
 
 # Average spacing between points:
-d1 = P1/L1
-d2 = P2/L2
+d1 = CumP1[-1]/(N1 - 1)
+d2 = CumP2[-1]/(N2 - 1)
 
-print(f'Contour1 has {L1} points and perimeter {P1} with mean spacing {d1}')
-print(f'Contour2 has {L2} points and perimeter {P2} with mean spacing {d2}')
+print(f'Contour1 has {N1} points and perimeter {CumP1[-1]} with mean spacing {d1}')
+print(f'Contour2 has {N2} points and perimeter {CumP2[-1]} with mean spacing {d2}')
 
 
 # In[80]:
@@ -790,8 +786,9 @@ NewContour2
 
 
 """ 
-Create list of contour points containing N points from USContour1
-followed by N points from NewUPContour2, where:
+Create list of contour points containing N points from up-sampled Contour1
+(USContour1) followed by N points from the modified up-sampled Contour2 
+(NewUPContour2), where:
 
 - USContour1 is up-sampled Contour1
 - USContour2 is up-sampled Contour2
@@ -900,16 +897,578 @@ PtNos, InInds, InPts_PCS, FixOutInds,OutPts_PCS, Defs_PCS, MovOutInds = ParseTra
 len(OutPts_PCS)
 
 
-# In[ ]:
+# In[60]:
+
+
+list(set(LUTDict['InSliceNo']))
+
+
+# In[68]:
+
+
+import math
+
+# See what the contour points FixPtsBySliceAndContourPCS look like:
+
+ExportPlot = False
+
+
+# Number of points:
+P = len(LUT)
+
+SliceIndsWithContours = list(set(LUTDict['InSliceNo']))
+NumSlicesWithContours = len(SliceIndsWithContours)
+
+# Choose colours for different contours:
+colours = ['blue', 'green', 'yellow', 'red']
+
+# Slice no:
+#s = 13
 
 
 
 
 
-# In[ ]:
+MarkerSize = 5
+
+# Nrows and Ncols in figure:
+Nrows = math.ceil(math.sqrt(NumSlicesWithContours))
+Ncols = NumSlicesWithContours - Nrows
+
+# Sub-plot number:
+n = 0
+
+# Initialise the figure:
+plt.subplots(Nrows, Ncols, figsize=(Ncols*5, Nrows*5))
+
+# Iterate through all slice indeces containing contours:
+for i in SliceIndsWithContours:
+    n += 1
+    
+    # Initialise this sub-plot:
+    plt.subplot(Nrows, Ncols, n)
+    plt.title(f'Slice no {i}')
+    
+    C = len(ContourData['InPointsPCS'][i])
+
+    print(f'There are {C} contours in the {i}^th slice of ContourData.')
+    
+    # Iterate through all contours for this slice:
+    for c in range(C):
+
+        # Unpack tuple and store each x,y tuple in arrays 
+        # X and Y:
+        X = []
+        Y = []
+
+        for x, y, z in ContourData['InPointsPCS'][i][c]:
+            X.append(x)
+            Y.append(y)
+
+        plt.plot(X, Y, linewidth=1, c=colours[c]);
+        plt.plot(X, Y, 'b', markersize=MarkerSize, c=colours[c]);
 
 
 
+
+# Create filename for exported figure:
+FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime())             + f'_.png'
+
+if ExportPlot:
+    plt.savefig(FigFname, bbox_inches='tight')
+
+
+# ### July 8:  Work through Matt Orton's code and implement functions:
+
+# In[111]:
+
+
+# Import packages and functions
+import SimpleITK as sitk
+print(sitk.Version())
+import numpy as np
+import time, os, copy
+import importlib
+import pydicom
+#import pandas as pd
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+get_ipython().run_line_magic('matplotlib', 'notebook')
+#from ipywidgets import interact, fixed
+#from IPython.display import clear_output
+
+import GetInputPoints
+importlib.reload(GetInputPoints)
+
+#import GetImageAttributes
+#importlib.reload(GetImageAttributes)
+from GetImageAttributes import GetImageAttributes
+from GetInputPoints import GetInputPoints
+#import CreateInputFileForElastix
+#importlib.reload(CreateInputFileForElastix)
+from CreateInputFileForElastix import CreateInputFileForElastix
+from RunSimpleElastixReg import RunSimpleElastixReg
+from TransformPoints import TransformPoints
+from GetOutputPoints import GetOutputPoints
+import RegUtilityFuncs
+importlib.reload(RegUtilityFuncs)
+import RegUtilityFuncs as ruf
+
+# Define FixedDicomDir and MovingDicomDir:
+DicomDir = r'C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011'
+FixDicomDir = os.path.join(DicomDir, r'04-10-1960-MRI Brain wwo Contrast-69626\8-T1 SE AXIAL POST FS FC-59362')
+MovDicomDir = os.path.join(DicomDir, r'06-11-1961-MRI Brain wwo Contrast-79433\8-T1 SE AXIAL POST FS FC-81428')
+
+# Define the filepath to the ROI Collection (for the fixed) image:
+FixRoiDir = r'C:\Temp\2020-05-13 ACRIN MR_4 to MR_12\8 T1 SE AXIAL POST FS FC ROIs (source)'
+FixRoiFname = r'AIM_20200511_073405.dcm' # tumour
+#FixRoiFname = r'AIM_20200626_104631.dcm' # ventricles
+FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
+
+# Chose which package to use to get the Image Plane Attributes:
+#package = 'sitk'
+package = 'pydicom'
+
+
+# Get the Image Attributes for the images:
+FixOrigin, FixDirs, FixSpacings, FixDims = GetImageAttributes(DicomDir=FixDicomDir, 
+                                                              Package=package)
+
+MovOrigin, MovDirs, MovSpacings, MovDims = GetImageAttributes(DicomDir=MovDicomDir, 
+                                                              Package=package)
+
+
+# Read in the 3D stack of Fixed DICOMs:
+FixReader = sitk.ImageSeriesReader()
+FixNames = FixReader.GetGDCMSeriesFileNames(FixDicomDir)
+FixReader.SetFileNames(FixNames)
+FixIm = FixReader.Execute()
+FixIm = sitk.Cast(FixIm, sitk.sitkFloat32)
+
+# Read in the 3D stack of Moving DICOMs:
+MovReader = sitk.ImageSeriesReader()
+MovNames = MovReader.GetGDCMSeriesFileNames(MovDicomDir)
+MovReader.SetFileNames(MovNames)
+MovIm = MovReader.Execute()
+MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
+
+# Get some info on FixIm and MovIm:
+#ruf.ShowImagesInfo(FixIm, MovIm)
+
+# Register MovIm to FixIm:
+#RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
+
+CoordSys = 'PCS'
+#CoordSys = 'ICS'
+
+# Get contour points into necessary arrays:
+FixPtsPCS, FixPtsBySliceAndContourPCS,FixPtsICS, FixPtsBySliceAndContourICS,LUT, PointData, ContourData = GetInputPoints(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath,
+                                             Origin=FixOrigin, Directions=FixDirs,
+                                             Spacings=FixSpacings)
+
+
+# In[112]:
+
+
+import pandas as pd
+
+FixPtsPCS
+FixPtsBySliceAndContourPCS
+LUT
+PointData
+ContourData
+
+
+# In[113]:
+
+
+# Convert the dictionaries into data frames:
+PointDataDF = pd.DataFrame(data=PointData)
+ContourDataDF = pd.DataFrame(data=ContourData)
+
+PointDataDF
+
+
+# In[114]:
+
+
+ContourDataDF
+
+
+# In[123]:
+
+
+
+
+#def GetBoundingSliceInds(InterpInd, Extent, ContourData):
+def GetBoundingSliceInds(InterpInd, SliceInds, ContourData):
+    """ 
+    Note 1: 
+        ContourData is a list of contour points 
+        arranged along rows for different slices and along 
+        columns for different contours (i.e. ContourData 
+        is a list of lists). Slices without contours have
+        empty list ([]).
+        
+    Note 2:
+        _getBoundingPair checks if a contour is an
+        interpolated contour, and if so, it is excluded
+        from the list of possible contours to interpolate
+        between (hence the index of an interpolated contour
+        cannot be included in ContourPair). This has not yet
+        been implemented in GetBoundingSliceInds.
+        
+    Note 3: 
+        Like _getBoundingPair, GetBoundingSliceInds will 
+        exclude any slices that have multiple contours.
+        A more robust version will be required to interpolate
+        contours on slices with multiple contours present.
+    """
+    
+    # Initialise BoundingSliceInds:
+    BoundingSliceInds = []
+    
+    # Initialise booleans:
+    FoundLowerSlice = False
+    FoundUpperSlice = False
+    
+    # Cannot interpolate a slice whose index is <= Extent[0], or
+    # >= Extent[1]:
+    if InterpInd <= Extent[0] or InterpInd >= Extent[1]:
+        print(f'Cannot interpolate slice number {InterpInd}')
+        return []
+    
+    else:
+        # Iterate backwards from (InterpInd - 1) to SliceInds[0] 
+        # to determine the nearest lowest slice index that 
+        # contains a single contour:
+        for i in range(InterpInd - 1, SliceInds[0], -1):
+            #print(f'\nContourData[{i}] =', ContourData[i])
+            print(f'\nlen(ContourData[{i}]) = {len(ContourData[i])}')
+            
+            if len(ContourData[i]) == 1:
+                print(f'\nlen(ContourData[{i}]) == 1')
+                print(f'\nAppending {i} to BoundingSliceInds')
+                
+                BoundingSliceInds.append(i)
+                
+                FoundLowerSlice = True
+                
+                break
+                #continue
+                
+        # Iterate forwards from (InterpInd + 1) to SliceInds[-1]
+        # to determine the nearest upper slice index that contains
+        # a single contour:
+        for i in range(InterpInd + 1, SliceInds[-1] + 1):
+            #print(f'\nContourData[{i}] =', ContourData[i])
+            print(f'\nlen(ContourData[{i}]) = {len(ContourData[i])}')
+            print(f'\nAppending {i} to BoundingSliceInds')
+            
+            if len(ContourData[i]) == 1:
+                print(f'\nlen(ContourData[{i}]) == 1')
+                print(f'\nAppending {i} to BoundingSliceInds')
+                
+                BoundingSliceInds.append(i)
+                
+                FoundUpperSlice = True
+                
+                break
+        
+        # Deal with case where no lower, or upper, or both upper nor 
+        # lower slice index can be used for interpolation:
+        #if len(BoundingSliceInds) < 2:
+        #    print('Cannot find suitable lower and/or upper slice to ',
+        #          f'interpolate slice number {InterpInd}.')
+        #    return []
+        if not (FoundLowerSlice and FoundUpperSlice):
+            if not FoundLowerSlice and FoundUpperSlice:
+                print('Did not find suitable lower slice to ',
+                      f'interpolate slice number {InterpInd}.')
+                
+            if not FoundUpperSlice and FoundLowerSlice:
+                print('Did not find suitable upper slice to ',
+                      f'interpolate slice number {InterpInd}.')
+                
+            if not FoundLowerSlice and not FoundUpperSlice:
+                print('Did not find suitable lower or upper slice ',
+                      f'to interpolate slice number {InterpInd}.')
+            
+            return []
+        
+        else:
+            return BoundingSliceInds 
+    
+    
+""" This need not be a function at all.. """
+def GenerateClosedContour(Contour):
+    # Import packages:
+    #import copy
+    
+    #Contour = copy.deepcopy(Points)
+    
+    # Append the first point to create a closed contour:
+    #Contour.append(Points[0])
+    Contour.append(Contour[0])
+    
+    #return ReverseIfAntiClockwise(contour)
+    return Contour
+
+
+def ReverseIfAntiClockwise(Contour):
+    
+    P = len(Contour)
+    
+    # Get mean x position of all points:
+    MeanX = sum([Contour[i][0] for i in range(P)])
+    
+    # Check the direction of the points:
+    CheckSum = 0
+    j = 1
+    k = 2
+    
+    for i in range(P):
+        CheckSum += (Contour[j][0] - MeanX) * (Contour[k][1] - Contour[i][1])
+        
+        j += 1
+        k += 1
+        
+        if i >= P:
+            i = 0
+        if k >= P:
+            k = 0
+            
+            
+    if CheckSum > 0:
+        Contour.reverse()
+        
+    return Contour
+            
+
+""" Generate list of cumulative perimeters of a contour at each node """
+
+def GetCumulativePerimeters(Contour):
+    
+    # Initialise the list:
+    CumPerimeters = []
+    
+    # Initialise the cumulative perimeter:
+    CumPerimeter = 0
+    
+    # Loop through each point:
+    for i in range(len(Contour) - 1):
+        Point1 = Contour[i]
+        Point2 = Contour[i+1]
+        
+         # The segment length between Point1 and Point2:
+        SegmentL = (                   (Point1[0] - Point2[0])**2                    + (Point1[1] - Point2[1])**2                    + (Point1[2] - Point2[2])**2                    )**(1/2)
+        
+        CumPerimeter = CumPerimeter + SegmentL
+        
+        CumPerimeters.append(CumPerimeter)
+        
+    return CumPerimeters
+
+
+""" 
+I've written the following function but for a simple one-line operation it
+seems unnecessary.  I might just do away with the use of the function altogether.
+"""
+def NormaliseCumulativePerimeters(CumPerimeters): 
+    
+    return [CumPerimeters[i]/CumPerimeters[-1] for i in range(len(CumPerimeters))]
+
+
+
+def GetCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
+    # The inter-node spacing is:
+    dP = 1 / (NumNodesToAdd - 1)
+    
+    """ Exclude the first and last item since they are already covered by the
+    original cumulative perimeters (i.e. iterate from 1 to NumNodesToAdd - 1)
+    """
+    # Initialise the cumulative super-sampled perimeters:
+    CumSSPerimeters = [dP]
+    
+    # First append the cumulative perimeters for the nodes that ensure
+    # the minimum inter-node spacing required:
+    for i in range(1, NumNodesToAdd - 1):
+        CumSSPerimeters.append(CumSSPerimeters[-1] + dP)
+        
+    # Next concatenate the normalised cumulative perimeters:
+    CumSSPerimeters += CumPerimetersNorm
+    
+    return CumPerimetersNorm
+    
+
+
+def GetIsOrigNode(Contour, NumNodesToAdd):
+    """
+    Note:
+    This is called _getIndicatorArray in Matt Orton's code
+    """
+    IsOrigNode = []
+    
+    # The first NumNodesToAdd - 2 nodes were additional nodes
+    # added to achieve the required minimum inter-node spacing:
+    for i in range(NumNodesToAdd):
+        IsOrigNode.append(False)
+        
+    # The next len(Contour) nodes are original nodes from Contour:
+    for i in range(len(Contour)):
+        IsOrigNode.append(True)
+        
+        
+    return IsOrigNode
+    
+    
+    
+def SuperSampleContour(Contour, NodesPerSegment):
+    # Initialise list of super-sampled contour points and 
+    # list of booleans that indicate if the point/node is
+    # original (False if the node was interpolated):
+    SuperContour = []
+    IsOrigNode = []
+    
+    # Iterate through each contour point without returning to
+    # the 0th point (hence open polygon):
+    """ I'm not sure why the polygon isn't closed since it
+    appears that this function follows from 
+    GenerateClosedContour..."""
+    for i in range(len(Contour)):
+        # Add the original node:
+        SuperContour.append(Contour[i])
+        IsOrigNode.append(True)
+        
+        # Add the linearly interpolated nodes:
+        dx = (Contour[i + 1][0] - Contour[i][0]) / (NodesPerSegment[i] + 1)
+        dy = (Contour[i + 1][1] - Contour[i][1]) / (NodesPerSegment[i] + 1)
+        
+        # Add dx and dy to the x and y components of the last item in Contour
+        # (keep the z component unchanged):
+        for j in range(NodesPerSegment[i]):
+            SuperContour.append([Contour[-1][0] + dx, Contour[-1][1] + dy, Contour[-1][2]])
+            IsOrigNode.append(False)
+            
+    return SuperContour, IsOrigNode
+
+
+
+def ReduceNodesOfContours(SuperSampledContour1, SuperSampledContour2, IsOrigNode1, IsOrigNode2):
+    # Initialise the list of points in the over-sampled contours with some
+    # nodes removed:
+    OverSampledContour1 = []
+    OverSampledContour2 = []
+    
+    for i in range(len(SuperSampledContour1)):
+        if IsOrigNode1[i] or IsOrigNode2[i]:
+            OverSampledContour1.append(SuperSampledContour1[i])
+            OverSampledContour2.append(SuperSampledContour2[i])
+            
+    return InterpContour1, InterpContour2
+
+
+def InterpolateBetweenContours(OverSampledContour1, OverSampledContour2, 
+                               IsOrigNode1, IsOrigNode2,
+                               InterpSliceInd, Contour1HasMorePts):
+    # Initialise the interpolated contour:
+    InterpolatedContour = []
+    
+    if Contour1HasMorePts:
+        inds = IsOrigNode1
+    else:
+        inds = IsOrigNode2
+        
+    for i in range(len(OverSampledContour1)):
+        if inds[i]:
+            InterpX = (1 - InterpSliceInd) * OverSampledContour1[i][0]                       + InterpSliceInd * OverSampledContour2[i][0]
+            
+            InterpY = (1 - InterpSliceInd) * OverSampledContour1[i][1]                       + InterpSliceInd * OverSampledContour2[i][1]
+            
+            InterpolatedContour.append(InterpX, InterpY)
+            
+    return InterpolatedContour
+    
+    
+
+
+# Define the slice to be interpolated:
+InterpInd = 14
+
+# Select the desired minimum super-sampled inter-node spacing:
+dP = 0.2
+
+# Get slice indices that contain contours:
+SliceInds = PointData['InSliceNo']
+
+# Get extent of region of contours by slice number 
+# (equivalent to function _getExtentOfRegion in 
+# generateInterpolationData.js):
+Extent = [SliceInds[0], SliceInds[-1]]
+
+print('Extent =', Extent)
+
+
+
+
+# Get bounding slice indices:
+BoundingSliceInds = GetBoundingSliceInds(InterpInd=InterpInd, 
+                                         SliceInds=SliceInds, 
+                                         ContourData=ContourData['InPointPCS'])
+
+BoundingSliceInds
+
+#CumPerimeter1 = GetCumulativePerimeters(Contour=ContourData['InPointsPCS'][Extent])
+
+if False:
+    # The number of nodes required for Contour1 and Contour2 to
+    # achieve the minimum inter-node spacing of dP:
+    """ 
+    Note:
+        a//b yields floor(a/b)
+        - (-a//b) yields ceil(a/b)
+    """
+    MinNumNodes1 = - (- CumPlist1[-1] // dP)
+    MinNumNodes2 = - (- CumPlist2[-1] // dP)
+
+    # The minimum number of nodes that will need to be added:
+    MinNumNodes = max(MinNumNodes1, MinNumNodes2)
+
+    # The number of nodes that will have to be added to Contour1 and Contour2 
+    # are MinNumNodes plus the number of original nodes in Contour2 and Contour1
+    # respectively (i.e. the nodes not common to either):
+    #NumNodesToAdd1 = MinNumNodes + len(Contour2)
+    #NumNodesToAdd2 = MinNumNodes + len(Contour1)
+    """ I'm not sure about the above (copied from _generateInterpolationContourPair)
+    so commenting above lines for now.
+    """
+    NumNodesToAdd1 = MinNumNodes + len(Contour1)
+    NumNodesToAdd2 = MinNumNodes + len(Contour2)
+
+
+# In[50]:
+
+
+temp = [0,1,2,3]
+
+temp.reverse()
+
+temp
+
+
+# In[43]:
+
+
+sum([1, 2])
+
+
+# In[101]:
+
+
+print(3/2)
+print(3//2)
+print(-3//2)
+print(-(-3//2))
 
 
 # In[ ]:

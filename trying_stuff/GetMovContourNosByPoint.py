@@ -26,15 +26,15 @@ Input:
               calling function GetInputPoints(), containing:
         
               - (col 0): the point number: integer starting from 0, 
-              - (col 1): the input (fixed image) contour number it belongs to: integer starting from 0,
-              - (col 2): the input (fixed image) slice number it came from: integer starting from 0,
+              - (col 1): the input (fixed image) slice number it came from: integer starting from 0,    (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE NEXT ROW)
+              - (col 2): the input (fixed image) contour number it belongs to: integer starting from 0, (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE PREVIOUS ROW)
               - (col 3): an empty list ([]) as a placeholder for the input (fixed image) index of the point: array of integers (N=3),
               - (col 4): the input (fixed image) point in PCS: array of floats (N=3),
               - (col 5): the input (fixed image) point in ICS: array of floats (N=3)
             
               e.g. [0, 
-                    0 
-                    12, 
+                    12,
+                    0, 
                     [],
                     [-19.904, -10.938, 2.551],
                     [89.940, 146.288, 12.000]]
@@ -88,7 +88,8 @@ def GetMovContourNosByPoint(MovInds, LUT):
         
         PtIndsByMovSlice.append(inds)
         
-        FixContourNosByMovSlice.append([LUT[ind][1] for ind in inds])
+        #FixContourNosByMovSlice.append([LUT[ind][1] for ind in inds])
+        FixContourNosByMovSlice.append([LUT[ind][2] for ind in inds]) # Changed on 08/07/2020
         
     #print('\nPtIndsByMovSlice =', PtIndsByMovSlice)
     

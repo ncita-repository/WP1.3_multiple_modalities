@@ -54,14 +54,14 @@ Returns:
     LUT - A P x 5 array (P rows for all P points, 5 columns) containing:
         
             - the point number: integer starting from 0, 
-            - the input (fixed image) contour number it belongs to: integer starting from 0,
-            - the input (fixed image) slice number it came from: integer starting from 0,
+            - the input (fixed image) slice number it came from: integer starting from 0,    (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE NEXT ROW)
+            - the input (fixed image) contour number it belongs to: integer starting from 0, (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE PREVIOUS ROW)
             - an empty list ([]) as a placeholder for the input (fixed image) index of the point: array of integers (N=3),
             - the input (fixed image) point in PCS: array of floats (N=3)
             
             e.g. [0, 
-                  0 
                   12, 
+                  0, 
                   [],
                   [-19.904, -10.938, 2.551]]
             
@@ -74,8 +74,8 @@ Returns:
          be a P x 12 array (P rows for all P points, 12 columns) containing:
         
             - (col 0): the point number: integer starting from 0, 
-            - (col 1): the input (fixed image) contour number it belongs to: integer starting from 0,
-            - (col 2): the input (fixed image) slice number it came from: integer starting from 0,
+            - (col 1): the input (fixed image) slice number it came from: integer starting from 0,    (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE NEXT ROW)
+            - (col 2): the input (fixed image) contour number it belongs to: integer starting from 0, (NOTE 08/07/20: THIS WAS PREVIOUSLY IN THE PREVIOUS ROW)
             - (col 3): the input (fixed image) index of the point: array of integers (N=3),
             - (col 4): the input (fixed image) point in PCS: array of floats (N=3),
             - (col 5): the input (fixed image) point in ICS: array of floats (N=3),
@@ -111,6 +111,11 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
     PtsPCS, PtsBySliceAndContourPCS, LUT = GetContourPtsForDicoms(DicomDir, 
                                                                   RoiFpath)
     
+    P = len(PtsPCS)
+    S = len(PtsBySliceAndContourPCS)
+    
+    # List of slice numbers:
+    SliceNos = list(range(S))
 
     # Convert points in Pts_PCS from PCS to ICS:
     PtsICS = PCStoICS(Pts_PCS=PtsPCS, Origin=Origin, 
@@ -143,7 +148,7 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
     
     
     # Convert each PCS point (last item) in LUT and append to the sub-array:
-    for i in range(len(LUT)):
+    for i in range(P):
         PtPCS = LUT[i][-1]
         
         #print('PtPCS =', PtPCS)
@@ -159,26 +164,29 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
         LUT[i].append(PtICS)
     
  
-    ## Convert points in Pts_ICS to a dictionary:
-    ## Initialise an array to store the x, y and z coordinates:
-    #x = []
-    #y = []
-    #z = []  
-    #
-    ## Loop through each array of points in Pts_ICS and append the x, y 
-    ## and z coordinates to X, Y and Z:
-    #for point in Pts_ICS:
-    #    x.append(point[0])
-    #    y.append(point[1])
-    #    z.append(point[2])
-    #
-    #PtsDict_ICS = {'x':x, 'y':y, 'z':z} 
-    # 
-    #return Pts_PCS, PtsBySliceAndContour_PCS, PtsDict_PCS,\
-    #       Pts_ICS, PtsBySliceAndContour_ICS, PtsDict_ICS,\
-    #       LUT
-               
+    
+    # Convert the LUT to a dictionary:
+    PointData = {
+                 'PointNo'      : [LUT[i][0] for i in range(P)], 
+                 'InSliceNo'    : [LUT[i][1] for i in range(P)], 
+                 'InContourNo'  : [LUT[i][2] for i in range(P)],
+                 'InPointIndex' : [LUT[i][3] for i in range(P)],
+                 'InPointPCS'   : [LUT[i][4] for i in range(P)],
+                 'InPointICS'   : [LUT[i][5] for i in range(P)]
+                 } 
+    
+    # Create a dictionary to store contour data arranged by slices and 
+    # contours:
+    ContourData = {
+                   'InSliceNo'  : SliceNos, 
+                   'InPointPCS' : PtsBySliceAndContourPCS,
+                   'InPointICS' : PtsBySliceAndContourICS
+                   } 
+    
+          
+    #print(len(SliceNos))
+    #print(len(PtsBySliceAndContourPCS))     
     
     return PtsPCS, PtsBySliceAndContourPCS,\
            PtsICS, PtsBySliceAndContourICS,\
-           LUT
+           LUT, PointData, ContourData

@@ -9,7 +9,7 @@ Created on Mon Jul  6 14:48:40 2020
 
 """ Calculate the perimeter of a contour """
 
-def ContourPerimeter(Contour):
+def GetContourPerimeter(Contour):
     
     # Initialise the perimeter value:
     Perimeter = 0

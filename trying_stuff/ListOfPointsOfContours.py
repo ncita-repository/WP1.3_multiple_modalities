@@ -8,13 +8,14 @@ Created on Mon Jul  6 14:30:29 2020
 
 
 """ 
-Create list of contour points containing N points from USContour1
-followed by N points from NewUPContour2, where:
+Create list of contour points containing N points from up-sampled Contour1
+(USContour1) followed by N points from the modified up-sampled Contour2 
+(NewUPContour2), where:
 
 - USContour1 is up-sampled Contour1
 - USContour2 is up-sampled Contour2
-- NewUSContour2 is re-ordered points from USContour2 that minimises surface area 
-formed by joining points in USContour1 and USContour2
+- NewUSContour2 is re-ordered points from USContour2 that minimises surface 
+area formed by joining points in USContour1 and USContour2
 """
 
 def ListOfPointsOfContours(Contour1, Contour2, N):
