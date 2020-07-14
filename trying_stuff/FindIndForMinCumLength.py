@@ -15,7 +15,7 @@ starting index yields the minimum cumulative line length.
 
 def FindIndForMinCumLength(Contour1, Contour2):
     # Import function:
-    from AddLineLengths import AddLineLengths
+    from IntegrateLineLengths import IntegrateLineLengths
     
     # Create list to store N cumulative line lengths for all
     # N combinations of starting index for Contour2:
@@ -23,7 +23,9 @@ def FindIndForMinCumLength(Contour1, Contour2):
 
     # Loop through all N possible starting indeces for Contour2:
     for i in range(len(Contour2)):
-        CumLineLengths.append(AddLineLengths(Contour1=Contour1, Contour2=Contour2, StartInd2=i))
+        CumLineLengths.append(IntegrateLineLengths(Contour1=Contour1, 
+                                                   Contour2=Contour2, 
+                                                   StartInd2=i))
 
     
     # Return the index that yields the minimum cumulative line length:

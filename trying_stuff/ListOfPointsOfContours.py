@@ -10,12 +10,14 @@ Created on Mon Jul  6 14:30:29 2020
 """ 
 Create list of contour points containing N points from up-sampled Contour1
 (USContour1) followed by N points from the modified up-sampled Contour2 
-(NewUPContour2), where:
+(NewUPContour2), ready to use as input to Transformix, where:
 
 - USContour1 is up-sampled Contour1
 - USContour2 is up-sampled Contour2
 - NewUSContour2 is re-ordered points from USContour2 that minimises surface 
 area formed by joining points in USContour1 and USContour2
+
+(Combining all points from both contours into a single list ready to transform.)
 """
 
 def ListOfPointsOfContours(Contour1, Contour2, N):
@@ -25,7 +27,7 @@ def ListOfPointsOfContours(Contour1, Contour2, N):
     # Import functions:
     from UpsampleContour import UpsampleContour
     from FindIndForMinCumLength import FindIndForMinCumLength
-    from ReorderContour import ReorderContour
+    from ShiftContourPoints import ShiftContourPoints
 
 
     print(f'\nThere are {len(Contour1)} points in Contour1 and ',
@@ -52,9 +54,9 @@ def ListOfPointsOfContours(Contour1, Contour2, N):
     print(f'\nMinimising area...')
     
     # Re-order Contour2:
-    ROContour2 = ReorderContour(Contour=Contour2, 
-                                StartInd=FindIndForMinCumLength(Contour1=Contour1,
-                                                                Contour2=Contour2))
+    ROContour2 = ShiftContourPoints(Contour=Contour2, 
+                                    StartInd=FindIndForMinCumLength(Contour1=Contour1,
+                                                                    Contour2=Contour2))
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)

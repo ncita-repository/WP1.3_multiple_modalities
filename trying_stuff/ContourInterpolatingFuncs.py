@@ -222,25 +222,26 @@ def NormaliseCumulativePerimeters(CumPerimeters):
 
 
 
-def GetCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
+def GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
     # The inter-node spacing is:
     dP = 1 / (NumNodesToAdd - 1)
     
-    """ Exclude the first and last item since they are already covered by the
-    original cumulative perimeters (i.e. iterate from 1 to NumNodesToAdd - 1)
+    """ Exclude the first (0) and last item (1) normalised cumulative perimeter
+    since they are already covered by the original normalised cumulative 
+    perimeters (i.e. iterate from 1 to NumNodesToAdd - 1)
     """
-    # Initialise the cumulative super-sampled perimeters:
-    CumSSPerimeters = [dP]
+    # Initialise the normalised cumulative super-sampled perimeters:
+    CumSSPerimNorm = [dP]
     
     # First append the cumulative perimeters for the nodes that ensure
     # the minimum inter-node spacing required:
     for i in range(1, NumNodesToAdd - 1):
-        CumSSPerimeters.append(CumSSPerimeters[-1] + dP)
+        CumSSPerimNorm.append(CumSSPerimNorm[-1] + dP)
         
     # Next concatenate the normalised cumulative perimeters:
-    CumSSPerimeters += CumPerimetersNorm
+    CumSSPerimNorm += CumPerimetersNorm
     
-    return CumSSPerimeters
+    return CumSSPerimNorm
     
 
 
@@ -253,7 +254,7 @@ def GetIsOrigNode(Contour, NumNodesToAdd):
     
     # The first NumNodesToAdd - 2 nodes were additional nodes
     # added to achieve the required minimum inter-node spacing:
-    for i in range(NumNodesToAdd):
+    for i in range(NumNodesToAdd - 2):
         IsOrigNode.append(False)
         
     # The next len(Contour) nodes are original nodes from Contour:
@@ -264,71 +265,230 @@ def GetIsOrigNode(Contour, NumNodesToAdd):
     return IsOrigNode
     
     
+
+def GetNodesPerSegment(CumSuperSampledPerim, IsOrigNode):
+    # Get the indices that sort the cumulative super-sampled perimeters:
+    Inds = [i[0] for i in sorted(enumerate(CumSuperSampledPerim), key=lambda x:x[1])]
+    
+    # Order the boolean list:
+    IsOrigNodeSorted = [IsOrigNode[i] for i in Inds]
+    
+    # Get ordered indices of original nodes:
+    OrigIndsSorted = []
+    
+    for i in range(len(Inds)):
+        if IsOrigNodeSorted[i]:
+            OrigIndsSorted.append(Inds[i])
+        
+
+    # Order the cumulative super-sampled perimeters:
+    """ This is not in Matt's code """
+    #CumSSPerimSorted = [CumSuperSampledPerim[i] for i in Inds]
+
+    # Get the list of cumulative super-sampled perimeters for the original 
+    # nodes:
+    """ This is not in Matt's code """
+    #CumSSPerimSortedOrig = [CumSSPerimSorted[i] for i in OrigIndsSorted]
+
+    # The segment lengths are:
+    """ This is not in Matt's code """
+    #SegmentL = [CumSSPerimSortedOrig[i+1] - CumSSPerimSortedOrig[i] for i in range(len(CumSSPerimSortedOrig) - 1)]
+    
+    # Initialise the list of the number of nodes in each segment:
+    NodesPerSegment = []
+    
+    for i in range(len(OrigIndsSorted) - 1):
+        NodesPerSegment.append(OrigIndsSorted[i + 1] - OrigIndsSorted[i])
+        
+        
+    return NodesPerSegment
+
+
+
+    
     
 def SuperSampleContour(Contour, NodesPerSegment):
-    # Initialise list of super-sampled contour points and 
-    # list of booleans that indicate if the point/node is
-    # original (False if the node was interpolated):
-    SuperContour = []
-    IsOrigNode = []
+    # Initialise list of super-sampled contour points and the list of booleans 
+    # that indicate if the point/node in the super-sampled list is original 
+    # (False if the node was interpolated):
+    SSContour = []
+    SSIsOrigNode = []
     
-    # Iterate through each contour point without returning to
-    # the 0th point (hence open polygon):
-    """ I'm not sure why the polygon isn't closed since it
-    appears that this function follows from 
-    GenerateClosedContour..."""
-    for i in range(len(Contour)):
+    #print(f'len(Contour)         = {len(Contour)}')
+    #print(f'len(NodesPerSegment) = {len(NodesPerSegment)}')
+    
+    # Iterate through each contour point without returning to the 0th point 
+    # (which is the final node in the list):
+    for i in range(len(Contour) - 1):
+        #print(i)
+        
         # Add the original node:
-        SuperContour.append(Contour[i])
-        IsOrigNode.append(True)
+        SSContour.append(Contour[i])
+        SSIsOrigNode.append(True)
         
         # Add the linearly interpolated nodes:
         dx = (Contour[i + 1][0] - Contour[i][0]) / (NodesPerSegment[i] + 1)
         dy = (Contour[i + 1][1] - Contour[i][1]) / (NodesPerSegment[i] + 1)
         
-        # Add dx and dy to the x and y components of the last item in Contour
+        # Add dx and dy to the x and y components of the last item in SSContour
         # (keep the z component unchanged):
-        for j in range(NodesPerSegment[i]):
-            SuperContour.append([Contour[-1][0] + dx, Contour[-1][1] + dy, Contour[-1][2]])
-            IsOrigNode.append(False)
+        for j in range(NodesPerSegment[i] - 1):
+            SSContour.append([
+                              SSContour[-1][0] + dx, 
+                              SSContour[-1][1] + dy, 
+                              SSContour[-1][2]
+                              ])
+            SSIsOrigNode.append(False)
             
-    return SuperContour, IsOrigNode
+    return SSContour, SSIsOrigNode
 
 
 
-def ReduceNodesOfContours(SuperSampledContour1, SuperSampledContour2, IsOrigNode1, IsOrigNode2):
+""" 
+Estimate the area of the surface created by linking points from Contour1 to
+points in Contour2, starting with the first point in Contour1 and a point in 
+Contour2 given by the index StartInd2, and adding up all line lengths.
+
+Note: There are N points in Contour1 and Contour2.
+"""
+
+def IntegrateLineLengths(Contour1, Contour2, StartInd2):
+    
+    # Initialise the cummulative line lengths:
+    LineLength = 0
+    
+    for i in range(len(Contour1)):
+        Point1 = Contour1[i]
+        
+        for j in range(len(Contour2)):
+            # The index of the point for Contour2 starts
+            # at StartInd2 and increments to N, then is 
+            # "wrapped" back to 0 and so on until N 
+            # iterations:
+            if StartInd2 + j < len(Contour2):
+                Ind2 = StartInd2 + j
+            else:
+                Ind2 = len(Contour2) - (StartInd2 + j)
+                
+            Point2 = Contour2[Ind2]
+            
+            # The vector length between Point1 and Point2:
+            VectorL = ((Point1[0] - Point2[0])**2 \
+                       + (Point1[1] - Point2[1])**2 \
+                       + (Point1[2] - Point2[2])**2)**(1/2)
+            
+            # Add the line length between Point1 and Point2:
+            LineLength = LineLength + VectorL
+            
+            
+    return LineLength
+
+
+
+
+""" 
+Using the function AddLineLengths(), loop through each N possible 
+combinations of starting index StartInd2, and work out which
+starting index yields the minimum cumulative line length.
+"""
+
+def FindIndForMinCumLength(Contour1, Contour2):
+    
+    # Create list to store N cumulative line lengths for all
+    # N combinations of starting index for Contour2:
+    CumLineLengths = []
+
+    # Loop through all N possible starting indeces for Contour2:
+    for i in range(len(Contour2)):
+        CumLineLengths.append(IntegrateLineLengths(Contour1=Contour1, 
+                                                   Contour2=Contour2, 
+                                                   StartInd2=i))
+
+    
+    # Return the index that yields the minimum cumulative line length:
+    return CumLineLengths.index(min(CumLineLengths))
+
+
+
+
+
+""" 
+Defining Contour1 and Contour2 as the two contours, shift the points in
+Contour2 by StartInd (the amount that yields the minimum cumulative line length).
+Then the points in the Contour1 and ROContour2, when joined point-by-point, 
+will create the minimal surface area (i.e. catenoid) of the two contours:
+
+https://en.wikipedia.org/wiki/Minimal_surface_of_revolution
+"""
+
+
+def ShiftContourPoints(Contour, Shift):
+    
+    # Initialise the shifted contour:
+    ShiftedContour = []
+    
+    # Shift Contour by starting at the index StartInd then iterating through
+    # all N subsequent points, wrapping the indeces past N:
+    for i in range(len(Contour)):
+        # The index of the point for Contour starts at StartInd and increments 
+        # to N, then is "wrapped" back to 0 and so on until N iterations:
+        if Shift + i < len(Contour):
+            Ind = Shift + i
+        else:
+            Ind = len(Contour) - (Shift + i)
+
+        ShiftedContour.append(Contour[Ind])
+        
+    return ShiftedContour
+
+
+
+
+
+
+def ReduceNodesOfContours(SuperSampledContour1, SuperSampledContour2, 
+                          SuperSampledIsOrigNode1, SuperSampledIsOrigNode2):
     # Initialise the list of points in the over-sampled contours with some
-    # nodes removed:
+    # nodes removed, and the corresponding IsOrigNode lists:
     OverSampledContour1 = []
     OverSampledContour2 = []
+    OverSampledIsOrigNode1 = []
+    OverSampledIsOrigNode2 = []
     
     for i in range(len(SuperSampledContour1)):
-        if IsOrigNode1[i] or IsOrigNode2[i]:
+        if SuperSampledIsOrigNode1[i] or SuperSampledIsOrigNode2[i]:
             OverSampledContour1.append(SuperSampledContour1[i])
             OverSampledContour2.append(SuperSampledContour2[i])
             
-    return OverSampledContour1, OverSampledContour2
+            OverSampledIsOrigNode1.append(SuperSampledIsOrigNode1[i])
+            OverSampledIsOrigNode2.append(SuperSampledIsOrigNode2[i])
+            
+    return OverSampledContour1, OverSampledContour2, \
+           OverSampledIsOrigNode1, OverSampledIsOrigNode2
 
 
 def InterpolateBetweenContours(OverSampledContour1, OverSampledContour2, 
-                               IsOrigNode1, IsOrigNode2,
-                               InterpSliceInd, Contour1HasMorePts):
+                               OverSampledIsOrigNode1, OverSampledIsOrigNode2,
+                               FracInterpSliceInd, Contour1HasMorePts):
     # Initialise the interpolated contour:
     InterpolatedContour = []
     
     if Contour1HasMorePts:
-        inds = IsOrigNode1
+        inds = OverSampledIsOrigNode1
     else:
-        inds = IsOrigNode2
+        inds = OverSampledIsOrigNode2
         
     for i in range(len(OverSampledContour1)):
         if inds[i]:
-            InterpX = (1 - InterpSliceInd) * OverSampledContour1[i][0] \
-                      + InterpSliceInd * OverSampledContour2[i][0]
+            InterpX = (1 - FracInterpSliceInd) * OverSampledContour1[i][0] \
+                      + FracInterpSliceInd * OverSampledContour2[i][0]
             
-            InterpY = (1 - InterpSliceInd) * OverSampledContour1[i][1] \
-                      + InterpSliceInd * OverSampledContour2[i][1]
+            InterpY = (1 - FracInterpSliceInd) * OverSampledContour1[i][1] \
+                      + FracInterpSliceInd * OverSampledContour2[i][1]
+                      
+            InterpZ = (1 - FracInterpSliceInd) * OverSampledContour1[i][2] \
+                      + FracInterpSliceInd * OverSampledContour2[i][2]
             
-            InterpolatedContour.append(InterpX, InterpY)
+            InterpolatedContour.append([InterpX, InterpY, InterpZ])
             
     return InterpolatedContour
