@@ -1095,7 +1095,7 @@ PointDataDF
 ContourDataDF
 
 
-# In[117]:
+# In[279]:
 
 
 import ContourInterpolatingFuncs
@@ -1106,10 +1106,7 @@ import ContourInterpolatingFuncs as cif
 # Define the slice to be interpolated:
 InterpSliceInd = 14
 
-print(f'Interpolating slice {InterpInd}...')
-
-# Select the desired minimum super-sampled inter-node spacing:
-dP = 0.2
+print(f'Interpolating slice {InterpSliceInd}...')
 
 # Get slice indices that contain contours:
 SliceInds = PointData['InSliceNo']
@@ -1134,7 +1131,9 @@ print('BoundingSliceInds =', BoundingSliceInds)
 
 # Define the contours:
 """
-Note: Need to add [0] to the end of ContourData['InPointPCS'][BoundingSliceInds[0]] since
+Note: 
+
+Need to add [0] to the end of ContourData['InPointPCS'][BoundingSliceInds[0]] since
 the contour points are a list within the list for each slice.
 """
 Contour1 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[0]][0])
@@ -1144,6 +1143,18 @@ Contour2 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[1]][0])
 Contour1.append(Contour1[0])
 Contour2.append(Contour2[0])
 
+print(f'len(Contour1) (after closing) = {len(Contour1)}')
+print(f'len(Contour2) (after closing) = {len(Contour2)}')
+
+# Get the segment lengths (surplus to interpolation algorithm):
+SegmentLengths1 = cif.GetSegmentLengths(Contour1)
+SegmentLengths2 = cif.GetSegmentLengths(Contour2)
+
+print(f'The min, mean and max segment lengths of Contour1 are {min(SegmentLengths1)},',
+      f'{sum(SegmentLengths1)/len(SegmentLengths1)}, and {max(SegmentLengths1)}.')
+print(f'The min, mean and max segment lengths of Contour2 are {min(SegmentLengths2)},',
+      f'{sum(SegmentLengths2)/len(SegmentLengths2)}, and {max(SegmentLengths2)}.')
+
 # Ensure that the points in both contours run clockwise:
 Contour1 = cif.ReverseIfAntiClockwise(Contour=Contour1)
 Contour2 = cif.ReverseIfAntiClockwise(Contour=Contour2)
@@ -1152,11 +1163,39 @@ Contour2 = cif.ReverseIfAntiClockwise(Contour=Contour2)
 CumPerim1 = cif.GetCumulativePerimeters(Contour=Contour1)
 CumPerim2 = cif.GetCumulativePerimeters(Contour=Contour2)
 
+print(f'len(CumPerim1) = {len(CumPerim1)}')
+print(f'len(CumPerim2) = {len(CumPerim2)}')
+#print('')
 print(f'CumPerim1[-1] = {CumPerim1[-1]}, CumPerim2[-1] = {CumPerim2[-1]}')
+#print('')
+#print('CumPerim1 =\n\n', CumPerim1)
+#print('')
+#print('CumPerim2 =\n\n', CumPerim2)
+#print('')
 
 # Normalise the cumulative perimeters:
 CumPerim1Norm = cif.NormaliseCumulativePerimeters(CumPerimeters=CumPerim1)
 CumPerim2Norm = cif.NormaliseCumulativePerimeters(CumPerimeters=CumPerim2)
+
+print(f'len(CumPerim1Norm) = {len(CumPerim1Norm)}')
+print(f'len(CumPerim2Norm) = {len(CumPerim2Norm)}')
+#print('')
+#print('CumPerim1Norm =\n\n', CumPerim1Norm)
+#print('')
+#print('CumPerim2Norm =\n\n', CumPerim2Norm)
+#print('')
+
+# Select the desired minimum super-sampled inter-node spacing:
+dP = 0.2
+#dP = 0.5
+#dP = 1
+#dP = 1.5
+#dP = 2
+#dP = 50
+#dP = 100
+dP = 0.1
+
+print(f'The chosen minimum inter-node spacing is {dP}.')
 
 # The number of nodes required for Contour1 and Contour2 to
 # achieve the minimum inter-node spacing of dP:
@@ -1171,6 +1210,10 @@ MinNumNodes2 = round(- (- CumPerim2[-1] // dP))
 # The minimum number of nodes that will need to be added:
 MinNumNodes = max(MinNumNodes1, MinNumNodes2)
 
+print(f'MinNumNodes1 = {MinNumNodes1}')
+print(f'MinNumNodes2 = {MinNumNodes2}')
+print(f'MinNumNodes = {MinNumNodes}')
+
 # The number of nodes that will have to be added to Contour1 and Contour2 
 # are MinNumNodes plus the number of original nodes in Contour2 and Contour1
 # respectively (i.e. the nodes not common to either)?:
@@ -1179,6 +1222,10 @@ NumNodesToAdd2 = MinNumNodes + len(Contour1)
 
 print(f'Num of nodes to add to Contour1 is {NumNodesToAdd1}')
 print(f'Num of nodes to add to Contour2 is {NumNodesToAdd2}')
+print(f'The expected length of CumSSPerim1 is {NumNodesToAdd1 - 2} (NumNodesToAdd1 - 2)',
+      f'+ {len(Contour1)} (len(Contour1)) = {NumNodesToAdd1 - 2 + len(Contour1)}')
+print(f'The expected length of CumSSPerim2 is {NumNodesToAdd2 - 2} (NumNodesToAdd2 - 2)',
+      f'+ {len(Contour2)} (len(Contour2)) = {NumNodesToAdd2 - 2 + len(Contour2)}')
 
 # Get the cumulative super-sampled perimeters:
 CumSSPerim1 = cif.GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm=CumPerim1Norm,
@@ -1186,7 +1233,7 @@ CumSSPerim1 = cif.GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm=CumP
 CumSSPerim2 = cif.GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm=CumPerim2Norm,
                                                           NumNodesToAdd=NumNodesToAdd2)
 
-print('')
+#print('')
 #print(f'CumSSPerim1[-1] = {CumSSPerim1[-1]}, CumSSPerim2[-1] = {CumSSPerim2[-1]}')
 print(f'len(CumSSPerim1) = {len(CumSSPerim1)}')
 print(f'len(CumSSPerim2) = {len(CumSSPerim2)}')
@@ -1195,29 +1242,51 @@ print(f'len(CumSSPerim2) = {len(CumSSPerim2)}')
 IsOrigNode1 = cif.GetIsOrigNode(Contour=Contour1, NumNodesToAdd=NumNodesToAdd1)
 IsOrigNode2 = cif.GetIsOrigNode(Contour=Contour2, NumNodesToAdd=NumNodesToAdd2)
 
-print('')
+#print('')
 print(f'len(IsOrigNode1) = {len(IsOrigNode1)}')
 print(f'len(IsOrigNode2) = {len(IsOrigNode2)}')
 
 # Get the nodes per segment:
-NodesPerSegment1 = cif.GetNodesPerSegment(CumSuperSampledPerim=CumSSPerim1, IsOrigNode=IsOrigNode1)
-NodesPerSegment2 = cif.GetNodesPerSegment(CumSuperSampledPerim=CumSSPerim2, IsOrigNode=IsOrigNode2)
+#NodesToAddPerSegment1 = cif.GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim1, 
+#                                                    IsOrigNode=IsOrigNode1)
+#NodesToAddPerSegment2 = cif.GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim2,
+#                                                    IsOrigNode=IsOrigNode2)
 
-print('')
-print(f'len(NodesPerSegment1) = {len(NodesPerSegment1)}')
-print(f'len(NodesPerSegment2) = {len(NodesPerSegment2)}')
-print('')
-print(f'sum(NodesPerSegment1) = {sum(NodesPerSegment1)}')
-print(f'sum(NodesPerSegment2) = {sum(NodesPerSegment2)}')
-print('')
-print(f'NodesPerSegment1 =', NodesPerSegment1)
-print(f'NodesPerSegment2 =', NodesPerSegment2)
-print('')
+Inds1, IsOrigNodeSorted1, IndsOrigNodes1, NodesToAddPerSegment1= cif.GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim1, 
+                              IsOrigNode=IsOrigNode1)
+Inds2, IsOrigNodeSorted2, IndsOrigNodes2, NodesToAddPerSegment2= cif.GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim2, 
+                              IsOrigNode=IsOrigNode2)
 
+#print('')
+print(f'len(NodesToAddPerSegment1) = {len(NodesToAddPerSegment1)}')
+print(f'len(NodesToAddPerSegment2) = {len(NodesToAddPerSegment2)}')
+#print('')
+print(f'sum(NodesToAddPerSegment1) = {sum(NodesToAddPerSegment1)}')
+print(f'sum(NodesToAddPerSegment2) = {sum(NodesToAddPerSegment2)}')
+#print('')
+#print(f'Inds1 =', Inds1)
+#print('')
+#print(f'IsOrigNodeSorted1 =', IsOrigNodeSorted1)
+#print('')
+#print(f'IndsOrigNodes1 =', IndsOrigNodes1)
+#print('')
+#print(f'NodesToAddPerSegment1 =', NodesToAddPerSegment1)
+#print('')
+#print('')
+#print(f'Inds2 =', Inds2)
+#print('')
+#print(f'IsOrigNodeSorted2 =', IsOrigNodeSorted2)
+#print('')
+#print(f'IndsOrigNodes2 =', IndsOrigNodes2)
+#print('')
+#print(f'NodesToAddPerSegment2 =', NodesToAddPerSegment2)
+#print('')
 
 # Super-sample the contours:
-SSContour1, SSIsOrigNode1 = cif.SuperSampleContour(Contour=Contour1, NodesPerSegment=NodesPerSegment1)
-SSContour2, SSIsOrigNode2 = cif.SuperSampleContour(Contour=Contour2, NodesPerSegment=NodesPerSegment2)
+SSContour1, SSIsOrigNode1 = cif.SuperSampleContour(Contour=Contour1, 
+                                                   NodesToAddPerSegment=NodesToAddPerSegment1)
+SSContour2, SSIsOrigNode2 = cif.SuperSampleContour(Contour=Contour2, 
+                                                   NodesToAddPerSegment=NodesToAddPerSegment2)
 
 print('')
 print(f'len(SSContour1) = {len(SSContour1)}')
@@ -1225,6 +1294,7 @@ print(f'len(SSContour2) = {len(SSContour2)}')
 print('')
 print(f'len(SSIsOrigNode1) = {len(SSIsOrigNode1)}')
 print(f'len(SSIsOrigNode2) = {len(SSIsOrigNode2)}')
+
 
 # Start timing:
 times = []
@@ -1237,9 +1307,17 @@ print('\nSearching for the index for SSContour2 that minimises the surface area.
 IndMinCumL = cif.FindIndForMinCumLength(Contour1=SSContour1, Contour2=SSContour2)
 
 times.append(time.time())
-Dtime = round(times[-1] - times[-2], 1)
-print(f'Took {Dtime} s to find the index for SSContour2 that minimises the surface area.') 
-# 6 s
+Dtime = times[-1] - times[-2]
+#Dtime = round(times[-1] - times[-2], 1)
+print(f'Took {round(Dtime, 2)} s to find the index for SSContour2 that minimises the surface',
+      f'area ({round(Dtime/len(SSContour1), 2)} s per iteration over {len(SSContour1)}',
+      'possible shifts)') 
+# 0.06 s for 230 possible shifts (0.09 s/iteration; dP = 50)
+# 0.1 s for 290 possible shifts (0.11 s/iteration; dP = 2)
+# 0.13 s for 352 possible shifts (0.18 s/iteration; dP = 1)
+# 0.25 s for 476 possible shifts (0.18 s/iteration; dP = 0.5)
+# 2.26 s for 849 possible shifts (0.18 s/iteration; dP = 0.2)
+# 3.09 s for 1470 possible shifts (0.18 s/iteration; dP = 0.1)
 
 print('')
 print(f'IndMinCumL = {IndMinCumL}')
@@ -1276,13 +1354,15 @@ if len(Contour1) > len(Contour2):
 else:
     Contour1HasMorePts = False
 
-    
+
 """ 
 Note:  What if len(Contour1) = len(Contour2)?...
 """
 
 # Define the fractional interpolated slice number:
 FracInterpInd = (InterpSliceInd - BoundingSliceInds[0]) / (BoundingSliceInds[1] - BoundingSliceInds[0])
+
+print(f'FracInterpInd = {FracInterpInd}')
 
 # Linearly interpolate between the two over-sampled contours:
 InterpContour = cif.InterpolateBetweenContours(OverSampledContour1=OSContour1,
@@ -1298,31 +1378,109 @@ print(f'len(Contour2)      = {len(Contour2)}')
 print(f'len(InterpContour) = {len(InterpContour)}')
 
 
-# In[116]:
+# Deviate from Matt's code - try interpolating using the super-sampled contours
+# (i.e. before reducing the num of nodes):
+InterpSSContour = cif.InterpolateBetweenContours(OverSampledContour1=SSContour1,
+                                               OverSampledContour2=SSContour2,
+                                               OverSampledIsOrigNode1=SSIsOrigNode1,
+                                               OverSampledIsOrigNode2=SSIsOrigNode2,
+                                               FracInterpSliceInd=FracInterpInd,
+                                               Contour1HasMorePts=Contour1HasMorePts)
 
 
-SSContour1
-print(NodesPerSegment1)
-print(NodesPerSegment2)
+# In[229]:
 
 
-# In[112]:
+#SSContour1
+#print(NodesPerSegment1)
+#print(NodesPerSegment2)
+
+#print('CumSSPerim1 added:\n\n', [CumSSPerim1[i] for i in range(NumNodesToAdd1)])
+#print('\n\nCumSSPerim1 original:\n\n', [CumSSPerim1[i] for i in range(NumNodesToAdd1, len(CumSSPerim1))])
+
+#Contour1Shifted = cif.ShiftContourPoints(Contour=Contour1, Shift=3)
+
+#print(len(Contour1))
+#print(len(Contour1Shifted))
+
+CumLineLengths = []
+
+# Loop through all N possible starting indeces for Contour2:
+for i in range(len(Contour2)):
+    CumLineLengths.append(cif.IntegrateLineLengths(Contour1=Contour1, 
+                                                   Contour2=Contour2, 
+                                                   StartInd2=i))
+
+
+# In[231]:
+
+
+CumLineLengths.index(min(CumLineLengths))
+
+
+# In[283]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+Contour1 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[0]][0])
+Contour2 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[1]][0])
+
+# The actual contour that exists at slice InterpSliceInd:
+ActualContour = copy.deepcopy(ContourData['InPointPCS'][InterpSliceInd][0])
 
 
 ExportPlot = False
+#ExportPlot = True
+
+#Contour1Shifted = cif.ShiftContourPoints(Contour=Contour1, Shift=3)
+
+
+#shift = cif.FindIndForMinCumLength(Contour1=SSContour1, Contour2=SSContour2)
+#print(f'shift = {shift}')
+#SSContour2Shifted = cif.ShiftContourPoints(Contour=SSContour2, Shift=shift)
+
 
 # Define contours to plot and their line colours:
-Contours = [Contour1, SSContour1, OSContour1]
+#Contours = [Contour1, Contour1Shifted]
+#Contours = [Contour1, SSContour1, OSContour1]
 #Contours = [Contour1]
 #Contours = [SSContour1]
 #Contours = [OSContour1]
-Contours = [Contour1, Contour2, InterpContour]
-Colours = ['b', 'g', 'r']
+#Contours = [Contour2, SSContour2, OSContour2]
+#Contours = [SSContour1, SSContour2, SSContour2Shifted]
+#Contours = [Contour1, Contour2, InterpContour]
+
+Contours = [Contour1, Contour2, InterpContour, ActualContour]
+Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+          f'Contour at slice {BoundingSliceInds[1]}', 
+          f'Interpolated contour at slice {InterpSliceInd}', 
+          f'Actual contour at slice {InterpSliceInd}']
+
+Contours = [Contour1, Contour2, InterpContour, InterpSSContour]
+Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+          f'Contour at slice {BoundingSliceInds[1]}', 
+          f'Interpolated contour at slice {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}']
+
+Contours = [Contour1, Contour2, InterpContour, InterpSSContour, ActualContour]
+Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+          f'Contour at slice {BoundingSliceInds[1]}', 
+          f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Actual contour at {InterpSliceInd}']
+
+
+Colours = ['b', 'g', 'r', 'm', 'y']
+Shifts = [0, 2, 4, 6, 8] # to help visualise
+Shifts = [0, 0, 0, 0, 0] # no shift
 
 MarkerSize = 5
 
 # Create a figure with two subplots and the specified size:
-plt.subplots(1, 1, figsize=(14, 14))
+fig, ax = plt.subplots(1, 1, figsize=(14, 14))
 
 for i in range(len(Contours)):
     # Unpack tuple and store each x,y tuple in arrays 
@@ -1332,30 +1490,212 @@ for i in range(len(Contours)):
 
     for x, y, z in Contours[i]:
         X.append(x)
-        Y.append(y)
+        #X.append(x + Shifts[i])
+        Y.append(y + Shifts[i])
 
-    plt.plot(X, Y, linewidth=1, c=Colours[i]);
-    plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[i]);
+    # Define linestyle:
+    if 'nterp' in Labels[i]: # i.e. interpolated contour
+        if 'uper' in Labels[i]: # super-sampled
+            LineStyle='dashed'
+        else: # reduced nodes
+            LineStyle=(0, (5, 10)) # loosely dashed   
+    else:
+        LineStyle='solid'
+        
+    # Plot line:
+    ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[i], label=Labels[i]);    
+    legend = ax.legend(loc='upper left', fontsize='large')
+    # Plot dots:
+    if False:
+        plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[i]);
     
     # Plot the first and last points with different markers to help
     # identify them:
-    plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
-    plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+    #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+    #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+    
+    #P = list(range(len(X))) # list of point numbers
+    #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+    #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+    #plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+    
+    # Annotate every 5th point with the point number:
+    if False:
+        for p in range(0, len(X), 5):
+            plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[i]);
+        
+    # Also annotate the last point:
+    #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
     
 
-#plt.title(f'Interpolated (red) contour at slice no {InterpSliceInd} between',
-#          f'slice {BoundingSliceInds[0]} (blue) and {BoundingSliceInds[1]} (green)')
+plt.title(f'Interpolation of contour at slice {InterpSliceInd} between '           + f'slices {BoundingSliceInds[0]} and {BoundingSliceInds[1]} '           + f'(dP = {dP})')
 
 # Create filename for exported figure:
-#FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-#            + f'_Interpolation_at_slice_{InterpSliceInd}_of_contours_at_{BoundingSliceInds[0]}'
-#            + f'_and_{BoundingSliceInds[1]}.png'
+FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime())             + f'_Interpolation_at_slice_{InterpSliceInd}_of_contours_at_'             + f'{BoundingSliceInds[0]}_and_{BoundingSliceInds[1]}_dP_{dP}.png'
 
 if ExportPlot:
     plt.savefig(FigFname, bbox_inches='tight')
 
 
-# In[45]:
+# In[287]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+Contour1 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[0]][0])
+Contour2 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[1]][0])
+
+# The actual contour that exists at slice InterpSliceInd:
+ActualContour = copy.deepcopy(ContourData['InPointPCS'][InterpSliceInd][0])
+
+
+ExportPlot = False
+#ExportPlot = True
+
+#Contour1Shifted = cif.ShiftContourPoints(Contour=Contour1, Shift=3)
+
+
+#shift = cif.FindIndForMinCumLength(Contour1=SSContour1, Contour2=SSContour2)
+#print(f'shift = {shift}')
+#SSContour2Shifted = cif.ShiftContourPoints(Contour=SSContour2, Shift=shift)
+
+
+# Define contours to plot and their line colours:
+#Contours = [Contour1, Contour1Shifted]
+#Contours = [Contour1, SSContour1, OSContour1]
+#Contours = [Contour1]
+#Contours = [SSContour1]
+#Contours = [OSContour1]
+#Contours = [Contour2, SSContour2, OSContour2]
+#Contours = [SSContour1, SSContour2, SSContour2Shifted]
+#Contours = [Contour1, Contour2, InterpContour]
+
+#Contours = [Contour1, Contour2, InterpContour, ActualContour]
+#Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+#          f'Contour at slice {BoundingSliceInds[1]}', 
+#          f'Interpolated contour at slice {InterpSliceInd}', 
+#          f'Actual contour at slice {InterpSliceInd}']
+
+#Contours = [Contour1, Contour2, InterpContour, InterpSSContour]
+#Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+#          f'Contour at slice {BoundingSliceInds[1]}', 
+#          f'Interpolated contour at slice {InterpSliceInd}', 
+#          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}']
+
+Contours = [Contour1, Contour2, InterpContour, InterpSSContour, ActualContour]
+Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+          f'Contour at slice {BoundingSliceInds[1]}', 
+          f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Actual contour at {InterpSliceInd}']
+Colours = ['b', 'g', 'r', 'm', 'y']
+
+Contours = [InterpContour, InterpSSContour, ActualContour]
+Labels = [f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Actual contour at {InterpSliceInd}']
+Colours = ['r', 'm', 'y']
+
+
+#Shifts = [0, 2, 4, 6, 8] # to help visualise
+#Shifts = [0, 0, 0, 0, 0] # no shift
+
+
+cif.PlotInterpolationResults(Contours=Contours, Labels=Labels, 
+                             Colours=Colours,
+                             InterpSliceInd=InterpSliceInd,
+                             BoundingSliceInds=BoundingSliceInds,
+                             dP=dP, ExportPlot=ExportPlot)
+
+
+# In[295]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+# Define the slice to be interpolated:
+InterpSliceInd = 14
+
+# Chose the minimum inter-node distance for super-sampled contours:
+dP = 0.2
+
+InterpContour, InterpSSContour, ReducedInterpSSContour = cif.InterpolateContours(InterpSliceInd, PointData, ContourData, dP)
+
+print(f'len(InterpContour)          = {len(InterpContour)}')
+print(f'len(InterpSSContour)        = {len(InterpSSContour)}')
+print(f'len(ReducedInterpSSContour) = {len(ReducedInterpSSContour)}')
+
+Contour1 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[0]][0])
+Contour2 = copy.deepcopy(ContourData['InPointPCS'][BoundingSliceInds[1]][0])
+
+# The actual contour that exists at slice InterpSliceInd:
+ActualContour = copy.deepcopy(ContourData['InPointPCS'][InterpSliceInd][0])
+
+
+ExportPlot = False
+#ExportPlot = True
+
+#Contour1Shifted = cif.ShiftContourPoints(Contour=Contour1, Shift=3)
+
+
+#shift = cif.FindIndForMinCumLength(Contour1=SSContour1, Contour2=SSContour2)
+#print(f'shift = {shift}')
+#SSContour2Shifted = cif.ShiftContourPoints(Contour=SSContour2, Shift=shift)
+
+
+# Define contours to plot, their labels and their line colours:
+Contours = [Contour1, Contour2, InterpContour, InterpSSContour, ActualContour]
+Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+          f'Contour at slice {BoundingSliceInds[1]}', 
+          f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Actual contour at {InterpSliceInd}']
+Colours = ['b', 'g', 'r', 'm', 'y']
+#Shifts = [0, 2, 4, 6, 8] # to help visualise
+Shifts = [0, 0, 0, 0, 0] # no shift
+
+Contours = [InterpContour, InterpSSContour, ActualContour]
+Labels = [f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Actual contour at {InterpSliceInd}']
+Colours = ['r', 'm', 'y']
+#Shifts = [0, 2, 4, 6, 8] # to help visualise
+Shifts = [0, 0, 0, 0, 0] # no shift
+
+Contours = [InterpContour, InterpSSContour, ReducedInterpSSContour, ActualContour]
+Labels = [f'Interpolated contour at {InterpSliceInd}', 
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd}',
+          f'Super-sampled interpolated \ncontour at slice {InterpSliceInd} with \nreduced nodes',
+          f'Actual contour at {InterpSliceInd}']
+Colours = ['r', 'm', 'c', 'y']
+#Shifts = [0, 2, 4, 6, 8] # to help visualise
+Shifts = [0, 0, 2, 0, 0] # no shift
+
+
+cif.PlotInterpolationResults(Contours=Contours, Labels=Labels, 
+                             Colours=Colours, Shifts=Shifts,
+                             InterpSliceInd=InterpSliceInd,
+                             BoundingSliceInds=BoundingSliceInds,
+                             dP=dP, ExportPlot=ExportPlot)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[215]:
 
 
 test = [3, 1, 4, 2]
