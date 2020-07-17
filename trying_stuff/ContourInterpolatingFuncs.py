@@ -10,11 +10,25 @@ Created on Mon Jul 13 09:50:23 2020
 """ Contour interpolating functions """
 
 
+def GetIndsOfSlicesWithContours(ContourData):
+    # Initialise list of indices of the slices that contain contours:
+    SlicesWithContours = []
+    
+    for i in range(len(ContourData['ContourType'])):
+        if ContourData['ContourType'][i] == 1:
+            SlicesWithContours.append(i)
+            
+    # Reduce to list of unique indices:
+    SlicesWithContours = list(set(SlicesWithContours))
+            
+    return SlicesWithContours
 
-def GetBoundingSliceInds(InterpInd, SliceInds, ContourData):
+
+def GetBoundingSliceInds(ContourData, PointData, InterpInd):
     """ 
     Note 1: 
-        ContourData is a list of contour points arranged along rows for 
+        ContourData is a dictionary containing the key ['InPointPCS'], whose
+        values are a list of contour points arranged along rows for 
         different slices and along columns for different contours (i.e. 
         ContourData is a list of lists). Slices without contours have empty 
         list ([]).
@@ -32,9 +46,17 @@ def GetBoundingSliceInds(InterpInd, SliceInds, ContourData):
         interpolate contours on slices with multiple contours present.
     """
     
+    # Get the indices of the slices that contain contours:
+    #SlicesWithContours = GetIndsOfSlicesWithContours(ContourData=ContourData)
+    SlicesWithContours = list(set(PointData['InSliceNo']))
+    
+    #print('SlicesWithContours =', SlicesWithContours)
+    
+    
     # Get extent of region of contours by slice number (equivalent to function 
     # _getExtentOfRegion in generateInterpolationData.js):
-    Extent = [SliceInds[0], SliceInds[-1]]
+    #Extent = [SlicesWithContours[0], SlicesWithContours[-1]]
+    Extent = [min(SlicesWithContours), max(SlicesWithContours)]
     
     #print('Extent =', Extent)
 
@@ -53,41 +75,76 @@ def GetBoundingSliceInds(InterpInd, SliceInds, ContourData):
     else:
         #print(f'Looking for the nearest lower slice to {InterpInd}...')
         
-        # Iterate backwards from (InterpInd - 1) to SliceInds[0] to determine 
+        # Iterate backwards from (InterpInd - 1) to SlicesWithContours[0] to determine 
         # the nearest lowest slice index that contains a single contour:
-        for i in range(InterpInd - 1, SliceInds[0] - 1, -1):
-            #print(f'\nContourData[{i}] =', ContourData[i])
-            #print(f'\nlen(ContourData[{i}]) = {len(ContourData[i])}')
+        if False:
+            for i in range(InterpInd - 1, min(SlicesWithContours) - 1, -1):
+                #print(f'\nContourData['InPointPCS'][{i}] =', ContourData['InPointPCS'][i])
+                #print(f'\nlen(ContourData['InPointPCS'][{i}]) = {len(ContourData['InPointPCS'][i])}')
+                
+                if len(ContourData['InPointPCS'][i]) == 1:
+                    #print(f'\nlen(ContourData['InPointPCS'][{i}]) == 1')
+                    #print(f'Appending {i} to BoundingSliceInds')
+                    
+                    BoundingSliceInds.append(i)
+                    
+                    FoundLowerSlice = True
+                    
+                    break
             
-            if len(ContourData[i]) == 1:
-                #print(f'\nlen(ContourData[{i}]) == 1')
-                #print(f'Appending {i} to BoundingSliceInds')
+        """ Allow for the possibility of InterpInd to be a fraction (not an
+        integer) by taking floor of InterpInd using (InterpInd//1): """
+        FloorInterpInd = int(InterpInd//1)
+        
+        for i in range(FloorInterpInd, min(SlicesWithContours) - 1, -1):
+            if len(ContourData['InPointPCS'][i]) == 1:
+                # Append i to BoundingSliceInds if i != InterpInd (which could
+                # arise if InterpInd is an integer):
+                if i != InterpInd:
+                    BoundingSliceInds.append(i)
+                    
+                    FoundLowerSlice = True
+                    
+                    break
                 
-                BoundingSliceInds.append(i)
+        
+        
                 
-                FoundLowerSlice = True
-                
-                break
-                #continue
                 
         #print(f'Looking for the nearest upper slice to {InterpInd}...')
         
-        # Iterate forwards from (InterpInd + 1) to SliceInds[-1] to determine 
+        # Iterate forwards from (InterpInd + 1) to SlicesWithContours[-1] to determine 
         # the nearest upper slice index that contains a single contour:
-        for i in range(InterpInd + 1, SliceInds[-1] + 1):
-            #print(f'\nContourData[{i}] =', ContourData[i])
-            #print(f'\nlen(ContourData[{i}]) = {len(ContourData[i])}')
-            #print(f'Appending {i} to BoundingSliceInds')
-            
-            if len(ContourData[i]) == 1:
-                #print(f'\nlen(ContourData[{i}]) == 1')
+        if False:
+            for i in range(InterpInd + 1, max(SlicesWithContours) + 1):
+                #print(f'\nContourData['InPointPCS'][{i}] =', ContourData['InPointPCS'][i])
+                #print(f'\nlen(ContourData['InPointPCS'][{i}]) = {len(ContourData['InPointPCS'][i])}')
                 #print(f'Appending {i} to BoundingSliceInds')
                 
-                BoundingSliceInds.append(i)
+                if len(ContourData['InPointPCS'][i]) == 1:
+                    #print(f'\nlen(ContourData['InPointPCS'][{i}]) == 1')
+                    #print(f'Appending {i} to BoundingSliceInds')
+                    
+                    BoundingSliceInds.append(i)
+                    
+                    FoundUpperSlice = True
+                    
+                    break
                 
-                FoundUpperSlice = True
-                
-                break
+        """ Allow for the possibility of InterpInd to be a fraction (not an
+        integer) by taking ceiling of InterpInd using -(-InterpInd//1): """
+        CeilInterpInd = int(-(-InterpInd//1))
+        
+        for i in range(CeilInterpInd, max(SlicesWithContours) + 1):
+            if len(ContourData['InPointPCS'][i]) == 1:
+                 # Append i to BoundingSliceInds if i != InterpInd (which could
+                # arise if InterpInd is an integer):
+                if i != InterpInd:
+                    BoundingSliceInds.append(i)
+                    
+                    FoundUpperSlice = True
+                    
+                    break
         
         # Deal with case where no lower, or upper, or both upper nor lower 
         # slice index can be used for interpolation:
@@ -534,7 +591,7 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
     # Initialise the interpolated contour:
     InterpolatedContour = []
     
-    # If the original Contour1 has more points than the oiginal Contour2..
+    # If the original Contour1 has more points than the original Contour2..
     if Contour1HasMorePts:
         IsOrigNode = IsOrigNode1
     else:
@@ -551,6 +608,8 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
                           
                 InterpZ = (1 - FracInterpSliceInd) * Contour1[i][2] \
                           + FracInterpSliceInd * Contour2[i][2]
+                          
+                InterpolatedContour.append([InterpX, InterpY, InterpZ])
             
         if False:
             """ Try something different from Matt's code: """
@@ -563,8 +622,8 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
             InterpZ = (1 - FracInterpSliceInd) * Contour1[i][2] \
                       + FracInterpSliceInd * Contour2[i][2]
         
-        
-        InterpolatedContour.append([InterpX, InterpY, InterpZ])
+            InterpolatedContour.append([InterpX, InterpY, InterpZ])
+            
             
     return InterpolatedContour
 
@@ -607,20 +666,22 @@ def GetSegmentLengths(Contour):
 
 
 
-def InterpolateContours(InterpSliceInd, PointData, ContourData, dP):
+def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
     import copy
     
-    # Get slice indices that contain contours:
-    SliceInds = PointData['InSliceNo']
-    
-    # Get extent of region of contours by slice number (equivalent to function 
-    # _getExtentOfRegion in generateInterpolationData.js):
-    #Extent = [SliceInds[0], SliceInds[-1]]
-    
     # Get bounding slice indices:
-    BoundingSliceInds = GetBoundingSliceInds(InterpInd=InterpSliceInd, 
-                                             SliceInds=SliceInds, 
-                                             ContourData=ContourData['InPointPCS'])
+    BoundingSliceInds = GetBoundingSliceInds(ContourData=ContourData,
+                                             PointData=PointData,
+                                             InterpInd=InterpSliceInd)
+    
+    
+    # Escape if None was returned for BoundingSliceInds (i.e. if two slice 
+    # indices were not found):
+    if not BoundingSliceInds:
+        return
+    
+    print(f'Interpolating between slice {BoundingSliceInds[0]} and',
+          f'{BoundingSliceInds[1]} for slice at {InterpSliceInd}')
     
     # Define the contours:
     """
@@ -737,23 +798,41 @@ def InterpolateContours(InterpSliceInd, PointData, ContourData, dP):
                                                FracInterpSliceInd=FracInterpInd,
                                                Contour1HasMorePts=Contour1HasMorePts)
     
+    """ 
+    Note:
+        
+    It would be sensible to add the interpolated contour points to PointData
+    and ContourData, but along wih the PCS points it would be wise to add the
+    ICS points at the same time, but that requires the origin, cosine 
+    directions and pixel spacings of the corresponding image...
+    """
+    
+    
+    
+    return InterpContour
+
+
+    
     """ Deviate from Matt's code - try interpolating using the super-sampled 
     contours (i.e. before reducing the num of nodes): """
-    InterpSSContour = InterpolateBetweenContours(Contour1=SSContour1,
-                                                 Contour2=SSContour2,
-                                                 IsOrigNode1=SSIsOrigNode1,
-                                                 IsOrigNode2=SSIsOrigNode2,
-                                                 FracInterpSliceInd=FracInterpInd,
-                                                 Contour1HasMorePts=Contour1HasMorePts)
+    if False:
+        InterpSSContour = InterpolateBetweenContours(Contour1=SSContour1,
+                                                     Contour2=SSContour2,
+                                                     IsOrigNode1=SSIsOrigNode1,
+                                                     IsOrigNode2=SSIsOrigNode2,
+                                                     FracInterpSliceInd=FracInterpInd,
+                                                     Contour1HasMorePts=Contour1HasMorePts)
+        
+        # Define boolean list of indices to keep in the super-sampled interpolated
+        # contour:
+        IsOrigNode1or2 = IsOrigNode1 or IsOrigNode2
+        
+        # Reduce the number of nodes of InterpSSContour:
+        ReducedInterpSSContour = ReduceNodesOfContour(Contour=InterpSSContour, IndsToKeep=IsOrigNode1or2)
+        
+        return InterpContour, InterpSSContour, ReducedInterpSSContour
     
-    # Define boolean list of indices to keep in the super-sampled interpolated
-    # contour:
-    IsOrigNode1or2 = IsOrigNode1 or IsOrigNode2
     
-    # Reduce the number of nodes of InterpSSContour:
-    ReducedInterpSSContour = ReduceNodesOfContour(Contour=InterpSSContour, IndsToKeep=IsOrigNode1or2)
-    
-    return InterpContour, InterpSSContour, ReducedInterpSSContour
 
 
     
@@ -770,7 +849,13 @@ def PlotInterpolationResults(Contours, Labels, Colours, Shifts, InterpSliceInd,
     MarkerSize = 5
     
     # Create a figure with two subplots and the specified size:
-    fig, ax = plt.subplots(1, 1, figsize=(14, 14))
+    if ExportPlot:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14), dpi=300)
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14))
+    
+
+
     
     for i in range(len(Contours)):
         # Unpack tuple and store each x,y tuple in arrays X and Y:
@@ -796,7 +881,7 @@ def PlotInterpolationResults(Contours, Labels, Colours, Shifts, InterpSliceInd,
         ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[i], label=Labels[i]);    
         ax.legend(loc='upper left', fontsize='large')
         # Plot dots:
-        if False:
+        if True:
             plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[i]);
         
         # Plot the first and last points with different markers to help

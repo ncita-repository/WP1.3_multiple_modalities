@@ -122,8 +122,12 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
                       Directions=Directions, Spacings=Spacings)
 
     
-    # Convert points in PtsBySliceAndContourPCS from PCS to ICS:
+    # Initialise list of converted points in PtsBySliceAndContourPCS from PCS 
+    # to ICS:
     PtsBySliceAndContourICS = []
+    
+    # Initialise ContourTypeBySlice:
+    ContourTypeBySlice = []
     
     # Loop through each slice of points:
     for PtsThisSlicePCS in PtsBySliceAndContourPCS:
@@ -143,8 +147,13 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
                
             PtsBySliceAndContourICS.append(PtsThisSliceICS)
             
+            ContourTypeBySlice.append(1)
+            
         else:
             PtsBySliceAndContourICS.append([])
+            
+            ContourTypeBySlice.append(0)
+            
     
     
     # Convert each PCS point (last item) in LUT and append to the sub-array:
@@ -170,17 +179,19 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
                  'PointNo'      : [LUT[i][0] for i in range(P)], 
                  'InSliceNo'    : [LUT[i][1] for i in range(P)], 
                  'InContourNo'  : [LUT[i][2] for i in range(P)],
-                 'InPointIndex' : [LUT[i][3] for i in range(P)],
-                 'InPointPCS'   : [LUT[i][4] for i in range(P)],
-                 'InPointICS'   : [LUT[i][5] for i in range(P)]
+                 'ContourType'  : [LUT[i][3] for i in range(P)],
+                 'InPointIndex' : [LUT[i][4] for i in range(P)],
+                 'InPointPCS'   : [LUT[i][5] for i in range(P)],
+                 'InPointICS'   : [LUT[i][6] for i in range(P)]
                  } 
     
     # Create a dictionary to store contour data arranged by slices and 
     # contours:
     ContourData = {
-                   'InSliceNo'  : SliceNos, 
-                   'InPointPCS' : PtsBySliceAndContourPCS,
-                   'InPointICS' : PtsBySliceAndContourICS
+                   'InSliceNo'   : SliceNos, 
+                   'ContourType' : ContourTypeBySlice,
+                   'InPointPCS'  : PtsBySliceAndContourPCS,
+                   'InPointICS'  : PtsBySliceAndContourICS
                    } 
     
           

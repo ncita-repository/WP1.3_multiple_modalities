@@ -1610,7 +1610,21 @@ cif.PlotInterpolationResults(Contours=Contours, Labels=Labels,
                              dP=dP, ExportPlot=ExportPlot)
 
 
-# In[295]:
+# In[298]:
+
+
+IsOrigNode1or2 = IsOrigNode1 or IsOrigNode2
+
+count = 0
+
+for i in range(len(IsOrigNode1or2)):
+    if IsOrigNode1or2[i]:
+        count += 1
+        
+count
+
+
+# In[306]:
 
 
 import ContourInterpolatingFuncs
@@ -1683,11 +1697,13 @@ cif.PlotInterpolationResults(Contours=Contours, Labels=Labels,
                              dP=dP, ExportPlot=ExportPlot)
 
 
-# In[ ]:
-
-
-
-
+# ### July 17:
+# 
+# ### I don't understand why the result of interpolating the super-sampled contours looks so different from the result of interpolating the contours after reducing their number of nodes (i.e. "over-sampled" contours).  They should be equivalent except for perhaps higher frequency structures in the former.
+# 
+# ### Also I don't know why after reducing the result of interpolating the super-sampled contours to nodes that were in either of the original contours has been reduced to only 117 points and clearly is no longer a closed contour.
+# 
+# ### But leaving this for now.
 
 # In[ ]:
 

@@ -170,10 +170,18 @@ def GetContourPtsForDicoms(DicomDir, RoiFpath):
                     PtsThisContour.append(Pt)
         
                     #LUT.append([PtNo, CntNo, SliceNo, [], Pt])
-                    LUT.append([PtNo, SliceNo, CntNo, [], Pt]) # Changed on 08/07/2020
-                    """ Note that the empty array in the 3rd position will be
-                    replaced with the point indeces later, as will the 
-                    subsequent items that will finalise the LUT. """
+                    #LUT.append([PtNo, SliceNo, CntNo, [], Pt]) # Changed on 08/07/2020
+                    LUT.append([PtNo, SliceNo, CntNo, 1, [], Pt]) # Changed on 17/07/2020
+                    """ 
+                    Notes:
+                        
+                    1. The 1 in the 3rd position signals that the contour 
+                    point is original (not interpolated, for example).
+                    
+                    2. The empty array in the 4th position will be replaced 
+                    with the point indeces later, as will the subsequent items 
+                    that will finalise the LUT. 
+                    """
                     
                     PtNo = PtNo + 1
                     
@@ -187,6 +195,7 @@ def GetContourPtsForDicoms(DicomDir, RoiFpath):
                 
         else: 
             PtsBySliceAndContour.append([])
+            
         
     
       
