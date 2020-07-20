@@ -7,10 +7,118 @@ Created on Mon Jul 13 09:50:23 2020
 
 
 
-""" Contour interpolating functions """
+""" 
+Contour interpolating functions
+
+
+The following dictionaries are used as inputs to some of the following 
+functions and are appended to by others:
+    
+ContourData - Dictionary containing the keys:
+    
+              'InSliceNo'   - List of integers (for original contour points) or
+                              floats (for interpolated contours that correspond
+                              to non-imaged planes, e.g. slice interpolated at
+                              2.5 in between slices 2 and 3).
+                              
+              'ContourType' - List of integers for each DICOM slice; 
+                              The integer value denotes whether there is or is
+                              not contour data for any given slice, and if 
+                              there is, whether it is an original contour,
+                              an interpolated contour, or transformed contour.
+                              0 -> No contour points 
+                              1 -> Original contour points
+                              2 -> Interpolated contour points
+                              3 -> Transformed contour points
+                              
+              'InPointPCS'  - List of input points in the Patient Coordinate 
+                              System if contour data exists for any given slice 
+                              (e.g. [[x0, y0, z0], [x1, y1, z1], ...], i.e. a 
+                              list of lists of lists), or [] if not.
+                            
+              'InPointICS'  - Same as 'InPointPCS' but with points in the
+                              Image Coordinate System.
+                             
+              'OutPointPCS' - Like 'InPointPCS' but for the output/transformed
+                              image.
+                              
+              'OutPointICS' - Same as 'OutPointPCS' but with points in the 
+                              Image Coordinate System.
+              
+                              
+PointData   - Dictionary containing the keys:
+    
+              'PointNo'      - List of integers of all points in ContourData.
+              
+              'InSliceNo'    - List of integers (for original contour points) 
+                               or floats (for interpolated contours that 
+                               correspond to non-imaged planes, e.g. slice 
+                               interpolated at 2.5 in between slices 2 and 3).
+                              
+              'InContourNo'  - List of integers of the contour number each 
+                               point belongs to from the input image.
+              
+              'ContourType'  - List of integers for each DICOM slice; 
+                               The integer value denotes whether there is or is
+                               not contour data for any given slice, and if 
+                               there is, whether it is an original contour,
+                               an interpolated contour, or transformed contour.
+                               0 -> No contour points 
+                               1 -> Original contour points
+                               2 -> Interpolated contour points
+                               3 -> Transformed contour points
+                              
+              'InPointIndex' - List of indeces [x, y, z] for each point in the
+                               input image.
+                              
+              'InPointPCS'   - List of points in the Patient Coordinate System 
+                               if contour data exists for any given slice (e.g. 
+                               [[x0, y0, z0], [x1, y1, z1], ...], i.e. a list  
+                               of lists of lists), or [] if not.
+                            
+              'InPointICS'   - Same as 'InPointPCS' but with points in the
+                               Image Coordinate System.
+                               
+              'OutPointIndex - Like 'InPointIndex' but for the output/
+                               transformed image.
+                               
+              'OutPointPCS'  - Like 'InPointPCS' but for the output/transformed
+                              image.
+                            
+              'OutPointICS' - Same as 'OutPointPCS' but with points in the 
+                              Image Coordinate System.
+
+
+Note:
+    PointData is a flat dictionary, that contains contour data on a 
+    point-by-point basis.
+    
+    ContourData is a multi-list dictionary, that contains contour data 
+    arranged on a slice-by-slice and contour-by-contour basis for all slices
+    within the DICOM image (including slices that do not contain any contour
+    data).
+"""
 
 
 def GetIndsOfSlicesWithContours(ContourData):
+    """
+    Get he indices of the rows (slices) within ContourData that contain a 
+    single list of contour points (i.e. only one contour per slice).
+    
+    Inputs:
+        ContourData         - Dictionary containing the key 'InPointPCS', 
+                              whose values are a list of contour points 
+                              [x, y, z] arranged along rows for each DICOM 
+                              slice, and along columns for different contours 
+                              (i.e. a list of lists of lists). 
+                              Slices without contours have empty list ([]).
+                      
+    Returns:
+        SlicesWithContours - List of integers of the indices (row numbers) in
+                             ContourData that contains a single list of contour
+                             points.
+    """
+    
     # Initialise list of indices of the slices that contain contours:
     SlicesWithContours = []
     
@@ -24,24 +132,43 @@ def GetIndsOfSlicesWithContours(ContourData):
     return SlicesWithContours
 
 
-def GetBoundingSliceInds(ContourData, PointData, InterpInd):
+def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
     """ 
-    Note 1: 
-        ContourData is a dictionary containing the key ['InPointPCS'], whose
-        values are a list of contour points arranged along rows for 
-        different slices and along columns for different contours (i.e. 
-        ContourData is a list of lists). Slices without contours have empty 
-        list ([]).
+    Get the slice indices (row numbers) in ContourData of the nearest slices 
+    that bound the slice to be interpolated.
+    
+    Inputs:
+        ContourData         - Dictionary containing the key 'InPointPCS', 
+                              whose values are a list of contour points 
+                              [x, y, z] arranged along rows for each DICOM 
+                              slice, and along columns for different contours 
+                              (i.e. a list of lists of lists). 
+                              Slices without contours have empty list ([]).
+                              
+        PointData          - Dictionary containing the key 'InSliceNo' whose
+                             values are a list of integers of the indices of
+                             the DICOM slices that contain contour data.
+                             
+        InterpSliceInd     - The slice index within the DICOM image where a 
+                             contour is to be interpolated; May be an integer  
+                             (i.e. interpolation at an imaging plane) or a  
+                             float (i.e. interpolation between imaging planes).
+                      
+    Returns:
+        BoundingSliceInds  - List of integers of the indices (row numbers) in
+                             ContourData that contains a single list of contour
+                             points.
+    
         
-    Note 2:
-        _getBoundingPair checks if a contour is an interpolated contour, and if 
-        so, it is excluded from the list of possible contours to interpolate
-        between (hence the index of an interpolated contour cannot be included 
-        in ContourPair). This has not yet been implemented in 
-        GetBoundingSliceInds.
+    Notes:
         
-    Note 3: 
-        Like _getBoundingPair, GetBoundingSliceInds will exclude any slices 
+        1. Matt Orton's function _getBoundingPair checks if a contour is an 
+        interpolated contour, and if so, it is excluded from the list of 
+        possible contours to interpolate between (hence the index of an 
+        interpolated contour cannot be included in ContourPair). 
+        This has not yet been implemented in GetBoundingSliceInds.
+        
+        2. Like _getBoundingPair, GetBoundingSliceInds will exclude any slices 
         that have multiple contours.  A more robust version will be required to 
         interpolate contours on slices with multiple contours present.
     """
@@ -68,17 +195,18 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
     FoundUpperSlice = False
     
     # Cannot interpolate a slice whose index is <= Extent[0], or >= Extent[1]:
-    if InterpInd <= Extent[0] or InterpInd >= Extent[1]:
-        print(f'Cannot interpolate slice number {InterpInd}')
+    if InterpSliceInd <= Extent[0] or InterpSliceInd >= Extent[1]:
+        print(f'Cannot interpolate slice number {InterpSliceInd}')
         return []
     
     else:
-        #print(f'Looking for the nearest lower slice to {InterpInd}...')
+        #print(f'Looking for the nearest lower slice to {InterpSliceInd}...')
         
-        # Iterate backwards from (InterpInd - 1) to SlicesWithContours[0] to determine 
-        # the nearest lowest slice index that contains a single contour:
+        # Iterate backwards from (InterpSliceInd - 1) to SlicesWithContours[0] 
+        # to determine the nearest lowest slice index that contains a single 
+        # contour:
         if False:
-            for i in range(InterpInd - 1, min(SlicesWithContours) - 1, -1):
+            for i in range(InterpSliceInd - 1, min(SlicesWithContours) - 1, -1):
                 #print(f'\nContourData['InPointPCS'][{i}] =', ContourData['InPointPCS'][i])
                 #print(f'\nlen(ContourData['InPointPCS'][{i}]) = {len(ContourData['InPointPCS'][i])}')
                 
@@ -92,15 +220,16 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
                     
                     break
             
+            
         """ Allow for the possibility of InterpInd to be a fraction (not an
         integer) by taking floor of InterpInd using (InterpInd//1): """
-        FloorInterpInd = int(InterpInd//1)
+        FloorInterpInd = int(InterpSliceInd//1)
         
         for i in range(FloorInterpInd, min(SlicesWithContours) - 1, -1):
             if len(ContourData['InPointPCS'][i]) == 1:
-                # Append i to BoundingSliceInds if i != InterpInd (which could
-                # arise if InterpInd is an integer):
-                if i != InterpInd:
+                # Append i to BoundingSliceInds if i != InterpSliceInd (which 
+                # could arise if InterpSliceInd is an integer):
+                if i != InterpSliceInd:
                     BoundingSliceInds.append(i)
                     
                     FoundLowerSlice = True
@@ -111,12 +240,13 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
         
                 
                 
-        #print(f'Looking for the nearest upper slice to {InterpInd}...')
+        #print(f'Looking for the nearest upper slice to {InterpSliceInd}...')
         
-        # Iterate forwards from (InterpInd + 1) to SlicesWithContours[-1] to determine 
-        # the nearest upper slice index that contains a single contour:
+        # Iterate forwards from (InterpSliceInd + 1) to SlicesWithContours[-1] 
+        # to determine the nearest upper slice index that contains a single 
+        # contour:
         if False:
-            for i in range(InterpInd + 1, max(SlicesWithContours) + 1):
+            for i in range(InterpSliceInd + 1, max(SlicesWithContours) + 1):
                 #print(f'\nContourData['InPointPCS'][{i}] =', ContourData['InPointPCS'][i])
                 #print(f'\nlen(ContourData['InPointPCS'][{i}]) = {len(ContourData['InPointPCS'][i])}')
                 #print(f'Appending {i} to BoundingSliceInds')
@@ -131,15 +261,16 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
                     
                     break
                 
-        """ Allow for the possibility of InterpInd to be a fraction (not an
-        integer) by taking ceiling of InterpInd using -(-InterpInd//1): """
-        CeilInterpInd = int(-(-InterpInd//1))
+        """ Allow for the possibility of InterpSliceInd to be a fraction (not 
+        an integer) by taking ceiling of InterpSliceInd using 
+        # -(-InterpSliceInd//1): """
+        CeilInterpInd = int(-(-InterpSliceInd//1))
         
         for i in range(CeilInterpInd, max(SlicesWithContours) + 1):
             if len(ContourData['InPointPCS'][i]) == 1:
-                 # Append i to BoundingSliceInds if i != InterpInd (which could
-                # arise if InterpInd is an integer):
-                if i != InterpInd:
+                 # Append i to BoundingSliceInds if i != InterpSliceInd (which 
+                 # could arise if InterpInd is an integer):
+                if i != InterpSliceInd:
                     BoundingSliceInds.append(i)
                     
                     FoundUpperSlice = True
@@ -151,15 +282,15 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
         if not (FoundLowerSlice and FoundUpperSlice):
             if not FoundLowerSlice and FoundUpperSlice:
                 print('Did not find suitable lower slice to',
-                      f'interpolate slice number {InterpInd}.')
+                      f'interpolate slice number {InterpSliceInd}.')
                 
             if not FoundUpperSlice and FoundLowerSlice:
                 print('Did not find suitable upper slice to',
-                      f'interpolate slice number {InterpInd}.')
+                      f'interpolate slice number {InterpSliceInd}.')
                 
             if not FoundLowerSlice and not FoundUpperSlice:
                 print('Did not find suitable lower or upper slice',
-                      f'to interpolate slice number {InterpInd}.')
+                      f'to interpolate slice number {InterpSliceInd}.')
             
             return []
         
@@ -171,6 +302,16 @@ def GetBoundingSliceInds(ContourData, PointData, InterpInd):
 
 
 def GenerateClosedContour(Contour):
+    """
+    Close an open contour by appending the first point to the end of the list.
+    
+    Inputs:
+        Contour - An open list of contour points.
+        
+    Returns:
+        Contour - A closed list of contour points.
+    """
+    
     # Import packages:
     #import copy
     
@@ -184,6 +325,17 @@ def GenerateClosedContour(Contour):
 
 
 def ReverseIfAntiClockwise(Contour):
+    """
+    Ensures that a contour's points are arranged in a clockwise order.
+    
+    Inputs:
+        Contour - A list of contour points.
+        
+    Returns:
+        Contour - A list of contour points whose points have been reversed if
+                  they were counter-clockwise, or the original list if not.
+    """
+    
     
     P = len(Contour)
     
@@ -223,6 +375,15 @@ def ReverseIfAntiClockwise(Contour):
 """ Generate list of cumulative perimeters of a contour at each node """
 
 def GetCumulativePerimeters(Contour):
+    """
+    Generate a list of cumulative "perimeters" of a contour.
+    
+    Inputs:
+        Contour  - A list of contour points.
+        
+    Returns:
+        CumPerim - A list of cumulative "perimeters" of the contour.
+    """
     
     #print(f'len(Contour) = {len(Contour)}')
     
@@ -250,6 +411,16 @@ def GetCumulativePerimeters(Contour):
 
 
 def NormaliseCumulativePerimeters(CumPerimeters): 
+    """
+    Normalised list of cumulative contour "perimeters".
+    
+    Inputs:
+        CumPerimeters - List of cumulative contour "perimeters".
+    
+    Returns:
+        CumPerimNorm  - List of normalised cumulative contour "perimeters".
+    """
+    
     # List comprehension is compact but not reader-friendly outside Python:
     #return [CumPerimeters[i]/CumPerimeters[-1] for i in range(len(CumPerimeters))]
     
@@ -264,8 +435,33 @@ def NormaliseCumulativePerimeters(CumPerimeters):
 
 
 def GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
-    """ Note:
-        This function is called _getInterpolatedPerim in Matt Orton's code. 
+    """ 
+    Super-sample a list of normalised cumulative "perimeters".
+    
+    Inputs:
+        CumPerimetersNorm - List of normalised cumulative contour "perimeters".
+        
+        NumNodesToAdd     - List of integers whose values are the number of 
+                            nodes to be added within each segment along the
+                            list of normalised cumulative contour perimeters.
+        
+    Returns:
+        CumSSPerimNorm    - List of super-sampled normalised cumulative contour
+                            perimeters.    
+    
+    Notes: 
+        
+        1. The first (NumNodesToAdd - 2) items in CumSSPerimNorm are the 
+        cumulative contour perimeters that ensure that a minimum desired inter-
+        node spacing is satisfied.  The -2 is due to skipping of the 0 and 1
+        since they are already covered by the first and final items in the 
+        input list CumPerimetersNorm.
+        
+        The next len(CumPerimetersNorm) items in CumSSPerimNorm are the items
+        in the input list CumPerimetersNorm (concatenated to the end of the 
+        list CumSSPerimNorm following the initial step described above).
+        
+        2. This function is called _getInterpolatedPerim in Matt Orton's code. 
     """
     
     # The inter-node spacing is:
@@ -299,9 +495,27 @@ def GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
 
 def GetIsOrigNode(Contour, NumNodesToAdd):
     """
+    Generate an array of booleans that indicate whether the nodes are original
+    or interpolated (i.e. super-sampled).
+    
+    Inputs:
+        Contour       - A list of contour points.
+        
+        NumNodesToAdd - List of integers whose values are the number of 
+                        nodes to be added within each segment along the list
+                        of normalised cumulative contour perimeters.
+                        
+    Returns:
+        IsOrigNode    - List of booleans whose values denote whether the 
+                        corresponding contour point is an original node (True)
+                        or an added node (False).
+    
+    
     Note:
-    This is called _getIndicatorArray in Matt Orton's code
+        
+        This is called _getIndicatorArray in Matt Orton's code
     """
+    
     IsOrigNode = []
     
     # The first NumNodesToAdd - 2 nodes were additional nodes added to achieve 
@@ -318,10 +532,35 @@ def GetIsOrigNode(Contour, NumNodesToAdd):
     
     
 
-def GetNodesToAddPerSegment(CumSuperSampledPerim, IsOrigNode):
+def GetNodesToAddPerSegment(CumSSPerimNorm, IsOrigNode):
+    """
+    Generate list of the number of nodes to be added for each segment of a
+    contour.
     
-    # Get the indices that sort the cumulative super-sampled perimeters:
-    Inds = [i[0] for i in sorted(enumerate(CumSuperSampledPerim), key=lambda x:x[1])]
+    Inputs:
+        CumSSPerimNorm       - List of super-sampled normalised cumulative 
+                               contour perimeters.
+        
+        IsOrigNode           - List of booleans whose values denote whether the 
+                               corresponding contour point is an original node
+                               (True) or an added node (False).
+        
+    Returns:
+        Inds                 - List of indices that sort CumSSPerimNorm in
+                               ascending order.
+                               
+        IsOrigNodeSorted     - List of IsOrigNode sorted by Inds.
+        
+        IndsOrigNodes        - List of indices of original nodes in 
+                               CumSSPerimNorm sorted by Inds.
+                               
+        NodesToAddPerSegment - A list of the integer number of nodes to be
+                               added to each original node/point.
+    """
+    
+    # Get the indices that sort the normalised cumulative super-sampled 
+    # perimeters:
+    Inds = [i[0] for i in sorted(enumerate(CumSSPerimNorm), key=lambda x:x[1])]
     
     # Order the boolean list:
     IsOrigNodeSorted = []
@@ -347,18 +586,18 @@ def GetNodesToAddPerSegment(CumSuperSampledPerim, IsOrigNode):
             IndsOrigNodes.append(i)
         
 
-    # Order the cumulative super-sampled perimeters:
+    # Order the normalised cumulative super-sampled perimeters:
     """ This is not in Matt's code """
-    #CumSSPerimSorted = [CumSuperSampledPerim[i] for i in Inds]
+    #CumSSPerimNormSorted = [CumSSPerimNorm[i] for i in Inds]
 
-    # Get the list of cumulative super-sampled perimeters for the original 
-    # nodes:
+    # Get the list of normailsed cumulative super-sampled perimeters for the
+    # original nodes:
     """ This is not in Matt's code """
-    #CumSSPerimSortedOrig = [CumSSPerimSorted[i] for i in OrigIndsSorted]
+    #CumSSPerimNormSortedOrig = [CumSSPerimNormSorted[i] for i in OrigIndsSorted]
 
     # The segment lengths are:
     """ This is not in Matt's code """
-    #SegmentL = [CumSSPerimSortedOrig[i+1] - CumSSPerimSortedOrig[i] for i in range(len(CumSSPerimSortedOrig) - 1)]
+    #SegmentL = [CumSSPerimNormSortedOrig[i+1] - CumSSPerimNormSortedOrig[i] for i in range(len(CumSSPerimNormSortedOrig) - 1)]
     
     # Initialise the list of the number of nodes to add to each segment:
     NodesToAddPerSegment = []
@@ -368,9 +607,6 @@ def GetNodesToAddPerSegment(CumSuperSampledPerim, IsOrigNode):
         
     for i in range(len(IndsOrigNodes) - 1):
         NodesToAddPerSegment.append(IndsOrigNodes[i + 1] - IndsOrigNodes[i])
-    
-    
-    
     
         
     #return NodesToAddPerSegment
@@ -382,6 +618,24 @@ def GetNodesToAddPerSegment(CumSuperSampledPerim, IsOrigNode):
     
     
 def SuperSampleContour(Contour, NodesToAddPerSegment):
+    """
+    Super-sample a contour.
+    
+    Inputs:
+        Contour              - A list of contours points.
+        
+        NodesToAddPerSegment - A list of the integer number of nodes to be 
+                               added to each original node/point in Contour.
+        
+    Returns:
+        SSContour            - A list of super-sampled (with added nodes) 
+                               contour points.
+        
+        SSIsOrigNode         - A list of booleans whose values denote whether  
+                               the corresponding contour point in SSContour is 
+                               an original node (True) or an added node (False).
+    """
+    
     # Initialise list of super-sampled contour points and the list of booleans 
     # that indicate if the point/node in the super-sampled list is original 
     # (False if the node was interpolated):
@@ -425,13 +679,7 @@ def SuperSampleContour(Contour, NodesToAddPerSegment):
 
 
 
-""" 
-Estimate the area of the surface created by linking points from Contour1 to
-points in Contour2, starting with the first point in Contour1 and a point in 
-Contour2 given by the index StartInd2, and adding up all line lengths.
 
-Note: There are N points in Contour1 and Contour2.
-"""
 
 #def IntegrateLineLengths(Contour1, Contour2, StartInd2):
 #    
@@ -467,7 +715,23 @@ Note: There are N points in Contour1 and Contour2.
 
 
 def IntegrateLineLengths(Contour1, Contour2):
-    """ Note: Contour1 and Contour2 must have equal lengths. """
+    """ 
+    Integrate the line lengths that connect every point in Contour1 with the
+    corresponding point in Contour2.  
+    
+    Inputs:
+        Contour1   - A list of contour points.
+        
+        Contour2   - A list of contour points.
+        
+    Returns:
+        LineLength - The sum of all line lengths that join the points in 
+                     Contour1 and Contour2.
+                     
+    Note: 
+        Contour1 and Contour2 must have equal lengths. 
+        
+    """
     
     # Initialise the cummulative line lengths:
     LineLength = 0
@@ -487,13 +751,36 @@ def IntegrateLineLengths(Contour1, Contour2):
 
 
 
-""" 
-Using the function AddLineLengths(), loop through each N possible combinations 
-of starting index StartInd2, and work out which starting index yields the 
-minimum cumulative line length.
-"""
+
 
 def FindIndForMinCumLength(Contour1, Contour2):
+    """ 
+    Determine the index for Contour2 that would minimise the integrated line
+    lengths obtained by joining the points in Contour1 to the corresponding 
+    points in Contour2 with the index shift applied to Contour2.
+    
+    Inputs:
+        Contour1 - A list of contour points.
+        
+        Contour2 - A list of contour points.
+        
+    Returns:
+        Shift    - The starting index for Contour2 that minimises the 
+                   integrated line lengths.
+    
+    
+    Note:
+        The Shift index is determined by looping through each of N possible
+        combinations of Shift index (for N points in Contour2) and applying the 
+        function IntegrateLineLengths() with those shifts. The starting index 
+        that yields the minimum cumulative line length is equivalent to 
+        minimising the surface area (i.e. catenoid) that would be formed by 
+        joining each i^th point in Contour1 to each (i + Shift)^th point in 
+        Contour 2.
+
+        https://en.wikipedia.org/wiki/Minimal_surface_of_revolution
+
+    """
     
     # Create list to store N cumulative line lengths for all N combinations of 
     # starting index for Contour2:
@@ -515,24 +802,30 @@ def FindIndForMinCumLength(Contour1, Contour2):
         LineLengths.append(LineLength)
 
     
-    # Return the index that yields the minimum cumulative line length:
-    return LineLengths.index(min(LineLengths))
+    # The index that yields the minimum cumulative line length:
+    Shift = LineLengths.index(min(LineLengths))
+    
+    return Shift
 
 
 
 
-
-""" 
-Defining Contour1 and Contour2 as the two contours, shift the points in
-Contour2 by StartInd (the amount that yields the minimum cumulative line length).
-Then the points in the Contour1 and ROContour2, when joined point-by-point, 
-will create the minimal surface area (i.e. catenoid) of the two contours:
-
-https://en.wikipedia.org/wiki/Minimal_surface_of_revolution
-"""
 
 
 def ShiftContourPoints(Contour, Shift):
+    """
+    Generate a new list of contour points by shifting the points in the 
+    original list of contour points by an integer number.
+    
+    Inputs:
+        Contour        - A list of contour points.
+        
+        Shift          - A integer value.
+        
+    Returns:
+        ShiftedContour - A list of the contour points in Contour shifted by
+                         Shift integer positions.
+    """
     
     # Initialise the shifted contour:
     ShiftedContour = []
@@ -554,6 +847,49 @@ def ShiftContourPoints(Contour, Shift):
 
 def ReduceNodesOfContours(SuperSampledContour1, SuperSampledContour2, 
                           SuperSampledIsOrigNode1, SuperSampledIsOrigNode2):
+    """
+    Reduce the number of nodes in a list of super-sampled contour points to a
+    "over-sampled" number of nodes.
+    
+    Inputs:
+        SuperSampledContour1    - A list of super-sampled contour points.
+        
+        SuperSampledContour2    - A list of super-sampled contour points.
+        
+        SuperSampledIsOrigNode1 - A list of booleans whose values denote   
+                                  whether the corresponding contour point in 
+                                  SuperSampledContour1 is an original node 
+                                  (True) or an added node (False).
+        
+        SuperSampledIsOrigNode2 - A list of booleans whose values denote   
+                                  whether the corresponding contour point in 
+                                  SuperSampledContour2 is an original node 
+                                  (True) or an added node (False).
+        
+    Returns:
+        OverSampledContour1     - A list of over-sampled contour points after 
+                                  removing of any node in SuperSampledContour1
+                                  if both that node and the corresponding node
+                                  in SuperSampledContour2 was added (i.e. not
+                                  original).
+        
+        OverSampledContour2     - A list of over-sampled contour points after 
+                                  removing of any node in SuperSampledContour2
+                                  if both that node and the corresponding node
+                                  in SuperSampledContour1 was added (i.e. not
+                                  original).
+        
+        OverSampledIsOrigNode1  - A list of booleans whose values denote   
+                                  whether the corresponding contour point in 
+                                  OverSampledContour1 is an original node 
+                                  (True) or an added node (False).
+        
+        OverSampledIsOrigNode2  - A list of booleans whose values denote   
+                                  whether the corresponding contour point in 
+                                  OverSampledContour2 is an original node 
+                                  (True) or an added node (False).
+    """
+    
     # Initialise the list of points in the over-sampled contours with some
     # nodes removed, and the corresponding IsOrigNode lists:
     OverSampledContour1 = []
@@ -577,7 +913,43 @@ def ReduceNodesOfContours(SuperSampledContour1, SuperSampledContour2,
 
 def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
                                FracInterpSliceInd, Contour1HasMorePts):
-    """ Note Contour1 and Contour2 must have equal lengths. """
+    """ 
+    Generate a list of intepolated contour points between two contours.
+    
+    Inputs:
+        Contour1            - A list of contour points.
+        
+        Contour2            - A list of contour points.
+        
+        IsOrigNode1         - A list of booleans whose values denote whether the
+                              corresponding contour point in Contour1 is an 
+                              original node (True) or an added node (False).
+                              
+        IsOrigNode2         - A list of booleans whose values denote whether the
+                              corresponding contour point in Contour1 is an 
+                              original node (True) or an added node (False).
+                              
+        FracInterpSliceInd  - A integer or float that denotes the fractional 
+                              distance of the interpolated contour's plane 
+                              within the region bounded by the planes for 
+                              Contour1 and Contour2.
+                             
+        Contour1HasMorePts  - A boolean that denotes whether or not Contour1
+                              has more points than Contour2.
+    
+    Returns:
+        InterpolatedContour - A list of interpolated contour points.
+    
+    Notes:
+        1. Contour1 and Contour2 would normally be over-sampled contours (i.e. 
+        not the original lists of contours).
+        
+        2. Contour1 and Contour2 must have equal lengths. 
+        
+        3. The fraction FracInterpSliceInd would be 0 if the interpolated 
+        contour were to coincide with the plane containing Contour1, and 1 if 
+        it were to coincide with the plane containing Contour2.
+    """
     
     N1 = len(Contour1)
     N2 = len(Contour2)
@@ -612,7 +984,10 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
                 InterpolatedContour.append([InterpX, InterpY, InterpZ])
             
         if False:
-            """ Try something different from Matt's code: """
+            """ 
+            Try something different from Matt's code - interpolate all
+            points - not only those for which IsOrigNode[i] is True: 
+            """
             InterpX = (1 - FracInterpSliceInd) * Contour1[i][0] \
                        + FracInterpSliceInd * Contour2[i][0]
                 
@@ -632,10 +1007,26 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
 """ Extra (supplementary) functions : """
 
 
-""" New function, similar to but slight modification of ReduceNodesOfContours 
-so that it operates on a single set of contour points.
-"""
+
 def ReduceNodesOfContour(Contour, IndsToKeep):
+    """
+    Reduce the number of nodes in a list of contour points.
+    
+    Inputs:
+        Contour        - A list of super-sampled contour points.
+        
+        IndsToKeep     - A list of booleans whose values denote whether the   
+                         corresponding contour point in Contour is to remain
+                         (True) or not (False).
+        
+    Returns:
+        ReducedContour - A reduced list of contour points.
+        
+        
+    Note:
+        This function is similar to ReduceNodesOfContours() but it operates on
+        a single set of contour points.
+    """
     
     ReducedContour = []
     
@@ -648,6 +1039,17 @@ def ReduceNodesOfContour(Contour, IndsToKeep):
 
 
 def GetSegmentLengths(Contour):
+    """
+    Generate a list of segment lengths for each segment in a contour.
+    
+    Inputs:
+        Contour   - A list of contour points.
+        
+    Returns:
+        SegmentLs - A list of segment lengths.
+    
+    """
+    
     # Initialise the list of segment lengths:
     SegmentLs = []
     
@@ -667,12 +1069,41 @@ def GetSegmentLengths(Contour):
 
 
 def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
+    """
+    Main function for contour interpolation.
+    
+    Inputs:
+        ContourData    - Dictionary containing the key 'InPointPCS', whose
+                         values are a list of contour points [x, y, z] 
+                         arranged along rows for each DICOM slice, and along
+                         columns for different contours (i.e. a list of lists 
+                         of lists). Slices without contours have empty list 
+                         ([]).
+                              
+        PointData      - Dictionary containing the key 'InSliceNo' whose values
+                         are a list of integers of the indices of the DICOM
+                         slices that contain contour data.
+                             
+        InterpSliceInd - The index within the DICOM image where a contour is to
+                         be interpolated; May be an integer (i.e. interpolation
+                         at an imaging plane) or a float (i.e. interpolation 
+                         between imaging planes).
+                             
+        dP             - A float denoting the desired inter-node spacing to use 
+                         when super-sampling the contours used for 
+                         interpolation.
+        
+    Returns:
+        InterpContour  - A list of interpolated contour points.
+     
+    """
+    
     import copy
     
     # Get bounding slice indices:
     BoundingSliceInds = GetBoundingSliceInds(ContourData=ContourData,
                                              PointData=PointData,
-                                             InterpInd=InterpSliceInd)
+                                             InterpSliceInd=InterpSliceInd)
     
     
     # Escape if None was returned for BoundingSliceInds (i.e. if two slice 
@@ -745,10 +1176,10 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
     
     # Get the nodes per segment:
     Inds1, IsOrigNodeSorted1, IndsOrigNodes1, NodesToAddPerSegment1\
-    = GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim1, 
+    = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim1, 
                               IsOrigNode=IsOrigNode1)
     Inds2, IsOrigNodeSorted2, IndsOrigNodes2, NodesToAddPerSegment2\
-    = GetNodesToAddPerSegment(CumSuperSampledPerim=CumSSPerim2, 
+    = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim2, 
                               IsOrigNode=IsOrigNode2)
     
     # Super-sample the contours:
@@ -839,6 +1270,11 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
 
 def PlotInterpolationResults(Contours, Labels, Colours, Shifts, InterpSliceInd, 
                              BoundingSliceInds, dP, ExportPlot):
+    """
+    Plot interpolation results.
+    
+    """
+    
     import matplotlib.pyplot as plt
     import time
     
