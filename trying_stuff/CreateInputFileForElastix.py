@@ -143,7 +143,7 @@ def CreateInputFileForElastix(Points):
     # Get working directory:
     CWD = os.getcwd()
     
-    print('Contour points exported to', os.path.join(CWD, TextFname))
+    #print('Contour points exported to', os.path.join(CWD, TextFname))
     
     #return Pts_PCS, PtsArr_PCS, PtsDict_PCS,\
     #       Pts_ICS, PtsArr_ICS, PtsDict_ICS

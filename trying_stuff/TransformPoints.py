@@ -38,6 +38,6 @@ def TransformPoints(MovingImage, TransformFilter):
     
     #CWD = os.getcwd()
     
-    print('The points in inputpoints.txt have been transformed to outputpoints.txt')
+    #print('The points in inputpoints.txt have been transformed to outputpoints.txt')
     
     return

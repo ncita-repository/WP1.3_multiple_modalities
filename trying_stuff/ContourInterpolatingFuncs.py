@@ -1175,18 +1175,26 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
     IsOrigNode2 = GetIsOrigNode(Contour=Contour2, NumNodesToAdd=NumNodesToAdd2)
     
     # Get the nodes per segment:
-    Inds1, IsOrigNodeSorted1, IndsOrigNodes1, NodesToAddPerSegment1\
-    = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim1, 
-                              IsOrigNode=IsOrigNode1)
-    Inds2, IsOrigNodeSorted2, IndsOrigNodes2, NodesToAddPerSegment2\
-    = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim2, 
-                              IsOrigNode=IsOrigNode2)
+    Inds1,\
+    IsOrigNodeSorted1,\
+    IndsOrigNodes1,\
+    NodesToAddPerSegment1 = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim1, 
+                                                    IsOrigNode=IsOrigNode1)
+    
+    Inds2,\
+    IsOrigNodeSorted2,\
+    IndsOrigNodes2,\
+    NodesToAddPerSegment2 = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerim2, 
+                                                    IsOrigNode=IsOrigNode2)
     
     # Super-sample the contours:
-    SSContour1, SSIsOrigNode1 = SuperSampleContour(Contour=Contour1, 
-                                                   NodesToAddPerSegment=NodesToAddPerSegment1)
-    SSContour2, SSIsOrigNode2 = SuperSampleContour(Contour=Contour2, 
-                                                   NodesToAddPerSegment=NodesToAddPerSegment2)
+    SSContour1,\
+    SSIsOrigNode1 = SuperSampleContour(Contour=Contour1, 
+                                       NodesToAddPerSegment=NodesToAddPerSegment1)
+    
+    SSContour2,\
+    SSIsOrigNode2 = SuperSampleContour(Contour=Contour2, 
+                                       NodesToAddPerSegment=NodesToAddPerSegment2)
     
     # Find the starting index for SSContour2 that minimises the integrated line 
     # lengths (i.e. minimal area of the surfaces created by linking points in 
@@ -1199,9 +1207,9 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
     SSIsOrigNode2Shifted = ShiftContourPoints(Contour=SSIsOrigNode2, Shift=IndMinCumL)
     
     # Remove added nodes uncommon to both original contours:
-    OSContour1, \
-    OSContour2, \
-    OSIsOrigNode1, \
+    OSContour1,\
+    OSContour2,\
+    OSIsOrigNode1,\
     OSIsOrigNode2 = ReduceNodesOfContours(SuperSampledContour1=SSContour1,
                                           SuperSampledContour2=SSContour2Shifted,
                                           SuperSampledIsOrigNode1=SSIsOrigNode1, 
@@ -1240,7 +1248,9 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP):
     
     
     
-    return InterpContour
+    #return InterpContour
+    return BoundingSliceInds, OSContour1, OSIsOrigNode1,\
+           OSContour2, OSIsOrigNode2, InterpContour
 
 
     

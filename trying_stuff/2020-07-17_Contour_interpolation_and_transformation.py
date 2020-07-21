@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[104]:
+# In[1]:
 
 
 # Import packages and functions
@@ -34,6 +34,7 @@ from GetInputPoints import GetInputPoints
 from CreateInputFileForElastix import CreateInputFileForElastix
 from RunSimpleElastixReg import RunSimpleElastixReg
 from TransformPoints import TransformPoints
+from ParseTransformixOutput import ParseTransformixOutput
 from GetOutputPoints import GetOutputPoints
 from PCStoICS import PCStoICS
 import RegUtilityFuncs as ruf
@@ -81,7 +82,7 @@ MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
 #ruf.ShowImagesInfo(FixIm, MovIm)
 
 # Register MovIm to FixIm:
-#RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
+RegIm, ElastixImFilt = RunSimpleElastixReg(FixIm, MovIm)
 
 CoordSys = 'PCS'
 #CoordSys = 'ICS'
@@ -92,7 +93,7 @@ FixPtsPCS, FixPtsBySliceAndContourPCS,FixPtsICS, FixPtsBySliceAndContourICS,LUT,
                                              Spacings=FixSpacings)
 
 
-# In[57]:
+# In[2]:
 
 
 # Convert the dictionaries into data frames:
@@ -146,7 +147,7 @@ for i in range(len(ContourData)):
         print(False)
 
 
-# In[101]:
+# In[9]:
 
 
 import ContourInterpolatingFuncs
@@ -166,7 +167,9 @@ SlicesWithContours = cif.GetIndsOfSlicesWithContours(ContourData=ContourData)
 
 print('Contours exist on slices', SlicesWithContours)
 
-InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
+#InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
+
+BoundingSliceInds,OSContour1,OSIsOrigNode1,OSContour2,OSIsOrigNode2,InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
 
 # Continue only if None was not returned for InterpContour:
 if InterpContour:
@@ -291,7 +294,9 @@ for i in range(len(SlicesWithContours) - 1):
     print(SlicesWithContours[i] + 0.5)
 
 
-# In[110]:
+# ### Same as above but iterate through all slices with contours and interpolate at the midway slice:
+
+# In[2]:
 
 
 import ContourInterpolatingFuncs
@@ -311,6 +316,18 @@ SlicesWithContours = cif.GetIndsOfSlicesWithContours(ContourData=ContourData)
 
 print('Contours exist on slices', SlicesWithContours)
 
+# Initialise a dictionary to store the interpolation results:
+InterpData = {'InterpSliceInd'       : [],
+              'BoundingSliceInds'    : [],
+              'FixOSIsOrigNode1'     : [],
+              'FixOSIsOrigNode2'     : [],
+              'FixOSContour1Inds'    : [],
+              'FixOSContour2Inds'    : [],
+              'FixInterpContourInds' : [],
+              'FixOSContour1Pts'     : [],
+              'FixOSContour2Pts'     : [],
+              'FixInterpContourPts'  : []
+              }
 
 # Iterate through all SlicesWithContours and interpolate between each
 # two slices:
@@ -320,7 +337,9 @@ for i in range(len(SlicesWithContours) - 1):
     print(f'Attempting to interpolate at slice {InterpSliceInd}...')
 
 
-    InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
+    #InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
+    
+    BoundingSliceInds,    OSContour1,    OSIsOrigNode1,    OSContour2,    OSIsOrigNode2,    InterpContour = cif.InterpolateContours(ContourData, PointData, InterpSliceInd, dP)
 
     # Continue only if None was not returned for InterpContour:
     if InterpContour:
@@ -350,6 +369,15 @@ for i in range(len(SlicesWithContours) - 1):
                                                   Origin=FixOrigin, 
                                                   Directions=FixDirs, 
                                                   Spacings=FixSpacings))
+        
+        # Store the interpolation output in InterpData:
+        InterpData['InterpSliceInd'].append(InterpSliceInd)
+        InterpData['BoundingSliceInds'].append(BoundingSliceInds)
+        InterpData['FixOSIsOrigNode1'].append(OSIsOrigNode1)
+        InterpData['FixOSIsOrigNode2'].append(OSIsOrigNode2)
+        InterpData['FixOSContour1Pts'].append(OSContour1)
+        InterpData['FixOSContour2Pts'].append(OSContour2)
+        InterpData['FixInterpContourPts'].append(InterpContour)
 
 
         """ GET ADDITIONAL DATA FOR PLOTTING """
@@ -401,20 +429,131 @@ for i in range(len(SlicesWithContours) - 1):
 # for key, values in ContourData.items():
 #     print(key, '=', values)
 
-# In[102]:
+# In[26]:
 
 
 # Convert the dictionaries into data frames:
 PointDataDF = pd.DataFrame(data=PointData)
 ContourDataDF = pd.DataFrame(data=ContourData)
+#InterpDataDF = pd.DataFrame(data=InterpData)
 
 PointDataDF
 
 
-# In[103]:
+# In[12]:
 
 
 ContourDataDF
+
+
+# In[19]:
+
+
+InterpDataDF
+
+
+# In[21]:
+
+
+len(InterpData)
+
+
+# ### Transform the contour points in InterpData (July 20)
+
+# In[28]:
+
+
+BaseKeys = ['OSContour1', 'OSContour2', 'InterpContour']
+
+FixPtsKeys = ['Fix' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+
+FixIndsKeys = ['Fix' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+
+MovPtsKeys = ['Mov' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+
+MovIndsKeys = ['Mov' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+
+
+print(BaseKeys)
+print(FixPtsKeys)
+print(FixIndsKeys)
+print(MovPtsKeys)
+print(MovIndsKeys)
+
+
+# In[3]:
+
+
+# Create lists of keys that can be looped through:
+BaseKeys = ['OSContour1', 'OSContour2', 'InterpContour']
+
+FixIndsKeys = ['Fix' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+FixPtsKeys = ['Fix' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+
+MovIndsKeys = ['Mov' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+MovPtsKeys = ['Mov' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+
+# Loop through each row in InterpData and transform the points in FixPtsKeys:
+for i in range(len(InterpData['InterpSliceInd'])):
+    
+    
+    for k in range(len(FixPtsKeys)):
+        Points = InterpData[FixPtsKeys[k]][i]
+        
+        # Create inputpoints.txt for Elastix, containing the contour points to be
+        # transformed:
+        CreateInputFileForElastix(Points=Points)
+
+        # Transform MovingContourPts:
+        TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
+
+        # Parse outputpoints.txt:
+        PtNos, FixInds, FixPts_PCS,        FixOutInds, MovPts_PCS,        Def_PCS, MovInds = ParseTransformixOutput()
+        
+        # Initialise the keys to be added to InterpData:
+        #InterpData.update({MovIndsKeys[k] : [],
+        #                   MovPtsKeys[k]  : []
+        #                   })
+        
+        # Append the transformed results to InterpData:
+        InterpData[FixIndsKeys[k]].append(FixInds) # the indices of the input (fixed) points
+        #InterpData[MovIndsKeys[k]].append(MovInds) # the indices of the output (moving/transformed) points
+        #InterpData[MovPtsKeys[k]].append(MovPts_PCS) # the output (moving/transformed) points
+        
+        # Get list of keys in InterpData:
+        keys = list(InterpData.keys())
+        
+        if MovIndsKeys[k] in keys:
+            InterpData[MovIndsKeys[k]].append(MovInds) # the indices of the output (moving/transformed) points
+        else:
+            InterpData.update({MovIndsKeys[k] : [MovInds]}) # the indices of the output (moving/transformed) points
+            
+        if MovPtsKeys[k] in keys:
+            InterpData[MovPtsKeys[k]].append(MovPts_PCS) # the output (moving/transformed) points
+        else:
+            InterpData.update({MovPtsKeys[k] : [MovPts_PCS]}) # the output (moving/transformed) points
+
+
+# In[4]:
+
+
+for key, values in InterpData.items():
+    print(key, f'has {len(values)} items in list')
+
+
+# In[5]:
+
+
+# Convert the InterpData into a data frame:
+InterpDataDF = pd.DataFrame(data=InterpData)
+
+InterpDataDF
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
