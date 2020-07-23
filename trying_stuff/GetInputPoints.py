@@ -176,23 +176,23 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
     
     # Convert the LUT to a dictionary:
     PointData = {
-                 'PointNo'      : [LUT[i][0] for i in range(P)], 
-                 'InSliceNo'    : [LUT[i][1] for i in range(P)], 
-                 'InContourNo'  : [LUT[i][2] for i in range(P)],
-                 'ContourType'  : [LUT[i][3] for i in range(P)],
-                 'InPointIndex' : [LUT[i][4] for i in range(P)],
-                 'InPointPCS'   : [LUT[i][5] for i in range(P)],
-                 'InPointICS'   : [LUT[i][6] for i in range(P)]
+                 'PointNo'       : [LUT[i][0] for i in range(P)], 
+                 'InSliceNo'     : [LUT[i][1] for i in range(P)], 
+                 'InContourNo'   : [LUT[i][2] for i in range(P)],
+                 'InContourType' : [LUT[i][3] for i in range(P)],
+                 'InPointIndex'  : [LUT[i][4] for i in range(P)],
+                 'InPointPCS'    : [LUT[i][5] for i in range(P)],
+                 'InPointICS'    : [LUT[i][6] for i in range(P)]
                  } 
     
-    # Create a dictionary to store contour data arranged by slices and 
-    # contours:
-    ContourData = {
-                   'InSliceNo'   : SliceNos, 
-                   'ContourType' : ContourTypeBySlice,
-                   'InPointPCS'  : PtsBySliceAndContourPCS,
-                   'InPointICS'  : PtsBySliceAndContourICS
-                   } 
+    # Create a dictionary to store the contour data for the Fixed image
+    # (input points) arranged by slices and contours:
+    FixContourData = {
+                      'SliceNo'     : SliceNos, 
+                      'ContourType' : ContourTypeBySlice,
+                      'PointPCS'    : PtsBySliceAndContourPCS,
+                      'PointICS'    : PtsBySliceAndContourICS
+                      } 
     
           
     #print(len(SliceNos))
@@ -200,4 +200,4 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
     
     return PtsPCS, PtsBySliceAndContourPCS,\
            PtsICS, PtsBySliceAndContourICS,\
-           LUT, PointData, ContourData
+           LUT, PointData, FixContourData

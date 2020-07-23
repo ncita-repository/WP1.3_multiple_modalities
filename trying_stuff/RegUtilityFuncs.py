@@ -1527,7 +1527,8 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
                                                                  export_fname,
                                                                  plot_slices,
                                                                  perspective,
-                                                                 contours_as):
+                                                                 contours_as,
+                                                                 LogToConsole):
     
     #use_matplotlib = True
     #use_plotly = False
@@ -1545,10 +1546,11 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
     mov_dims = [mov_shape[i] for i in [1, 2, 0]]
     #reg_dims = [reg_shape[i] for i in [1, 2, 0]]
     
-    #print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {reg_dims}')
-    print(f'Fixed image dims      = {fix_dims}')
-    print(f'Moving image dims     = {mov_dims}')
-    print(f'Registered image dims = {fix_dims}')
+    if LogToConsole: 
+        #print(f'\nFixed dims = {fix_dims}\nMoving dims = {mov_dims}\nRegistered dims = {reg_dims}')
+        print(f'Fixed image dims      = {fix_dims}')
+        print(f'Moving image dims     = {mov_dims}')
+        print(f'Registered image dims = {fix_dims}')
     
     fix_orig = fix_im.GetOrigin()
     mov_orig = mov_im.GetOrigin()
@@ -1573,10 +1575,10 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
     mov_Ncontours = 0
     
     for s in range(len(fix_pts)):
-        fix_Ncontours = fix_Ncontours + len(fix_pts[s])
+        fix_Ncontours += len(fix_pts[s])
         
     for s in range(len(fix_pts)):
-        mov_Ncontours = mov_Ncontours + len(mov_pts[s])
+        mov_Ncontours += len(mov_pts[s])
     
     
     # Generate random colours for every contour in fix_pts and mov_pts:
@@ -1693,8 +1695,9 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
         
         return
     
-    print('\nfix_inds =', fix_inds)
-    print('\nmov_inds =', mov_inds)
+    if LogToConsole:
+        print('\nfix_inds =', fix_inds)
+        print('\nmov_inds =', mov_inds)
     
     # Combine the data for fixed, moving and registered images in a list:
     inds = [fix_inds, mov_inds, fix_inds]
@@ -1715,7 +1718,10 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
     #print(f'\nmov_inds (N = {len(mov_inds)}) =', mov_inds)
 
     # Create a figure with two subplots and the specified size:
-    plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+    if export_fig:
+        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows), dpi=300)
+    else:
+        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
     #if use_matplotlib:
     #    plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
     #    
@@ -1803,38 +1809,81 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
                 
                 # Plot contours (currently for axial view only):
                 if perspective == 'axial':
+                    # Get the shape of the contour data for this slice:
+                    DataShape = np.array(pts[ind]).shape
+                    
+                    LenDataShape = len(DataShape)
+                    
+                    if LogToConsole:
+                        print(f'\nDataShape = {DataShape}')
+                        print(f'LenDataShape = {LenDataShape}')
+                    
+                    """
+                    Note (July 23):
+                        The following logic was developed for contour data that
+                        consists of at most a single contour for any given
+                        slice. It needs to be verified for other data sets.
+                    """
+                    
+                    if DataShape[0] == 0:
+                        Ncontours = 0
+                        Npoints = 0
+                    
+                    elif LenDataShape == 3:
+                        """
+                        e.g. (1, 117, 3) -> This slice has 1 contour consisting
+                        of 117 points with 3 dimensions per point.
+                        """
+                        Ncontours = DataShape[0]
+                        Npoints = DataShape[1]
+                        
+                    else:
+                        print(f'\nNot sure what it means for DataShape = {DataShape}.')
+                        return
+                        
+                    
+                    
                     # Get the number of contours for this slice:
-                    Ncts = len(pts[ind])
+                    #Ncts = len(pts[ind])
                     
-                    print('\ntxt =', txt)
+                    if LogToConsole:
+                        print('\ntxt =', txt)
                     
-                    print('\nind =', ind)
-                    
-                    print(f'\nNcts = {Ncts}')
-                    
-                    print(f'\npts[ind={ind}] =\n\n', pts[ind])
+                        print('\nind =', ind)
+                        
+                        #print(f'\nNcts = {Ncts}')
+                        print(f'\nNcontours[ind={ind}] = {Ncontours}')
+                        
+                        #print(f'\npts[ind={ind}] =\n\n', pts[ind])
+                        print(f'\nNpoints[ind={ind}] = {Npoints}')
                     
                     # Plot contours if Ncts is not 0:
-                    if Ncts:
+                    #if Ncts:
+                    # Plot contours if Ncontours != 0:
+                    if Ncontours:
                         # Loop through each array of contour points:
-                        for c in range(Ncts):
+                        for c in range(Ncontours):
                             # Generate a random colour for this contour:
                             fixreg_colour = [item/255 for item in list(np.random.choice(range(256), size=3))]
+                            fixreg_colour = [1, 0, 0] # red
                             
                             mov_colour = [item/255 for item in list(np.random.choice(range(256), size=3))]
+                            mov_colour = [1, 0, 0] # red
         
                             # Number of points in this contour:
                             Npts = len(pts[ind][c])
                             
-                            # Unpack tuple and store each x,y tuple in arrays 
-                            # X and Y:
+                            # Initialise lists of x and y coordinates: 
                             X = []
                             Y = []
                             
-                            print(f'\nNpts[ind={ind}][c={c}] = {Npts}')
+                            if LogToConsole:
+                                print(f'\nNpts[ind={ind}][c={c}] = {Npts}')
                             
-                            print(f'\npts[ind={ind}][c={c}] =\n\n', pts[ind][c])
+                                print(f'\npts[ind={ind}][c={c}] =\n\n', pts[ind][c])
                             
+                            # Unpack tuple of x,y,z coordinates and store in
+                            # lists X and Y:
                             for x, y, z in pts[ind][c]:
                                 X.append(x)
                                 Y.append(y)
