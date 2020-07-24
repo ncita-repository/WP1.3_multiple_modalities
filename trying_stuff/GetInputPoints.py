@@ -90,36 +90,48 @@ Returns:
 
 
 
-def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
+#def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings): # July 24
+def GetInputPoints(FixedDicomDir, FixedRoiFpath):
     # Import packages:
     #import os
     #import SimpleITK as sitk
     #import pydicom
     #from GetDicoms import GetDicoms
-    import importlib
-    import PCStoICS
-    importlib.reload(PCStoICS)
+    #import importlib
+    #import PCStoICS
+    #importlib.reload(PCStoICS)
     from PCStoICS import PCStoICS
     #import RegUtilityFuncs as ruf
-    import GetContourPtsForDicoms
-    importlib.reload(GetContourPtsForDicoms)
+    #import GetContourPtsForDicoms
+    #importlib.reload(GetContourPtsForDicoms)
     from GetContourPtsForDicoms import GetContourPtsForDicoms
-    #from GetImageAttributes import GetImageAttributes
+    from GetImageAttributes import GetImageAttributes
     
     
     # Get the contour points:    
-    PtsPCS, PtsBySliceAndContourPCS, LUT = GetContourPtsForDicoms(DicomDir, 
-                                                                  RoiFpath)
+    PtsPCS, PtsBySliceAndContourPCS, LUT = GetContourPtsForDicoms(FixedDicomDir, 
+                                                                  FixedRoiFpath)
     
     P = len(PtsPCS)
     S = len(PtsBySliceAndContourPCS)
     
     # List of slice numbers:
     SliceNos = list(range(S))
+    
+    
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+
+    # Get the Image Attributes for the Fixed image:
+    FixOrigin, FixDirs,\
+    FixSpacings, FixDims = GetImageAttributes(DicomDir=FixedDicomDir, 
+                                              Package=package)
+
 
     # Convert points in Pts_PCS from PCS to ICS:
-    PtsICS = PCStoICS(Pts_PCS=PtsPCS, Origin=Origin, 
-                      Directions=Directions, Spacings=Spacings)
+    PtsICS = PCStoICS(Pts_PCS=PtsPCS, Origin=FixOrigin, 
+                      Directions=FixDirs, Spacings=FixSpacings)
 
     
     # Initialise list of converted points in PtsBySliceAndContourPCS from PCS 
@@ -139,9 +151,9 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
             # Loop through each contour of points:
             for PtsThisContourPCS in PtsThisSlicePCS:
                 PtsThisContourICS = PCStoICS(Pts_PCS=PtsThisContourPCS, 
-                                             Origin=Origin, 
-                                             Directions=Directions, 
-                                             Spacings=Spacings)
+                                             Origin=FixOrigin, 
+                                             Directions=FixDirs, 
+                                             Spacings=FixSpacings)
         
                 PtsThisSliceICS.append(PtsThisContourICS)
                
@@ -164,8 +176,8 @@ def GetInputPoints(DicomDir, RoiFpath, Origin, Directions, Spacings):
         
         #PtICS = PCStoICS(Pts_PCS=[PtPCS], Origin=Origin,
         #                 Directions=Directions, Spacings=Spacings)
-        PtICS = PCStoICS(Pts_PCS=PtPCS, Origin=Origin,
-                         Directions=Directions, Spacings=Spacings)
+        PtICS = PCStoICS(Pts_PCS=PtPCS, Origin=FixOrigin,
+                         Directions=FixDirs, Spacings=FixSpacings)
         
         #print('PtICS =', PtICS[0])
         

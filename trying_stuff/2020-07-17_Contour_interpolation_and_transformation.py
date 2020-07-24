@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[16]:
 
 
 # Import packages and functions
@@ -88,9 +88,12 @@ CoordSys = 'PCS'
 #CoordSys = 'ICS'
 
 # Get contour points into necessary arrays:
-FixPtsPCS, FixPtsBySliceAndContourPCS,FixPtsICS, FixPtsBySliceAndContourICS,LUT, PointData, FixContourData = GetInputPoints(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath,
-                                                Origin=FixOrigin, Directions=FixDirs,
-                                                Spacings=FixSpacings)
+#FixPtsPCS, FixPtsBySliceAndContourPCS,\
+#FixPtsICS, FixPtsBySliceAndContourICS,\
+#LUT, PointData, FixContourData = GetInputPoints(DicomDir=FixDicomDir, RoiFpath=FixRoiFpath,
+#                                                Origin=FixOrigin, Directions=FixDirs,
+#                                                Spacings=FixSpacings)
+FixPtsPCS, FixPtsBySliceAndContourPCS,FixPtsICS, FixPtsBySliceAndContourICS,LUT, PointData, FixContourData = GetInputPoints(FixedDicomDir=FixDicomDir, FixedRoiFpath=FixRoiFpath)
 
 
 # In[2]:
@@ -283,7 +286,7 @@ if InterpContourPCS:
     #Shifts = [0, 2, 4, 6] # to help visualise
     #Shifts = [0, 0, 0, 0] # no shift
 
-    Contours = [Contour1, Contour2, InterpContour]
+    Contours = [Contour1, Contour2, InterpContourPCS]
     Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
               f'Contour at slice {BoundingSliceInds[1]}', 
               f'Interpolated contour at {InterpSliceInd}']
@@ -312,7 +315,7 @@ for i in range(len(SlicesWithContours) - 1):
 
 # ### Same as above but iterate through all slices with contours and interpolate at the midway slice:
 
-# In[4]:
+# In[5]:
 
 
 import ContourInterpolatingFuncs
@@ -463,13 +466,13 @@ for i in range(len(SlicesWithContours) - 1):
 # for key, values in ContourData.items():
 #     print(key, '=', values)
 
-# In[5]:
+# In[6]:
 
 
 # Convert the dictionaries into data frames:
 PointDataDF = pd.DataFrame(data=PointData)
 FixContourDataDF = pd.DataFrame(data=FixContourData)
-#InterpDataDF = pd.DataFrame(data=InterpData)
+#InterpDataDF = pd.DataFrame(data=InterpData) # ValueError: arrays must all be same length
 
 PointDataDF
 
@@ -480,10 +483,11 @@ PointDataDF
 FixContourDataDF
 
 
-# In[13]:
+# In[35]:
 
 
 #InterpDataDF
+InterpData
 
 
 # In[21]:
@@ -493,27 +497,6 @@ len(InterpData)
 
 
 # ### Transform the contour points in InterpData (July 20)
-
-# In[28]:
-
-
-BaseKeys = ['OSContour1', 'OSContour2', 'InterpContour']
-
-FixPtsKeys = ['Fix' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
-
-FixIndsKeys = ['Fix' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
-
-MovPtsKeys = ['Mov' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
-
-MovIndsKeys = ['Mov' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
-
-
-print(BaseKeys)
-print(FixPtsKeys)
-print(FixIndsKeys)
-print(MovPtsKeys)
-print(MovIndsKeys)
-
 
 # In[7]:
 
@@ -526,6 +509,24 @@ FixPtsKeys = ['Fix' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
 
 MovIndsKeys = ['Mov' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
 MovPtsKeys = ['Mov' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+
+#print(BaseKeys)
+#print(FixPtsKeys)
+#print(FixIndsKeys)
+#print(MovPtsKeys)
+#print(MovIndsKeys)
+
+# Initialise the additional keys to be added to InterpData (this isn't
+# required but ensures that the keys are added in the same order for
+# Mov as for Fix):
+InterpData.update({
+                   'MovOSContour1Inds':[],
+                   'MovOSContour2Inds':[],
+                   'MovInterpContourInds':[],
+                   'MovOSContour1Pts':[],
+                   'MovOSContour2Pts':[],
+                   'MovInterpContourPts':[]
+                   })
 
 # Loop through each row in InterpData and transform the points in FixPtsKeys:
 for i in range(len(InterpData['InterpSliceInd'])):
@@ -568,7 +569,7 @@ for i in range(len(InterpData['InterpSliceInd'])):
             InterpData.update({MovPtsKeys[k] : [MovPts_PCS]}) # the output (moving/transformed) points
 
 
-# In[56]:
+# In[37]:
 
 
 for key, values in InterpData.items():
@@ -697,7 +698,10 @@ for i in range(len(InterpData['InterpSliceInd'])):
     print('len Contour2      =', len(InterpData['MovOSContour2Pts'][i]), '\n\n')
 
 
-# In[11]:
+# ### Get the contours in the moving planes (i.e. the intersection of the lines that join each over-sampled-to-interpolated contour #1 to each imaging plane, and likewise for each interpolated-to-over-sampled contour #2)
+
+# In[9]:
+
 
 
 import GetLinePlaneIntersection
@@ -809,7 +813,7 @@ IntersContoursPCS
 FixContourDataDF
 
 
-# In[15]:
+# In[12]:
 
 
 # Create a dictionary to store contour points for Moving image (obtained by
@@ -884,12 +888,32 @@ MovContourData = {
                    }
 
 
-# In[16]:
+# In[14]:
 
 
 MovContourDataDF = pd.DataFrame(data=MovContourData)
 
 MovContourDataDF
+
+
+# In[23]:
+
+
+FixSlicesWithContours = cif.GetIndsOfSlicesWithContours(FixContourData, 1)
+MovSlicesWithContours = cif.GetIndsOfSlicesWithContours(MovContourData, 3)
+
+print(f'There are {len(FixSlicesWithContours)} slices in the Fixed image domain containing',
+      f'contours, and {len(MovSlicesWithContours)} in the Moving image domain.')
+
+print(FixSlicesWithContours)
+print(MovSlicesWithContours)
+print(list(set(FixSlicesWithContours + MovSlicesWithContours)))
+
+
+# In[ ]:
+
+
+
 
 
 # In[30]:

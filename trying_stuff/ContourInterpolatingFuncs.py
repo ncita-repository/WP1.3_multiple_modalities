@@ -8,84 +8,150 @@ Created on Mon Jul 13 09:50:23 2020
 
 
 """ 
+
+******************************************************************************
+******************************************************************************
 Contour interpolating functions
+******************************************************************************
+******************************************************************************
 
 
 The following dictionaries are used as inputs to some of the following 
 functions and are appended to by others:
+   
+***************
+FixContourData:
+***************
+
+A dictionary of the contour points belonging to the Fixed (input) image, 
+containing the keys:
+
     
-FixContourData - Dictionary of the contour points belonging to the Fixed 
-(input) image, containing the keys:
-    
-              'SliceNo'     - List of integers (for original contour points) or
-                              floats (for interpolated contours that correspond
-                              to non-imaged planes, e.g. slice interpolated at
-                              2.5 in between slices 2 and 3).
-                              
-              'ContourType' - List of integers for each DICOM slice; 
-                              The integer value denotes whether there is or is
-                              not contour data for any given slice, and if 
-                              there is, whether it is an original contour,
-                              an interpolated contour, or transformed contour.
-                              0 -> No contour points 
-                              1 -> Original contour points
-                              2 -> Interpolated contour points
-                              3 -> Transformed contour points
-                              
-              'PointPCS'    - List of input points in the Patient Coordinate 
-                              System if contour data exists for any given slice 
-                              (e.g. [[x0, y0, z0], [x1, y1, z1], ...], i.e. a 
-                              list of lists of lists), or [] if not.
-                            
-              'PointICS'    - Same as 'PointPCS' but with points in the
-                              Image Coordinate System.
+  'SliceNo'     - List of integers (for original contour points) or floats (for
+                  interpolated contours that correspond to non-imaged planes,
+                  e.g. slice interpolated at 2.5 in between slices 2 and 3).
+                  
+  'ContourType' - List of integers for each DICOM slice; 
+                  The integer value denotes whether there is or is not contour 
+                  data for any given slice, and if there is, whether it is an
+                  original contour, an interpolated contour, or transformed 
+                  contour.
+                  0 -> No contour points 
+                  1 -> Original contour points
+                  2 -> Interpolated contour points
+                  3 -> Transformed contour points
+                  
+  'PointPCS'    - List of input points in the Patient Coordinate System if 
+                  contour data exists for any given slice, e.g.:
+                  [[x0, y0, z0], [x1, y1, z1], ...], 
+                  i.e. a list of lists of lists), or [] if not.
+                
+  'PointICS'    - Same as 'PointPCS' but with points in the Image Coordinate
+                  System.
 
               
-                              
-PointData   - Dictionary containing the keys:
+**********                          
+PointData:
+**********        
+
+A dictionary containing the keys:
     
-              'PointNo'      - List of integers of all points in ContourData.
-              
-              'InSliceNo'    - List of integers (for original contour points) 
-                               or floats (for interpolated contours that 
-                               correspond to non-imaged planes, e.g. slice 
-                               interpolated at 2.5 in between slices 2 and 3).
-                              
-              'InContourNo'  - List of integers of the contour number each 
-                               point belongs to from the input image.
-              
-              'ContourType'  - List of integers for each DICOM slice; 
-                               The integer value denotes whether there is or is
-                               not contour data for any given slice, and if 
-                               there is, whether it is an original contour,
-                               an interpolated contour, or transformed contour.
-                               0 -> No contour points 
-                               1 -> Original contour points
-                               2 -> Interpolated contour points
-                               3 -> Transformed contour points
-                              
-              'InPointIndex' - List of indeces [x, y, z] for each point in the
-                               input image.
-                              
-              'InPointPCS'   - List of points in the Patient Coordinate System 
-                               if contour data exists for any given slice (e.g. 
-                               [[x0, y0, z0], [x1, y1, z1], ...], i.e. a list  
-                               of lists of lists), or [] if not.
-                            
-              'InPointICS'   - Same as 'InPointPCS' but with points in the
-                               Image Coordinate System.
-                               
-              'OutPointIndex - Like 'InPointIndex' but for the output/
-                               transformed image.
-                               
-              'OutPointPCS'  - Like 'InPointPCS' but for the output/transformed
-                              image.
-                            
-              'OutPointICS' - Same as 'OutPointPCS' but with points in the 
-                              Image Coordinate System.
+  'PointNo'      - List of integers of all points in ContourData.
+  
+  'InSliceNo'    - List of integers (for original contour points) or floats 
+                   (for interpolated contours that correspond to non-imaged
+                   planes, e.g. slice interpolated at 2.5 in between slices
+                   2 and 3).
+                  
+  'InContourNo'  - List of integers of the contour number each point belongs to
+                   from the input image.
+  
+  'ContourType'  - List of integers for each DICOM slice; 
+                   The integer value denotes whether there is or is not contour
+                   data for any given slice, and if there is, whether it is an 
+                   original contour, an interpolated contour, or transformed 
+                   contour.
+                   0 -> No contour points 
+                   1 -> Original contour points
+                   2 -> Interpolated contour points
+                   3 -> Transformed contour points
+                  
+  'InPointIndex' - List of indeces [x, y, z] for each point in the input image.
+                   
+                  
+  'InPointPCS'   - List of points in the Patient Coordinate System if contour 
+                   data exists for any given slice, e.g.:
+                   [[x0, y0, z0], [x1, y1, z1], ...], 
+                   i.e. a list of lists of lists), or [] if not.
+                
+  'InPointICS'   - Same as 'InPointPCS' but with points in the Image 
+                   Coordinate System.
+                   
+  'OutPointIndex - Like 'InPointIndex' but for the output/transformed image.
+                   
+  'OutPointPCS'  - Like 'InPointPCS' but for the output/transformed image.
+                
+  'OutPointICS' - Same as 'OutPointPCS' but with points in the Image
+                  Coordinate System.
+           
+            
+***********
+InterpData:
+***********
+    
+A dictionary containing the keys:
+    
+  'InterpSliceInd'       - A list of the indices of the interpolated slices 
+                          (can be floats if interpolating between two 
+                          neighbouring slices), e.g.: [13.5, 14.5, ...]
+                          
+  'BoundingSliceInds'    - A list of a list of the indices of the nearest 
+                           slices that surround the plane to be interpolated, 
+                           e.g.: [ [13, 14], [14, 15], ...]
+                           
+  'FixOSIsOrigNode1'     - A list of booleans whose value denotes whether the 
+                           point/node in the list FixOSContour1Pts were 
+                           original (True) or added (False).
+                           
+  'FixOSIsOrigNode2'     - Like FixOSIsOrigNode1 but for FixOSContour2Pts.
+  
+  'FixOSContour1Inds'    - A list of a list of [x, y, z] indices for each point
+                           in FixOSContour1Pts.
+                           
+  'FixOSContour2Inds'    - Like FixOSContour1Inds but for FixOSContour2Pts.
+  
+  'FixInterpContourInds' - Like FixOSContour1Inds but for FixInterpContourPts.
+  
+  'FixOSContour1Pts'     - A list of a list of [x, y, z] coordinates for each
+                           point in the over-sampled Contour1 for the Fixed 
+                           image.
+                           
+  'FixOSContour2Pts'     - Like FixOSContour2Pts but for Contour2.
+  
+  'FixInterpContourPts'  - Like FixOSContour2Pts but for the contour 
+                           interpolated from FixOSContour1Pts and 
+                           FixOSContour2Pts. 
+                           
+  'MovOSContour1Inds'    - Like FixOSContour1Inds but for MovOSContour1Pts.
+  
+  'MovOSContour2Inds'    - Like FixOSContour1Inds but for MovOSContour2Pts.
+  
+  'MovInterpContourInds' - Like FixOSContour1Inds but for MovInterpContourPts.
+  
+  'MovOSContour1Pts'     - A list of a list of [x, y, z] coordinates for each
+                           point in FixOSContour1Pts transformed to the Moving
+                           image domain.
+                           
+  'MovOSContour2Pts'     - Like MovOSContour1Pts but for the transformation of
+                           FixOSContour2Pts.
+                           
+  'MovInterpContourPts'  - Like MovOSContour1Pts but for the transformation of
+                           FixInterpContourPts.
+                           
 
 
 Note:
+*****
     PointData is a flat dictionary, that contains contour data on a 
     point-by-point basis.
     
@@ -93,48 +159,79 @@ Note:
     arranged on a slice-by-slice and contour-by-contour basis for all slices
     within the input DICOM image (including slices that do not contain any
     contour data).
+    
+    Many of the functions below were adapted from Matt Orton's JavaScript code
+    (https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat/src/master/Packages/icr-peppermint-tools/client/lib/util/freehandInterpolate/),
+    which evidentally were adapted from James Petts' (C-based?) code.
+    
 """
 
 
-def GetIndsOfSlicesWithContours(ContourData):
+
+
+
+def GetIndsOfSlicesWithContours(ContourData, ContourType):
     """
-    Get the indices of the rows (slices) within ContourData that contain a 
+    Get the indices of the rows (slices) within FixContourData that contain a 
     single list of contour points (i.e. only one contour per slice).
     
     Inputs:
-        ContourData         - Dictionary containing the key 'PointPCS', 
-                              whose values are a list of contour points 
-                              [x, y, z] arranged along rows for each DICOM 
-                              slice, and along columns for different contours 
-                              (i.e. a list of lists of lists). 
-                              Slices without contours have empty list ([]).
+        ContourData        - Dictionary containing the key 'PointPCS', whose
+                             values are a list of contour points [x, y, z] 
+                             arranged along rows for each DICOM slice, and 
+                             along columns for different contours (i.e. a list 
+                             of lists of lists). Slices without contours have 
+                             an empty list ([]).
+                             
+        ContourType        - Integer that denotes what type of contour to 
+                             include in the list SlicesWithContours.
+                             Acceptable values are:
+                                 1  -> Original contours only
+                                 2  -> Interpolated contours only
+                                 3  -> Interpolated, transformed contours that
+                                       intersect the Moving image planes only
+                                 -1 -> Any contours
                       
     Returns:
         SlicesWithContours - List of integers of the indices (row numbers) in
-                             ContourData that contains a single list of contour
-                             points.
+                             FixContourData that contains a single list of 
+                             contour points.
     """
     
     # Initialise list of indices of the slices that contain contours:
     SlicesWithContours = []
     
     for i in range(len(ContourData['ContourType'])):
-        if ContourData['ContourType'][i] == 1:
+        if ContourType == -1 and ContourData['ContourType'][i] > 0:
             SlicesWithContours.append(i)
             
-    # Reduce to list of unique indices:
-    SlicesWithContours = list(set(SlicesWithContours))
+        else:
+            if ContourData['ContourType'][i] == ContourType:
+                SlicesWithContours.append(i)
+        
+    
+    if SlicesWithContours:
+        # Reduce to list of unique indices:
+        SlicesWithContours = list(set(SlicesWithContours))
+        
+    else:
+        # Print warning to console if SlicesWithContours = []:
+        print(f'No slices in ContourData found with ContourType = {ContourType}')
+        
             
     return SlicesWithContours
 
 
-def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
+
+
+
+def GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd):
     """ 
-    Get the slice indices (row numbers) in ContourData of the nearest slices 
+    Get the slice indices (row numbers) in FixContourData of the nearest slices 
     that bound the slice to be interpolated.
     
     Inputs:
-        ContourData         - Dictionary containing the key 'PointPCS', 
+        FixContourData      - Dictionary containing the key 'PointPCS', 
                               whose values are a list of contour points 
                               [x, y, z] arranged along rows for each DICOM 
                               slice, and along columns for different contours 
@@ -152,8 +249,8 @@ def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
                       
     Returns:
         BoundingSliceInds  - List of integers of the indices (row numbers) in
-                             ContourData that contains a single list of contour
-                             points.
+                             FixContourData that contains a single list of 
+                             contour points.
     
         
     Notes:
@@ -203,11 +300,11 @@ def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
         # contour:
         if False:
             for i in range(InterpSliceInd - 1, min(SlicesWithContours) - 1, -1):
-                #print(f'\nContourData['InPointPCS'][{i}] =', ContourData['InPointPCS'][i])
-                #print(f'\nlen(ContourData['InPointPCS'][{i}]) = {len(ContourData['InPointPCS'][i])}')
+                #print(f'\nFixContourData['InPointPCS'][{i}] =', FixContourData['InPointPCS'][i])
+                #print(f'\nlen(FixContourData['InPointPCS'][{i}]) = {len(FixContourData['InPointPCS'][i])}')
                 
-                if len(ContourData['PointPCS'][i]) == 1:
-                    #print(f'\nlen(ContourData['PointPCS'][{i}]) == 1')
+                if len(FixContourData['PointPCS'][i]) == 1:
+                    #print(f'\nlen(FixContourData['PointPCS'][{i}]) == 1')
                     #print(f'Appending {i} to BoundingSliceInds')
                     
                     BoundingSliceInds.append(i)
@@ -222,7 +319,7 @@ def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
         FloorInterpInd = int(InterpSliceInd//1)
         
         for i in range(FloorInterpInd, min(SlicesWithContours) - 1, -1):
-            if len(ContourData['PointPCS'][i]) == 1:
+            if len(FixContourData['PointPCS'][i]) == 1:
                 # Append i to BoundingSliceInds if i != InterpSliceInd (which 
                 # could arise if InterpSliceInd is an integer):
                 if i != InterpSliceInd:
@@ -243,12 +340,12 @@ def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
         # contour:
         if False:
             for i in range(InterpSliceInd + 1, max(SlicesWithContours) + 1):
-                #print(f'\nContourData['PointPCS'][{i}] =', ContourData['PointPCS'][i])
-                #print(f'\nlen(ContourData['PointPCS'][{i}]) = {len(ContourData['PointPCS'][i])}')
+                #print(f'\nFixContourData['PointPCS'][{i}] =', FixContourData['PointPCS'][i])
+                #print(f'\nlen(FixContourData['PointPCS'][{i}]) = {len(FixContourData['PointPCS'][i])}')
                 #print(f'Appending {i} to BoundingSliceInds')
                 
-                if len(ContourData['PointPCS'][i]) == 1:
-                    #print(f'\nlen(ContourData['PointPCS'][{i}]) == 1')
+                if len(FixContourData['PointPCS'][i]) == 1:
+                    #print(f'\nlen(FixContourData['PointPCS'][{i}]) == 1')
                     #print(f'Appending {i} to BoundingSliceInds')
                     
                     BoundingSliceInds.append(i)
@@ -263,7 +360,7 @@ def GetBoundingSliceInds(ContourData, PointData, InterpSliceInd):
         CeilInterpInd = int(-(-InterpSliceInd//1))
         
         for i in range(CeilInterpInd, max(SlicesWithContours) + 1):
-            if len(ContourData['PointPCS'][i]) == 1:
+            if len(FixContourData['PointPCS'][i]) == 1:
                  # Append i to BoundingSliceInds if i != InterpSliceInd (which 
                  # could arise if InterpInd is an integer):
                 if i != InterpSliceInd:
@@ -1019,77 +1116,16 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
 
 
 
-""" Extra (supplementary) functions : """
 
 
 
-def ReduceNodesOfContour(Contour, IndsToKeep):
-    """
-    Reduce the number of nodes in a list of contour points.
-    
-    Inputs:
-        Contour        - A list of super-sampled contour points.
-        
-        IndsToKeep     - A list of booleans whose values denote whether the   
-                         corresponding contour point in Contour is to remain
-                         (True) or not (False).
-        
-    Returns:
-        ReducedContour - A reduced list of contour points.
-        
-        
-    Note:
-        This function is similar to ReduceNodesOfContours() but it operates on
-        a single set of contour points.
-    """
-    
-    ReducedContour = []
-    
-    for i in range(len(Contour)):
-        if IndsToKeep[i]:
-            ReducedContour.append(Contour[i])
-            
-    return ReducedContour
-
-
-
-def GetSegmentLengths(Contour):
-    """
-    Generate a list of segment lengths for each segment in a contour.
-    
-    Inputs:
-        Contour   - A list of contour points.
-        
-    Returns:
-        SegmentLs - A list of segment lengths.
-    
-    """
-    
-    # Initialise the list of segment lengths:
-    SegmentLs = []
-    
-    # Loop through each point:
-    for i in range(len(Contour) - 1):
-        # The segment length between every two points:
-        SegmentL = (\
-                   (Contour[i+1][0] - Contour[i][0])**2 \
-                   + (Contour[i+1][1] - Contour[i][1])**2 \
-                   + (Contour[i+1][2] - Contour[i][2])**2 \
-                   )**(1/2)
-              
-        SegmentLs.append(SegmentL)
-        
-    return SegmentLs
-
-
-
-def InterpolateContours(ContourData, PointData, InterpSliceInd, dP, 
+def InterpolateContours(FixContourData, PointData, InterpSliceInd, dP, 
                         InterpolateAllPts):
     """
     Main function for contour interpolation.
     
     Inputs:
-        ContourData       - Dictionary containing the key 'PointPCS', whose
+        FixContourData    - Dictionary containing the key 'PointPCS', whose
                             values are a list of contour points [x, y, z] 
                             arranged along rows for each DICOM slice, and along
                             columns for different contours (i.e. a list of  
@@ -1124,7 +1160,7 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP,
     import copy
     
     # Get bounding slice indices:
-    BoundingSliceInds = GetBoundingSliceInds(ContourData=ContourData,
+    BoundingSliceInds = GetBoundingSliceInds(FixContourData=FixContourData,
                                              PointData=PointData,
                                              InterpSliceInd=InterpSliceInd)
     
@@ -1141,11 +1177,11 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP,
     """
     Note: 
     
-    Need to add [0] to the end of ContourData['PointPCS'][BoundingSliceInds[0]] 
+    Need to add [0] to the end of FixContourData['PointPCS'][BoundingSliceInds[0]] 
     since the contour points are a list within the list for each slice.
     """
-    Contour1 = copy.deepcopy(ContourData['PointPCS'][BoundingSliceInds[0]][0])
-    Contour2 = copy.deepcopy(ContourData['PointPCS'][BoundingSliceInds[1]][0])
+    Contour1 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[0]][0])
+    Contour2 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[1]][0])
     
     # Close the contours:
     Contour1.append(Contour1[0])
@@ -1292,9 +1328,792 @@ def InterpolateContours(ContourData, PointData, InterpSliceInd, dP,
     
 
 
+   
+
+
+
+#def TransformInterpolatedContours(OSContour1, OSContour2, InterpContour, 
+#                                  InterpData, FixedDicomDir, MovingDicomDir):
+def TransformInterpolatedContours(InterpData, FixedDicomDir, MovingDicomDir):
+    """
+    Transform the interpolated contours and the over-sampled contours that were
+    used to interpolate, using the transformation filter from Elastix, within
+    the dictionary InterpData.
+    
+    Inputs:
+        InterpData         - A dictionary containing interpolated data.
+        
+        FixedDicomDir      - Directory containing the DICOMs for the Fixed 
+                             image domain.
+        
+        MovingDicomDir     - Directory containing the DICOMs for the Moving 
+                             image domain.
+        
+        
+    Returns:
+        InterpData         - As above but with added entries for the 
+                             transformed contours.
+                             
+        FixIm              - 3D Fixed image as a SimpleITK object
+        
+        MovIm              - 3D Moving image as a SimpleITK object
+        
+        RegIm              - 3D Registered image as a SimpleITK object
+        
+        ElastixImFilt      - Image transformation filter used by Elastix to
+                             transform MovingImage to the Fixed image domain.
+    
+    """
+
+    # Import packages and functions:
+    import SimpleITK as sitk
+    from GetImageAttributes import GetImageAttributes
+    from RunSimpleElastixReg import RunSimpleElastixReg
+    from CreateInputFileForElastix import CreateInputFileForElastix
+    from TransformPoints import TransformPoints
+    from ParseTransformixOutput import ParseTransformixOutput
+                                                                     
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+
+    # Get the Image Attributes for the images:
+    FixOrigin, FixDirs,\
+    FixSpacings, FixDims = GetImageAttributes(DicomDir=FixedDicomDir, 
+                                              Package=package)
+    
+    MovOrigin, MovDirs,\
+    MovSpacings, MovDims = GetImageAttributes(DicomDir=MovingDicomDir, 
+                                              Package=package)
+
+    # Read in the 3D stack of Fixed DICOMs:
+    FixReader = sitk.ImageSeriesReader()
+    FixNames = FixReader.GetGDCMSeriesFileNames(FixedDicomDir)
+    FixReader.SetFileNames(FixNames)
+    FixIm = FixReader.Execute()
+    FixIm = sitk.Cast(FixIm, sitk.sitkFloat32)
+    
+    # Read in the 3D stack of Moving DICOMs:
+    MovReader = sitk.ImageSeriesReader()
+    MovNames = MovReader.GetGDCMSeriesFileNames(MovingDicomDir)
+    MovReader.SetFileNames(MovNames)
+    MovIm = MovReader.Execute()
+    MovIm = sitk.Cast(MovIm, sitk.sitkFloat32)
+    
+    # Register MovIm to FixIm to obtain the transformation filter:
+    RegIm, ElastixImFilt = RunSimpleElastixReg(FixedIm=FixIm, MovingIm=MovIm, 
+                                               LogToConsole=False)
+
+                                                         
+    # Create lists of keys in InterpData whose values are to be transformed 
+    # (will loop through each key):
+    BaseKeys = ['OSContour1', 'OSContour2', 'InterpContour']
+    
+    FixIndsKeys = ['Fix' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+    FixPtsKeys = ['Fix' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+    
+    MovIndsKeys = ['Mov' + BaseKeys[i] + 'Inds' for i in range(len(BaseKeys))]
+    MovPtsKeys = ['Mov' + BaseKeys[i] + 'Pts' for i in range(len(BaseKeys))]
+    
+    # Initialise the additional keys to be added to InterpData (this isn't
+    # required but ensures that the keys are added in the same order for
+    # Mov as for Fix):
+    InterpData.update({
+                       'MovOSContour1Inds':[],
+                       'MovOSContour2Inds':[],
+                       'MovInterpContourInds':[],
+                       'MovOSContour1Pts':[],
+                       'MovOSContour2Pts':[],
+                       'MovInterpContourPts':[]
+                       })
+    
+    # Loop through each row in InterpData and transform the points in FixPtsKeys:
+    for i in range(len(InterpData['InterpSliceInd'])):
+        
+        
+        for k in range(len(FixPtsKeys)):
+            Points = InterpData[FixPtsKeys[k]][i]
+            
+            # Create inputpoints.txt for Elastix, containing the contour points to be
+            # transformed:
+            CreateInputFileForElastix(Points=Points)
+    
+            # Transform MovingContourPts:
+            TransformPoints(MovingImage=MovIm, TransformFilter=ElastixImFilt)
+    
+            # Parse outputpoints.txt:
+            PtNos, FixInds, FixPts_PCS,\
+            FixOutInds, MovPts_PCS,\
+            Def_PCS, MovInds = ParseTransformixOutput()
+            
+            # Initialise the keys to be added to InterpData:
+            #InterpData.update({MovIndsKeys[k] : [],
+            #                   MovPtsKeys[k]  : []
+            #                   })
+            
+            # Append the transformed results to InterpData:
+            InterpData[FixIndsKeys[k]].append(FixInds) # the indices of the input (fixed) points
+            #InterpData[MovIndsKeys[k]].append(MovInds) # the indices of the output (moving/transformed) points
+            #InterpData[MovPtsKeys[k]].append(MovPts_PCS) # the output (moving/transformed) points
+            
+            # Get list of keys in InterpData:
+            keys = list(InterpData.keys())
+            
+            if MovIndsKeys[k] in keys:
+                InterpData[MovIndsKeys[k]].append(MovInds) # the indices of the output (moving/transformed) points
+            else:
+                InterpData.update({MovIndsKeys[k] : [MovInds]}) # the indices of the output (moving/transformed) points
+                
+            if MovPtsKeys[k] in keys:
+                InterpData[MovPtsKeys[k]].append(MovPts_PCS) # the output (moving/transformed) points
+            else:
+                InterpData.update({MovPtsKeys[k] : [MovPts_PCS]}) # the output (moving/transformed) points
+    
+    
+    return InterpData, FixIm, MovIm, RegIm, ElastixImFilt
+
+
+
+
+
+def GetLinePlaneIntersection(PlaneNormal, PlanePoint, 
+                            LineDirection, LinePoint):
+    """ 
+    Get the intersection between a line and a plane.
+    
+    Inputs:
+        PlaneNormal   - A list of the [x, y, z] components of the plane's 
+                        normal
+                        
+        PlanePoint    - A list of the [x, y z] components of a point lying on 
+                        the plane
+
+        LineDirection - A list of the [x, y, z] components of the line's
+                        vector orientation
+                        
+        LinePoint     - A list of the [x, y z] components of a point lying on 
+                        the point
+                        
+                        
+    Modified from rosettacode.org:
+        
+    https://rosettacode.org/wiki/Find_the_intersection_of_a_line_with_a_plane
+    """
+
+    import numpy as np
+    
+    epsilon=1e-6
+    
+    PlaneNormal = np.array(PlaneNormal)
+    PlanePoint = np.array(PlanePoint)
+    LineDirection = np.array(LineDirection)
+    LinePoint = np.array(LinePoint)
+    
+    NormDOTLine = np.dot(PlaneNormal, LineDirection)
+    
+    if abs(NormDOTLine) < epsilon:
+        raise RuntimeError("No intersection or line is within plane")
+        
+    dPoint = LinePoint - PlanePoint
+    
+    NormDOTdPoint = - np.dot(PlaneNormal, dPoint) / NormDOTLine
+    
+    InterPoint = dPoint + NormDOTdPoint * LineDirection + PlanePoint
+    
+    return list(InterPoint)
+
+
+
+
+
+def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir):
+    """
+    Generate contours in the moving planes by finding the intersection of the 
+    lines that join each over-sampled-to-interpolated contour #1 to each 
+    imaging plane, and likewise for each interpolated-to-over-sampled contour 
+    #2.
+    
+    Inputs:
+        InterpData     - A dictionary containing interpolated data.
+        
+        MovingDicomDir - Directory containing the DICOMs for the Moving image
+                         domain.
+        
+        
+    Returns:
+        MovContourData - A dictionary containing the contour data belonging to
+                         the Moving image domain.
+    """
+    
+    # Import packages and functions:
+    from GetImageAttributes import GetImageAttributes
+    from PCStoICS import PCStoICS
+    
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+    
+    # Get the Image Attributes for the Moving image:
+    MovOrigin, MovDirs,\
+    MovSpacings, MovDims = GetImageAttributes(DicomDir=MovingDicomDir, 
+                                              Package=package)
+    
+    # The imaging plane normal:
+    PlaneNormal = MovDirs[6:9]
+    
+    # Initialise a list of contours consisting of the intersecting points 
+    # for each imaging plane:
+    IntersContours = [[] for i in range(MovDims[2])]
+    
+    
+    # Loop through each set of interpolation data in InterpData:
+    for i in range(len(InterpData['InterpSliceInd'])):
+    
+        # Loop through each triplet of points in Contour1, InterpContour and 
+        # Contour2:
+        for j in range(len(InterpData['MovOSContour1Pts'][i])):
+    
+            Point1 = InterpData['MovOSContour1Pts'][i][j]
+            Point2 = InterpData['MovInterpContourPts'][i][j]
+            Point3 = InterpData['MovOSContour2Pts'][i][j]
+            
+            # Get the line directions for the line that joins Point1 and Point2, 
+            # and the line that joins Point2 and Point3:
+            LineDir1 = [Point2[n] - Point1[n] for n in range(len(Point1))]
+            LineDir2 = [Point3[n] - Point2[n] for n in range(len(Point2))]
+            
+            # Store the intersection points for the Line1 and each image plane,
+            # and for Line2 and each image plane:
+            IntersPoints1 = []
+            IntersPoints2 = []
+    
+            # Loop through all imaging planes in Moving Image and get the 
+            # intersecting points of Line1 and Line2 with each plane:
+            for k in range(MovDims[2]):
+    
+                # Need a point lying on the plane - use the plane's origin:
+                PlaneOrigin = [MovOrigin[0], MovOrigin[1], MovOrigin[2] + k*MovSpacings[2]]
+    
+                #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
+    
+                IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
+                                                        PlanePoint=PlaneOrigin,
+                                                        LineDirection=LineDir1,
+                                                        LinePoint=Point1)
+                
+                IntersPoint2 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
+                                                        PlanePoint=PlaneOrigin,
+                                                        LineDirection=LineDir2,
+                                                        LinePoint=Point2)
+                    
+    
+                IntersPoints1.append(IntersPoint1)
+                IntersPoints2.append(IntersPoint2)
+                
+                if False:
+                    print('The intersection of Line1 joining point', Point1, 'in slice', 
+                          InterpData['BoundingSliceInds'][i][0], 'and \npoint', Point2,
+                          'in slice', InterpData['InterpSliceInd'][i], 'and the', 
+                          f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
+                          IntersPoint1, '.\n\n')
+    
+                    print('The intersection of Line2 joining point', Point2, 'in slice', 
+                          InterpData['InterpSliceInd'][i], 'and \npoint', Point3,
+                          'in slice', InterpData['BoundingSliceInds'][i][1], 'and the',  
+                          f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
+                          IntersPoint2, '.\n\n')
+    
+    
+    
+            
+            # Find if any of the intersection points lie between Point1 and Point2, and
+            # between Point2 and Point3:
+            for k in range(MovDims[2]):
+                if ( IntersPoints1[k][2] > Point1[2] ) and ( IntersPoints1[k][2] < Point2[2] ):
+                    IntersContours[k].append(IntersPoints1[k])
+                    
+                if ( IntersPoints2[k][2] > Point2[2] ) and ( IntersPoints2[k][2] < Point3[2] ):
+                    IntersContours[k].append(IntersPoints2[k])
+                    
+                    
+    """
+    Note:
+        IntersContours has lists of points by contour. Modify it so that each 
+        slice has a list of a list of points (whereby the first list represents 
+        the list of points that belong to a contour, and the list of points 
+        follow), so that it's consistent with the structure of FixContourData.
+    """
+    
+    # Initialise IntersContoursPCS:
+    IntersContoursPCS = []
+    
+    for PtsThisSlice in IntersContours:    
+        if PtsThisSlice: # i.e. if not empty
+            IntersContoursPCS.append([PtsThisSlice])
+        else:
+            IntersContoursPCS.append([])
+    
+    
+    
+    # Create a dictionary to store contour points for Moving image (obtained by
+    # transforming the input/Fixed points, interpolating and finding 
+    # intersection points with the image planes in Moving image) arranged by 
+    # slices and contours:
+    """
+    Note:
+        Assign the number 3 for ContourType for all slices that have contours 
+        and 0 for all slices that have no contours. 
+        
+        N.B. ContourType 0 -> No contours
+                         1 -> Original contour
+                         2 -> Interpolated contour
+                         3 -> Contour obtained by transforming original or 
+                              interpolated points in the Fixed image domain and 
+                              finding the intersection with the Moving image 
+                              planes
+        
+    """
+    
+    # Create a list of slice numbers:
+    SliceNo = list(range(MovDims[2]))
+    
+    # Initialise ContourType:
+    ContourType = []
+    
+    for contour in IntersContours:
+        if contour:
+            ContourType.append(3)
+            
+        else:
+            ContourType.append(0)
+    
+    # Initialise IntersContoursICS:
+    IntersContoursICS = []
+    
+    for i in range(len(IntersContoursPCS)):
+        PtsThisSlicePCS = IntersContoursPCS[i]
+        
+        if PtsThisSlicePCS:
+            # Convert points from PCS to ICS:
+            """
+            Note: There should only be one contour since the contour
+            interpolation code can currently only deal with one contour
+            per slice, but to future-proof this loop through all contours.
+            """ 
+            PtsThisSliceICS = []
+            
+            for c in range(len(PtsThisSlicePCS)):
+                PtsThisSliceThisContourPCS = PtsThisSlicePCS[c]
+                
+                PtsThisSliceThisContourICS = PCStoICS(Pts_PCS=PtsThisSliceThisContourPCS, 
+                                                      Origin=MovOrigin, 
+                                                      Directions=MovDirs, 
+                                                      Spacings=MovSpacings
+                                                      )
+                                                      
+                PtsThisSliceICS.append(PtsThisSliceThisContourICS)
+                                                      
+                
+            IntersContoursICS.append(PtsThisSliceICS)
+                                     
+            
+        else:
+            IntersContoursICS.append([])
+    
+    
+    MovContourData = {
+                      'SliceNo'     : SliceNo, 
+                      'ContourType' : ContourType,
+                      'PointPCS'    : IntersContoursPCS,
+                      'PointICS'    : IntersContoursICS
+                       }
+
+    return MovContourData
+
+
+
+
+
+
+
+def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, 
+             InterpolateAllPts, LogToConsole, PlotResults, ExportResults):
+    """
+    Copy ROIs from the Fixed to Moving image domain.  
+    
+    This is a main function that runs the following functions:
+        1. InterpolateContours
+        
+        2. TransformInterpolatedContours
+        
+        3. GetIntersectingContoursInMovingPlanes
+        
+        
+    Interpolation will be midway between all contours in a ROI collection for
+    the Fixed image domain by running the main function InterpolateContours() 
+    iteratively.
+    
+    The interpolated contours and the contours used to interpolate them (the
+    over-sampled original contours) are then transformed from the Fixed to 
+    Moving image domain.
+    
+    Then the intersecting points between the lines that link each point in the
+    first over-sampled contour and the interpolated contour, and each point in
+    the interpolated contour and the second over-sampled contour, with the 
+    imaging planes is found. These points form contours that lie in the Moving
+    image planes.
+    
+    
+    Inputs:
+        FixedDicomDir     - Directory containing the DICOMs for the Fixed 
+                            image domain.
+        
+        MovingDicomDir    - Directory containing the DICOMs for the Moving 
+                            image domain.
+                             
+        FixedRoiFpath     - Full path to the ROI Collection RT-STRUCT file.
+                             
+        dP                - A float denoting the desired inter-node spacing to 
+                            use when super-sampling the contours used for 
+                            interpolation.
+                         
+        InterpolateAllPts - A boolean that determines whether or not 
+                            interpolation will be performed only between a pair
+                            of contour points for which the corresponding node
+                            in the longer of the original contours was an
+                            original node.  See Note 4 in the function 
+                            InterpolateBetweenContours.
+                            
+        LogToConsole      - Log some results to the console.
+                            
+        PlotResults       - Boolean that denotes whether or not results will be
+                            plotted.
+        
+        ExportResults     - Boolean that denotes whether or not plotted results
+                            are to be exported.
+        
+    Returns:
+        PointData         - Dictionary containing the data on all points in all
+                            contours for the Fixed image and with added entries 
+                            for interpolated points.
+        
+        FixContourData    - Dictionary containing the data on all points 
+                            arranged slices, including the interpolated points.
+        
+        InterpData        - A dictionary containing interpolated data.
+    
+    """
+    
+    # Import packages and functions:
+    import time
+    from GetImageAttributes import GetImageAttributes
+    from GetInputPoints import GetInputPoints
+    from PCStoICS import PCStoICS
+    
+    # Start timing:
+    times = []
+    times.append(time.time())
+    
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+    
+    # Get the Image Attributes for the Fixed image:
+    FixOrigin, FixDirs,\
+    FixSpacings, FixDims = GetImageAttributes(DicomDir=FixedDicomDir, 
+                                              Package=package)
+    
+    
+    # Get contour points into necessary arrays:
+    FixPtsPCS, FixPtsBySliceAndContourPCS,\
+    FixPtsICS, FixPtsBySliceAndContourICS,\
+    LUT, PointData, FixContourData = GetInputPoints(FixedDicomDir=FixedDicomDir, 
+                                                    FixedRoiFpath=FixedRoiFpath)
+    
+    
+    # Get the indices of the slices that contain contours in the Fixed image:
+    FixSlicesWithContours = GetIndsOfSlicesWithContours(ContourData=FixContourData,
+                                                        ContourType=1)
+    
+    print('Contours exist on slices', FixSlicesWithContours)
+    
+    # Initialise a dictionary to store the interpolation results:
+    InterpData = {'InterpSliceInd'       : [],
+                  'BoundingSliceInds'    : [],
+                  'FixOSIsOrigNode1'     : [],
+                  'FixOSIsOrigNode2'     : [],
+                  'FixOSContour1Inds'    : [],
+                  'FixOSContour2Inds'    : [],
+                  'FixInterpContourInds' : [],
+                  'FixOSContour1Pts'     : [],
+                  'FixOSContour2Pts'     : [],
+                  'FixInterpContourPts'  : []
+                  }
+    
+    # Iterate through all FixSlicesWithContours and interpolate between each
+    # two slices:
+    for i in range(len(FixSlicesWithContours) - 1):
+        InterpSliceInd = FixSlicesWithContours[i] + 0.5
+        
+        if LogToConsole:
+            print(f'Attempting to interpolate at slice {InterpSliceInd}...')
+    
+    
+        #InterpContour = InterpolateContours(FixContourData, PointData, InterpSliceInd, dP)
+        
+        BoundingSliceInds,\
+        OSContour1,\
+        OSIsOrigNode1,\
+        OSContour2,\
+        OSIsOrigNode2,\
+        InterpContourPCS = InterpolateContours(FixContourData, PointData, 
+                                               InterpSliceInd, dP,
+                                               InterpolateAllPts)
+    
+        # Continue only if None was not returned for InterpContourPCS:
+        if InterpContourPCS:
+            #print(f'len(InterpContourPCS) = {len(InterpContourPCS)}')
+    
+            # The maximum contour number in the original contour data:
+            LastCntNo = PointData['InContourNo'][-1]
+    
+            # Add interpolated contour to PointData:
+            for i in range(len(InterpContourPCS)):
+                PointData['PointNo'].append(PointData['PointNo'][-1] + 1)
+                PointData['InSliceNo'].append(InterpSliceInd)
+                PointData['InContourNo'].append(LastCntNo + 1)
+                PointData['InContourType'].append(2)
+                PointData['InPointIndex'].append([])
+                PointData['InPointPCS'].append(InterpContourPCS[i])
+                PointData['InPointICS'].append(PCStoICS(Pts_PCS=InterpContourPCS[i], 
+                                                        Origin=FixOrigin, 
+                                                        Directions=FixDirs, 
+                                                        Spacings=FixSpacings))
+    
+            # Add interpolated contour to FixContourData:
+            FixContourData['SliceNo'].append(InterpSliceInd)
+            FixContourData['ContourType'].append(2)
+            #FixContourData['PointPCS'].append(InterpContourPCS)
+            #FixContourData['PointICS'].append(PCStoICS(Pts_PCS=InterpContourPCS, 
+            #                                           Origin=FixOrigin, 
+            #                                           Directions=FixDirs, 
+            #                                           Spacings=FixSpacings))
+            """
+            The list of contour points needs to be in a list structure to be 
+            consistent with the other contour data in the dictionary.  
+            Should verify this (July 23).
+            """
+            FixContourData['PointPCS'].append([InterpContourPCS])
+            InterpContourICS = PCStoICS(Pts_PCS=InterpContourPCS, 
+                                        Origin=FixOrigin, 
+                                        Directions=FixDirs, 
+                                        Spacings=FixSpacings)
+            FixContourData['PointICS'].append([InterpContourICS])
+        
+            
+            # Store the interpolation output in InterpData:
+            InterpData['InterpSliceInd'].append(InterpSliceInd)
+            InterpData['BoundingSliceInds'].append(BoundingSliceInds)
+            InterpData['FixOSIsOrigNode1'].append(OSIsOrigNode1)
+            InterpData['FixOSIsOrigNode2'].append(OSIsOrigNode2)
+            InterpData['FixOSContour1Pts'].append(OSContour1)
+            InterpData['FixOSContour2Pts'].append(OSContour2)
+            InterpData['FixInterpContourPts'].append(InterpContourPCS)
+            
+            
+            
+            """ Plot interpolated contours: """
+            if PlotResults:
+                """ Get additional data for plots: """
+                import copy
+                
+                # Get the bounding slice indices for the slice at InterpSliceInd:
+                BoundingSliceInds = GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd)
+        
+                Contour1 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[0]][0])
+                Contour2 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[1]][0])
+        
+                if InterpSliceInd.is_integer():
+                    # The actual contour that exists at slice InterpSliceInd:
+                    ActualContour = copy.deepcopy(FixContourData['PointPCS'][InterpSliceInd][0])
+        
+        
+                # Combine data into lists to plot:
+                Contours = [Contour1, Contour2, InterpContourPCS]
+                Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+                          f'Contour at slice {BoundingSliceInds[1]}', 
+                          f'Interpolated contour at {InterpSliceInd}']
+                Colours = ['b', 'g', 'r', 'y']
+                #Shifts = [0, 2, 4, 6] # to help visualise
+                Shifts = [0, 0, 0, 0] # no shift
+                if InterpSliceInd.is_integer():
+                    Contours.append(ActualContour)
+                    Labels.append(f'Actual contour at {InterpSliceInd}')
+        
+                # Plot results:
+                PlotInterpolatedContours2D(Contours=Contours, Labels=Labels, 
+                                           Colours=Colours, Shifts=Shifts,
+                                           InterpSliceInd=InterpSliceInd,
+                                           BoundingSliceInds=BoundingSliceInds,
+                                           dP=dP, ExportPlot=ExportResults)
+
+     
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if LogToConsole:
+        print(f'Took {Dtime} s to interpolate {len(FixSlicesWithContours)}',
+              'contours.\n\n')
+        
+    
+    # Transform the interpolated contours and over-sampled contours used to
+    # interpolate:
+    if LogToConsole:
+        print('Registering images...')
+ 
+    InterpData, FixIm, MovIm, RegIm,\
+    ElastixImFilt = TransformInterpolatedContours(InterpData, FixedDicomDir, 
+                                                  MovingDicomDir)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if LogToConsole:
+        print(f'Took {Dtime} s to register the Moving image stack to the',
+              'Fixed image domain and transform the contours.\n\n')
+    
+    # Generate contours in the Moving image planes:
+    MovContourData = GetIntersectingContoursInMovingPlanes(InterpData, 
+                                                           MovingDicomDir)
+    
+    # Get the indices of the slices that contain contours in the Moving image:
+    MovSlicesWithContours = GetIndsOfSlicesWithContours(ContourData=MovContourData,
+                                                        ContourType=3)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 1)
+    if LogToConsole:
+        print(f'Took {Dtime} s to copy {len(FixSlicesWithContours)} contours',
+              f'in the Fixed image domain to {len(MovSlicesWithContours)}',
+              'contours in the Moving image domain.')
+    
+    
+    
+    """ Plot DICOM images containing contours overlaid: """
+    if PlotResults:
+        import RegUtilityFuncs as ruf
+        import time
+        
+        # Plot all slices containing contours in either image domains.
+        # Concatenate the lists:
+        FixOrMovSlicesWithContours = FixSlicesWithContours + MovSlicesWithContours
+        
+        # Reduce to set of unique indices:
+        FixOrMovSlicesWithContours = list(set(FixOrMovSlicesWithContours))
+        
+        # Choose the perspective:
+        Perspective = 'axial'
+        #Perspective = 'sagittal'
+        #Perspective = 'coronal'
+        
+        # Choose whether to plot contour points as lines or dots:
+        ContoursAs = 'lines'
+        #ContoursAs = 'dots'
+
+        # Create the filename for the exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                   + f'_Result_of_registration_and_interpolation.png'
+        
+        ruf.display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im=FixIm, 
+                                                                         mov_im=MovIm, 
+                                                                         reg_im=RegIm,
+                                                                         fix_pts=FixContourData['PointICS'], 
+                                                                         mov_pts=MovContourData['PointICS'],
+                                                                         export_fig=ExportResults,
+                                                                         export_fname=FigFname,
+                                                                         plot_slices=FixOrMovSlicesWithContours,
+                                                                         perspective=Perspective,
+                                                                         contours_as=ContoursAs,
+                                                                         LogToConsole=False)
+    
+    
+    return PointData, FixContourData, InterpData, MovContourData
+    
     
 
-def PlotInterpolationResults2D(Contours, Labels, Colours, Shifts, InterpSliceInd, 
+
+
+    
+
+"""
+******************************************************************************
+Supplementary functions : 
+******************************************************************************
+"""
+
+
+
+def ReduceNodesOfContour(Contour, IndsToKeep):
+    """
+    Reduce the number of nodes in a list of contour points.
+    
+    Inputs:
+        Contour        - A list of super-sampled contour points.
+        
+        IndsToKeep     - A list of booleans whose values denote whether the   
+                         corresponding contour point in Contour is to remain
+                         (True) or not (False).
+        
+    Returns:
+        ReducedContour - A reduced list of contour points.
+        
+        
+    Note:
+        This function is similar to ReduceNodesOfContours() but it operates on
+        a single set of contour points.
+    """
+    
+    ReducedContour = []
+    
+    for i in range(len(Contour)):
+        if IndsToKeep[i]:
+            ReducedContour.append(Contour[i])
+            
+    return ReducedContour
+
+
+
+def GetSegmentLengths(Contour):
+    """
+    Generate a list of segment lengths for each segment in a contour.
+    
+    Inputs:
+        Contour   - A list of contour points.
+        
+    Returns:
+        SegmentLs - A list of segment lengths.
+    
+    """
+    
+    # Initialise the list of segment lengths:
+    SegmentLs = []
+    
+    # Loop through each point:
+    for i in range(len(Contour) - 1):
+        # The segment length between every two points:
+        SegmentL = (\
+                   (Contour[i+1][0] - Contour[i][0])**2 \
+                   + (Contour[i+1][1] - Contour[i][1])**2 \
+                   + (Contour[i+1][2] - Contour[i][2])**2 \
+                   )**(1/2)
+              
+        SegmentLs.append(SegmentL)
+        
+    return SegmentLs
+
+
+
+
+
+def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd, 
                                BoundingSliceInds, dP, ExportPlot):
     """
     Plot interpolation results.
@@ -1380,7 +2199,7 @@ def PlotInterpolationResults2D(Contours, Labels, Colours, Shifts, InterpSliceInd
     
     
     
-def PlotInterpolationResults3D_OLD(InterpData, dP, ExportPlot):
+def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
     """
     Plot interpolation results.
     
@@ -1548,7 +2367,7 @@ def PlotInterpolationResults3D_OLD(InterpData, dP, ExportPlot):
     
     
     
-def PlotInterpolationResults3D(InterpData, dP, ExportPlot):
+def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     """
     Plot interpolation results.
     
@@ -1681,6 +2500,62 @@ def PlotInterpolationResults3D(InterpData, dP, ExportPlot):
     FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                 + f'_Interpolation_bt_slice_{FirstSliceInd}_and_' \
                 + f'{LastSliceInd}_dP_{dP}.png'
+    
+    if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+    
+    
+    
+
+def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, ExportPlot):
+    """
+    Plot intersecting points.
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    MarkerSize = 5
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    
+    # Create a figure with two subplots and the specified size:
+    if ExportPlot:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14), dpi=300)
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14))
+    
+    
+    Points = MovContourData['PointPCS'][SliceNum]
+    
+    for i in range(len(Points)):
+        # Unpack tuple and store each x,y tuple in arrays X and Y:
+        X = []
+        Y = []
+    
+        for x, y, z in Points[i]:
+            X.append(x)
+            Y.append(y)
+
+                
+    # Plot line:
+    ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');    
+    #ax.legend(loc='upper left', fontsize='large')
+    # Plot dots:
+    if True:
+        plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+    
+        
+    
+    plt.title(f'Intersecting points on Moving slice {SliceNum}')
+
+    # Create filename for exported figure:
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')

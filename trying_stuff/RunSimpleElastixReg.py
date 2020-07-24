@@ -5,7 +5,7 @@ Created on Wed Jun 17 14:00:14 2020
 @author: ctorti
 """
 
-def RunSimpleElastixReg(FixedIm, MovingIm):
+def RunSimpleElastixReg(FixedIm, MovingIm, LogToConsole):
     # Import packages:
     import SimpleITK as sitk
     import time
@@ -44,7 +44,8 @@ def RunSimpleElastixReg(FixedIm, MovingIm):
     # Set the parameter map:
     ElastixImFilt.SetParameterMap(ElastixParamMap)
     
-    print('\nPerforming registration...')
+    if LogToConsole:
+        print('\nPerforming registration...')
     
     # Register the 3D images:
     ElastixImFilt.Execute()
@@ -53,6 +54,7 @@ def RunSimpleElastixReg(FixedIm, MovingIm):
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
-    print(f'Took {Dtime} s to register the 3D image stacks.')
+    if LogToConsole:
+        print(f'Took {Dtime} s to register the 3D image stacks.')
     
     return RegIm, ElastixImFilt
