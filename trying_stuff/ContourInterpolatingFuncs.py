@@ -160,9 +160,10 @@ Note:
     within the input DICOM image (including slices that do not contain any
     contour data).
     
-    Many of the functions below were adapted from Matt Orton's JavaScript code
-    (https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat/src/master/Packages/icr-peppermint-tools/client/lib/util/freehandInterpolate/),
-    which evidentally were adapted from James Petts' (C-based?) code.
+    Many of the functions below were adapted from a JavaScript conversion of
+    Matt Orton's Matlab code:
+    
+    https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat/src/master/Packages/icr-peppermint-tools/client/lib/util/freehandInterpolate/
     
 """
 
@@ -255,7 +256,7 @@ def GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd):
         
     Notes:
         
-        1. Matt Orton's function _getBoundingPair checks if a contour is an 
+        1. The JavaScript function _getBoundingPair checks if a contour is an 
         interpolated contour, and if so, it is excluded from the list of 
         possible contours to interpolate between (hence the index of an 
         interpolated contour cannot be included in ContourPair). 
@@ -433,12 +434,14 @@ def ReverseIfAntiClockwise(Contour):
     P = len(Contour)
     
     # Get mean x position of all points:
-    #MeanX = sum([Contour[i][0] for i in range(P)])
+    #MeanX = sum([Contour[i][0] for i in range(P)]) / P # correct but might not
+    # be clear outside Python
     
     MeanX = 0
     
     for i in range(P):
-        MeanX += Contour[i][0]
+        MeanX += Contour[i][0] / P
+        
     
     # Check the direction of the points:
     CheckSum = 0
@@ -554,7 +557,7 @@ def GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
         in the input list CumPerimetersNorm (concatenated to the end of the 
         list CumSSPerimNorm following the initial step described above).
         
-        2. This function is called _getInterpolatedPerim in Matt Orton's code. 
+        2. This function is called _getInterpolatedPerim in the JavaScript code. 
     """
     
     # The inter-node spacing is:
@@ -573,8 +576,8 @@ def GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm, NumNodesToAdd):
     """ 
     Not sure why the upper limit needs to be (NumNodesToAdd - 2) instead of
     (NumNodesToAdd - 1), since the lower limit of 1 (rather than 0) already
-    accounts for one, and the -1 accounts for the other. Matt's code also has
-    -2 so it's probably correct.
+    accounts for one, and the -1 accounts for the other. The JavaScript code 
+    also has -2 so it's probably correct.
     """
     for i in range(1, NumNodesToAdd - 2):
         CumSSPerimNorm.append(CumSSPerimNorm[-1] + dP)
@@ -606,7 +609,7 @@ def GetIsOrigNode(Contour, NumNodesToAdd):
     
     Note:
         
-        This is called _getIndicatorArray in Matt Orton's code
+        This is called _getIndicatorArray in the JavaScript code.
     """
     
     IsOrigNode = []
@@ -663,7 +666,7 @@ def GetNodesToAddPerSegment(CumSSPerimNorm, IsOrigNode):
     
     # Get ordered indices of original nodes:
     """
-    Seems this isn't needed (I've likely misunderstood Matt's code).
+    Seems this isn't needed (I've likely misunderstood the JavaScript code).
     """
     #OrigIndsSorted = []
     #
@@ -680,16 +683,16 @@ def GetNodesToAddPerSegment(CumSSPerimNorm, IsOrigNode):
         
 
     # Order the normalised cumulative super-sampled perimeters:
-    """ This is not in Matt's code """
+    """ This is not in the JavaScript code """
     #CumSSPerimNormSorted = [CumSSPerimNorm[i] for i in Inds]
 
     # Get the list of normailsed cumulative super-sampled perimeters for the
     # original nodes:
-    """ This is not in Matt's code """
+    """ This is not in the JavaScript code """
     #CumSSPerimNormSortedOrig = [CumSSPerimNormSorted[i] for i in OrigIndsSorted]
 
     # The segment lengths are:
-    """ This is not in Matt's code """
+    """ This is not in the JavaScript code """
     #SegmentL = [CumSSPerimNormSortedOrig[i+1] - CumSSPerimNormSortedOrig[i] for i in range(len(CumSSPerimNormSortedOrig) - 1)]
     
     # Initialise the list of the number of nodes to add to each segment:
@@ -757,7 +760,7 @@ def SuperSampleContour(Contour, NodesToAddPerSegment):
         # (keep the z component unchanged):
         """
         Not sure why j is iterated to NodesToAddPerSegment[i] - 1, instead of
-        NodesToAddPerSegment[i] so deviating from Matt Orton's code:
+        NodesToAddPerSegment[i] so deviating from the JavaScript code:
         """
         for j in range(NodesToAddPerSegment[i] - 1):
         #for j in range(NodesToAddPerSegment[i]):
@@ -1050,18 +1053,18 @@ def InterpolateBetweenContours(Contour1, Contour2, IsOrigNode1, IsOrigNode2,
         contour were to coincide with the plane containing Contour1, and 1 if 
         it were to coincide with the plane containing Contour2.
         
-        4. In Matt Orton's code the interpolation is performed between the pair
-        of contour points only if the corresponding contour point in the longer
-        list of contour points was an original node. This results in an 
+        4. In the JavaScript code the interpolation is performed between the 
+        pair of contour points only if the corresponding contour point in the 
+        longer list of contour points was an original node. This results in an 
         interpolated contour with the same number of points in it as the number
         of True values in the longer of IsOrigNode1 and IsOrigNode2, and hence,
         the length of interpolated contour points is shorter than the length of
         Contour1 or Contour2.
         
-        In this function I've allowed for either using the truncation that Matt
-        uses (InterpolateAllPts = False) or to interpolate all pairs of points, 
-        so that the length of Contour1, Contour2 and InterpolatedContour are 
-        equal (InterpolateAllPts = True).
+        In this function I've allowed for either using the truncation used in
+        the JavaScript code (InterpolateAllPts = False) or to interpolate all 
+        pairs of points, so that the length of Contour1, Contour2 and 
+        InterpolatedContour are equal (InterpolateAllPts = True).
     """
     
     N1 = len(Contour1)
@@ -1305,8 +1308,8 @@ def InterpolateContours(FixContourData, PointData, InterpSliceInd, dP,
 
 
     
-    """ Deviate from Matt's code - try interpolating using the super-sampled 
-    contours (i.e. before reducing the num of nodes): """
+    """ Deviate from the JavaScript code - try interpolating using the 
+    super-sampled contours (i.e. before reducing the num of nodes): """
     if False:
         InterpSSContour = InterpolateBetweenContours(Contour1=SSContour1,
                                                      Contour2=SSContour2,
@@ -2113,8 +2116,24 @@ def GetSegmentLengths(Contour):
 
 
 
+def GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo):
+    ContourTypes = ContourData['ContourType']
+    
+    inds = []
+    
+    for i in range(len(ContourTypes)):
+        if ContourTypes[i] == ContourTypeNo:
+            inds.append(i)
+            
+    return inds
+
+
+
+
+
 def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd, 
-                               BoundingSliceInds, dP, ExportPlot):
+                               BoundingSliceInds, dP, AnnotatePtNums,
+                               ExportPlot):
     """
     Plot interpolation results.
     
@@ -2169,14 +2188,15 @@ def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd
         # identify them:
         #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
         #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
-        
-        #P = list(range(len(X))) # list of point numbers
-        #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
-        #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
-        #plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[i]);
-        
-        # Annotate every 5th point with the point number:
-        if False:
+        # Annotate with point numbers:
+        if AnnotatePtNums:
+            P = list(range(len(X))) # list of point numbers
+            # Annotate every point:
+            #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+            #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+            if False:
+                plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+            # Annotate every 5th point with the point number:
             for p in range(0, len(X), 5):
                 plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[i]);
             
@@ -2367,7 +2387,66 @@ def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
     
     
     
-def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
+    
+    
+def GetPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
+    from GetImageAttributes import GetImageAttributes
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for i in range(len(SliceNums)):
+        s = SliceNums[i]
+        
+        # Let Point0 be equivalent to the origin moved up to slice number s 
+        # in the z-direction:
+        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
+                  Origin[1] + s*Spacings[2]*Dirs[7], 
+                  Origin[2] + s*Spacings[2]*Dirs[8]
+                  ]
+        
+        # Let Point1 be equivalent to Point0 moved along MovDims[0] in the
+        # x-direction:
+        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
+                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
+                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
+                  ]
+        
+        # Let Point2 be equivalent to Point1 moved along MovDims[1] in the 
+        # y-direction:
+        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        # Let Point3 be equivalent to Point0 moved along MovDims[1] in the
+        # y-direction:
+        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        
+        Planes.append([Point0, Point1, Point2, Point3, Point0])
+        
+    
+    return Planes
+            
+            
+            
+def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
+                               PlotImagingPlanes, FixDicomDir, MovDicomDir, 
+                               CombinePlots, ExportPlot):
     """
     Plot interpolation results.
     
@@ -2377,6 +2456,7 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     #from mpl_toolkits import mplot3d
     #from mpl_toolkits import Axes3D
     from mpl_toolkits.mplot3d import Axes3D
+    import numpy as np
     import time
     
     FirstSliceInd = InterpData['BoundingSliceInds'][0][0]
@@ -2384,6 +2464,7 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     
     
     NumPairs = len(InterpData['InterpSliceInd'])
+        
     
     # Group all original and interpolated contours:
     FixContours = []
@@ -2413,11 +2494,26 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     MovContour = InterpData['MovOSContour2Pts'][-1]
     MovContours.append(MovContour)
     
-    
     # Group all contours:
     AllContours = [FixContours, MovContours]
     
-    #Colours = ['b', 'g', 'r', 'm', 'y']
+    
+    if PlotImagingPlanes:
+        # Get points that define each imaging plane that contains contours:
+        FixPlanes = GetPointsInImagePlanes(ContourData=FixContourData, 
+                                           ContourTypeNo=1, 
+                                           DicomDir=FixDicomDir)
+        MovPlanes = GetPointsInImagePlanes(ContourData=MovContourData, 
+                                           ContourTypeNo=3, 
+                                           DicomDir=MovDicomDir)
+        
+        
+        # Group all points belonging to the planes:
+        AllPlanes = [FixPlanes, MovPlanes]                    
+    
+    
+    
+    Colours = ['b', 'r', 'g', 'm', 'y']
     #Shifts = [0, 2, 4, 6, 8] # to help visualise
     #Shifts = [0, 0, 0, 0, 0] # no shift
     
@@ -2430,16 +2526,19 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     else:
         #fig = plt.subplots(1, 2, figsize=(14, 14))
         fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
     #ax = plt.axes(projection="3d")
 
-
+    if CombinePlots:
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
     
     # Loop through each list of contours for each sub-plot:
     for i in range(len(AllContours)):
         Contours = AllContours[i]
         
         # Set up the axes for this sub-plot:
-        ax = fig.add_subplot(1, 2, i+1, projection='3d')
+        if not CombinePlots:
+            ax = fig.add_subplot(1, 2, i+1, projection='3d')
         
         # Store all x,y,z coordinates in arrays X, Y and Z:
         X = []
@@ -2475,17 +2574,60 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
         #print(len(X), len(Y), len(Z), len(AveZ))
         
         # Plot dots:
-        #ax.scatter3D(X, Y, Z, markersize=MarkerSize, c=Z, cmap='hsv');
-        ax.scatter3D(X, Y, Z, c=Z, cmap='hsv');
+        ##ax.scatter3D(X, Y, Z, markersize=MarkerSize, c=Z, cmap='hsv');
+        #ax.scatter3D(X, Y, Z, c=Z, cmap='hsv');
+        ax.scatter3D(X, Y, Z, c=Colours[i], cmap='hsv');
+        
+        
+        if PlotImagingPlanes:  
+            #X = PlanesX[i]
+            #Y = PlanesY[i]
+            #Z = PlanesZ[i]
+            #
+            ##ax.plot_surface(X, Y, Z)
+            #
+            #XX, YY = np.meshgrid(X, Y)
+            #   
+            #ax.plot_surface(XX, YY, Z)
             
+            Planes = AllPlanes[i]
+            
+            # Store all x,y,z coordinates in arrays X, Y and Z:
+            X = []
+            Y = []
+            Z = []
+                
+            # Loop through each contour:
+            for j in range(len(Planes)):
+                Plane = Planes[j]
+                
+                #print(len(Contour))
+                    
+                # Unpack tuple and append to arrays X, Y and Z:
+                for x, y, z in Plane:
+                    X.append(x)
+                    Y.append(y)
+                    Z.append(z)
+            
+            # Plot line:
+            ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c='gray'); 
+            
+        
+        #plt.axis('equal') # doesn't work
         
         if i == 0:
             txt = 'Fixed'
         else:
             txt = 'Moving'
-            
-        plt.title(txt + f' image contours between slice {FirstSliceInd} and' \
-                  + f' {LastSliceInd} \nand interpolation inbetween slices')
+        
+        if CombinePlots:
+            plt.title('Fixed and Moving image contours between slice ' \
+                      + f'{FirstSliceInd} and {LastSliceInd} \nand ' \
+                      + 'interpolation inbetween slices')
+        else:
+            plt.title(txt + f' image contours between slice {FirstSliceInd}' \
+                      + f' and {LastSliceInd} \nand interpolation inbetween' \
+                      + ' slices')
         
         # Increment the sub-plot number:
         i += 1
@@ -2507,7 +2649,8 @@ def PlotInterpolatedContours3D(InterpData, dP, ExportPlot):
     
     
 
-def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, ExportPlot):
+def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, AnnotatePtNums,
+                             ExportPlot):
     """
     Plot intersecting points.
     
@@ -2548,7 +2691,20 @@ def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, ExportPlot):
     # Plot dots:
     if True:
         plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
-    
+    # Annotate with point numbers:
+    if AnnotatePtNums:
+        P = list(range(len(X))) # list of point numbers
+        # Annotate every point:
+        #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+        #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+        if False:
+            plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5);
+        # Annotate every 5th point with the point number:
+        for p in range(0, len(X), 5):
+            plt.text(X[p], Y[p], p, fontsize=MarkerSize+5);
+        
+    # Also annotate the last point:
+    #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5);
         
     
     plt.title(f'Intersecting points on Moving slice {SliceNum}')
@@ -2558,5 +2714,96 @@ def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, ExportPlot):
                 + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
     
     if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+    
+    
+    
+def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
+    """
+    Plot joined points.
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    import numpy as np
+    
+    MarkerSize = 5
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    
+    # Create a figure with two subplots and the specified size:
+    if ExportPlot:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14), dpi=300)
+        #fig, ax = plt.subplots(1, 1, figsize=(14, 14), dpi=150)
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 14))
+    
+    
+    # Loop through each collection of points joined to every other point:
+    for i in range(len(PointsJoined)):
+        Points = PointsJoined[i]
+        
+        # Unpack tuple and store each x,y tuple in arrays X and Y:
+        X = []
+        Y = []
+        
+        for j in range(len(Points)):
+            # Unpack tuple and store each x,y tuple in arrays X and Y:
+            #X = []
+            #Y = []
+        
+            for x, y, z in Points[j]:
+                X.append(x)
+                Y.append(y)
+    
+        
+        # Generate a random colour for this contour:
+        colour = [item/255 for item in list(np.random.choice(range(256), size=3))]
+                            
+                            
+        # Plot line:
+        ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=colour);    
+        #ax.legend(loc='upper left', fontsize='large')
+        # Plot dots:
+        plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+            
+            
+        if False:
+            for i in range(len(Points)):
+                # Plot line:
+                ax.plot(Points[i][0], Points[i][1], linestyle=LineStyle, linewidth=1, c='b');    
+                #ax.legend(loc='upper left', fontsize='large')
+                # Plot dots:
+                plt.plot(Points[i][0], Points[i][1], '.', markersize=MarkerSize, c='k');
+                # Annotate with point numbers:
+                if False:#AnnotatePtNums:
+                    P = list(range(len(X))) # list of point numbers
+                    # Annotate every point:
+                    #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                    #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                    if False:
+                        plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5);
+                    # Annotate every 5th point with the point number:
+                    for p in range(0, len(X), 5):
+                        plt.text(X[p], Y[p], p, fontsize=MarkerSize+5);
+                    
+                # Also annotate the last point:
+                #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5);
+        
+    
+    plt.title(f'Every point in intersecting points joined to every other' \
+              + f'point for slice no {SliceNum}')
+
+    # Create filename for exported figure:
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + f'_Intersecting_pts_for_slice_{SliceNum}_joined_to_every_' \
+                + 'other_point.png'
+    
+    if ExportPlot:
+        print('exporting plot...')
         plt.savefig(FigFname, bbox_inches='tight')
     
