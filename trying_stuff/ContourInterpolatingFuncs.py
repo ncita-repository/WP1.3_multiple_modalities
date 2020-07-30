@@ -1480,22 +1480,27 @@ def TransformInterpolatedContours(InterpData, FixedDicomDir, MovingDicomDir):
 
 
 def GetLinePlaneIntersection(PlaneNormal, PlanePoint, 
-                            LineDirection, LinePoint):
+                             LinePoint1, LinePoint2,
+                             BetweenLinePts):
     """ 
     Get the intersection between a line and a plane.
     
     Inputs:
-        PlaneNormal   - A list of the [x, y, z] components of the plane's 
-                        normal
+        PlaneNormal    - A list of the [x, y, z] components of the plane's 
+                         normal
                         
-        PlanePoint    - A list of the [x, y z] components of a point lying on 
-                        the plane
+        PlanePoint     - A list of the [x, y z] components of a point lying on 
+                         the plane
 
-        LineDirection - A list of the [x, y, z] components of the line's
-                        vector orientation
+        LinePoint1     - A list of the [x, y, z] components of a point lying on
+                         the line
                         
-        LinePoint     - A list of the [x, y z] components of a point lying on 
-                        the point
+        LinePoint2     - A list of the [x, y z] components of a point lying on 
+                         the line
+                        
+        BetweenLinePts - Boolean value that determines whether the intersection
+                         point must lie between LinePoint1 and LinePoint2 (True)
+                         or not (False)
                         
                         
     Modified from rosettacode.org:
@@ -1509,27 +1514,52 @@ def GetLinePlaneIntersection(PlaneNormal, PlanePoint,
     
     PlaneNormal = np.array(PlaneNormal)
     PlanePoint = np.array(PlanePoint)
-    LineDirection = np.array(LineDirection)
-    LinePoint = np.array(LinePoint)
+    LinePoint1 = np.array(LinePoint1)
+    LinePoint2 = np.array(LinePoint2)
+    LineDirection = LinePoint2 - LinePoint1
     
-    NormDOTLine = np.dot(PlaneNormal, LineDirection)
+    Normal_dot_LineDir = np.dot(PlaneNormal, LineDirection)
     
-    if abs(NormDOTLine) < epsilon:
+    if abs(Normal_dot_LineDir) < epsilon:
         raise RuntimeError("No intersection or line is within plane")
         
-    dPoint = LinePoint - PlanePoint
+    PlaneLineVector = LinePoint1 - PlanePoint
     
-    NormDOTdPoint = - np.dot(PlaneNormal, dPoint) / NormDOTLine
+    Normal_dot_PlaneLineVector = - np.dot(PlaneNormal, PlaneLineVector) / Normal_dot_LineDir
     
-    InterPoint = dPoint + NormDOTdPoint * LineDirection + PlanePoint
+    IntersPoint = PlaneLineVector + Normal_dot_PlaneLineVector * LineDirection + PlanePoint
     
-    return list(InterPoint)
+    #return list(IntersPoint)
+
+    # Get the z-components of the intersection point, LinePoint1 and LinePoint2:
+    zI = IntersPoint[2]
+    z1 = LinePoint1[2]
+    z2 = LinePoint2[2]
+    
+    if z1 < z2:
+        zLow = z1
+        zHigh = z2
+    else:
+        zLow = z2
+        zHigh = z1
+    
+    # Does the intersection point (zI) lie between zLow and zHigh?
+    if ( zI >= zLow ) and ( zI <= zHigh ):
+        IsBetween = True
+    else:
+        IsBetween = False
+        
+    if BetweenLinePts and not IsBetween:
+        return []
+    else:
+        return list(IntersPoint)
+    
 
 
 
 
-
-def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir):
+def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir, 
+                                          UseInterp, BetweenLinePts):
     """
     Generate contours in the moving planes by finding the intersection of the 
     lines that join each over-sampled-to-interpolated contour #1 to each 
@@ -1541,6 +1571,14 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir):
         
         MovingDicomDir - Directory containing the DICOMs for the Moving image
                          domain.
+                         
+        UseInterp      - Boolean that determines whether interpolated contours
+                         will be used (True) when finding intersecting points
+                         or not (False).
+                         
+        BetweenLinePts - Boolean value that determines whether the intersection
+                         point must lie between LinePoint1 and LinePoint2 (True)
+                         or not (False)
         
         
     Returns:
@@ -1579,39 +1617,40 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir):
             Point1 = InterpData['MovOSContour1Pts'][i][j]
             Point2 = InterpData['MovInterpContourPts'][i][j]
             Point3 = InterpData['MovOSContour2Pts'][i][j]
-            
-            # Get the line directions for the line that joins Point1 and Point2, 
-            # and the line that joins Point2 and Point3:
-            LineDir1 = [Point2[n] - Point1[n] for n in range(len(Point1))]
-            LineDir2 = [Point3[n] - Point2[n] for n in range(len(Point2))]
-            
-            # Store the intersection points for the Line1 and each image plane,
-            # and for Line2 and each image plane:
-            IntersPoints1 = []
-            IntersPoints2 = []
     
             # Loop through all imaging planes in Moving Image and get the 
-            # intersecting points of Line1 and Line2 with each plane:
+            # intersecting points of Vector1 and Vector2 with each plane:
             for k in range(MovDims[2]):
     
                 # Need a point lying on the plane - use the plane's origin:
-                PlaneOrigin = [MovOrigin[0], MovOrigin[1], MovOrigin[2] + k*MovSpacings[2]]
+                PlaneOrigin = [MovOrigin[0] + k*MovSpacings[2]*PlaneNormal[0], 
+                               MovOrigin[1] + k*MovSpacings[2]*PlaneNormal[1], 
+                               MovOrigin[2] + k*MovSpacings[2]*PlaneNormal[2]
+                               ]
     
                 #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
     
                 IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
                                                         PlanePoint=PlaneOrigin,
-                                                        LineDirection=LineDir1,
-                                                        LinePoint=Point1)
+                                                        LinePoint1=Point1,
+                                                        LinePoint2=Point2,
+                                                        BetweenLinePts=BetweenLinePts)
                 
-                IntersPoint2 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
-                                                        PlanePoint=PlaneOrigin,
-                                                        LineDirection=LineDir2,
-                                                        LinePoint=Point2)
+                if UseInterp:
+                    IntersPoint2 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
+                                                            PlanePoint=PlaneOrigin,
+                                                            LinePoint1=Point2,
+                                                            LinePoint2=Point3,
+                                                            BetweenLinePts=BetweenLinePts)
+                
+                
+                # Append IntersPoint1 and IntersPoint2 to IntersContours if 
+                # the intersecting points were found: 
+                if IntersPoint1:
+                    IntersContours[k].append(IntersPoint1)
+                if UseInterp and IntersPoint2:
+                    IntersContours[k].append(IntersPoint2)
                     
-    
-                IntersPoints1.append(IntersPoint1)
-                IntersPoints2.append(IntersPoint2)
                 
                 if False:
                     print('The intersection of Line1 joining point', Point1, 'in slice', 
@@ -1625,20 +1664,7 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir):
                           'in slice', InterpData['BoundingSliceInds'][i][1], 'and the',  
                           f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
                           IntersPoint2, '.\n\n')
-    
-    
-    
             
-            # Find if any of the intersection points lie between Point1 and Point2, and
-            # between Point2 and Point3:
-            for k in range(MovDims[2]):
-                if ( IntersPoints1[k][2] > Point1[2] ) and ( IntersPoints1[k][2] < Point2[2] ):
-                    IntersContours[k].append(IntersPoints1[k])
-                    
-                if ( IntersPoints2[k][2] > Point2[2] ) and ( IntersPoints2[k][2] < Point3[2] ):
-                    IntersContours[k].append(IntersPoints2[k])
-                    
-                    
     """
     Note:
         IntersContours has lists of points by contour. Modify it so that each 
@@ -1984,8 +2010,12 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
               'Fixed image domain and transform the contours.\n\n')
     
     # Generate contours in the Moving image planes:
+    UseInterp = True
+    #UseInterp = False
+    
     MovContourData = GetIntersectingContoursInMovingPlanes(InterpData, 
-                                                           MovingDicomDir)
+                                                           MovingDicomDir,
+                                                           UseInterp)
     
     # Get the indices of the slices that contain contours in the Moving image:
     MovSlicesWithContours = GetIndsOfSlicesWithContours(ContourData=MovContourData,
@@ -2129,11 +2159,94 @@ def GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo):
 
 
 
+def GetPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
+    from GetImageAttributes import GetImageAttributes
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for i in range(len(SliceNums)):
+        s = SliceNums[i]
+        
+        # Let Point0 be equivalent to the origin moved up to slice number s 
+        # in the z-direction:
+        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
+                  Origin[1] + s*Spacings[2]*Dirs[7], 
+                  Origin[2] + s*Spacings[2]*Dirs[8]
+                  ]
+        
+        # Let Point1 be equivalent to Point0 moved along MovDims[0] in the
+        # x-direction:
+        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
+                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
+                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
+                  ]
+        
+        # Let Point2 be equivalent to Point1 moved along MovDims[1] in the 
+        # y-direction:
+        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        # Let Point3 be equivalent to Point0 moved along MovDims[1] in the
+        # y-direction:
+        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        
+        Planes.append([Point0, Point1, Point2, Point3, Point0])
+        
+    
+    return Planes
+            
+        
 
+def ExportContourPtsToCsv(ContourData, Label):
+    """
+    ContourData - e.g. FixContourData, MovContourData
+    
+    Label       - e.g. 'Fix', 'Mov'
+    """
+    
+    import csv
 
-def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd, 
-                               BoundingSliceInds, dP, AnnotatePtNums,
-                               ExportPlot):
+    for i in range(len(ContourData['PointPCS'])):
+        Points = ContourData['PointPCS'][i]
+        
+        if Points:
+            Points = Points[0]
+            
+            SliceNo = ContourData['SliceNo'][i]
+            
+            with open(Label + f"ContourPts_slice{SliceNo}.csv", "w") as output:
+                writer = csv.writer(output, lineterminator='\n')
+                writer.writerows(Points)
+                
+                #for r in range(len(Points)):
+                #    writer.writerow(Points[r])
+                
+    return
+    
+
+    
+    
+
+def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts, 
+                             InterpSliceInd, BoundingSliceInds, dP, 
+                             AnnotatePtNums, ExportPlot):
     """
     Plot interpolation results.
     
@@ -2142,20 +2255,15 @@ def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd
     import matplotlib.pyplot as plt
     import time
     
-    #Colours = ['b', 'g', 'r', 'm', 'y']
-    #Shifts = [0, 2, 4, 6, 8] # to help visualise
-    #Shifts = [0, 0, 0, 0, 0] # no shift
-    
     MarkerSize = 5
+    AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    #AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
     
     # Create a figure with two subplots and the specified size:
     if ExportPlot:
         fig, ax = plt.subplots(1, 1, figsize=(14, 14), dpi=300)
     else:
         fig, ax = plt.subplots(1, 1, figsize=(14, 14))
-    
-
-
     
     for i in range(len(Contours)):
         # Unpack tuple and store each x,y tuple in arrays X and Y:
@@ -2196,13 +2304,13 @@ def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd
             #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
             if False:
                 plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[i]);
-            # Annotate every 5th point with the point number:
-            for p in range(0, len(X), 5):
+            # Annotate every AnnotationPeriod^th point with the point number:
+            for p in range(0, len(X), AnnotationPeriod):
                 plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[i]);
-            
         # Also annotate the last point:
         #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
         
+    plt.axis('equal')
     
     plt.title(f'Interpolation of contour at slice {InterpSliceInd} between ' \
               + f'slices {BoundingSliceInds[0]} and {BoundingSliceInds[1]}')
@@ -2216,7 +2324,145 @@ def PlotInterpolatedContours2D(Contours, Labels, Colours, Shifts, InterpSliceInd
         plt.savefig(FigFname, bbox_inches='tight')
     
     
+
+def PlotInterpContours2D(InterpData, dP, AnnotatePtNums, SubPlots, ExportPlot):
+    """
+    Plot interpolation results.
     
+    AnnotatePtNums - Boolean value determines whether points are annotated with
+                     point numbers
+                     
+    SubPlots       - Boolean value determines whether a single figure with 
+                     sub-plots or individual plots are generated.
+                     
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    MarkerSize = 5
+    
+    Colours = ['b', 'g', 'r']
+    
+    #AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
+    
+    # Get number of interp data sets in InterpData:
+    N = len(InterpData['InterpSliceInd'])
+    
+    # Get the number of rows and columns required of the subplot:
+    if N == 1:
+        Nrows = 1
+        Ncols = 1
+    elif N > 1:
+        Ncols = 2
+        Nrows = - (- N//Ncols) # i.e. floor of N / Ncols
+    else:
+        return
+        
+    # Prepare the figure:
+    if ExportPlot:
+        DPI = 300
+    else:
+        DPI = 100
+        
+    if SubPlots:
+        fig = plt.figure(figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+
+    
+    for i in range(N):
+        # Set up the axes for this sub-plot:
+        if SubPlots:
+            ax = fig.add_subplot(Nrows, Ncols, i+1)
+        else:
+            fig = plt.figure(figsize=(10, 10), dpi=DPI)
+            ax = fig.add_subplot(111)
+        
+        Contour1 = InterpData['FixOSContour1Pts'][i]
+        Contour2 = InterpData['FixOSContour2Pts'][i]
+        ContourI = InterpData['FixInterpContourPts'][i]
+        AllContours = [Contour1, Contour2, ContourI]
+        
+        SliceInd1 = InterpData['BoundingSliceInds'][i][0]
+        SliceInd2 = InterpData['BoundingSliceInds'][i][1]
+        SliceIndI = InterpData['InterpSliceInd'][i]
+        
+        AllLabels = [f'{SliceInd1}', 
+                     f'{SliceInd2}', 
+                     f'{SliceIndI}']
+        
+        for j in range(len(AllContours)):
+            # Unpack tuple and store each x,y tuple in arrays X and Y:
+            X = []
+            Y = []
+        
+            for x, y, z in AllContours[j]:
+                X.append(x)
+                #X.append(x + Shifts[j])
+                Y.append(y)
+                #Y.append(y + Shifts[j])
+        
+            # Define linestyle:
+            if 'nterp' in AllLabels[j]: # i.e. interpolated contour
+                if 'uper' in AllLabels[j]: # super-sampled
+                    LineStyle='dashed'
+                else: # reduced nodes
+                    LineStyle=(0, (5, 10)) # loosely dashed   
+            else:
+                LineStyle='solid'
+                
+            # Plot line:
+            ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]);    
+            ax.legend(loc='upper left', fontsize='small')
+            # Plot dots:
+            if True:
+                plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[j]);
+            
+            # Plot the first and last points with different markers to help
+            # identify them:
+            #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+            #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+            # Annotate with point numbers:
+            if AnnotatePtNums:
+                P = list(range(len(X))) # list of point numbers
+                # Annotate every point:
+                #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                if False:
+                    plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[j]);
+                # Annotate every AnnotationPeriod^th point with the point number:
+                for p in range(0, len(X), AnnotationPeriod):
+                    plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[j]);
+            # Also annotate the last point:
+            #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
+        
+        plt.axis('equal')
+    
+        plt.title(f'Interpolation between slices {SliceInd1} and {SliceInd2}')
+        
+        if not SubPlots:
+            # Create filename for exported figure:
+            FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Interpolation' \
+                        + f'_between_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
+            
+            if ExportPlot:
+                plt.savefig(FigFname, bbox_inches='tight')
+    
+    FirstSlice = InterpData['BoundingSliceInds'][0][0]
+    LastSlice = InterpData['BoundingSliceInds'][-1][1]
+    
+    if SubPlots:
+        # Create filename for exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Interpolation' \
+                    + f'_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        
+        if ExportPlot:
+            plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
+
     
     
 def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
@@ -2369,7 +2615,7 @@ def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
                   + f'{LastSliceInd} \nand interpolation inbetween slices')
         
         # Increment the sub-plot number:
-        i += 1
+        #i += 1
 
         
     
@@ -2389,60 +2635,23 @@ def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
     
     
     
-def GetPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
-    from GetImageAttributes import GetImageAttributes
-        
-    package = 'pydicom'
+def axisEqual3D(ax):
+    """
+    Source:
+    https://stackoverflow.com/questions/8130823/set-matplotlib-3d-plot-aspect-ratio    
+    """
     
-    # Get the image attributes:
-    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
-                                                      Package=package)
-        
-    # Get the slice numbers of the imaging planes that contain contours:
-    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    import numpy as np
     
-    # Create "contours" that mark out corners that define each plane in 
-    # SliceNums:
-    Planes = []
-    
-    for i in range(len(SliceNums)):
-        s = SliceNums[i]
-        
-        # Let Point0 be equivalent to the origin moved up to slice number s 
-        # in the z-direction:
-        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
-                  Origin[1] + s*Spacings[2]*Dirs[7], 
-                  Origin[2] + s*Spacings[2]*Dirs[8]
-                  ]
-        
-        # Let Point1 be equivalent to Point0 moved along MovDims[0] in the
-        # x-direction:
-        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
-                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
-                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
-                  ]
-        
-        # Let Point2 be equivalent to Point1 moved along MovDims[1] in the 
-        # y-direction:
-        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
-                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
-                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
-                  ]
-        
-        # Let Point3 be equivalent to Point0 moved along MovDims[1] in the
-        # y-direction:
-        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
-                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
-                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
-                  ]
-        
-        
-        Planes.append([Point0, Point1, Point2, Point3, Point0])
+    extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
+    sz = extents[:,1] - extents[:,0]
+    centers = np.mean(extents, axis=1)
+    maxsize = max(abs(sz))
+    r = maxsize/2
+    for ctr, dim in zip(centers, 'xyz'):
+        getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
         
     
-    return Planes
-            
-            
             
 def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
                                PlotImagingPlanes, FixDicomDir, MovDicomDir, 
@@ -2512,33 +2721,30 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
         AllPlanes = [FixPlanes, MovPlanes]                    
     
     
-    
     Colours = ['b', 'r', 'g', 'm', 'y']
-    #Shifts = [0, 2, 4, 6, 8] # to help visualise
-    #Shifts = [0, 0, 0, 0, 0] # no shift
-    
-    #MarkerSize = 5
+    MarkerSize = 3
     
     # Create a figure with two subplots and the specified size:
-    if ExportPlot:
-        #fig = plt.subplots(1, 2, figsize=(14, 14), dpi=300)
-        fig = plt.figure(figsize=(10, 10), dpi=300)
-    else:
-        #fig = plt.subplots(1, 2, figsize=(14, 14))
-        fig = plt.figure(figsize=(10, 10))
-        fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+    #if ExportPlot:
+    #    #fig = plt.subplots(1, 2, figsize=(14, 14), dpi=300)
+    #    #fig = plt.figure(figsize=(10, 10), dpi=300)
+    #    fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+    #else:
+    #    #fig = plt.subplots(1, 2, figsize=(14, 14))
+    #    #fig = plt.figure(figsize=(10, 10))
+    #    fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
     #ax = plt.axes(projection="3d")
 
-    if CombinePlots:
-        ax = fig.add_subplot(1, 1, 1, projection='3d')
+    #if CombinePlots:
+    #    ax = fig.add_subplot(1, 1, 1, projection='3d')
     
     # Loop through each list of contours for each sub-plot:
     for i in range(len(AllContours)):
         Contours = AllContours[i]
         
         # Set up the axes for this sub-plot:
-        if not CombinePlots:
-            ax = fig.add_subplot(1, 2, i+1, projection='3d')
+        #if not CombinePlots:
+        #    ax = fig.add_subplot(2, 1, i+1, projection='3d')
         
         # Store all x,y,z coordinates in arrays X, Y and Z:
         X = []
@@ -2557,7 +2763,6 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
                 Y.append(y)
                 Z.append(z)
         
-        
         # Define linestyle:
         if (i % 2): # i.e. if i is even, it's an interpolated contour
             #LineStyle='dashed'
@@ -2565,8 +2770,14 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
         else: # if i is odd, it's not an interpolated contour
             LineStyle='solid'
             
+            
+        #fig = plt.figure(figsize=plt.figaspect(0.5)*1.5, projection='3d') # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+        #fig = plt.figure(figsize=plt.figaspect(0.5)*1.5)
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111, projection='3d')
+        
         # Plot line:
-        ax.plot3D(X, Y, Z, linestyle=LineStyle, linewidth=1, c='gray'); 
+        ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[i]); 
         #Axes3D.plot(X, Y, Z, linestyle=LineStyle, linewidth=1, c='gray'); 
         
         #ax.legend(loc='upper left', fontsize='large')
@@ -2576,7 +2787,8 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
         # Plot dots:
         ##ax.scatter3D(X, Y, Z, markersize=MarkerSize, c=Z, cmap='hsv');
         #ax.scatter3D(X, Y, Z, c=Z, cmap='hsv');
-        ax.scatter3D(X, Y, Z, c=Colours[i], cmap='hsv');
+        ax.scatter3D(X, Y, Z, s=MarkerSize, c=Colours[i], cmap='hsv');
+        
         
         
         if PlotImagingPlanes:  
@@ -2613,27 +2825,33 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
             ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c='gray'); 
             
         
-        #plt.axis('equal') # doesn't work
-        
-        if i == 0:
-            txt = 'Fixed'
-        else:
-            txt = 'Moving'
+            #plt.axis('equal') # doesn't work
+            #ax.set_aspect('equal')
+            #plt.axis('square')
+            
+            axisEqual3D(ax)
+            
+            if i == 0:
+                txt = 'Fixed'
+            else:
+                txt = 'Moving'
+                
+            plt.title(txt + f' image contours between slice {FirstSliceInd}' \
+                      + f' and {LastSliceInd} and interpolation inbetween' \
+                      + ' slices')    
         
         if CombinePlots:
             plt.title('Fixed and Moving image contours between slice ' \
                       + f'{FirstSliceInd} and {LastSliceInd} \nand ' \
                       + 'interpolation inbetween slices')
-        else:
-            plt.title(txt + f' image contours between slice {FirstSliceInd}' \
-                      + f' and {LastSliceInd} \nand interpolation inbetween' \
-                      + ' slices')
+        #else:
+        #    plt.title(txt + f' image contours between slice {FirstSliceInd}' \
+        #              + f' and {LastSliceInd} \nand interpolation inbetween' \
+        #              + ' slices')
         
         # Increment the sub-plot number:
         i += 1
 
-        
-    
     
     #plt.title(f'Interpolation of contours between slice {FirstSliceInd} and ' \
     #          + f'slice {LastSliceInd}')
@@ -2649,8 +2867,8 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
     
     
 
-def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, AnnotatePtNums,
-                             ExportPlot):
+def PlotIntersectingPoints2D_OLD(MovContourData, SliceNum, dP, AnnotatePtNums,
+                                 ExportPlot):
     """
     Plot intersecting points.
     
@@ -2706,6 +2924,7 @@ def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, AnnotatePtNums,
     # Also annotate the last point:
     #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5);
         
+    plt.axis('equal')
     
     plt.title(f'Intersecting points on Moving slice {SliceNum}')
 
@@ -2716,7 +2935,137 @@ def PlotIntersectingPoints2D(MovContourData, SliceNum, dP, AnnotatePtNums,
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
     
+    return
+
+
+
+def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots, 
+                          ExportPlot):
+    """
+    Plot intersecting points.
     
+    AnnotatePtNums - Boolean value determines whether points are annotated with
+                     point numbers
+                     
+    SubPlots       - Boolean value determines whether a single figure with 
+                     sub-plots or individual plots are generated.
+                     
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    #AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
+    
+    # Get the indices of the slices in ContourData that have the desired 
+    # ContourType value:
+    Inds = GetIndsOfSliceNumsOfContourType(ContourData=MovContourData, 
+                                           ContourTypeNo=3)
+    
+    N = len(Inds)
+    
+    # Get the number of rows and columns required of the subplot:
+    if N == 1:
+        Nrows = 1
+        Ncols = 1
+    elif N > 1:
+        Ncols = 2
+        Nrows = - (- N//Ncols) # i.e. floor of N / Ncols
+    else:
+        return
+        
+    # Prepare the figure:
+    if ExportPlot:
+        DPI = 300
+    else:
+        DPI = 100
+        
+    if SubPlots:
+        fig = plt.figure(figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+        MarkerSize = 2
+    else:
+        MarkerSize = 5
+
+    
+    for i in range(N):
+        # Set up the axes for this sub-plot:
+        if SubPlots:
+            ax = fig.add_subplot(Nrows, Ncols, i+1)
+        else:
+            fig = plt.figure(figsize=(10, 10), dpi=DPI)
+            ax = fig.add_subplot(111)
+        
+        SliceNum = Inds[i]
+        
+        Points = MovContourData['PointPCS'][SliceNum]
+        
+        for j in range(len(Points)):
+            # Unpack tuple and store each x,y tuple in arrays X and Y:
+            X = []
+            Y = []
+        
+            for x, y, z in Points[j]:
+                X.append(x)
+                Y.append(y)
+                
+            # Plot line:
+            ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');    
+            # Plot dots:
+            if True:
+                plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+            
+            # Plot the first and last points with different markers to help
+            # identify them:
+            #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+            #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+            # Annotate with point numbers:
+            if AnnotatePtNums:
+                P = list(range(len(X))) # list of point numbers
+                # Annotate every point:
+                #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                if False:
+                    plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c='k');
+                # Annotate every AnnotationPeriod^th point with the point number:
+                for p in range(0, len(X), AnnotationPeriod):
+                    plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c='k');
+            # Also annotate the last point:
+            #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
+        
+        #plt.axis('tight') 
+        plt.axis('equal')
+        
+    
+        plt.title(f'Intersecting points on Moving slice {SliceNum}')
+        
+        if not SubPlots:
+            # Create filename for exported figure:
+            FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                       + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
+            
+            if ExportPlot:
+                plt.savefig(FigFname, bbox_inches='tight')
+    
+    FirstSlice = Inds[0]
+    LastSlice = Inds[-1]
+    
+    if SubPlots:
+        # Create filename for exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Intersecting' \
+                   + f'_points_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        
+        if ExportPlot:
+            plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+    
+
     
 def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
     """
@@ -2794,6 +3143,7 @@ def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
                 # Also annotate the last point:
                 #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5);
         
+    plt.axis('equal')
     
     plt.title(f'Every point in intersecting points joined to every other' \
               + f'point for slice no {SliceNum}')
