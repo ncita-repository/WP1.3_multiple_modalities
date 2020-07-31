@@ -1628,17 +1628,24 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                                ]
     
                 #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
-    
-                IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
-                                                        PlanePoint=PlaneOrigin,
-                                                        LinePoint1=Point1,
-                                                        LinePoint2=Point2,
-                                                        BetweenLinePts=BetweenLinePts)
                 
                 if UseInterp:
+                    IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
+                                                            PlanePoint=PlaneOrigin,
+                                                            LinePoint1=Point1,
+                                                            LinePoint2=Point2,
+                                                            BetweenLinePts=BetweenLinePts)
+                
                     IntersPoint2 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
                                                             PlanePoint=PlaneOrigin,
                                                             LinePoint1=Point2,
+                                                            LinePoint2=Point3,
+                                                            BetweenLinePts=BetweenLinePts)
+                    
+                else:
+                    IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
+                                                            PlanePoint=PlaneOrigin,
+                                                            LinePoint1=Point1,
                                                             LinePoint2=Point3,
                                                             BetweenLinePts=BetweenLinePts)
                 
