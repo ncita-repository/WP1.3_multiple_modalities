@@ -1475,91 +1475,82 @@ def TransformInterpolatedContours(InterpData, FixedDicomDir, MovingDicomDir):
     
     return InterpData, FixIm, MovIm, RegIm, ElastixImFilt
 
+    
+    
 
-
-
-
-def GetLinePlaneIntersection(PlaneNormal, PlanePoint, 
-                             LinePoint1, LinePoint2,
-                             BetweenLinePts):
+    
+def GetLinePlaneIntersection(PlaneN, PlaneP, LineP0, LineP1, OnLineSegment):
     """ 
     Get the intersection between a line and a plane.
     
     Inputs:
-        PlaneNormal    - A list of the [x, y, z] components of the plane's 
-                         normal
+        PlaneN        - A list of the [x, y, z] components of the plane's 
+                        normal
                         
-        PlanePoint     - A list of the [x, y z] components of a point lying on 
-                         the plane
+        PlaneP        - A list of the [x, y z] components of a point lying on 
+                        the plane
 
-        LinePoint1     - A list of the [x, y, z] components of a point lying on
-                         the line
+        LineP0        - A list of the [x, y, z] components of a point lying on
+                        the line
                         
-        LinePoint2     - A list of the [x, y z] components of a point lying on 
-                         the line
+        LineP1        - A list of the [x, y z] components of a point lying on 
+                        the line
                         
-        BetweenLinePts - Boolean value that determines whether the intersection
-                         point must lie between LinePoint1 and LinePoint2 (True)
-                         or not (False)
+        OnLineSegment - Boolean value that determines whether the intersection
+                        point must lie on the line segment (True) or not (False)
                         
-                        
-    Modified from rosettacode.org:
-        
-    https://rosettacode.org/wiki/Find_the_intersection_of_a_line_with_a_plane
+    Returns:
+        IntersP       - A list of the [x, y, z] components of the point that
+                        intersects the line and plane; or None
+    
+    Code adapted from:
+    https://stackoverflow.com/questions/5666222/3d-line-plane-intersection
     """
-
-    import numpy as np
     
     epsilon=1e-6
-    
-    PlaneNormal = np.array(PlaneNormal)
-    PlanePoint = np.array(PlanePoint)
-    LinePoint1 = np.array(LinePoint1)
-    LinePoint2 = np.array(LinePoint2)
-    LineDirection = LinePoint2 - LinePoint1
-    
-    Normal_dot_LineDir = np.dot(PlaneNormal, LineDirection)
-    
-    if abs(Normal_dot_LineDir) < epsilon:
-        raise RuntimeError("No intersection or line is within plane")
         
-    PlaneLineVector = LinePoint1 - PlanePoint
+    LineV = [LineP1[0] - LineP0[0],
+             LineP1[1] - LineP0[1],
+             LineP1[2] - LineP0[2]
+             ]
     
-    Normal_dot_PlaneLineVector = - np.dot(PlaneNormal, PlaneLineVector) / Normal_dot_LineDir
+    PlaneN_dot_LineV = PlaneN[0] * LineV[0] + \
+                       PlaneN[1] * LineV[1] + \
+                       PlaneN[2] * LineV[2]
     
-    IntersPoint = PlaneLineVector + Normal_dot_PlaneLineVector * LineDirection + PlanePoint
-    
-    #return list(IntersPoint)
-
-    # Get the z-components of the intersection point, LinePoint1 and LinePoint2:
-    zI = IntersPoint[2]
-    z1 = LinePoint1[2]
-    z2 = LinePoint2[2]
-    
-    if z1 < z2:
-        zLow = z1
-        zHigh = z2
-    else:
-        zLow = z2
-        zHigh = z1
-    
-    # Does the intersection point (zI) lie between zLow and zHigh?
-    if ( zI >= zLow ) and ( zI <= zHigh ):
-        IsBetween = True
-    else:
-        IsBetween = False
+    if abs(PlaneN_dot_LineV) < epsilon:
+        raise RuntimeError("The line is parallel to the plane")
+        return None
         
-    if BetweenLinePts and not IsBetween:
-        return []
-    else:
-        return list(IntersPoint)
+    PlaneLineV = [LineP0[0] - PlaneP[0],
+                  LineP0[1] - PlaneP[1],
+                  LineP0[2] - PlaneP[2]
+                  ]
     
-
+    PlaneN_dot_PlaneLineV = PlaneN[0] * PlaneLineV[0] + \
+                            PlaneN[1] * PlaneLineV[1] + \
+                            PlaneN[2] * PlaneLineV[2]
+    
+    factor = - PlaneN_dot_PlaneLineV / PlaneN_dot_LineV
+    
+    IntersP = [LineP0[0] + factor * LineV[0],
+               LineP0[1] + factor * LineV[1],
+               LineP0[2] + factor * LineV[2]
+               ]
+    
+    if OnLineSegment and ( factor < 0 ) or ( factor > 1 ):
+        # IntersP does not lie on the line segment.
+        return None
+        
+    else:
+        return IntersP
+            
+    
 
 
 
 def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir, 
-                                          UseInterp, BetweenLinePts):
+                                          UseInterp, OnLineSegment):
     """
     Generate contours in the moving planes by finding the intersection of the 
     lines that join each over-sampled-to-interpolated contour #1 to each 
@@ -1576,9 +1567,8 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                          will be used (True) when finding intersecting points
                          or not (False).
                          
-        BetweenLinePts - Boolean value that determines whether the intersection
-                         point must lie between LinePoint1 and LinePoint2 (True)
-                         or not (False)
+        OnLineSegment  - Boolean value that determines whether the intersection
+                         point must lie on the line segment (True) or not (False)
         
         
     Returns:
@@ -1613,9 +1603,9 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
         # Loop through each point in Contour1, InterpContour and Contour2:
         for j in range(len(InterpData['MovOSContour1Pts'][i])):
     
-            Point1 = InterpData['MovOSContour1Pts'][i][j]
-            Point2 = InterpData['MovInterpContourPts'][i][j]
-            Point3 = InterpData['MovOSContour2Pts'][i][j]
+            Point0 = InterpData['MovOSContour1Pts'][i][j]
+            Point1 = InterpData['MovInterpContourPts'][i][j]
+            Point2 = InterpData['MovOSContour2Pts'][i][j]
     
             # Loop through all imaging planes in Moving Image and get the 
             # intersecting points of Vector1 and Vector2 with each plane:
@@ -1630,46 +1620,46 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                 #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
                 
                 if UseInterp:
-                    IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
-                                                            PlanePoint=PlaneOrigin,
-                                                            LinePoint1=Point1,
-                                                            LinePoint2=Point2,
-                                                            BetweenLinePts=BetweenLinePts)
+                    IntersPoint0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                            PlaneP=PlaneOrigin,
+                                                            LineP0=Point0,
+                                                            LineP1=Point1,
+                                                            OnLineSegment=OnLineSegment)
                 
-                    IntersPoint2 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
-                                                            PlanePoint=PlaneOrigin,
-                                                            LinePoint1=Point2,
-                                                            LinePoint2=Point3,
-                                                            BetweenLinePts=BetweenLinePts)
+                    IntersPoint1 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                            PlaneP=PlaneOrigin,
+                                                            LineP0=Point1,
+                                                            LineP1=Point2,
+                                                            OnLineSegment=OnLineSegment)
                     
                 else:
-                    IntersPoint1 = GetLinePlaneIntersection(PlaneNormal=PlaneNormal, 
-                                                            PlanePoint=PlaneOrigin,
-                                                            LinePoint1=Point1,
-                                                            LinePoint2=Point3,
-                                                            BetweenLinePts=BetweenLinePts)
+                    IntersPoint0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                            PlaneP=PlaneOrigin,
+                                                            LineP0=Point0,
+                                                            LineP1=Point2,
+                                                            OnLineSegment=OnLineSegment)
                 
                 
-                # Append IntersPoint1 and IntersPoint2 to IntersContours if 
+                # Append IntersPoint0 and IntersPoint1 to IntersContours if 
                 # the intersecting points were found: 
-                if IntersPoint1:
+                if IntersPoint0:
+                    IntersContours[k].append(IntersPoint0)
+                if UseInterp and IntersPoint1:
                     IntersContours[k].append(IntersPoint1)
-                if UseInterp and IntersPoint2:
-                    IntersContours[k].append(IntersPoint2)
                     
                 
                 if False:
-                    print('The intersection of Line1 joining point', Point1, 'in slice', 
-                          InterpData['BoundingSliceInds'][i][0], 'and \npoint', Point2,
+                    print('The intersection of Line0 joining point', Point0, 'in slice', 
+                          InterpData['BoundingSliceInds'][i][0], 'and \npoint', Point1,
                           'in slice', InterpData['InterpSliceInd'][i], 'and the', 
                           f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
-                          IntersPoint1, '.\n\n')
+                          IntersPoint0, '.\n\n')
     
-                    print('The intersection of Line2 joining point', Point2, 'in slice', 
-                          InterpData['InterpSliceInd'][i], 'and \npoint', Point3,
+                    print('The intersection of Line1 joining point', Point1, 'in slice', 
+                          InterpData['InterpSliceInd'][i], 'and \npoint', Point2,
                           'in slice', InterpData['BoundingSliceInds'][i][1], 'and the',  
                           f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
-                          IntersPoint2, '.\n\n')
+                          IntersPoint1, '.\n\n')
             
     """
     Note:
@@ -1772,7 +1762,8 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
 
 
 def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, 
-             InterpolateAllPts, LogToConsole, PlotResults, ExportResults):
+             InterpolateAllPts, LogToConsole, PlotResults, AnnotatePtNums, 
+             ExportResults):
     """
     Copy ROIs from the Fixed to Moving image domain.  
     
@@ -1954,44 +1945,9 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
             InterpData['FixOSContour1Pts'].append(OSContour1)
             InterpData['FixOSContour2Pts'].append(OSContour2)
             InterpData['FixInterpContourPts'].append(InterpContourPCS)
-            
-            
-            
-            """ Plot interpolated contours: """
-            if PlotResults:
-                """ Get additional data for plots: """
-                import copy
+                         
+   
                 
-                # Get the bounding slice indices for the slice at InterpSliceInd:
-                BoundingSliceInds = GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd)
-        
-                Contour1 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[0]][0])
-                Contour2 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[1]][0])
-        
-                if InterpSliceInd.is_integer():
-                    # The actual contour that exists at slice InterpSliceInd:
-                    ActualContour = copy.deepcopy(FixContourData['PointPCS'][InterpSliceInd][0])
-        
-        
-                # Combine data into lists to plot:
-                Contours = [Contour1, Contour2, InterpContourPCS]
-                Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
-                          f'Contour at slice {BoundingSliceInds[1]}', 
-                          f'Interpolated contour at {InterpSliceInd}']
-                Colours = ['b', 'g', 'r', 'y']
-                #Shifts = [0, 2, 4, 6] # to help visualise
-                Shifts = [0, 0, 0, 0] # no shift
-                if InterpSliceInd.is_integer():
-                    Contours.append(ActualContour)
-                    Labels.append(f'Actual contour at {InterpSliceInd}')
-        
-                # Plot results:
-                PlotInterpolatedContours2D(Contours=Contours, Labels=Labels, 
-                                           Colours=Colours, Shifts=Shifts,
-                                           InterpSliceInd=InterpSliceInd,
-                                           BoundingSliceInds=BoundingSliceInds,
-                                           dP=dP, ExportPlot=ExportResults)
-
      
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
@@ -2019,9 +1975,12 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
     UseInterp = True
     #UseInterp = False
     
+    OnLineSegment = True
+    
     MovContourData = GetIntersectingContoursInMovingPlanes(InterpData, 
                                                            MovingDicomDir,
-                                                           UseInterp)
+                                                           UseInterp,
+                                                           OnLineSegment)
     
     # Get the indices of the slices that contain contours in the Moving image:
     MovSlicesWithContours = GetIndsOfSlicesWithContours(ContourData=MovContourData,
@@ -2035,11 +1994,65 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
               'contours in the Moving image domain.')
     
     
-    
-    """ Plot DICOM images containing contours overlaid: """
+    """ Plot various results: """
     if PlotResults:
         import RegUtilityFuncs as ruf
         import time
+        
+        #""" Get additional data for plots: """
+        #import copy
+        
+        # Get the bounding slice indices for the slice at InterpSliceInd:
+        #BoundingSliceInds = GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd)
+
+        #Contour1 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[0]][0])
+        #Contour2 = copy.deepcopy(FixContourData['PointPCS'][BoundingSliceInds[1]][0])
+
+        #if InterpSliceInd.is_integer():
+        #    # The actual contour that exists at slice InterpSliceInd:
+        #    ActualContour = copy.deepcopy(FixContourData['PointPCS'][InterpSliceInd][0])
+
+
+        # Combine data into lists to plot:
+        #Contours = [Contour1, Contour2, InterpContourPCS]
+        #Labels = [f'Contour at slice {BoundingSliceInds[0]}', 
+        #          f'Contour at slice {BoundingSliceInds[1]}', 
+        #          f'Interpolated contour at {InterpSliceInd}']
+        #Colours = ['b', 'g', 'r', 'y']
+        ##Shifts = [0, 2, 4, 6] # to help visualise
+        #Shifts = [0, 0, 0, 0] # no shift
+        #if InterpSliceInd.is_integer():
+        #    Contours.append(ActualContour)
+        #    Labels.append(f'Actual contour at {InterpSliceInd}')
+
+        # Plot the interpolated and original contours:
+        PlotInterpContours2D(InterpData=InterpData, 
+                             FixedOrMoving='Fixed', 
+                             dP=dP, 
+                             AnnotatePtNums=False, 
+                             SubPlots=True, 
+                             ExportPlot=ExportResults)
+                             
+        # Plot the transformed interpolated and original contours:
+        PlotInterpContours2D(InterpData=InterpData,
+                             FixedOrMoving='Moving', 
+                             dP=dP, 
+                             AnnotatePtNums=False, 
+                             SubPlots=True, 
+                             ExportPlot=ExportResults)
+                             
+        # Plot the intersecting points of the transformed interpolated
+        # and original contours with the image planes in the Moving
+        # domain:
+        PlotIntersectingPts2D(MovContourData=MovContourData, 
+                              dP=dP, 
+                              AnnotatePtNums=False, 
+                              SubPlots=True, 
+                              ExportPlot=ExportResults)
+                
+                
+                
+        """ Plot DICOM images containing contours overlaid: """        
         
         # Plot all slices containing contours in either image domains.
         # Concatenate the lists:
@@ -2331,16 +2344,27 @@ def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts,
     
     
 
-def PlotInterpContours2D(InterpData, dP, AnnotatePtNums, SubPlots, ExportPlot):
+def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums, 
+                         SubPlots, ExportPlot):
     """
     Plot interpolation results.
     
-    AnnotatePtNums - Boolean value determines whether points are annotated with
-                     point numbers
+    Inputs:
+        InterpData     - Dictionary containing interpolated data
+        
+        FixedOrMoving  - String; Acceptable values are "Fixed" or "Moving"
+        
+        dP             - Float value; Minimum inter-node spacing used for 
+                         interpolation
+        
+        AnnotatePtNums - Boolean value determines whether points are annotated with
+                         point numbers
                      
-    SubPlots       - Boolean value determines whether a single figure with 
-                     sub-plots or individual plots are generated.
-                     
+        SubPlots       - Boolean value determines whether a single figure with 
+                         sub-plots or individual plots are generated.
+                    
+    Returns:
+        None; Plot exported if ExportPlot = True
     
     """
     
@@ -2385,9 +2409,18 @@ def PlotInterpContours2D(InterpData, dP, AnnotatePtNums, SubPlots, ExportPlot):
             fig = plt.figure(figsize=(10, 10), dpi=DPI)
             ax = fig.add_subplot(111)
         
-        Contour1 = InterpData['FixOSContour1Pts'][i]
-        Contour2 = InterpData['FixOSContour2Pts'][i]
-        ContourI = InterpData['FixInterpContourPts'][i]
+        if 'ix' in FixedOrMoving:
+            Contour1 = InterpData['FixOSContour1Pts'][i]
+            Contour2 = InterpData['FixOSContour2Pts'][i]
+            ContourI = InterpData['FixInterpContourPts'][i]
+        elif 'ov' in FixedOrMoving:
+            Contour1 = InterpData['MovOSContour1Pts'][i]
+            Contour2 = InterpData['MovOSContour2Pts'][i]
+            ContourI = InterpData['MovInterpContourPts'][i]
+        else:
+            print('Input "FixedOrMoving" must be "Fixed" or "Moving".')
+            return
+        
         AllContours = [Contour1, Contour2, ContourI]
         
         SliceInd1 = InterpData['BoundingSliceInds'][i][0]
@@ -2445,12 +2478,14 @@ def PlotInterpContours2D(InterpData, dP, AnnotatePtNums, SubPlots, ExportPlot):
         
         plt.axis('equal')
     
-        plt.title(f'Interpolation between slices {SliceInd1} and {SliceInd2}')
+        plt.title('Interpolation between ' + FixedOrMoving \
+                  + f' slices {SliceInd1} and {SliceInd2}')
         
         if not SubPlots:
             # Create filename for exported figure:
-            FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Interpolation' \
-                        + f'_between_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
+            FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                       + '_Interpolation_between_' + FixedOrMoving \
+                       + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
             
             if ExportPlot:
                 plt.savefig(FigFname, bbox_inches='tight')
@@ -2460,8 +2495,9 @@ def PlotInterpContours2D(InterpData, dP, AnnotatePtNums, SubPlots, ExportPlot):
     
     if SubPlots:
         # Create filename for exported figure:
-        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Interpolation' \
-                    + f'_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                   + '_Interpolation_between_' + FixedOrMoving \
+                   + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')

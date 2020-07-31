@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[9]:
+# In[3]:
 
 
 # Import packages and functions
@@ -62,12 +62,20 @@ dP = 0.2
 # InterpolateBetweenContours):
 InterpolateAllPts = True
 
+# Decide whether or not to only consider intersection points that line
+# on the line segment:
+OnLineSegment = True
+
 # Decide whether to log some results to the console:
 LogToConsole = True
 
 # Decide whether to plot results to the console:
 PlotResults = True
 #PlotResults = False
+
+# Decide whether to annotate points with their numbers:
+AnnotatePtNums = True
+AnnotatePtNums = False
 
 # Decide whether to export plotted results to file:
 ExportResults = True
@@ -81,8 +89,128 @@ if not PlotResults:
 
 PointData, FixContourData,InterpData, MovContourData = cif.CopyRois(FixDicomDir, MovDicomDir, FixRoiFpath, 
                                           dP, InterpolateAllPts, LogToConsole, 
-                                          PlotResults, ExportResults)
+                                          PlotResults, AnnotatePtNums, ExportResults)
 
+
+
+# ### Export contour data to csv for Matt Orton to compare with his contour interpolation algorithm:
+
+# In[71]:
+
+
+if False:
+    import csv
+
+    for i in range(len(FixContourData['PointPCS'])):
+        Points = FixContourData['PointPCS'][i]
+
+        if Points:
+            Points = Points[0]
+
+            SliceNo = FixContourData['SliceNo'][i]
+
+            with open(f"FixContourPts_slice{SliceNo}.csv", "w") as output:
+                writer = csv.writer(output, lineterminator='\n')
+                writer.writerows(Points)
+
+                #for r in range(len(Points)):
+                #    writer.writerow(Points[r])
+
+
+    for i in range(len(MovContourData['PointPCS'])):
+        Points = MovContourData['PointPCS'][i]
+
+        if Points:
+            Points = Points[0]
+
+            SliceNo = MovContourData['SliceNo'][i]
+
+            with open(f"MovContourPts_slice{SliceNo}.csv", "w") as output:
+                writer = csv.writer(output, lineterminator='\n')
+                writer.writerows(Points)
+            
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+            
+ExportContourPtsToCsv(ContourData=FixContourData, Label='Fix')
+ExportContourPtsToCsv(ContourData=MovContourData, Label='Mov')
+
+
+# In[215]:
+
+
+- (-3//2)
+
+
+# In[180]:
+
+
+# Re-plot the interpolated contours with equal aspect ratio:
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+for i in range(len(InterpData['InterpSliceInd'])):
+    Contour1 = InterpData['FixOSContour1Pts'][i]
+    Contour2 = InterpData['FixOSContour2Pts'][i]
+    ContourI = InterpData['FixInterpContourPts'][i]
+    Contours = [Contour1, Contour2, ContourI]
+    #Contours = [Contour1[0], Contour2[0], ContourI[0]]
+    
+    SliceInd1 = InterpData['BoundingSliceInds'][i][0]
+    SliceInd2 = InterpData['BoundingSliceInds'][i][1]
+    SliceIndI = InterpData['InterpSliceInd'][i]
+    
+    Labels = [f'Contour at slice {SliceInd1}', 
+              f'Contour at slice {SliceInd2}', 
+              f'Interpolated contour at {SliceIndI}']
+    Colours = ['b', 'g', 'r']
+    Shifts = [0, 0, 0] # no shift
+    
+    AnnotatePtNums = True
+    AnnotatePtNums = False
+    
+    ExportPlot = True
+    ExportPlot = False
+    
+    cif.PlotInterpolatedContours2D(Contours=Contours, Labels=Labels, 
+                                   Colours=Colours, Shifts=Shifts,
+                                   InterpSliceInd=SliceIndI,
+                                   BoundingSliceInds=[SliceInd1, SliceInd2],
+                                   dP=dP, AnnotatePtNums=AnnotatePtNums, 
+                                   ExportPlot=ExportPlot)
+
+
+# In[ ]:
+
+
+# Re-plot the interpolated contours with equal aspect ratio:
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+FixedOrMoving = 'Fixed'
+FixedOrMoving = 'Moving'
+
+AnnotatePtNums = True
+AnnotatePtNums = False
+
+SubPlots = True
+SubPlots = False
+
+ExportPlot = True
+#ExportPlot = False
+
+cif.PlotInterpContours2D(InterpData=InterpData, 
+                         FixedOrMoving=FixedOrMoving,
+                         dP=dP, 
+                         AnnotatePtNums=AnnotatePtNums, 
+                         SubPlots=SubPlots,
+                         ExportPlot=ExportPlot)
 
 
 # In[18]:
@@ -120,18 +248,32 @@ InterpDataDF
 MovContourDataDF
 
 
-# In[152]:
+# In[262]:
 
 
 import ContourInterpolatingFuncs
 importlib.reload(ContourInterpolatingFuncs)
 import ContourInterpolatingFuncs as cif 
 
-for i in range(len(MovContourData['PointPCS'])):
-    Points = MovContourData['PointPCS'][i]
-    
-    if Points:
-        cif.PlotIntersectingPoints2D(MovContourData, i, dP, AnnotatePtNums=False, ExportPlot=False)
+AnnotatePtNums=True
+#AnnotatePtNums=False
+
+SubPlots = True
+#SubPlots = False
+
+ExportPlot=True
+ExportPlot=False
+
+#for i in range(len(MovContourData['PointPCS'])):
+#    Points = MovContourData['PointPCS'][i]
+#    
+#    if Points:
+#        cif.PlotIntersectingPoints2D(MovContourData, i, dP, 
+#                                     AnnotatePtNums=AnnotatePtNums, 
+#                                     ExportPlot=ExportPlot)
+
+
+cif.PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots, ExportPlot)
 
 
 # ### July 27: Tidy up the closed "contours".  Need to:
@@ -205,60 +347,7 @@ for s in range(len(FixContourData['PointPCS'])):
         print(f'CheckSum = {CheckSum}\n\n')
 
 
-# In[ ]:
-
-
-import ContourInterpolatingFuncs
-importlib.reload(ContourInterpolatingFuncs)
-import ContourInterpolatingFuncs as cif 
-
-AnnotatePtNums = True
-
-for i in range(len(MovContourData['PointPCS'])):
-    Points = MovContourData['PointPCS'][i]
-    
-    if Points:
-        cif.PlotIntersectingPoints2D(MovContourData, i, dP, AnnotatePtNums, ExportPlot=True)
-
-
-# ### Export contour data to csv for Matt Orton to compare with his contour interpolation algorithm:
-
-# In[71]:
-
-
-import csv
-
-for i in range(len(FixContourData['PointPCS'])):
-    Points = FixContourData['PointPCS'][i]
-    
-    if Points:
-        Points = Points[0]
-        
-        SliceNo = FixContourData['SliceNo'][i]
-        
-        with open(f"FixContourPts_slice{SliceNo}.csv", "w") as output:
-            writer = csv.writer(output, lineterminator='\n')
-            writer.writerows(Points)
-            
-            #for r in range(len(Points)):
-            #    writer.writerow(Points[r])
-    
-
-for i in range(len(MovContourData['PointPCS'])):
-    Points = MovContourData['PointPCS'][i]
-    
-    if Points:
-        Points = Points[0]
-        
-        SliceNo = MovContourData['SliceNo'][i]
-        
-        with open(f"MovContourPts_slice{SliceNo}.csv", "w") as output:
-            writer = csv.writer(output, lineterminator='\n')
-            writer.writerows(Points)
-            
-
-
-# In[72]:
+# In[257]:
 
 
 # Work with one collection of points:
@@ -267,7 +356,13 @@ i = 12
 
 Points = MovContourData['PointPCS'][i]
 
-cif.PlotIntersectingPoints2D(MovContourData, i, dP, AnnotatePtNums, ExportResults)
+AnnotatePtNums = True
+#AnnotatePtNums = False
+
+ExportPlot = True
+ExportPlot = False
+
+cif.PlotIntersectingPoints2D_OLD(MovContourData, i, dP, AnnotatePtNums, ExportPlot)
 
 
 # In[104]:
@@ -344,7 +439,7 @@ print(cif.GetIndsOfSliceNumsOfContourType(FixContourData, 1))
 print(cif.GetIndsOfSliceNumsOfContourType(MovContourData, 3))
 
 
-# In[168]:
+# In[208]:
 
 
 import ContourInterpolatingFuncs
@@ -385,6 +480,112 @@ InterpDataDF
 
 FixContourDataDF
 MovContourDataDF
+
+
+# ### July 29:
+# 
+# ### The intersection points for slice 13 look very odd around x = 10 mm, y = 45 mm, and it might be down to the fact that points of intersection from tranlated interpolated contours inherently have more uncertainty than if I were finding the intersection between translated original contours.
+
+# In[8]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif
+
+UseInterp = True
+UseInterp = False
+
+OnLineSegment = True
+    
+MovContourData2 = cif.GetIntersectingContoursInMovingPlanes(InterpData, 
+                                                            MovDicomDir,
+                                                            UseInterp,
+                                                            OnLineSegment)
+
+AnnotatePtNums=True
+AnnotatePtNums=False
+
+SubPlots = True
+#SubPlots = False
+
+ExportPlot=True
+ExportPlot=False
+
+#for i in range(len(MovContourData2['PointPCS'])):
+#    Points = MovContourData2['PointPCS'][i]
+#    
+#    if Points:
+#        cif.PlotIntersectingPoints2D(MovContourData2, i, dP, 
+#                                     AnnotatePtNums=AnnotatePtNums, 
+#                                     ExportPlot=ExportPlot)
+
+cif.PlotIntersectingPts2D(MovContourData2, dP, AnnotatePtNums, SubPlots, ExportPlot)
+
+
+# ### The results look surprisingly similar.  
+# 
+# ### It's still unclear is why contours are not closed.
+
+# ### July 30:
+# 
+# ### Might have found and fixed a bug in the function GetIntersectingContoursInMovingPlanes.
+
+# In[304]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif
+
+UseInterp = True
+#UseInterp = False
+
+# Decide whether to only consider intersection points that lie 
+# between the two contour points used to find the intersection 
+# points (based on their z-components):
+BetweenLinePts = True
+#BetweenLinePts = False
+    
+MovContourData2 = cif.GetIntersectingContoursInMovingPlanes(InterpData, 
+                                                          MovDicomDir,
+                                                          UseInterp,
+                                                          BetweenLinePts)
+AnnotatePtNums=True
+AnnotatePtNums=False
+
+SubPlots = True
+#SubPlots = False
+
+ExportPlot=True
+ExportPlot=False
+
+cif.PlotIntersectingPts2D(MovContourData2, dP, AnnotatePtNums, SubPlots, ExportPlot)
+
+
+# In[297]:
+
+
+MovContourData2DF = pd.DataFrame(data=MovContourData2)
+
+MovContourData2DF
+
+
+# In[305]:
+
+
+from ExportDictionaryToJson import ExportDictionaryToJson
+from LoadDictionaryFromJson import LoadDictionaryFromJson
+
+# Export InterpData to a JSON file:
+ExportDictionaryToJson(Dictionary=InterpData, FileName='InterpData')
+
+# Load the dictionary from the JSON file:
+test = LoadDictionaryFromJson(FileName='InterpData')
+
+test = pd.DataFrame(data=test)
+
+test[['InterpSliceInd', 'BoundingSliceInds', 'MovOSContour1Pts', 'MovOSContour2Pts', 'MovInterpContourPts']]
 
 
 # In[ ]:
