@@ -1610,8 +1610,7 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
     # Loop through each set of interpolation data in InterpData:
     for i in range(len(InterpData['InterpSliceInd'])):
     
-        # Loop through each triplet of points in Contour1, InterpContour and 
-        # Contour2:
+        # Loop through each point in Contour1, InterpContour and Contour2:
         for j in range(len(InterpData['MovOSContour1Pts'][i])):
     
             Point1 = InterpData['MovOSContour1Pts'][i][j]
