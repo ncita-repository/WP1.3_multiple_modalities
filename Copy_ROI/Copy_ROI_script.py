@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# ### Main script:
+
 # In[ ]:
 
 
@@ -60,8 +62,28 @@ PointData, FixContourData,InterpData, MovContourData = cif.CopyRois(FixDicomDir,
                                           PlotResults, AnnotatePtNums, ExportResults)
 
 
+# ### 3D plots:
+
 # In[ ]:
 
 
+get_ipython().run_line_magic('matplotlib', 'notebook')
 
+PlotImagingPlanes = True
+#PlotImagingPlanes = False
+
+CombinePlots = True
+CombinePlots = False
+
+ExportPlot = False
+#ExportPlot = True
+
+cif.PlotInterpolatedContours3D(InterpData=InterpData, 
+                               FixContourData=FixContourData, 
+                               MovContourData=MovContourData,
+                               FixDicomDir=FixDicomDir,
+                               MovDicomDir=MovDicomDir,
+                               dP=dP, 
+                               PlotImagingPlanes=PlotImagingPlanes,
+                               CombinePlots=CombinePlots, ExportPlot=ExportPlot)
 
