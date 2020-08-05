@@ -165,6 +165,98 @@ Note:
     
     https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat/src/master/Packages/icr-peppermint-tools/client/lib/util/freehandInterpolate/
     
+    
+    
+    
+    
+    
+    
+    
+List of main functions:
+    
+    GetIndsOfSlicesWithContours (line 266)
+    
+    GetBoundingSliceInds (line 321)
+    
+    CloseContour (line 490)
+    
+    ReverseIfAntiClockwise (line 513)
+    
+    GetCumulativePerimeters (line 565)
+    
+    NormaliseCumulativePerimeters (line 606)
+    
+    GetNormCumulativeSuperSampledPerimeters (line 630)
+    
+    GetIsOrigNode (line 689)
+    
+    GetNodesToAddPerSegment (line 728)
+    
+    SuperSampleContour (line 813)
+    
+    IntegrateLineLengths (line 910)
+    
+    FindIndForMinCumLength (line 954)
+    
+    ShiftContourPoints (line 1013)
+    
+    ReduceNodesOfContours (line 1046)
+    
+    InterpolateBetweenContours (line 1112)
+    
+    InterpolateContours (line 1227)
+    
+    TransformInterpolatedContours (line 1442)
+    
+    GetLinePlaneIntersection (line 1584)
+    
+    GetIntersectingContoursInMovingPlanes (line 1654)
+    
+    ClockwiseAngleAndDistance (line 1863)
+    
+    GetCentroid (line 1925)
+    
+    SortPointsClockwise (line 1959)
+    
+    Point0IsClockwiseToPoint1 (line 1982)
+    
+    CopyRois (line 2021)
+    
+    
+    
+List of supplementary functions:
+    
+    ReduceNodesOfContour (line 2368)
+    
+    GetSegmentLengths (line 2398)
+    
+    GetIndsOfSliceNumsOfContourType (line 2430)
+    
+    GetPointsInImagePlanes (line 2443)
+
+    GetGridOfPointsInImagePlanes (line 2503)
+    
+    ExportContourPtsToCsv (line 2544)
+    
+    PlotInterpContours2D_OLD (line 2574)
+    
+    PlotInterpContours2D (line 2657)
+    
+    PlotInterpolatedContours3D_OLD (line 2820)
+    
+    axisEqual3D (line 2992)
+    
+    PlotInterpolatedContours3D (line 3010)
+    
+    PlotIntersectingPoints2D_OLD (line 3235)
+    
+    PlotIntersectingPts2D (line 3307)
+    
+    PlotJoinedPoints2D (line 3435)
+    
+    PlotPoints (line 3530)
+    
+    
 """
 
 
@@ -395,7 +487,7 @@ def GetBoundingSliceInds(FixContourData, PointData, InterpSliceInd):
 
 
 
-def GenerateClosedContour(Contour):
+def CloseContour(Contour):
     """
     Close an open contour by appending the first point to the end of the list.
     
@@ -491,10 +583,15 @@ def GetCumulativePerimeters(Contour):
     for i in range(1, len(Contour)):
         # The segment length between every two points:
         SegmentL = (\
-                   (Contour[i-1][0] - Contour[i][0])**2 \
-                   + (Contour[i-1][1] - Contour[i][1])**2 \
-                   + (Contour[i-1][2] - Contour[i][2])**2 \
+                   (Contour[i-1][0] - Contour[i][0])**2 + \
+                   (Contour[i-1][1] - Contour[i][1])**2 + \
+                   (Contour[i-1][2] - Contour[i][2])**2 \
                    )**(1/2)
+        
+        # Save time by omitting the sqrt:
+        #SegmentL = (Contour[i-1][0] - Contour[i][0])**2 + \
+        #           (Contour[i-1][1] - Contour[i][1])**2 + \
+        #           (Contour[i-1][2] - Contour[i][2])**2
         
         CumP = CumP + SegmentL
               
@@ -835,10 +932,15 @@ def IntegrateLineLengths(Contour1, Contour2):
     for i in range(len(Contour1)):
             # The vector length between Point1 and Point2:
             VectorL = (
-                       (Contour1[i][0] - Contour2[i][0])**2 \
-                       + (Contour1[i][1] - Contour2[i][1])**2 \
-                       + (Contour1[i][2] - Contour2[i][2])**2 \
+                       (Contour1[i][0] - Contour2[i][0])**2 + \
+                       (Contour1[i][1] - Contour2[i][1])**2 + \
+                       (Contour1[i][2] - Contour2[i][2])**2 \
                        )**(1/2)
+            
+            # Omit sqrt to save time:
+            #VectorL = (Contour1[i][0] - Contour2[i][0])**2 + \
+            #          (Contour1[i][1] - Contour2[i][1])**2 + \
+            #          (Contour1[i][2] - Contour2[i][2])**2
             
             LineLength += VectorL
             
@@ -1758,6 +1860,260 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
 
 
 
+def ClockwiseAngleAndDistance(Point, OriginPt):
+    """
+    Get the angle of Point with respect to OriginPt.
+    
+    Inputs:
+        Point    - A list containing the [x, y, z] ([x, y] should also work) 
+                   components of a point.
+        
+        OriginPt - A list containing the [x, y, z] ([x, y] should also work) 
+                   components of a point defined as the origin.
+        
+    Returns:
+        Angle    - A float representing the angle in radians of Point w.r.t.
+                   OriginPt.
+        
+        VectorL  - A float representing the vector length of OriginPt -> Point.
+    
+    Both the Angle and VectorL are returned, and in that order since the angle
+    will be the primary sorting criterion.  If two vectors have the same angle 
+    then the points will sorted by the shorter distance.
+    
+    Code adapted from:
+    https://stackoverflow.com/questions/41855695/sorting-list-of-two-dimensional-coordinates-by-clockwise-angle-using-python
+    """
+    import math
+    
+    # Define the reference vector:
+    RefVector = [0, 1] # pointing up
+    RefVector = [0, -1] # pointing down
+    #RefVector = [1, 0] # pointing right
+    #RefVector = [-1, 0] # pointing left
+    
+    # Vector between Point and the OriginPt: v = p - o
+    Vector = [Point[0] - OriginPt[0], Point[1] - OriginPt[1]]
+    
+    # Length of vector: ||v||
+    VectorL = math.hypot(Vector[0], Vector[1])
+    
+    # If length is zero there is no angle
+    if VectorL == 0:
+        return -math.pi, 0
+    
+    # Normalize vector: v/||v||
+    VectorNorm = [Vector[0]/VectorL, Vector[1]/VectorL]
+    
+    DotProd  = VectorNorm[0] * RefVector[0] + VectorNorm[1] * RefVector[1]     # x1*x2 + y1*y2
+    
+    DiffProd = RefVector[1] * VectorNorm[0] - RefVector[0] * VectorNorm[1]     # x1*y2 - y1*x2
+    
+    Angle = math.atan2(DiffProd, DotProd)
+    
+    # Negative angles represent counter-clockwise angles so need to subtract  
+    # them from 2*pi (360 degrees):
+    if Angle < 0:
+        return 2*math.pi + Angle, VectorL
+
+    else:
+        return Angle, VectorL
+    
+    
+    
+
+def GetCentroid(Points):
+    """
+    Get centroid of points.
+    
+    Input:
+        Points   - A list of the [x, y, z] (or [x, y]) components of the points
+                 
+    Returns:
+        Centroid - A list of the [x, y, z] (or [x, y]) components of the 
+                   centroid of Points
+    """
+    
+    # Get the dimensions of Points:
+    dim = len(Points[0])
+    
+    # Get list of x- and y-coords of Points:
+    Points_x = [Points[i][0] for i in range(len(Points))]
+    Points_y = [Points[i][1] for i in range(len(Points))]
+    if dim > 2:
+        Points_z = [Points[i][2] for i in range(len(Points))]
+    
+    Mean_x = sum(Points_x)/len(Points_x)
+    Mean_y = sum(Points_y)/len(Points_y)
+    if dim > 2:
+        Mean_z = sum(Points_z)/len(Points_z)
+    
+        return [Mean_x, Mean_y, Mean_z]
+    
+    else:
+        return [Mean_x, Mean_y]
+    
+    
+    
+    
+def SortPointsClockwise(Points):
+    """
+    Sort points by clockwise ordering.
+    
+    Inputs:
+        Points   - A list of the [x, y, z] ([x, y] should also work) components
+                   of the points to be sorted.
+        
+    Returns:
+        Sorted   - A list of the [x, y, z] ([x, y] should also work) components
+                   of the points sorted in a clockwise ordering.
+    """
+    
+    OriginPt = GetCentroid(Points)
+    
+    Sorted = sorted(Points, key=lambda Points: ClockwiseAngleAndDistance(Points, OriginPt))
+    
+    return Sorted
+
+
+    
+
+
+def Point0IsClockwiseToPoint1(Point0, Point1, Centroid):
+    """
+    Check if Point0 is oriented in a clockwise position to Point1 relative to
+    Centroid.
+    
+    Code adapted from:
+    https://stackoverflow.com/questions/6989100/sort-points-in-clockwise-order
+    
+    Comment 05/08/20:
+        This approach doesn't work.  The sorted points zig-zag.
+    """
+
+    if ( Point0[0] - Centroid[0] >= 0 ) and ( Point1[0] - Centroid[0] < 0 ):
+        return True
+    if ( Point0[0] - Centroid[0] < 0 ) and ( Point1[0] - Centroid[0] >= 0 ):
+        return False
+    if ( Point0[0] - Centroid[0] == 0 ) and ( Point1[0] - Centroid[0] == 0 ):
+        if ( Point0[1] - Centroid[1] >= 0 ) or ( Point1[1] - Centroid[1] >= 0 ):
+            return Point0[1] > Point1[1]
+        return Point1[1] > Point0[1]
+    
+
+    # Compute the cross product of vectors (Centroid -> Point0) x (Centroid -> Point1):
+    det = (Point0[0] - Centroid[0]) * (Point1[1] - Centroid[1]) - \
+          (Point1[0] - Centroid[0]) * (Point0[1] - Centroid[1]);
+    if det < 0:
+        return True
+    if det > 0:
+        return False
+
+    # Point0 and Point1 are on the same line from the centroid.
+    # Check which point is closer to the centroid:
+    d1 = (Point0[0] - Centroid[0]) * (Point0[0] - Centroid[0]) + \
+         (Point0[1] - Centroid[1]) * (Point0[1] - Centroid[1])
+    
+    d2 = (Point1[0] - Centroid[0]) * (Point1[0] - Centroid[0]) + \
+         (Point1[1] - Centroid[1]) * (Point1[1] - Centroid[1])
+    
+    return d1 > d2
+
+
+
+def GetVectorLengths(Point0, Points):
+    """
+    Get list of vector lengths.
+    
+    Inputs:
+        Point0  - A list of [x, y, z] (or [x, y]) coordinates of a point
+        
+        Points  - A list of [x, y, z] (or [x, y]) coordinates of a list of 
+                  points
+        
+    Returns:
+        Lengths - A list of lengths of the vectors defined by Point0 to every
+                  point in Points
+    """
+    
+    # Get the dimensions of Points:
+    dim = len(Points[0])
+    
+    # Store the list of vector lengths:
+    Lengths = []
+    
+    for i in range(len(Points)):
+        Point1 = Points[i]
+        
+        if dim > 2:
+            Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1], Point1[2] - Point0[2]]
+        
+            VectorL = ( Vector[0]**2 + Vector[1]**2 + Vector[2]**2 )**(1/2)
+            
+        else:
+            Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1]]
+        
+            VectorL = ( Vector[0]**2 + Vector[1]**2 )**(1/2)
+        
+        Lengths.append(VectorL)
+        
+        
+    return Lengths
+
+
+
+def SortByClosest(Points):
+    """ 
+    Sort a list of points starting with the first point and the closest until
+    no points remain.
+    
+    Input:
+        Points - A list of [x, y, z] (or [x, y]) coordinates of a list of 
+                 points
+                 
+    Returns:
+        Sorted - A list of sorted points in Points
+    
+    
+    Comment 05/08/20:
+        This approach doesn't work.
+    """
+    
+    #import copy
+    
+    # The first point:
+    Point0 = Points[0]
+    #Point0 = copy.deepcopy(Points[0])
+    
+    # Remaining points:
+    RemPts = [Points[i] for i in range(1, len(Points))]
+    #RemPts = copy.deepcopy([Points[i] for i in range(1, len(Points))])
+    
+    # Initiate sorted list of Points:
+    Sorted = [Point0]
+    #Sorted = [copy.deepcopy(Point0)]
+    
+    while RemPts:
+        Lengths = GetVectorLengths(Point0, RemPts)
+    
+        # Get index of point in RemPts that is closest to Point0:
+        ind = Lengths.index(min(Lengths))
+    
+        # Re-define Point0:
+        Point0 = RemPts[ind]
+        #Point0 = copy.deepcopy(RemPts[ind])
+        
+        Sorted.append(Point0)
+    
+        # Pop the ind^th point in RemPts:
+        RemPts.pop(ind)
+    
+    
+    return Sorted
+    
+
+    
+    
 
 def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, 
              InterpolateAllPts, LogToConsole, PlotResults, AnnotatePtNums, 
@@ -2391,6 +2747,8 @@ def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts,
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
     
+    return
+
     
 
 def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums, 
@@ -2721,6 +3079,8 @@ def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
     
     
     
@@ -2963,6 +3323,8 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
     
     
     
@@ -3256,4 +3618,78 @@ def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
     if ExportPlot:
         print('exporting plot...')
         plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
     
+
+
+
+def PlotPoints(Points, AnnotatePtNums, PlotTitle, ExportPlot):
+    """ Plot a list of points with option of annotating the point numbers """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    MarkerSize = 5
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    
+    # Create a figure with two subplots and the specified size:
+    fig, ax = plt.subplots(1, 1, figsize=(14, 14))
+    
+    
+    # Unpack tuple and store each x,y tuple in arrays X and Y:
+    X = []
+    Y = []
+
+    for x, y, z in Points:
+        X.append(x)
+        Y.append(y)
+
+                
+    # Plot line:
+    ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');    
+    #ax.legend(loc='upper left', fontsize='large')
+    # Plot dots:
+    if True:
+        plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+    # Annotate with point numbers:
+    if AnnotatePtNums:
+        P = list(range(len(X))) # list of point numbers
+        # Annotate every point:
+        #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+        #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+        if False:
+            plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5);
+        # Annotate every 5th point with the point number:
+        if len(Points) < 50:
+            every = 1
+        else:
+            every = 5
+        for p in range(0, len(X) - 1, every):
+            plt.text(X[p], Y[p], p, fontsize=MarkerSize+5);
+        
+    # Shift the position of the annotation for the last point so it doesn't overlap the
+    # annotation for the first point:
+    plt.text(1.005*X[-1], 1.005*Y[-1], len(X) - 1, fontsize=MarkerSize+5);
+        
+    plt.axis('equal')
+    
+    #plt.title(f'Every point in intersecting points joined to every other' \
+    #          + f'point for slice no {SliceNum}')
+    plt.title(PlotTitle)
+
+    # Create filename for exported figure:
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + PlotTitle.replace(' ', '_') + '.png'
+    
+    if ExportPlot:
+        print('exporting plot...')
+        plt.savefig(FigFname, bbox_inches='tight')
+    
+    return
+
+
