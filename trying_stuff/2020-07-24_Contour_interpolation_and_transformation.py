@@ -957,37 +957,76 @@ for i in range(len(MovContourData['PointPCS'])):
         cif.PlotPoints(SortedClosed, AnnotatePts, PlotTitle, ExportPlot)
 
 
+# ### Try the Travelling Salesperson Problem:
+# 
+# ### https://codereview.stackexchange.com/questions/81865/travelling-salesman-using-brute-force-and-heuristics
+
+# In[158]:
+
+
+len(Points)
+
+
+# In[166]:
+
+
+from itertools import permutations
+import time
+
+
+i = 12
+#i = 17
+
+Points = MovContourData['PointPCS'][i][0]
+
+# Reduce Points to a shorter list points:
+n = 11
+
+points = [Points[i] for i in range(n)]
+
+P = len(points)
+
+print(f'There are {P} points in points.\n\n')
+
+#print('points:\n\n', points, '\n\n')
+
+# Start timing:
+times = []
+times.append(time.time())
+
+Permutations = [perm for perm in permutations(points)]
+
+R = len(Permutations)
+
+times.append(time.time())
+Dtime = round(times[-1] - times[-2], 1)
+
+print(f'Took {Dtime} s to get {R} permuations of {P} points.')
+
+#print('Permutations:\n\n')
+#Permutations
+
+
+"""
+N = 3 took 0.0 s
+N = 6 took 0.0 s
+N = 10 took 1.5 s
+N = 15 took .... too long!  I interrupted the kernel
+"""
+
+
+# ### It's clear that using bruteforce is not going to work.  It's taking impractically long to get the permutations for 15 points, so there's no chance of this approach being used for 100s let along 1000s of points.
+# 
+# ### The other algorithm listed on the stackexchange link called "optimised_travelling_salesman" is essentially the same as my SortByClosest function.
+# 
+# ### While waiting I've come up with a new idea - partially use SortByClosest.  But rather than sorting all points, only adjust the ordering if a line segment will exceed the min/mean segment length.
+# 
+# ### On the other hand, that will almost certainly fail for the case of slice 17 with the U-shaped points.
+# 
+# ### Need to come up with another strategy (05/08/2020).
+
 # In[ ]:
 
 
 
 
-
-# def ReorderPtsClockwise():
-#     
-#     bool less(point a, point b)
-# {
-#     if (a.x - center.x >= 0 && b.x - center.x < 0)
-#         return true;
-#     if (a.x - center.x < 0 && b.x - center.x >= 0)
-#         return false;
-#     if (a.x - center.x == 0 && b.x - center.x == 0) {
-#         if (a.y - center.y >= 0 || b.y - center.y >= 0)
-#             return a.y > b.y;
-#         return b.y > a.y;
-#     }
-# 
-#     // compute the cross product of vectors (center -> a) x (center -> b)
-#     int det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y);
-#     if (det < 0)
-#         return true;
-#     if (det > 0)
-#         return false;
-# 
-#     // points a and b are on the same line from the center
-#     // check which point is closer to the center
-#     int d1 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y);
-#     int d2 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y);
-#     return d1 > d2;
-# }
-# 

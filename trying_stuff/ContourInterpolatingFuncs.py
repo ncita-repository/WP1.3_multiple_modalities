@@ -1965,15 +1965,15 @@ def SortPointsClockwise(Points):
                    of the points to be sorted.
         
     Returns:
-        Sorted   - A list of the [x, y, z] ([x, y] should also work) components
+        Ordered  - A list of the [x, y, z] ([x, y] should also work) components
                    of the points sorted in a clockwise ordering.
     """
     
     OriginPt = GetCentroid(Points)
     
-    Sorted = sorted(Points, key=lambda Points: ClockwiseAngleAndDistance(Points, OriginPt))
+    Ordered = sorted(Points, key=lambda Points: ClockwiseAngleAndDistance(Points, OriginPt))
     
-    return Sorted
+    return Ordered
 
 
     
@@ -2021,6 +2021,39 @@ def Point0IsClockwiseToPoint1(Point0, Point1, Centroid):
 
 
 
+
+
+def GetVectorLength(Point0, Point1):
+    """
+    Get vector length between Point0 and Point1.
+    
+    Inputs:
+        Point0  - A list of [x, y, z] (or [x, y]) coordinates of a point
+        
+        Point1  - A list of [x, y, z] (or [x, y]) coordinates of a point
+        
+    Returns:
+        VectorL - The length of the vector created by Point0 -> Point1
+    """
+    
+    # Get the dimensions of Point0:
+    dim = len(Point0[0])
+        
+    if dim > 2:
+        Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1], Point1[2] - Point0[2]]
+    
+        VectorL = ( Vector[0]**2 + Vector[1]**2 + Vector[2]**2 ) ** 0.5
+        
+    else:
+        Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1]]
+    
+        VectorL = ( Vector[0]**2 + Vector[1]**2 ) ** 0.5
+        
+    return VectorL
+
+
+
+
 def GetVectorLengths(Point0, Points):
     """
     Get list of vector lengths.
@@ -2036,29 +2069,44 @@ def GetVectorLengths(Point0, Points):
                   point in Points
     """
     
-    # Get the dimensions of Points:
-    dim = len(Points[0])
-    
-    # Store the list of vector lengths:
     Lengths = []
     
     for i in range(len(Points)):
         Point1 = Points[i]
         
-        if dim > 2:
-            Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1], Point1[2] - Point0[2]]
-        
-            VectorL = ( Vector[0]**2 + Vector[1]**2 + Vector[2]**2 )**(1/2)
-            
-        else:
-            Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1]]
-        
-            VectorL = ( Vector[0]**2 + Vector[1]**2 )**(1/2)
-        
-        Lengths.append(VectorL)
-        
+        Lengths.append(GetVectorLength(Point0, Point1))
         
     return Lengths
+
+
+
+
+
+def GetContourPerimeter(Contour):
+    """ 
+    Calculate the perimeter of a contour.
+    
+    Input:
+        Contour   - A list of points (each point a list of [x, y, z] coordinates)
+        
+    Returns:
+        Perimeter - Perimeter of the contour (sum off all segment lengths) 
+    """
+    
+    Perimeter = 0
+    
+    # Loop through each point and integrate the vector lengths:
+    for i in range(len(Contour) - 1):
+        Point0 = Contour[i]
+        Point1 = Contour[i+1]
+        
+        VectorL = GetVectorLength(Point0, Point1)
+        
+        Perimeter += VectorL
+        
+    return Perimeter
+
+
 
 
 
@@ -2068,11 +2116,11 @@ def SortByClosest(Points):
     no points remain.
     
     Input:
-        Points - A list of [x, y, z] (or [x, y]) coordinates of a list of 
+        Points  - A list of [x, y, z] (or [x, y]) coordinates of a list of 
                  points
                  
     Returns:
-        Sorted - A list of sorted points in Points
+        Ordered - A list of points in Points ordered by closest
     
     
     Comment 05/08/20:
@@ -2090,8 +2138,8 @@ def SortByClosest(Points):
     #RemPts = copy.deepcopy([Points[i] for i in range(1, len(Points))])
     
     # Initiate sorted list of Points:
-    Sorted = [Point0]
-    #Sorted = [copy.deepcopy(Point0)]
+    Ordered = [Point0]
+    #Ordered = [copy.deepcopy(Point0)]
     
     while RemPts:
         Lengths = GetVectorLengths(Point0, RemPts)
@@ -2103,15 +2151,37 @@ def SortByClosest(Points):
         Point0 = RemPts[ind]
         #Point0 = copy.deepcopy(RemPts[ind])
         
-        Sorted.append(Point0)
+        Ordered.append(Point0)
     
         # Pop the ind^th point in RemPts:
         RemPts.pop(ind)
     
     
-    return Sorted
+    return Ordered
     
 
+
+
+def TravellingSalesman(Points):
+    """
+    Find the shortest route to join all points in Points by bruteforce.
+    Note that time complexity is O(N!) so not suitable for long lists.
+    
+    Input:
+        Points  - A list of [x, y, z] (or [x, y]) coordinates of a list of 
+                 points
+                 
+    Returns:
+        Ordered - Points sorted to minimise the contour perimeter
+    
+    Code modified from:
+    https://codereview.stackexchange.com/questions/81865/travelling-salesman-using-brute-force-and-heuristics
+    """
+    from itertools import permutations
+    
+    start = Points[0]
+    
+    Ordered = min([perm for perm in permutations(Points) if perm[0] == start], key=GetContourPerimeter)
     
     
 
