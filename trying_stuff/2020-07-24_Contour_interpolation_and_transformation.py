@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[62]:
 
 
 # Import packages and functions
@@ -56,14 +56,13 @@ FixRoiFpath = os.path.join(FixRoiDir, FixRoiFname)
 dP = 0.2
 #dP = 0.02
 
-# Decide whether or not to interpolate between all contour point pairs
-# or only those for which the node of the longest list of contour points
-# was an original node (see Note 4 in the function 
-# InterpolateBetweenContours):
+# Decide whether or not to interpolate between all contour point pairs or only 
+# those for which the node of the longest list of contour points was an 
+# original node (see Note 4 in the function InterpolateBetweenContours):
 InterpolateAllPts = True
 
-# Decide whether or not to only consider intersection points that line
-# on the line segment:
+# Decide whether or not to only consider intersection points that line on the
+# line segment:
 OnLineSegment = True
 
 # Decide whether to log some results to the console:
@@ -71,7 +70,7 @@ LogToConsole = True
 
 # Decide whether to plot results to the console:
 PlotResults = True
-#PlotResults = False
+PlotResults = False
 
 # Decide whether to annotate points with their numbers:
 AnnotatePtNums = True
@@ -81,16 +80,24 @@ AnnotatePtNums = False
 ExportResults = True
 ExportResults = False
 
-# Force ExportResults to False if PlotResults is False:
-if not PlotResults:
-    ExportResults = False
-
 
 
 PointData, FixContourData,InterpData, MovContourData = cif.CopyRois(FixDicomDir, MovDicomDir, FixRoiFpath, 
                                           dP, InterpolateAllPts, LogToConsole, 
                                           PlotResults, AnnotatePtNums, ExportResults)
 
+
+"""
+Timings to interpolate 5 contours using sqrt:
+4.2 s
+4.1 s
+4.2 s
+
+Timings to interpolate 5 contours without using sqrt:
+4.0 s
+4.0 s
+4.2 s
+"""
 
 
 # ### Export contour data to csv for Matt Orton to compare with his contour interpolation algorithm:
@@ -248,7 +255,7 @@ InterpDataDF
 MovContourDataDF
 
 
-# In[262]:
+# In[ ]:
 
 
 import ContourInterpolatingFuncs
@@ -439,7 +446,7 @@ print(cif.GetIndsOfSliceNumsOfContourType(FixContourData, 1))
 print(cif.GetIndsOfSliceNumsOfContourType(MovContourData, 3))
 
 
-# In[208]:
+# In[ ]:
 
 
 import ContourInterpolatingFuncs
@@ -588,8 +595,399 @@ test = pd.DataFrame(data=test)
 test[['InterpSliceInd', 'BoundingSliceInds', 'MovOSContour1Pts', 'MovOSContour2Pts', 'MovInterpContourPts']]
 
 
+# ### Aug 3: I might have mixed up points in different coordinate systems when getting the intersection points - the points were in the PCS but the planes' normals and points are defined in the ICS.
+# 
+# ### I've copied GetIntersectingContoursInMovingPlanes and have a new version GetIntersectingContoursInMovingPlanes_v2 that converts the points to ICS first.
+# 
+# ### See if this helps...
+
+# In[11]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif
+
+UseInterp = True
+#UseInterp = False
+
+# Decide whether to only consider intersection points that lie 
+# between the two contour points used to find the intersection 
+# points (based on their z-components):
+BetweenLinePts = True
+#BetweenLinePts = False
+    
+MovContourData3 = cif.GetIntersectingContoursInMovingPlanes_v2(InterpData, 
+                                                               MovDicomDir,
+                                                               UseInterp,
+                                                               BetweenLinePts)
+AnnotatePtNums=True
+AnnotatePtNums=False
+
+SubPlots = True
+#SubPlots = False
+
+ExportPlot=True
+ExportPlot=False
+
+cif.PlotIntersectingPts2D(MovContourData3, dP, AnnotatePtNums, SubPlots, ExportPlot)
+
+
+# In[13]:
+
+
+import pandas as pd
+
+pd.DataFrame(data=MovContourData3)
+
+
+# ### On second thought the above must be wrong since the image attributes are in the PCS!
+
+# In[ ]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif
+
+get_ipython().run_line_magic('matplotlib', 'notebook')
+
+PlotImagingPlanes = True
+#PlotImagingPlanes = False
+
+CombinePlots = True
+CombinePlots = False
+
+ExportPlot = False
+#ExportPlot = True
+
+
+#cif.PlotInterpolationResults3D(InterpData=InterpData, dP=dP, ExportPlot=False)
+cif.PlotInterpolatedContours3D(InterpData=InterpData, 
+                               FixContourData=FixContourData, 
+                               MovContourData=MovContourData,
+                               FixDicomDir=FixDicomDir,
+                               MovDicomDir=MovDicomDir,
+                               dP=dP, 
+                               PlotImagingPlanes=PlotImagingPlanes,
+                               CombinePlots=CombinePlots, ExportPlot=ExportPlot)
+
+
+# ### 04/08:  Re-order points clockwise
+
+# In[6]:
+
+
+import copy
+
+# Work with the 17th slice in MovContourData:
+
+i = 17
+
+Points = copy.deepcopy(MovContourData['PointPCS'][i][0])
+
+AnnotatePtNums = True
+#AnnotatePtNums = False
+
+ExportPlot = True
+ExportPlot = False
+
+cif.PlotIntersectingPoints2D_OLD(MovContourData, i, dP, AnnotatePtNums, ExportPlot)
+
+
+# i = 17
+# 
+# Points = copy.deepcopy(MovContourData['PointPCS'][i][0])
+# 
+# 
+# # Define the origin as the point with minimal y-coordinate.
+# 
+# # Get list of y-coords of Points:
+# Points_y = [Points[i][1] for i in range(len(Points))]
+# 
+# # Get the index of the point with minimum y-coordinate: 
+# IndMinY = Points_y.index(min(Points_y))
+# 
+# OriginPt = Points[IndMinY]
+# 
+# AllInds = list(range(len(Points)))
+# #OtherInds = AllInds.remove(IndMinY)
+# #OtherInds = list(range(len(Points))).remove(IndMinY)
+# 
+# OtherInds = []
+# 
+# for i in AllInds:
+#     if AllInds[i] != IndMinY:
+#         OtherInds.append(i)
+#         
+# OtherPts = [Points[i] for i in OtherInds]
+# 
+# import math
+# 
+# 
+# for i in range(len(OtherPts)):
+#     angle = math.atan2(OtherPts[i][1] - OriginPt[1], OtherPts[i][0] - OriginPt[0])
+#     
+#     if angle < 0:
+#         angle += 2 * math.pi
+#     
+#     print(angle)
+
+# In[103]:
+
+
+
+#PlotPoints(Points, True)
+#PlotPoints(PointsSorted, True)
+#PlotPoints(PointsSortedClosed, True)
+
+
+# In[95]:
+
+
+# Repeat for all contours:
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+        
+for i in range(len(MovContourData['PointPCS'])):
+    Points = MovContourData['PointPCS'][i]
+    
+    if Points:
+        Points = Points[0]
+        
+        # Get list of x- and y-coords of Points:
+        Points_x = [Points[i][0] for i in range(len(Points))]
+        Points_y = [Points[i][1] for i in range(len(Points))]
+
+        Mean_x = sum(Points_x)/len(Points_x)
+        Mean_y = sum(Points_y)/len(Points_y)
+
+        OriginPt = [Mean_x, Mean_y]
+
+        RefVector = [0, 1] # pointing up
+        #RefVector = [1, 0] # pointing right
+        #RefVector = [-1, 0] # pointing left
+
+        PointsSorted = sorted(OtherPts, key=ClockwiseAngleAndDistance)
+        #PointsSorted = sorted(Points, key=ClockwiseAngleAndDistance)
+        #PointsSorted
+
+        # Close the contour:
+        PointsSortedClosed = cif.CloseContour(PointsSorted)
+        #PointsSortedClosed
+        
+        PlotPoints(PointsSortedClosed, True)
+
+
+# In[146]:
+
+
+# Repeat for all contours:
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+
+AnnotatePts = True
+ExportPlot = True
+
+        
+for i in range(len(MovContourData['PointPCS'])):
+    Points = MovContourData['PointPCS'][i]
+    
+    if Points:
+        Points = Points[0]
+        
+        # Sort Points by clockwise ordering:
+        Sorted = cif.SortPointsClockwise(Points)
+
+        # Close the contour:
+        SortedClosed = cif.CloseContour(Sorted)
+        
+        PlotTitle = f'Sorted intersection points for slice {i} using clockwise ordering'
+        
+        cif.PlotPoints(SortedClosed, AnnotatePts, PlotTitle, ExportPlot)
+
+
+# ### Clearly the sorting algorithm is not suitable.
+# 
+# ### Try something else.
+
+# In[114]:
+
+
+i = 17
+
+AnnotatePtNums = True
+#AnnotatePtNums = False
+
+ExportPlot = True
+ExportPlot = False
+
+cif.PlotIntersectingPoints2D_OLD(MovContourData, i, dP, AnnotatePtNums, ExportPlot)
+
+
+# In[112]:
+
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+    
+i = 17
+
+Points = MovContourData['PointPCS'][i][0]
+
+OriginPts = cif.GetCentroid(Points)
+    
+for i in range(1, len(Points)):
+    print(cif.Point0IsClockwiseToPoint1(Points[i-1], Points[i], OriginPts))
+
+
+# ### I'm not sure how to use the above function (modified from ciamej's contribution here:
+# ### https://stackoverflow.com/questions/6989100/sort-points-in-clockwise-order)
+# 
+# ### Beside, I sense that it will give a similar result to the above results - i.e. sorting by angles.  So I'll try something else..
+
+# In[149]:
+
+
+"""
+Idea for a new sorting algorithm:
+
+1. Start with the first point in a list of points.  Append the first point to the a new list called Sorted.
+
+2. Find the next closest point.  Append it to Sorted.
+
+3. Repeat step 2 until there are no more points left.
+"""
+
+i = 12
+i = 17
+
+AnnotatePtNums = True
+#AnnotatePtNums = False
+
+ExportPlot = True
+ExportPlot = False
+
+cif.PlotIntersectingPoints2D_OLD(MovContourData, i, dP, AnnotatePtNums, ExportPlot)
+
+Points = copy.deepcopy(MovContourData['PointPCS'][i][0])
+
+# The first point:
+Point0 = copy.deepcopy(Points[0])
+
+# Remaining points:
+RemPts = copy.deepcopy([Points[i] for i in range(1, len(Points))])
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+
+# Initiate sorted list of Points:
+Sorted = [copy.deepcopy(Point0)]
+
+while RemPts:
+    Lengths = cif.GetVectorLengths(Point0, RemPts)
+
+    print(Lengths, '\n\n')
+
+    # Get index of point in RemPts that is closest to Point0:
+    ind = Lengths.index(min(Lengths))
+
+    print(ind, '\n\n')
+
+    # Re-define Point0:
+    Point0 = RemPts[ind]
+    
+    #Sorted.append(RemPts[ind])
+    Sorted.append(Point0)
+
+    # Pop the ind^th point in RemPts:
+    RemPts.pop(ind)
+    
+    
+
+
+# In[150]:
+
+
+AnnotatePts = True
+ExportPlot = False
+PlotTitle = f'Sorted intersection points for slice {i} using SortByClosest ordering'
+
+
+
+cif.PlotPoints(Sorted, AnnotatePts, PlotTitle, ExportPlot)
+
+
+# In[152]:
+
+
+# Repeat for all contours:
+
+import ContourInterpolatingFuncs
+importlib.reload(ContourInterpolatingFuncs)
+import ContourInterpolatingFuncs as cif 
+
+
+AnnotatePts = True
+ExportPlot = True
+
+        
+for i in range(len(MovContourData['PointPCS'])):
+    Points = MovContourData['PointPCS'][i]
+    
+    if Points:
+        Points = Points[0]
+        
+        # Sort Points by clockwise ordering:
+        Sorted = cif.SortByClosest(Points)
+
+        # Close the contour:
+        SortedClosed = cif.CloseContour(Sorted)
+        
+        PlotTitle = f'Sorted intersection points for slice {i} using SortByClosest ordering'
+        
+        cif.PlotPoints(SortedClosed, AnnotatePts, PlotTitle, ExportPlot)
+
+
 # In[ ]:
 
 
 
 
+
+# def ReorderPtsClockwise():
+#     
+#     bool less(point a, point b)
+# {
+#     if (a.x - center.x >= 0 && b.x - center.x < 0)
+#         return true;
+#     if (a.x - center.x < 0 && b.x - center.x >= 0)
+#         return false;
+#     if (a.x - center.x == 0 && b.x - center.x == 0) {
+#         if (a.y - center.y >= 0 || b.y - center.y >= 0)
+#             return a.y > b.y;
+#         return b.y > a.y;
+#     }
+# 
+#     // compute the cross product of vectors (center -> a) x (center -> b)
+#     int det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y);
+#     if (det < 0)
+#         return true;
+#     if (det > 0)
+#         return false;
+# 
+#     // points a and b are on the same line from the center
+#     // check which point is closer to the center
+#     int d1 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y);
+#     int d2 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y);
+#     return d1 > d2;
+# }
+# 
