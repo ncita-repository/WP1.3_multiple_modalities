@@ -2162,10 +2162,10 @@ def SortByClosest(Points):
 
 
 
+
 def TravellingSalesman(Points):
     """
     Find the shortest route to join all points in Points by bruteforce.
-    Note that time complexity is O(N!) so not suitable for long lists.
     
     Input:
         Points  - A list of [x, y, z] (or [x, y]) coordinates of a list of 
@@ -2176,12 +2176,21 @@ def TravellingSalesman(Points):
     
     Code modified from:
     https://codereview.stackexchange.com/questions/81865/travelling-salesman-using-brute-force-and-heuristics
+    
+    
+    Note:
+        This functions is inappropriate since the time cost is O(N!).
+        The permutations for N = 10 points took 1.5 s
+        With N = 15 took I had to interrupt the kernel.
     """
     from itertools import permutations
     
     start = Points[0]
     
     Ordered = min([perm for perm in permutations(Points) if perm[0] == start], key=GetContourPerimeter)
+    
+    return Ordered
+
     
     
 
@@ -2428,6 +2437,8 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         import RegUtilityFuncs as ruf
         import time
         
+        SubPlots = True
+        
         #""" Get additional data for plots: """
         #import copy
         
@@ -2455,29 +2466,52 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         #    Labels.append(f'Actual contour at {InterpSliceInd}')
 
         # Plot the interpolated and original contours:
-        PlotInterpContours2D(InterpData=InterpData, 
-                             FixedOrMoving='Fixed', 
-                             dP=dP, 
-                             AnnotatePtNums=False, 
-                             SubPlots=True, 
-                             ExportPlot=ExportResults)
+        if SubPlots:
+            PlotInterpContours2DSubPlots(InterpData=InterpData, 
+                                         FixedOrMoving='Fixed', 
+                                         dP=dP, 
+                                         AnnotatePtNums=False, 
+                                         SubPlots=SubPlots, 
+                                         ExportPlot=ExportResults)
+        else:
+            PlotInterpContours2D(InterpData=InterpData, 
+                                 FixedOrMoving='Fixed', 
+                                 dP=dP, 
+                                 AnnotatePtNums=False, 
+                                 SubPlots=SubPlots, 
+                                 ExportPlot=ExportResults)
                              
         # Plot the transformed interpolated and original contours:
-        PlotInterpContours2D(InterpData=InterpData,
-                             FixedOrMoving='Moving', 
-                             dP=dP, 
-                             AnnotatePtNums=False, 
-                             SubPlots=True, 
-                             ExportPlot=ExportResults)
+        if SubPlots:
+            PlotInterpContours2DSubPlots(InterpData=InterpData,
+                                         FixedOrMoving='Moving', 
+                                         dP=dP, 
+                                         AnnotatePtNums=False, 
+                                         SubPlots=SubPlots, 
+                                         ExportPlot=ExportResults)
+        else:
+            PlotInterpContours2D(InterpData=InterpData,
+                                 FixedOrMoving='Moving', 
+                                 dP=dP, 
+                                 AnnotatePtNums=False, 
+                                 SubPlots=SubPlots, 
+                                 ExportPlot=ExportResults)
                              
         # Plot the intersecting points of the transformed interpolated
         # and original contours with the image planes in the Moving
         # domain:
-        PlotIntersectingPts2D(MovContourData=MovContourData, 
-                              dP=dP, 
-                              AnnotatePtNums=False, 
-                              SubPlots=True, 
-                              ExportPlot=ExportResults)
+        if SubPlots:
+            PlotIntersectingPts2DSubPlots(MovContourData=MovContourData, 
+                                          dP=dP, 
+                                          AnnotatePtNums=False, 
+                                          SubPlots=SubPlots, 
+                                          ExportPlot=ExportResults)
+        else:
+            PlotIntersectingPts2D(MovContourData=MovContourData, 
+                                  dP=dP, 
+                                  AnnotatePtNums=False, 
+                                  SubPlots=SubPlots, 
+                                  ExportPlot=ExportResults)
                 
                 
                 
@@ -2843,6 +2877,14 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
     Returns:
         None; Plot exported if ExportPlot = True
     
+    
+    Note:  
+        I wasn't able to get retain a function that can either plot all results
+        as subplots or as individual figures whilst maintaining equal, shared
+        axes for all subplots.  So the function PlotInterpContours2D was split
+        into two functions:  PlotInterpContours2D for plotting individual 
+        figures, and PlotInterpContours2DSubPlots for plotting subplots.
+        
     """
     
     import matplotlib.pyplot as plt
@@ -2875,13 +2917,20 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
         DPI = 100
         
     if SubPlots:
-        fig = plt.figure(figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+        fig = plt.figure(figsize=(5*Ncols, 5*Nrows), dpi=DPI) # works
+        ##fig = plt.figure(figsize=(5*Ncols, 5*Nrows), dpi=DPI, sharex=True, sharey=True)
 
+
+    # Store the axes:
+    #axs = []
     
     for i in range(N):
         # Set up the axes for this sub-plot:
         if SubPlots:
-            ax = fig.add_subplot(Nrows, Ncols, i+1)
+            ax = fig.add_subplot(Nrows, Ncols, i+1) # works
+            ##ax = fig.add_subplot(Nrows, Ncols, i+1, sharex=True, sharey=True)
+            ##axs.append(fig.add_subplot(Nrows, Ncols, i+1))
+            #fig, ax = plt.subplots(Nrows, Ncols, sharex=True, sharey=True, figsize=(5*Ncols, 5*Nrows), dpi=DPI)
         else:
             fig = plt.figure(figsize=(10, 10), dpi=DPI)
             ax = fig.add_subplot(111)
@@ -2929,11 +2978,12 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
                 LineStyle='solid'
                 
             # Plot line:
-            ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]);    
-            ax.legend(loc='upper left', fontsize='small')
+            #ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]);    
+            plt.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]); # works
+            ax.legend(loc='upper left', fontsize='small') # works
             # Plot dots:
             if True:
-                plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[j]);
+                plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[j]); # works
             
             # Plot the first and last points with different markers to help
             # identify them:
@@ -2949,11 +2999,66 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
                     plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[j]);
                 # Annotate every AnnotationPeriod^th point with the point number:
                 for p in range(0, len(X), AnnotationPeriod):
-                    plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[j]);
+                    plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[j]); # works
             # Also annotate the last point:
             #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
         
         plt.axis('equal')
+        
+        # Equalise the axes range for all plots:
+        #xRangesMin = xRangesMax = yRangesMin = yRangesMax = []
+        
+        # Equalise the axes ticks for all plots:
+        #OldxTicksMins = OldxTicksMaxs = OldyTicksMins = OldyTicksMaxs = []
+
+        #for ax in axs:
+            #print('xlim =', ax.get_xlim())
+            #print('ylim =', ax.get_ylim(), '\n\n')
+            #xRangesMin.append(ax.get_xlim()[0])
+            #xRangesMax.append(ax.get_xlim()[1])
+            #yRangesMin.append(ax.get_ylim()[0])
+            #yRangesMax.append(ax.get_ylim()[1])
+            #print('xticks =', ax.get_xticks())
+            #print('yticks =', ax.get_yticks(), '\n\n')
+            #OldxTicksMins.append(ax.get_xticks()[0])
+            #OldxTicksMaxs.append(ax.get_xticks()[-1])
+            #OldyTicksMins.append(ax.get_yticks()[0])
+            #OldyTicksMaxs.append(ax.get_yticks()[-1])
+
+            
+        #print('OldxTicks =', OldxTicks, '\n\n')
+        #print('OldxTicks[0] =', OldxTicks[0], '\n\n')
+        #print('OldxTicks[0][0] =', OldxTicks[0][0], '\n\n')
+        #print('OldxTicks[0][-1] =', OldxTicks[0][-1], '\n\n')
+        
+        #xRangeMinMax = [min(xRangesMin), max(xRangesMax)]
+        #yRangeMinMax = [min(yRangesMin), max(yRangesMax)]
+        #OldxTicksMin = min(OldxTicksMins)
+        #OldxTicksMax = max(OldxTicksMaxs)
+        #OldyTicksMin = min(OldyTicksMins)
+        #OldyTicksMax = max(OldyTicksMaxs)
+        
+        #print('OldxTicksMin =', OldxTicksMin)
+        #print('OldxTicksMax =', OldxTicksMax)
+        #print('OldyTicksMin =', OldyTicksMin)
+        #print('OldyTicksMax =', OldyTicksMax, '\n\n')
+        
+        #print('xRangesMin =', xRangesMin)
+        #print('xRangesMax =', xRangesMax)
+        #print('yRangesMin =', yRangesMin)
+        #print('yRangesMin =', yRangesMin)
+        #print('xRangeMinMax =', xRangeMinMax)
+        #print('yRangeMinMax =', yRangeMinMax)
+        
+        # Create a new set of ticks:
+        #NewxTicks = list(range(int(OldxTicksMin), int(OldxTicksMax), 5))
+        #NewyTicks = list(range(int(OldyTicksMin), int(OldyTicksMax), 5))
+        
+        #for ax in axs:
+        #    ax.set_xlim(xRangeMinMax)
+        #    ax.set_ylim(yRangeMinMax)
+            #ax.set_xticks(NewxTicks)
+            #ax.set_yticks(NewyTicks)
     
         plt.title('Interpolation between ' + FixedOrMoving \
                   + f' slices {SliceInd1} and {SliceInd2}')
@@ -2981,6 +3086,197 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
         
     return
 
+
+
+def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums, 
+                                 SubPlots, ExportPlot):
+    """
+    Plot interpolation results.
+    
+    Inputs:
+        InterpData     - Dictionary containing interpolated data
+        
+        FixedOrMoving  - String; Acceptable values are "Fixed" or "Moving"
+        
+        dP             - Float value; Minimum inter-node spacing used for 
+                         interpolation
+        
+        AnnotatePtNums - Boolean value determines whether points are annotated with
+                         point numbers
+                     
+        SubPlots       - Boolean value determines whether a single figure with 
+                         sub-plots or individual plots are generated.
+                    
+    Returns:
+        None; Plot exported if ExportPlot = True
+    
+    
+    Note:  
+        I wasn't able to get retain a function that can either plot all results
+        as subplots or as individual figures whilst maintaining equal, shared
+        axes for all subplots.  So the function PlotInterpContours2D was split
+        into two functions:  PlotInterpContours2D for plotting individual 
+        figures, and PlotInterpContours2DSubPlots for plotting subplots.
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    MarkerSize = 5
+    
+    Colours = ['b', 'g', 'r']
+    
+    #AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
+    
+    # Get number of interp data sets in InterpData:
+    N = len(InterpData['InterpSliceInd'])
+    
+    # Get the number of rows and columns required of the subplot:
+    if N == 1:
+        Nrows = 1
+        Ncols = 1
+    elif N > 1:
+        Ncols = 2
+        Nrows = - (- N//Ncols) # i.e. floor of N / Ncols
+    else:
+        return
+        
+    # Prepare the figure:
+    if ExportPlot:
+        DPI = 300
+    else:
+        DPI = 100
+        
+    fig, axs = plt.subplots(Nrows, Ncols, sharex=True, sharey=True, figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+    
+    # Initialise sub-plot iterator:
+    i = 0
+    
+    for r in range(Nrows):
+        for c in range(Ncols):
+            # Set up the axes for this sub-plot:
+            if False:
+                if SubPlots:
+                    #ax = fig.add_subplot(Nrows, Ncols, i+1) # works
+                    ##ax = fig.add_subplot(Nrows, Ncols, i+1, sharex=True, sharey=True)
+                    ##axs.append(fig.add_subplot(Nrows, Ncols, i+1))
+                    #fig, ax = plt.subplots(Nrows, Ncols, sharex=True, sharey=True, figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+                    continue
+                else:
+                    fig = plt.figure(figsize=(10, 10), dpi=DPI)
+                    ax = fig.add_subplot(111)
+                    #axs.append(fig.add_subplot(111))
+            
+            if 'ix' in FixedOrMoving:
+                Contour1 = InterpData['FixOSContour1Pts'][i]
+                Contour2 = InterpData['FixOSContour2Pts'][i]
+                ContourI = InterpData['FixInterpContourPts'][i]
+            elif 'ov' in FixedOrMoving:
+                Contour1 = InterpData['MovOSContour1Pts'][i]
+                Contour2 = InterpData['MovOSContour2Pts'][i]
+                ContourI = InterpData['MovInterpContourPts'][i]
+            else:
+                print('Input "FixedOrMoving" must be "Fixed" or "Moving".')
+                return
+            
+            AllContours = [Contour1, Contour2, ContourI]
+            
+            SliceInd1 = InterpData['BoundingSliceInds'][i][0]
+            SliceInd2 = InterpData['BoundingSliceInds'][i][1]
+            SliceIndI = InterpData['InterpSliceInd'][i]
+            
+            AllLabels = [f'{SliceInd1}', 
+                         f'{SliceInd2}', 
+                         f'{SliceIndI}']
+            
+            for j in range(len(AllContours)):
+                # Unpack tuple and store each x,y tuple in arrays X and Y:
+                X = []
+                Y = []
+            
+                for x, y, z in AllContours[j]:
+                    X.append(x)
+                    #X.append(x + Shifts[j])
+                    Y.append(y)
+                    #Y.append(y + Shifts[j])
+            
+                # Define linestyle:
+                if 'nterp' in AllLabels[j]: # i.e. interpolated contour
+                    if 'uper' in AllLabels[j]: # super-sampled
+                        LineStyle='dashed'
+                    else: # reduced nodes
+                        LineStyle=(0, (5, 10)) # loosely dashed   
+                else:
+                    LineStyle='solid'
+                    
+                # Plot line:
+                #ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]);    
+                #plt.plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]); # works
+                axs[r, c].plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colours[j], label=AllLabels[j]);   
+                #ax.legend(loc='upper left', fontsize='small') # works
+                axs[r, c].legend(loc='upper left', fontsize='small') # works
+                #axs[-1].legend(loc='upper left', fontsize='small')
+                # Plot dots:
+                if True:
+                    #plt.plot(X, Y, '.', markersize=MarkerSize, c=Colours[j]); # works
+                    axs[r, c].plot(X, Y, '.', markersize=MarkerSize, c=Colours[j]);
+                
+                # Plot the first and last points with different markers to help
+                # identify them:
+                #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+                #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+                # Annotate with point numbers:
+                if AnnotatePtNums:
+                    P = list(range(len(X))) # list of point numbers
+                    # Annotate every point:
+                    #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                    #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                    if False:
+                        plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c=Colours[j]);
+                    # Annotate every AnnotationPeriod^th point with the point number:
+                    for p in range(0, len(X), AnnotationPeriod):
+                        #plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[j]); # works
+                        axs[r, c].text(X[p], Y[p], p, fontsize=MarkerSize+5, c=Colours[j]);
+                # Also annotate the last point:
+                #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
+            
+            #plt.axis('equal')
+            #axs[r, c].axis('equal')
+            axs[r, c].set_aspect('equal', adjustable='box')
+            #axs[r, c].set_aspect(1.0/axs[r, c].get_data_ratio(), adjustable='box')
+        
+            #plt.title('Interpolation between ' + FixedOrMoving \
+            #          + f' slices {SliceInd1} and {SliceInd2}')
+            
+            axs[r, c].set_title('Interpolation between ' + FixedOrMoving \
+                                + f' slices {SliceInd1} and {SliceInd2}')
+            
+            if not SubPlots:
+                # Create filename for exported figure:
+                FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                           + '_Interpolation_between_' + FixedOrMoving \
+                           + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
+                
+                if ExportPlot:
+                    plt.savefig(FigFname, bbox_inches='tight')
+                   
+            # Increment sub-plot iterator:
+            i += 1 
+    
+    FirstSlice = InterpData['BoundingSliceInds'][0][0]
+    LastSlice = InterpData['BoundingSliceInds'][-1][1]
+    
+    if SubPlots:
+        # Create filename for exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                   + '_Interpolation_between_' + FixedOrMoving \
+                   + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        
+        if ExportPlot:
+            plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
 
     
     
@@ -3483,6 +3779,13 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
                      sub-plots or individual plots are generated.
                      
     
+    Note:  
+        I wasn't able to get retain a function that can either plot all results
+        as subplots or as individual figures whilst maintaining equal, shared
+        axes for all subplots.  So the function PlotIntersectingPts2D was split
+        into two functions:  PlotIntersectingPts2D for plotting individual 
+        figures, and PlotIntersectingPts2DSubPlots for plotting subplots.
+        
     """
     
     import matplotlib.pyplot as plt
@@ -3597,6 +3900,157 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
         
     return
     
+
+
+
+def PlotIntersectingPts2DSubPlots(MovContourData, dP, AnnotatePtNums, SubPlots, 
+                                  ExportPlot):
+    """
+    Plot intersecting points.
+    
+    AnnotatePtNums - Boolean value determines whether points are annotated with
+                     point numbers
+                     
+    SubPlots       - Boolean value determines whether a single figure with 
+                     sub-plots or individual plots are generated.
+                     
+    
+    Note:  
+        I wasn't able to get retain a function that can either plot all results
+        as subplots or as individual figures whilst maintaining equal, shared
+        axes for all subplots.  So the function PlotIntersectingPts2D was split
+        into two functions:  PlotIntersectingPts2D for plotting individual 
+        figures, and PlotIntersectingPts2DSubPlots for plotting subplots.
+                     
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    #AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
+    
+    # Get the indices of the slices in ContourData that have the desired 
+    # ContourType value:
+    Inds = GetIndsOfSliceNumsOfContourType(ContourData=MovContourData, 
+                                           ContourTypeNo=3)
+    
+    N = len(Inds)
+    
+    # Get the number of rows and columns required of the subplot:
+    if N == 1:
+        Nrows = 1
+        Ncols = 1
+    elif N > 1:
+        Ncols = 2
+        Nrows = - (- N//Ncols) # i.e. floor of N / Ncols
+    else:
+        return
+        
+    # Prepare the figure:
+    if ExportPlot:
+        DPI = 300
+    else:
+        DPI = 100
+        
+    if SubPlots:
+        MarkerSize = 2
+    else:
+        MarkerSize = 5
+
+    fig, axs = plt.subplots(Nrows, Ncols, sharex=True, sharey=True, figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+    
+    # Initialise sub-plot iterator:
+    i = 0
+    
+    for r in range(Nrows):
+        for c in range(Ncols):
+            if False:
+                # Set up the axes for this sub-plot:
+                if SubPlots:
+                    ax = fig.add_subplot(Nrows, Ncols, i+1)
+                else:
+                    fig = plt.figure(figsize=(10, 10), dpi=DPI)
+                    ax = fig.add_subplot(111)
+        
+            SliceNum = Inds[i]
+            
+            Points = MovContourData['PointPCS'][SliceNum]
+            
+            for j in range(len(Points)):
+                # Unpack tuple and store each x,y tuple in arrays X and Y:
+                X = []
+                Y = []
+            
+                for x, y, z in Points[j]:
+                    X.append(x)
+                    Y.append(y)
+                    
+                # Plot line:
+                #ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');
+                axs[r, c].plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');    
+                # Plot dots:
+                if True:
+                    #plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+                    axs[r, c].plot(X, Y, '.', markersize=MarkerSize, c='k');
+                
+                # Plot the first and last points with different markers to help
+                # identify them:
+                #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+                #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+                # Annotate with point numbers:
+                if AnnotatePtNums:
+                    P = list(range(len(X))) # list of point numbers
+                    # Annotate every point:
+                    #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                    #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                    if False:
+                        plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c='k');
+                    # Annotate every AnnotationPeriod^th point with the point number:
+                    for p in range(0, len(X), AnnotationPeriod):
+                        #plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c='k');
+                        axs[r, c].text(X[p], Y[p], p, fontsize=MarkerSize+5, c='k');
+                # Also annotate the last point:
+                #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
+            
+            #plt.axis('tight') 
+            #plt.axis('equal')
+            #axs[r, c].axis('equal')
+            axs[r, c].set_aspect('equal', adjustable='box')
+            #axs[r, c].set_aspect(1.0/axs[r, c].get_data_ratio(), adjustable='box')
+        
+            #plt.title(f'Intersecting points on Moving slice {SliceNum}')
+            axs[r, c].set_title(f'Intersecting points on Moving slice {SliceNum}')
+            
+            if not SubPlots:
+                # Create filename for exported figure:
+                FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                           + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
+                
+                if ExportPlot:
+                    plt.savefig(FigFname, bbox_inches='tight')
+                    
+            # Increment sub-plot iterator:
+            i += 1 
+    
+    FirstSlice = Inds[0]
+    LastSlice = Inds[-1]
+    
+    if SubPlots:
+        # Create filename for exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Intersecting' \
+                   + f'_points_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        
+        if ExportPlot:
+            plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
 
     
 def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
