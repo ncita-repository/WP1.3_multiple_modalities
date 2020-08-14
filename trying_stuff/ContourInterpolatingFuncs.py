@@ -1468,6 +1468,24 @@ def TransformInterpolatedContours(InterpData, FixedDicomDir, MovingDicomDir):
         ElastixImFilt      - Image transformation filter used by Elastix to
                              transform MovingImage to the Fixed image domain.
     
+    
+    Note:
+        This function loops through the three contours Contour1, InterpContour 
+        and Contour2 for each row in InterpData (i.e. 3*4 = 12 iterations), 
+        each time creating inputpoints.txt, transforming the points, then
+        parsing outputpoints.txt.  
+        
+        This is very inefficient due to the numerous file I/O operations.  So
+        it should be modified to gather all points into one list, transform 
+        all of them, parse all of them, then re-group them into the original
+        list indices.
+        
+        Also, Contour2 on row 0 is equivalent to Contour1 on row 1, 
+        Contour2 on row 1 is equivalent to Contour1 on row 2, etc. so there's 
+        redundancy.
+        
+        Could instead gather all points in all Contour1 and InterpContour and
+        Contour2 on the last row of InterpData.
     """
 
     # Import packages and functions:
@@ -1581,29 +1599,33 @@ def TransformInterpolatedContours(InterpData, FixedDicomDir, MovingDicomDir):
     
 
     
-def GetLinePlaneIntersection(PlaneN, PlaneP, LineP0, LineP1, OnLineSegment):
+def GetLinePlaneIntersection(PlaneN, PlaneP, LineP0, LineP1, MustBeOnLineSeg):
     """ 
     Get the intersection between a line and a plane.
     
     Inputs:
-        PlaneN        - A list of the [x, y, z] components of the plane's 
-                        normal
+        PlaneN          - A list of the [x, y, z] components of the plane's 
+                          normal
                         
-        PlaneP        - A list of the [x, y z] components of a point lying on 
-                        the plane
+        PlaneP          - A list of the [x, y z] components of a point lying 
+                          on the plane
 
-        LineP0        - A list of the [x, y, z] components of a point lying on
-                        the line
+        LineP0          - A list of the [x, y, z] components of a point lying
+                          on the line
                         
-        LineP1        - A list of the [x, y z] components of a point lying on 
-                        the line
+        LineP1          - A list of the [x, y z] components of a point lying 
+                          on the line
                         
-        OnLineSegment - Boolean value that determines whether the intersection
-                        point must lie on the line segment (True) or not (False)
+        MustBeOnLineSeg - Boolean value that determines whether the 
+                          intersection point must lie on the line segment 
+                          (True) or not (False)
                         
     Returns:
-        IntersP       - A list of the [x, y, z] components of the point that
-                        intersects the line and plane; or None
+        IntersP         - A list of the [x, y, z] components of the point 
+                          that intersects the line and plane; or None
+                        
+        OnLineSegment   - Boolean value that indicates whether the intersection 
+                          point lies on the line segment (True) or not (False)
     
     Code adapted from:
     https://stackoverflow.com/questions/5666222/3d-line-plane-intersection
@@ -1640,42 +1662,65 @@ def GetLinePlaneIntersection(PlaneN, PlaneP, LineP0, LineP1, OnLineSegment):
                LineP0[2] + factor * LineV[2]
                ]
     
-    if OnLineSegment and ( factor < 0 ) or ( factor > 1 ):
+    if MustBeOnLineSeg and ( factor < 0 ) or ( factor > 1 ):
         # IntersP does not lie on the line segment.
-        return None
+        return None, None
         
     else:
-        return IntersP
+        if ( factor < 0 ) or ( factor > 1 ):
+            # The point does not lie on the line segment.
+            return IntersP, False
+        else: 
+            # The point does lie on the line segment.
+            return IntersP, True
             
     
 
 
 
-def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir, 
-                                          UseInterp, OnLineSegment):
+def GetIntersectingPointsInMovingPlanes_v1(InterpData, MovingDicomDir, 
+                                           UseInterp, MustBeOnLineSeg):
     """
-    Generate contours in the moving planes by finding the intersection of the 
-    lines that join each over-sampled-to-interpolated contour #1 to each 
-    imaging plane, and likewise for each interpolated-to-over-sampled contour 
-    #2.
+    Get the list of intersection points of the lines that join each 
+    over-sampled-to-interpolated contour #1 to each imaging plane, and likewise 
+    for each interpolated-to-over-sampled contour #2.
     
     Inputs:
-        InterpData     - A dictionary containing interpolated data.
+        InterpData      - A dictionary containing interpolated data.
         
-        MovingDicomDir - Directory containing the DICOMs for the Moving image
-                         domain.
+        MovingDicomDir  - Directory containing the DICOMs for the Moving image
+                          domain.
                          
-        UseInterp      - Boolean that determines whether interpolated contours
-                         will be used (True) when finding intersecting points
-                         or not (False).
+        UseInterp       - Boolean that determines whether interpolated contours
+                          will be used (True) when finding intersecting points
+                          or not (False).
                          
-        OnLineSegment  - Boolean value that determines whether the intersection
-                         point must lie on the line segment (True) or not (False)
+        MustBeOnLineSeg - Boolean value that determines whether the 
+                          intersection point must lie on the line segment 
+                          (True) or not (False)
         
         
     Returns:
-        MovContourData - A dictionary containing the contour data belonging to
-                         the Moving image domain.
+        MovContourData  - A dictionary containing the contour data belonging to
+                          the Moving image domain.
+                          
+                          
+    Note:
+        If UseInterp = True, there may be two intersection points for any given
+        imaging plane for each of P points in the contours:  One intersection
+        from the line segment created by joining a point from Contour1 to the
+        interpolated contour, and another intersection from the line segment
+        created by joining a point from the interpolated contour to Contour2.
+        
+        This probably explains some odd looking features in the collection of
+        intersecting points.
+        
+        In v2 of this function of the two intersecting points, the one which is
+        furthest to the imaging plane is rejected.
+        
+        The other big difference with v2 is that v1 returns MovContourData, 
+        a list of a list of points for every slice in the Moving image domain.
+        By contrast, v2 adds additional keys to InterpData.
     """
     
     # Import packages and functions:
@@ -1710,7 +1755,8 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
             Point2 = InterpData['MovOSContour2Pts'][i][j]
     
             # Loop through all imaging planes in Moving Image and get the 
-            # intersecting points of Vector1 and Vector2 with each plane:
+            # intersecting points of Point0->Point1 and Point1->Point2 with 
+            # each plane:
             for k in range(MovDims[2]):
     
                 # Need a point lying on the plane - use the plane's origin:
@@ -1722,26 +1768,38 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                 #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
                 
                 if UseInterp:
-                    IntersPoint0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
-                                                            PlaneP=PlaneOrigin,
-                                                            LineP0=Point0,
-                                                            LineP1=Point1,
-                                                            OnLineSegment=OnLineSegment)
+                    IntersPoint0, \
+                    OnLineSeg0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                          PlaneP=PlaneOrigin,
+                                                          LineP0=Point0,
+                                                          LineP1=Point1,
+                                                          MustBeOnLineSeg=MustBeOnLineSeg)
                 
-                    IntersPoint1 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
-                                                            PlaneP=PlaneOrigin,
-                                                            LineP0=Point1,
-                                                            LineP1=Point2,
-                                                            OnLineSegment=OnLineSegment)
+                    IntersPoint1, \
+                    OnLineSeg1 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                          PlaneP=PlaneOrigin,
+                                                          LineP0=Point1,
+                                                          LineP1=Point2,
+                                                          MustBeOnLineSeg=MustBeOnLineSeg)
                     
                 else:
-                    IntersPoint0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
-                                                            PlaneP=PlaneOrigin,
-                                                            LineP0=Point0,
-                                                            LineP1=Point2,
-                                                            OnLineSegment=OnLineSegment)
+                    IntersPoint0, \
+                    OnLineSeg0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                          PlaneP=PlaneOrigin,
+                                                          LineP0=Point0,
+                                                          LineP1=Point2,
+                                                          MustBeOnLineSeg=MustBeOnLineSeg)
                 
                 
+                #print('PlaneNormal =', PlaneNormal)
+                #print('PlaneOrigin =', PlaneOrigin)
+                #print('Point0 =', Point0)
+                #print('Point1 =', Point1)
+                #print('Point2 =', Point2)
+                #print('IntersPoint0 =', IntersPoint0, 'OnLineSeg0 =', OnLineSeg0)
+                #print('IntersPoint1 =', IntersPoint1, 'OnLineSeg1 =', OnLineSeg1, '\n')
+                    
+                    
                 # Append IntersPoint0 and IntersPoint1 to IntersContours if 
                 # the intersecting points were found: 
                 if IntersPoint0:
@@ -1763,6 +1821,8 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                           f'{i}^th image plane with origin\n', PlaneOrigin, 'is', 
                           IntersPoint1, '.\n\n')
             
+    #print('IntersContours', IntersContours, '\n')
+    
     """
     Note:
         IntersContours has lists of points by contour. Modify it so that each 
@@ -1855,6 +1915,466 @@ def GetIntersectingContoursInMovingPlanes(InterpData, MovingDicomDir,
                        }
 
     return MovContourData
+
+
+
+
+
+
+def GetIntersectingPointsInMovingPlanes_v2(InterpData, MovingDicomDir, 
+                                           UseInterp, MustBeOnLineSeg,
+                                           OnlyKeepClosestIntersPt):
+    """
+    Get the list of intersection points of the lines that join each 
+    over-sampled-to-interpolated contour #1 to each imaging plane, and likewise 
+    for each interpolated-to-over-sampled contour #2.
+    
+    Inputs:
+        InterpData      - A dictionary containing interpolated data.
+        
+        MovingDicomDir  - Directory containing the DICOMs for the Moving image
+                          domain.
+                         
+        UseInterp       - Boolean that determines whether interpolated contours
+                          will be used (True) when finding intersecting points
+                          or not (False).
+                         
+        MustBeOnLineSeg - Boolean value that determines whether the 
+                          intersection point must lie on the line segment 
+                          (True) or not (False)
+                         
+        OnlyKeepClosestIntersPt - Boolean value that determines whether or not the
+                              intersection point whose midpoint is furthest
+                              from the imaging plane will be rejected.
+        
+        
+    Returns:
+        InterpData      - Updated with additional keys 'AllIntPtsAllSlices' and
+                          'AllIntDtsAllSlices'.
+                          
+    
+    
+    
+    Note:
+        v2 is meant to overcome a limitation of v1 whereby for any given
+        triplet of points from Contour1, the interpolated contour and Contour2,
+        there may be two intersection points with any given plane - one from
+        the intersection of the line segment created by joining the point from
+        Contour1 and the interpolated contour, and one from the intersection of
+        the line segment created by joining the point from the interpolated 
+        contour and Contour2.
+        
+        In this version, of the two intersection points, the one furthest from
+        the imaging plane is rejected.
+        
+        The other big difference with v1 is that v1 returns MovContourData, 
+        a list of a list of points for every slice in the Moving image domain.
+        By contrast, v2 adds additional keys to InterpData: 
+        'AllIntPtsAllSlices' and 'AllIntDtsAllSlices'.  
+        For P points within the contours Contour1, InterpContour and Contour2
+        for any given row in InterpData, 'AllIntPtsAllSlices' contains a list
+        of length P (number of contour points) of a list of length S (number of
+        slices) of the list of [x, y, z] coordinates.
+            
+        Likewise, 'AllIntDtsAllSlices' contains a list of a list of a list of
+        distances between the plane and the midway point of the two points 
+        whose line segment's intersection with the plane defined the point in
+        the corresponding location in 'AllIntPtsAllSlices'.
+    """
+    
+    # Import packages and functions:
+    from GetImageAttributes import GetImageAttributes
+    from PCStoICS import PCStoICS
+    
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+    
+    # Get the Image Attributes for the Moving image:
+    MovOrigin, MovDirs,\
+    MovSpacings, MovDims = GetImageAttributes(DicomDir=MovingDicomDir, 
+                                              Package=package)
+    
+    # The imaging plane normal:
+    PlaneNormal = MovDirs[6:9]
+    
+    # Initialise a list of points and distances for each imaging plane:
+    AllIntersPoints = [[] for i in range(MovDims[2])]
+    AllIntersDistances = [[] for i in range(MovDims[2])]
+    
+    #AllIntPtsAllSlices = []
+    #AllIntDtsAllSlices = []
+    
+    InterpData.update({'AllIntPtsAllSlices' : [],
+                       'AllIntDtsAllSlices' : []
+                       })
+    
+    
+    # Loop through each set of interpolation data in InterpData:
+    for i in range(len(InterpData['InterpSliceInd'])):
+        
+        AllIntPtsAllSlices = []
+        AllIntDtsAllSlices = []
+    
+        # Loop through each point in Contour1, InterpContour and Contour2:
+        for p in range(len(InterpData['MovOSContour1Pts'][i])):
+    
+            Point0 = InterpData['MovOSContour1Pts'][i][p]
+            Point1 = InterpData['MovInterpContourPts'][i][p]
+            Point2 = InterpData['MovOSContour2Pts'][i][p]
+            
+            # Initialise the intersection points at all slices:
+            IntPtsAllSlices = []
+            IntDtsAllSlices = []
+    
+            # Loop through all imaging planes in Moving Image and get the 
+            # intersecting points of Point0->Point1 and Point1->Point2 with 
+            # each plane:
+            for s in range(MovDims[2]):
+    
+                # Need a point lying on the plane - use the plane's origin:
+                PlaneOrigin = [MovOrigin[0] + s*MovSpacings[2]*PlaneNormal[0], 
+                               MovOrigin[1] + s*MovSpacings[2]*PlaneNormal[1], 
+                               MovOrigin[2] + s*MovSpacings[2]*PlaneNormal[2]
+                               ]
+    
+                #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
+                
+                if UseInterp:
+                    IntersPoint0, \
+                    OnLineSeg0 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                          PlaneP=PlaneOrigin,
+                                                          LineP0=Point0,
+                                                          LineP1=Point1,
+                                                          MustBeOnLineSeg=MustBeOnLineSeg)
+                
+                    IntersPoint1, \
+                    OnLineSeg1 = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                          PlaneP=PlaneOrigin,
+                                                          LineP0=Point1,
+                                                          LineP1=Point2,
+                                                          MustBeOnLineSeg=MustBeOnLineSeg)
+                    
+                    #print('PlaneNormal =', PlaneNormal)
+                    #print('PlaneOrigin =', PlaneOrigin)
+                    #print('Point0 =', Point0)
+                    #print('Point1 =', Point1)
+                    #print('Point2 =', Point2)
+                    #print('IntersPoint0 =', IntersPoint0, 'OnLineSeg0 =', OnLineSeg0)
+                    #print('IntersPoint1 =', IntersPoint1, 'OnLineSeg1 =', OnLineSeg1, '\n')
+                        
+
+                    # Get the absolute z-distance between the z-coordinate of
+                    # IntersPoint0 and the midway z-position of the points used
+                    # to define that line (i.e. the z-components of Point0 and 
+                    # Point1):
+                    #midZ0 = Point1[2] - Point0[2] # 13/08
+                    #midZ1 = Point2[2] - Point1[2] # 13/08
+                    midZ0 = ( Point1[2] + Point0[2] ) / 2 # 13/08
+                    midZ1 = ( Point2[2] + Point1[2] ) / 2 # 13/08
+                            
+                    if IntersPoint0:
+                        d0 = abs( midZ0 - IntersPoint0[2] )
+                        
+                    if IntersPoint1:
+                        d1 = abs( midZ1 - IntersPoint1[2] )
+                        
+                    
+                    """ 
+                    Note:
+                        I could use the boolean values OnLineSeg0 and 
+                        OnLineSeg1 to retain or reject IntersPoint0 and
+                        IntersPoint1, but one will only be rejected if 
+                        either OnLineSeg0 or OnLineSeg1 is False.
+                        
+                        The benefit of using d0 and d1 is that one of these
+                        absolute distances will almost certainly be smaller
+                        than the other.
+                    """
+                        
+                    if IntersPoint0 and IntersPoint1:
+                        if d0 < d1:
+                            # IntersPoint0 is closer to the imaging plane, so
+                            # use this point:
+                            IntersPoint = IntersPoint0
+                            IntersDistance = d0
+                        else:
+                            # IntersPoint1 is closer to the imaging plane:
+                            IntersPoint = IntersPoint1
+                            IntersDistance = d1
+                    
+                    elif IntersPoint0 and not IntersPoint1:
+                        IntersPoint = IntersPoint0
+                        #IntersDistance = abs( midZ0 - IntersPoint0[2] )
+                        IntersDistance = d0
+                        
+                    elif not IntersPoint0 and IntersPoint1:
+                        IntersPoint = IntersPoint1
+                        #IntersDistance = abs( midZ1 - IntersPoint1[2] )
+                        IntersDistance = d1
+                        
+                    else:
+                        IntersPoint = []
+                        #IntersDistance = None
+                        IntersDistance = []
+                            
+                        
+                    
+                else:
+                    IntersPoint, \
+                    OnLineSeg = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                         PlaneP=PlaneOrigin,
+                                                         LineP0=Point0,
+                                                         LineP1=Point2,
+                                                         MustBeOnLineSeg=MustBeOnLineSeg)
+                    
+                    if IntersPoint:
+                        #midZ = Point2[2] - Point0[2] # 13/08
+                        midZ = ( Point2[2] + Point0[2] ) / 2 # 13/08
+                    
+                        IntersDistance = abs( midZ - IntersPoint[2] )
+                        
+                    else:
+                        IntersPoint = []
+                        #IntersDistance = None
+                        IntersDistance = []
+
+                
+                #print(f'IntersPoint = {IntersPoint}')
+                #print(f'IntersDistance = {IntersDistance}')
+                if OnlyKeepClosestIntersPt or ( not UseInterp ):
+                    AllIntersPoints[s].append(IntersPoint)
+                    AllIntersDistances[s].append(IntersDistance)
+                    
+                    IntPtsAllSlices.append(IntersPoint)
+                    IntDtsAllSlices.append(IntersDistance)
+                    
+                else:
+                    #print('THIS WAS TRUE')
+                    # Append both IntersPoint0 and IntersPoint1 if they exist: 
+                    if IntersPoint0:
+                        #print('FIRST IF')
+                        AllIntersPoints[s].append(IntersPoint0)
+                        AllIntersDistances[s].append(d0)
+                        
+                        IntPtsAllSlices.append(IntersPoint0)
+                        IntDtsAllSlices.append(d0)
+                        
+                    if UseInterp and IntersPoint1:
+                        #print('SECOND IF')
+                        AllIntersPoints[s].append(IntersPoint1)
+                        AllIntersDistances[s].append(d1)
+                        
+                        IntPtsAllSlices.append(IntersPoint1)
+                        IntDtsAllSlices.append(d1)
+                    
+                    
+                    
+            AllIntPtsAllSlices.append(IntPtsAllSlices)
+            AllIntDtsAllSlices.append(IntDtsAllSlices)
+        
+        InterpData['AllIntPtsAllSlices'].append(AllIntPtsAllSlices)
+        InterpData['AllIntDtsAllSlices'].append(AllIntDtsAllSlices)  
+        
+        #import pandas as pd
+        #pd.DataFrame(InterpData)
+        #print('\n\n', InterpData['AllIntPtsAllSlices'], '\n\n')
+        #print('\n\n', InterpData['AllIntDtsAllSlices'], '\n\n')
+
+    return InterpData
+
+
+
+
+def GetClosestIntersectionPoints(InterpData, MaxDistToImagePlane):
+    
+    #InterpData.update({'MinIntPts' : [],
+    #                   'MinIntDts' : [],
+    #                   'MinIntSlice' :
+    #                   })
+    
+    # Initialise the list of the closest intersecting points, their distances 
+    # to the nearest imaging plane, and the list slice indices of the nearest 
+    # imaging plane for all point pairs:
+    AllClosestPts = []
+    AllClosestDts = []
+    AllClosestInds = []
+    
+    # Loop through each set of interpolation data in InterpData:
+    for i in range(len(InterpData['InterpSliceInd'])):
+        
+        AllIntPtsAllSlices = InterpData['AllIntPtsAllSlices'][i]
+        AllIntDtsAllSlices = InterpData['AllIntDtsAllSlices'][i]
+    
+        # Initialise the list of the closest intersecting points, their 
+        # distances to the nearest imaging plane, and the list slice indices of 
+        # the nearest imaging plane for this point pair:
+        ClosestDts = []
+        ClosestPts = []
+        ClosestInds = []
+            
+        # Loop through each list of distances for each point pair:
+        for p in range(len(AllIntDtsAllSlices)):
+            # Get the intersection point and distances for all slices for this 
+            # point pair:
+            IntPtsAllSlices = AllIntPtsAllSlices[p]
+            IntDtsAllSlices = AllIntDtsAllSlices[p]
+            
+            # Initialise the list of distances for all slices for this point 
+            # pair:
+            Distances = []
+            
+            # Loop through the list of distances for each slice:
+            for s in range(len(IntDtsAllSlices)):
+                # Append to Distances if not [], and 100 (arbitrary) if empty 
+                # (to maintain the relationship between the distances and the 
+                # slice num they relate to):
+                if IntDtsAllSlices[s]:
+                    Distances.append(IntDtsAllSlices[s])
+                else:
+                    Distances.append(100)
+                    
+            # The index of the closest point:
+            ind = Distances.index(min(Distances))
+            
+            ClosestDt = Distances[ind] 
+            
+            # Only append if the closest distance is < MaxDistToImagePlane:
+            if ClosestDt < MaxDistToImagePlane:
+                ClosestDts.append(Distances[ind])
+                ClosestPts.append(IntPtsAllSlices[ind])
+                ClosestInds.append(ind)
+                
+        AllClosestDts.append(ClosestDts)
+        AllClosestPts.append(ClosestPts)
+        AllClosestInds.append(ClosestInds)
+    
+    InterpData.update({'ClosestIntersPts'  : AllClosestPts,
+                       'ClosestIntersDts'  : AllClosestDts,
+                       'ClosestIntersInds' : AllClosestInds
+                       })    
+        
+    return InterpData
+
+
+
+
+def GroupIntersPtsBySliceIndAndContourNum(InterpData, MovingDicomDir):
+    """
+    Note:
+        Assign the number 3 for ContourType for all slices that have contours 
+        and 0 for all slices that have no contours. 
+        
+        N.B. ContourType 0 -> No contours
+                         1 -> Original contour
+                         2 -> Interpolated contour
+                         3 -> Contour obtained by transforming original or 
+                              interpolated points in the Fixed image domain and 
+                              finding the intersection with the Moving image 
+                              planes
+        
+    """
+    
+    
+    # Import packages and functions:
+    from GetImageAttributes import GetImageAttributes
+    from PCStoICS import PCStoICS
+    
+    # Chose which package to use to get the Image Plane Attributes:
+    #package = 'sitk'
+    package = 'pydicom'
+    
+    # Get the Image Attributes for the Moving image:
+    MovOrigin, MovDirs,\
+    MovSpacings, MovDims = GetImageAttributes(DicomDir=MovingDicomDir, 
+                                              Package=package)
+    
+    # Initialise a list of interesting points and distances for each imaging 
+    # plane:
+    #IntersPts = [ [] for i in range(MovDims[2]) ]
+    #IntersDts = [ [] for i in range(MovDims[2]) ]
+    #IntersPts = [ [[]] for i in range(MovDims[2]) ]
+    #IntersDts = [ [[]] for i in range(MovDims[2]) ]
+    PtsPCSBySliceByContour = [ [] for i in range(MovDims[2]) ]
+    DtsBySliceByContour = [ [] for i in range(MovDims[2]) ]
+    ISIBySliceByContour = [ [] for i in range(MovDims[2]) ]
+    PtsICSBySliceByContour = [ [] for i in range(MovDims[2]) ]
+    CTBySliceByContour = [ [] for i in range(MovDims[2]) ]
+
+    
+    # Loop through each set of interpolation data in InterpData:
+    for i in range(len(InterpData['InterpSliceInd'])):
+        
+        Points = InterpData['ClosestIntersPts'][i]
+        Distances = InterpData['ClosestIntersDts'][i]
+        Inds = InterpData['ClosestIntersInds'][i]
+        
+        # Get the interpolated slice index for this i (to track where the
+        # re-grouped point originated from): 
+        InterpSliceInd = InterpData['InterpSliceInd'][i]
+        
+        PtsBySlice = [ [] for i in range(MovDims[2]) ]
+        DtsBySlice = [ [] for i in range(MovDims[2]) ]
+        ISIBySlice = [ [] for i in range(MovDims[2]) ]
+        
+        # Loop through each slice index:
+        for j in range(len(Inds)):
+            #IntersPts[Inds[j]].append(Points[j])
+            #IntersDts[Inds[j]].append(Distances[j])
+            
+            #IntersPts[Inds[j]][i].append(Points[j])
+            #IntersDts[Inds[j]][i].append(Distances[j])
+            
+            PtsBySlice[Inds[j]].append(Points[j])
+            DtsBySlice[Inds[j]].append(Distances[j])
+            ISIBySlice[Inds[j]].append(InterpSliceInd)
+         
+        
+        #PtsBySliceByContour[i].append(PtsBySlice)
+        #DtsBySliceByContour[i].append(DtsBySlice)
+        #PtsBySliceByContour.append(PtsBySlice)
+        #DtsBySliceByContour.append(DtsBySlice)
+        
+        
+        
+        # Loop through each slice in PtsBySlice:
+        for s in range(MovDims[2]):
+            # If the list of points for this slice is not empty:
+            if PtsBySlice[s]:
+                PtsPCSBySliceByContour[s].append(PtsBySlice[s])
+                DtsBySliceByContour[s].append(DtsBySlice[s])
+                ISIBySliceByContour[s].append(ISIBySlice[s])
+                CTBySliceByContour[s].append(3)
+                
+                PtsICS = PCStoICS(Pts_PCS=PtsBySlice[s], 
+                                          Origin=MovOrigin, 
+                                          Directions=MovDirs, 
+                                          Spacings=MovSpacings)
+                
+                PtsICSBySliceByContour[s].append(PtsICS)
+                
+            #else:
+            #    CTBySliceByContour[s].append(0)
+    
+    
+    # Create a list of slice numbers:
+    SliceNo = list(range(MovDims[2]))
+    
+    MovContourData = {
+                      'SliceNo'        : SliceNo, 
+                      'ContourType'    : CTBySliceByContour,
+                      'InterpSliceInd' : ISIBySliceByContour,
+                      'PointPCS'       : PtsPCSBySliceByContour,
+                      'PointICS'       : PtsICSBySliceByContour,
+                      'Distance2Plane' : DtsBySliceByContour
+                       }
+    
+    
+    #return IntersPts, IntersDts
+    return MovContourData
+    #return MovContourData, CTBySliceByContour, PtsPCSBySliceByContour, \
+    #       PtsICSBySliceByContour, DtsBySliceByContour, ISIBySliceByContour
+
 
 
 
@@ -2037,17 +2557,25 @@ def GetVectorLength(Point0, Point1):
     """
     
     # Get the dimensions of Point0:
-    dim = len(Point0[0])
+    #dim = len(Point0[0]) # 13/08
+    dim = len(Point0) # 13/08
+    
+    #print('Point0 =', Point0)
+    #print('Point1 =', Point1)
         
     if dim > 2:
-        Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1], Point1[2] - Point0[2]]
+        Vector = [Point1[0] - Point0[0], 
+                  Point1[1] - Point0[1], 
+                  Point1[2] - Point0[2]]
     
         VectorL = ( Vector[0]**2 + Vector[1]**2 + Vector[2]**2 ) ** 0.5
         
     else:
-        Vector = [Point1[0] - Point0[0], Point1[1] - Point0[1]]
+        Vector = [Point1[0] - Point0[0], 
+                  Point1[1] - Point0[1]]
     
         VectorL = ( Vector[0]**2 + Vector[1]**2 ) ** 0.5
+        #VectorL = ( Vector[0]**2 + Vector[1]**2 ) # doesn't reduce time by much
         
     return VectorL
 
@@ -2191,12 +2719,15 @@ def TravellingSalesman(Points):
     
     return Ordered
 
+   
     
+
+
     
 
 def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, 
-             InterpolateAllPts, LogToConsole, PlotResults, AnnotatePtNums, 
-             ExportResults):
+             InterpolateAllPts, OnlyKeepClosestIntersPt, MaxDistToImagePlane, 
+             LogToConsole, PlotResults, AnnotatePtNums, ExportResults):
     """
     Copy ROIs from the Fixed to Moving image domain.  
     
@@ -2410,15 +2941,29 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
               'Fixed image domain and transform the contours.\n\n')
     
     # Generate contours in the Moving image planes:
+    
+    # Decide whether or not to use the interpolated contours when searching for
+    # intersection points between the line segments that join adjacent contours
+    # and the imaging planes:
     UseInterp = True
     #UseInterp = False
     
-    OnLineSegment = True
+    MustBeOnLineSeg = True
     
-    MovContourData = GetIntersectingContoursInMovingPlanes(InterpData, 
-                                                           MovingDicomDir,
-                                                           UseInterp,
-                                                           OnLineSegment)
+    # Get the intersecting points of the contours on the moving planes:
+    InterpData = GetIntersectingPointsInMovingPlanes_v2(InterpData, 
+                                                        MovingDicomDir,
+                                                        UseInterp,
+                                                        MustBeOnLineSeg,
+                                                        OnlyKeepClosestIntersPt)
+    
+    # Get the closest intersecting points:
+    InterpData = GetClosestIntersectionPoints(InterpData, MaxDistToImagePlane)
+    
+    # Group intersecting points by slice and contour number:
+    MovContourData = GroupIntersPtsBySliceIndAndContourNum(InterpData, 
+                                                           MovingDicomDir)
+    
     
     # Get the indices of the slices that contain contours in the Moving image:
     MovSlicesWithContours = GetIndsOfSlicesWithContours(ContourData=MovContourData,
@@ -2470,6 +3015,7 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
             PlotInterpContours2DSubPlots(InterpData=InterpData, 
                                          FixedOrMoving='Fixed', 
                                          dP=dP, 
+                                         MaxDistToImagePlane=MaxDistToImagePlane,
                                          AnnotatePtNums=False, 
                                          SubPlots=SubPlots, 
                                          ExportPlot=ExportResults)
@@ -2477,25 +3023,26 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
             PlotInterpContours2D(InterpData=InterpData, 
                                  FixedOrMoving='Fixed', 
                                  dP=dP, 
+                                 MaxDistToImagePlane=MaxDistToImagePlane,
                                  AnnotatePtNums=False, 
                                  SubPlots=SubPlots, 
                                  ExportPlot=ExportResults)
                              
         # Plot the transformed interpolated and original contours:
-        if SubPlots:
-            PlotInterpContours2DSubPlots(InterpData=InterpData,
-                                         FixedOrMoving='Moving', 
-                                         dP=dP, 
-                                         AnnotatePtNums=False, 
-                                         SubPlots=SubPlots, 
-                                         ExportPlot=ExportResults)
-        else:
-            PlotInterpContours2D(InterpData=InterpData,
-                                 FixedOrMoving='Moving', 
-                                 dP=dP, 
-                                 AnnotatePtNums=False, 
-                                 SubPlots=SubPlots, 
-                                 ExportPlot=ExportResults)
+        #if SubPlots:
+        #    PlotInterpContours2DSubPlots(InterpData=InterpData,
+        #                                 FixedOrMoving='Moving', 
+        #                                 dP=dP, 
+        #                                 AnnotatePtNums=False, 
+        #                                 SubPlots=SubPlots, 
+        #                                 ExportPlot=ExportResults)
+        #else:
+        #    PlotInterpContours2D(InterpData=InterpData,
+        #                         FixedOrMoving='Moving', 
+        #                         dP=dP, 
+        #                         AnnotatePtNums=False, 
+        #                         SubPlots=SubPlots, 
+        #                         ExportPlot=ExportResults)
                              
         # Plot the intersecting points of the transformed interpolated
         # and original contours with the image planes in the Moving
@@ -2503,12 +3050,14 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         if SubPlots:
             PlotIntersectingPts2DSubPlots(MovContourData=MovContourData, 
                                           dP=dP, 
+                                          MaxDistToImagePlane=MaxDistToImagePlane,
                                           AnnotatePtNums=False, 
                                           SubPlots=SubPlots, 
                                           ExportPlot=ExportResults)
         else:
             PlotIntersectingPts2D(MovContourData=MovContourData, 
                                   dP=dP, 
+                                  MaxDistToImagePlane=MaxDistToImagePlane,
                                   AnnotatePtNums=False, 
                                   SubPlots=SubPlots, 
                                   ExportPlot=ExportResults)
@@ -2533,21 +3082,32 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         ContoursAs = 'lines'
         #ContoursAs = 'dots'
 
-        # Create the filename for the exported figure:
-        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                   + f'_Result_of_registration_and_interpolation.png'
+        # Create filename for exported figure:
+        ExportFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+              + f'_Contour_interp_transf_and_inters_dP_{dP}_' \
+              + f'MaxDistToPlane_{MaxDistToImagePlane}_' + Perspective + '.png'
         
-        ruf.display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im=FixIm, 
-                                                                         mov_im=MovIm, 
-                                                                         reg_im=RegIm,
-                                                                         fix_pts=FixContourData['PointICS'], 
-                                                                         mov_pts=MovContourData['PointICS'],
-                                                                         export_fig=ExportResults,
-                                                                         export_fname=FigFname,
-                                                                         plot_slices=FixOrMovSlicesWithContours,
-                                                                         perspective=Perspective,
-                                                                         contours_as=ContoursAs,
-                                                                         LogToConsole=False)
+        #ruf.display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im=FixIm, 
+        #                                                                 mov_im=MovIm, 
+        #                                                                 reg_im=RegIm,
+        #                                                                 fix_pts=FixContourData['PointICS'], 
+        #                                                                 mov_pts=MovContourData['PointICS'],
+        #                                                                 export_fig=ExportResults,
+        #                                                                 export_fname=FigFname,
+        #                                                                 plot_slices=FixOrMovSlicesWithContours,
+        #                                                                 perspective=Perspective,
+        #                                                                 contours_as=ContoursAs,
+        #                                                                 LogToConsole=False)
+        
+        
+
+        ruf.PlotFixMovRegImagesAndContours(FixImage=FixIm, MovImage=MovIm, RegImage=RegIm, 
+                                           FixContours=FixContourData['PointICS'], 
+                                           MovContours=MovContourData['PointICS'],
+                                           SlicesToPlot=FixOrMovSlicesWithContours, 
+                                           Perspective=Perspective, ContoursAs=ContoursAs, 
+                                           LogToConsole=False, ExportFig=ExportResults, 
+                                           ExportFname=ExportFname)
     
     
     return PointData, FixContourData, InterpData, MovContourData
@@ -2634,112 +3194,28 @@ def GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo):
     inds = []
     
     for i in range(len(ContourTypes)):
-        if ContourTypes[i] == ContourTypeNo:
+        #if ContourTypes[i] == ContourTypeNo: # 14/08
+        if ContourTypeNo in ContourTypes[i]: # 14/08
             inds.append(i)
             
     return inds
 
 
 
-def GetPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
-    """
-    Create a closed "contour" of the 4 (+ 1 to close the contour) points that
-    define the extent of the imaging planes.
-    """
+
+def GetIndsOfSliceNumsWithContours(Contours):
     
-    from GetImageAttributes import GetImageAttributes
-        
-    package = 'pydicom'
+    inds = []
     
-    # Get the image attributes:
-    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
-                                                      Package=package)
-        
-    # Get the slice numbers of the imaging planes that contain contours:
-    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
-    
-    # Create "contours" that mark out corners that define each plane in 
-    # SliceNums:
-    Planes = []
-    
-    for i in range(len(SliceNums)):
-        s = SliceNums[i]
-        
-        # Let Point0 be equivalent to the origin moved along s*Spacings[2] in 
-        # the z-direction (Dirs[6:8]):
-        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
-                  Origin[1] + s*Spacings[2]*Dirs[7], 
-                  Origin[2] + s*Spacings[2]*Dirs[8]
-                  ]
-        
-        # Let Point1 be equivalent to Point0 moved along Dims[0]*Spacings[0] in
-        # the x-direction (Dirs[0:2]):
-        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
-                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
-                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
-                  ]
-        
-        # Let Point2 be equivalent to Point1 moved along Dims[1]*Spacings[1] in 
-        # the y-direction (Dirs[3:5]):
-        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
-                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
-                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
-                  ]
-        
-        # Let Point3 be equivalent to Point0 moved along Dims[1]*Spacings[1] in
-        # the y-direction (Dirs[3:5]):
-        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
-                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
-                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
-                  ]
-        
-        
-        Planes.append([Point0, Point1, Point2, Point3, Point0])
-        
-    
-    return Planes
+    for i in range(len(Contours)):
+        # If Contours[i] is not empty:
+        if Contours[i]:
+            inds.append(i)
             
+    return inds
 
 
-def GetGridOfPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
-    """
-    Create a list of points that define the grid of pixels that
-    define the extent of the imaging planes.
-    """
-    
-    from GetImageAttributes import GetImageAttributes
-        
-    package = 'pydicom'
-    
-    # Get the image attributes:
-    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
-                                                      Package=package)
-        
-    # Get the slice numbers of the imaging planes that contain contours:
-    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
-    
-    # Create "contours" that mark out corners that define each plane in 
-    # SliceNums:
-    Planes = []
-    
-    for s in SliceNums:
-        
-        Points = []
-        
-        for i in range(Dims[0]):
-            for j in range(Dims[1]):
-                x = Origin[0] + i*Spacings[0]*Dirs[0] + j*Spacings[1]*Dirs[3] + s*Spacings[2]*Dirs[6]
-                
-                y = Origin[1] + i*Spacings[0]*Dirs[1] + j*Spacings[1]*Dirs[4] + s*Spacings[2]*Dirs[7]
-                
-                z = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8]
-                
-                Points.append([x, y, z])
-          
-        Planes.append(Points)
-        
 
-    return Planes
  
 
 def ExportContourPtsToCsv(ContourData, Label):
@@ -2774,7 +3250,7 @@ def ExportContourPtsToCsv(ContourData, Label):
 
 def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts, 
                              InterpSliceInd, BoundingSliceInds, dP, 
-                             AnnotatePtNums, ExportPlot):
+                             MaxDistToImagePlane, AnnotatePtNums, ExportPlot):
     """
     Plot interpolation results.
     
@@ -2795,8 +3271,7 @@ def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts,
     
     for i in range(len(Contours)):
         # Unpack tuple and store each x,y tuple in arrays X and Y:
-        X = []
-        Y = []
+        X = []; Y = []
     
         for x, y, z in Contours[i]:
             #X.append(x)
@@ -2845,8 +3320,9 @@ def PlotInterpContours2D_OLD(Contours, Labels, Colours, Shifts,
     
     # Create filename for exported figure:
     FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                + f'_Interpolation_at_slice_{InterpSliceInd}_of_contours_at_' \
-                + f'{BoundingSliceInds[0]}_and_{BoundingSliceInds[1]}_dP_{dP}.png'
+                + f'_Interp_at_slice_{InterpSliceInd}_of_contours_at_' \
+                + f'{BoundingSliceInds[0]}_and_{BoundingSliceInds[1]}_dP_{dP}' \
+                + f'_MaxDistToPlane_{MaxDistToImagePlane}.png'
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
@@ -2959,8 +3435,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
         
         for j in range(len(AllContours)):
             # Unpack tuple and store each x,y tuple in arrays X and Y:
-            X = []
-            Y = []
+            X = []; Y = []
         
             for x, y, z in AllContours[j]:
                 X.append(x)
@@ -3066,7 +3541,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
         if not SubPlots:
             # Create filename for exported figure:
             FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                       + '_Interpolation_between_' + FixedOrMoving \
+                       + '_Interp_bt_' + FixedOrMoving \
                        + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
             
             if ExportPlot:
@@ -3078,7 +3553,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
     if SubPlots:
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                   + '_Interpolation_between_' + FixedOrMoving \
+                   + '_Interp_bt_' + FixedOrMoving \
                    + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
         
         if ExportPlot:
@@ -3088,7 +3563,8 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
 
 
 
-def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums, 
+def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, 
+                                 MaxDistToImagePlane, AnnotatePtNums, 
                                  SubPlots, ExportPlot):
     """
     Plot interpolation results.
@@ -3192,8 +3668,7 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums,
             
             for j in range(len(AllContours)):
                 # Unpack tuple and store each x,y tuple in arrays X and Y:
-                X = []
-                Y = []
+                X = []; Y = []
             
                 for x, y, z in AllContours[j]:
                     X.append(x)
@@ -3255,7 +3730,7 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums,
             if not SubPlots:
                 # Create filename for exported figure:
                 FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                           + '_Interpolation_between_' + FixedOrMoving \
+                           + '_Interp_bt_' + FixedOrMoving \
                            + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
                 
                 if ExportPlot:
@@ -3270,7 +3745,7 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums,
     if SubPlots:
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                   + '_Interpolation_between_' + FixedOrMoving \
+                   + '_Interp_bt_' + FixedOrMoving \
                    + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
         
         if ExportPlot:
@@ -3279,6 +3754,467 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, AnnotatePtNums,
     return
 
     
+
+
+def GetPointsInImagePlanes(DicomDir):
+    """
+    Create a closed "contour" of the 4 (+ 1 to close the contour) points that
+    define the extent of the imaging planes.
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for s in range(Dims[2]):
+        
+        # Let Point0 be equivalent to the origin moved along s*Spacings[2] in 
+        # the z-direction (Dirs[6:8]):
+        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
+                  Origin[1] + s*Spacings[2]*Dirs[7], 
+                  Origin[2] + s*Spacings[2]*Dirs[8]
+                  ]
+        
+        # Let Point1 be equivalent to Point0 moved along Dims[0]*Spacings[0] in
+        # the x-direction (Dirs[0:2]):
+        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
+                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
+                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
+                  ]
+        
+        # Let Point2 be equivalent to Point1 moved along Dims[1]*Spacings[1] in 
+        # the y-direction (Dirs[3:5]):
+        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        # Let Point3 be equivalent to Point0 moved along Dims[1]*Spacings[1] in
+        # the y-direction (Dirs[3:5]):
+        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        
+        Planes.append([Point0, Point1, Point2, Point3, Point0])
+        
+    
+    return Planes
+
+
+
+def GetPointsInImagePlanesWithContoursOLD(ContourData, ContourTypeNo, DicomDir):
+    """
+    Create a closed "contour" of the 4 (+ 1 to close the contour) points that
+    define the extent of the imaging planes.
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for i in range(len(SliceNums)):
+        s = SliceNums[i]
+        
+        # Let Point0 be equivalent to the origin moved along s*Spacings[2] in 
+        # the z-direction (Dirs[6:8]):
+        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
+                  Origin[1] + s*Spacings[2]*Dirs[7], 
+                  Origin[2] + s*Spacings[2]*Dirs[8]
+                  ]
+        
+        # Let Point1 be equivalent to Point0 moved along Dims[0]*Spacings[0] in
+        # the x-direction (Dirs[0:2]):
+        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
+                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
+                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
+                  ]
+        
+        # Let Point2 be equivalent to Point1 moved along Dims[1]*Spacings[1] in 
+        # the y-direction (Dirs[3:5]):
+        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        # Let Point3 be equivalent to Point0 moved along Dims[1]*Spacings[1] in
+        # the y-direction (Dirs[3:5]):
+        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        
+        Planes.append([Point0, Point1, Point2, Point3, Point0])
+        
+    
+    return Planes
+            
+
+
+def GetPointsInImagePlanesWithContours(ContourData, ContourTypeNo, DicomDir):
+    """
+    Create a closed "contour" of the 4 (+ 1 to close the contour) points that
+    define the extent of the imaging planes that contain contour points only.
+    """
+    
+    # Get the list of the list of the four points at the corners of the image
+    # plane for all imaging planes:
+    AllPlanes = GetPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for i in range(len(SliceNums)):
+        s = SliceNums[i]
+        
+        Planes.append(AllPlanes[s])
+        
+    return Planes
+
+
+
+
+
+#def GetGridOfPointsInImagePlanes(ContourData, ContourTypeNo, DicomDir):
+def GetGridOfPointsInImagePlanes(DicomDir):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes.
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    #SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    SliceNums = list(range(Dims[2]))
+    
+    # Initialise the list grid of points for each plane:
+    GridPtsPerPlane = []
+    #XCoordsPerPlane = []
+    #YCoordsPerPlane = []
+    #ZCoordsPerPlane = []
+    
+    for s in SliceNums:
+        
+        Points = []
+        #X = []
+        #Y = []
+        #Z = []
+        
+        for i in range(Dims[0]):
+            for j in range(Dims[1]):
+                x = Origin[0] + i*Spacings[0]*Dirs[0] + j*Spacings[1]*Dirs[3] + s*Spacings[2]*Dirs[6]
+                
+                y = Origin[1] + i*Spacings[0]*Dirs[1] + j*Spacings[1]*Dirs[4] + s*Spacings[2]*Dirs[7]
+                
+                z = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8]
+                
+                Points.append([x, y, z])
+                #X.append(x)
+                #Y.append(y)
+                #Z.append(z)
+          
+        GridPtsPerPlane.append(Points)
+        #XCoordsPerPlane.append(X)
+        #YCoordsPerPlane.append(Y)
+        #ZCoordsPerPlane.append(Z)
+        
+
+    return GridPtsPerPlane#, XCoordsPerPlane, YCoordsPerPlane, ZCoordsPerPlane
+
+
+
+def GroupPointsIntoNearestPlanesTOOSLOW(Points, DicomDir):
+    """ 
+    Group a list of points into the nearest plane. 
+    
+    
+    NOTE:
+        This is taking too long.  It takes ~5 s to process one point, it will 
+        take 21 min to process the 253 points in that one contour.  Scaling up 
+        to multiple contours let along multiple contours with a higher number 
+        of points is unrealistic.
+    """
+    
+    import time
+    
+    # Start timing:
+    times = []
+    times.append(time.time())
+    
+    #GridPtsPerPlane, \
+    #XCoordsPerPlane, \
+    #YCoordsPerPlane, \
+    #ZCoordsPerPlane = GetGridOfPointsInImagePlanes(DicomDir)
+    GridPtsPerPlane = GetGridOfPointsInImagePlanes(DicomDir)
+    
+    S = len(GridPtsPerPlane)
+    
+    # Initialise the grouped points:
+    GroupedPts = [ [] for i in range(S) ]
+    
+    for i in range(len(Points)):
+        #pt_x, pt_y, pt_z = Points[i]
+            
+        # Initialise the list of plane distances:
+        dPlanes = []
+            
+        # Loop through all planes in GridPtsPerPlane, find the indices of the 
+        # grid point closest in [x, y], then calculate the distance:
+        for j in range(len(GridPtsPerPlane)):
+            GridPts = GridPtsPerPlane[j]
+            
+            # Initialise the distances between Points[i] and each :
+            #dists_x = []
+            #dists_y = []
+            #dists_z = []
+            
+            ## Initialise the list of point distances:
+            #dPoints = []
+            
+            ## Loop through each grid point:
+            #for k in range(len(GridPts)):
+            #    #GridPt = GridPts[k]
+            #    
+            #    dPoints.append(GetVectorLength(Points[i], GridPts[k]))
+            
+            dPoints = GetVectorLengths(Points[i], GridPts)
+            
+            # The index of the nearest point in GridPts to Points[i]:
+            PtInd = dPoints.index(min(dPoints))
+            
+            #print(f'Points[{i}] = {Points[i]}')
+            #print(f'GridPts[{PtInd}] = {GridPts[PtInd]}')
+            
+            dPlanes.append(GetVectorLength(Points[i], GridPts[PtInd]))
+            
+        # The index of the nearest plane in GridPtsPerPlane to Points[i]:
+        PlInd = dPlanes.index(min(dPlanes))
+        
+        # Append Points[i] to GroupedPts
+        GroupedPts[PlInd].extend(Points[i])
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        
+        print(f'Took {Dtime} s to find the nearest plane index ({PlInd}) for',
+              f'point {i} out of {len(Points)} points.\n\n')
+        
+    return GroupedPts
+
+
+
+
+
+
+
+def GetMeshGridsForImagePlanesOLD(ContourData, ContourTypeNo, DicomDir):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes.
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+    import numpy as np
+    #from scipy.interpolate import griddata
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+        
+    # Get the slice numbers of the imaging planes that contain contours:
+    SliceNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    Meshgrids = []
+    
+    for s in SliceNums:
+        xMin = Origin[0] + s*Spacings[2]*Dirs[6]
+        yMin = Origin[1] + s*Spacings[2]*Dirs[7]
+        #zMin = Origin[2] + s*Spacings[2]*Dirs[8]
+        
+        xMax = xMin + Dims[0]*Spacings[0]*Dirs[0] + Dims[1]*Spacings[1]*Dirs[3]
+        yMax = yMin + Dims[0]*Spacings[0]*Dirs[1] + Dims[1]*Spacings[1]*Dirs[4]
+        #zMax = zMin + Dims[0]*Spacings[0]*Dirs[2] + Dims[1]*Spacings[1]*Dirs[5]
+        
+        #X = np.linspace(xMin, xMax, 100)
+        X = np.linspace(xMin, xMax, Dims[0])
+        #Y = np.linspace(yMin, yMax, 100)
+        Y = np.linspace(yMin, yMax, Dims[1])
+        #Z = np.linspace(zMin, zMax, 100)
+        
+        #XX, YY, ZZ = np.meshgrid(X, Y, Z)
+        #Meshgrids.append( np.meshgrid(X, Y, Z) )
+        
+        XX, YY = np.meshgrid(X, Y)
+        
+        #YZ, ZZ = np.meshgrid(Y, Z)
+        #ZZ1, ZZ2 = np.meshgrid(Z, Z)
+        #ZZ = Z.reshape(XX.shape)
+        #ZZ = griddata((X, Y), Z, (XX, YY), method='cubic')
+        
+        #ZZ = np.zeros(XX.shape, dtype=float)
+        #ZZ = np.zeros((Dims[0], Dims[1]), dtype=float)
+        ZZ = np.zeros((Dims[1], Dims[0]), dtype=float)
+        
+        for i in range(Dims[0]):
+            for j in range(Dims[1]):
+                #ZZ[i,j] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8] 
+                ZZ[j,i] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8] 
+                
+                
+        #print('XX.shape =', XX.shape)
+        #print('YY.shape =', YY.shape)
+        #print('ZZ.shape =', ZZ.shape)
+        
+        Meshgrids.append([XX, YY, ZZ])
+        #Meshgrids.append([XX, YY, ZZ1 + ZZ2])
+        #Meshgrids.append([X, Y, Z])
+        
+        
+    return Meshgrids
+
+
+
+
+def GetMeshGridsForImagePlanes(PlaneNums, DicomDir):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes for select plane numbers.
+    
+    USE GetMeshGridsForImagePlanesInContourData INSTEAD.
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+    import numpy as np
+    #from scipy.interpolate import griddata
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+    
+    Meshgrids = []
+    
+    for s in PlaneNums:
+        xMin = Origin[0] + s*Spacings[2]*Dirs[6]
+        yMin = Origin[1] + s*Spacings[2]*Dirs[7]
+        #zMin = Origin[2] + s*Spacings[2]*Dirs[8]
+        
+        xMax = xMin + Dims[0]*Spacings[0]*Dirs[0] + Dims[1]*Spacings[1]*Dirs[3]
+        yMax = yMin + Dims[0]*Spacings[0]*Dirs[1] + Dims[1]*Spacings[1]*Dirs[4]
+        #zMax = zMin + Dims[0]*Spacings[0]*Dirs[2] + Dims[1]*Spacings[1]*Dirs[5]
+        
+        #X = np.linspace(xMin, xMax, 100)
+        X = np.linspace(xMin, xMax, Dims[0])
+        #Y = np.linspace(yMin, yMax, 100)
+        Y = np.linspace(yMin, yMax, Dims[1])
+        #Z = np.linspace(zMin, zMax, 100)
+        
+        #XX, YY, ZZ = np.meshgrid(X, Y, Z)
+        #Meshgrids.append( np.meshgrid(X, Y, Z) )
+        
+        XX, YY = np.meshgrid(X, Y)
+        
+        #YZ, ZZ = np.meshgrid(Y, Z)
+        #ZZ1, ZZ2 = np.meshgrid(Z, Z)
+        #ZZ = Z.reshape(XX.shape)
+        #ZZ = griddata((X, Y), Z, (XX, YY), method='cubic')
+        
+        #ZZ = np.zeros(XX.shape, dtype=float)
+        #ZZ = np.zeros((Dims[0], Dims[1]), dtype=float)
+        ZZ = np.zeros((Dims[1], Dims[0]), dtype=float)
+        
+        for i in range(Dims[0]):
+            for j in range(Dims[1]):
+                #ZZ[i,j] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8] 
+                ZZ[j,i] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8] 
+                
+                
+        #print('XX.shape =', XX.shape)
+        #print('YY.shape =', YY.shape)
+        #print('ZZ.shape =', ZZ.shape)
+        
+        Meshgrids.append([XX, YY, ZZ])
+        #Meshgrids.append([XX, YY, ZZ1 + ZZ2])
+        #Meshgrids.append([X, Y, Z])
+        
+        
+    return Meshgrids
+
+
+
+
+def GetMeshGridsForImagePlanesInContours(Contours, OnlyPlanesWithContours, 
+                                         DicomDir):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes from a list of contours.
+    """
+    
+    if OnlyPlanesWithContours:
+        # Get the indices of the imaging planes that contain contours:
+        PlaneNums = GetIndsOfSliceNumsWithContours(Contours)
+    else:
+        # Create a list from 0 to len(Contours):
+        PlaneNums = list(range(len(Contours)))
+    
+    Meshgrids = GetMeshGridsForImagePlanes(PlaneNums, DicomDir)
+          
+    return Meshgrids
+
+
+def GetMeshGridsForImagePlanesInContourData(ContourData, ContourTypeNo, 
+                                            DicomDir):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes.
+    """
+        
+    # Get the indices of the imaging planes that contain contours of the 
+    # required ContourTypeNo:
+    PlaneNums = GetIndsOfSliceNumsOfContourType(ContourData, ContourTypeNo)
+    
+    Meshgrids = GetMeshGridsForImagePlanes(PlaneNums, DicomDir)
+        
+    return Meshgrids
+
+
+
     
 def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
     """
@@ -3395,9 +4331,7 @@ def PlotInterpolatedContours3D_OLD(InterpData, dP, ExportPlot):
             #print(len(Contour))
                 
             # Store each x,y,z coordinate in arrays X, Y and Z:
-            X = []
-            Y = []
-            Z = []
+            X = []; Y = []; Z = []
             
             # Unpack tuple and append to arrays X, Y and Z:
             for x, y, z in Contour:
@@ -3573,9 +4507,7 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
         #    ax = fig.add_subplot(2, 1, i+1, projection='3d')
         
         # Store all x,y,z coordinates in arrays X, Y and Z:
-        X = []
-        Y = []
-        Z = []
+        X = []; Y = []; Z = []
             
         # Loop through each contour:
         for j in range(len(Contours)):
@@ -3631,9 +4563,7 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
             Planes = AllPlanes[i]
             
             # Store all x,y,z coordinates in arrays X, Y and Z:
-            X = []
-            Y = []
-            Z = []
+            X = []; Y = []; Z = []
                 
             # Loop through each contour:
             for j in range(len(Planes)):
@@ -3693,7 +4623,262 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
     return
     
     
+   
+"""
+
+
+"""
+
+
+def PlotInterpolatedContours3DNew(InterpData, FixContourData, MovContourData, 
+                                  Convert2ICS, dP, PlotImagingPlanes, 
+                                  FixDicomDir, MovDicomDir, CombinePlots, 
+                                  ExportPlot):
+    """
+    Plot interpolation results.
     
+    
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    #from mpl_toolkits import mplot3d
+    #from mpl_toolkits import Axes3D
+    from mpl_toolkits.mplot3d import Axes3D
+    import numpy as np
+    import time
+    
+    """ Aug 8 """
+    if Convert2ICS:
+        from PCStoICS import PCStoICS
+        from GetImageAttributes import GetImageAttributes
+    
+        # Get the image attributes:
+        FixOrigin, FixDirs, \
+        FixSpacings, FixDims = GetImageAttributes(DicomDir=FixDicomDir, 
+                                                  Package='pydicom')
+        
+        MovOrigin, MovDirs, \
+        MovSpacings, MovDims = GetImageAttributes(DicomDir=MovDicomDir, 
+                                                  Package='pydicom')
+    
+    
+    FirstSliceInd = InterpData['BoundingSliceInds'][0][0]
+    LastSliceInd = InterpData['BoundingSliceInds'][-1][1]
+    
+    
+    NumOfPairs = len(InterpData['InterpSliceInd'])
+        
+    
+    # Group all original and interpolated contours:
+    FixContours = []
+    MovContours = []
+    
+    """
+    For each contour pair (Contour1 and Contour2) in InterpData, Contour2 of
+    contour pair i is repeated as Contour1 for contour pair (i+1).  So only 
+    need to gather Contour1 and InterpContour in each contour pair + Contour2 
+    in the last pair.
+    """
+    
+    # First gather all Contour1 and InterpContour by looping through each 
+    # contour pair in InterpData.  The keys of the contours to gather are:
+    keys = ['FixOSContour1Pts', 'FixInterpContourPts', 'FixOSContour2Pts',
+            'MovOSContour1Pts', 'MovInterpContourPts', 'MovOSContour2Pts']
+    
+    
+    for i in range(NumOfPairs):
+        for key in keys:
+            Contour = InterpData[key][i]
+            
+            """ Aug 7 """
+            if Convert2ICS:
+                if 'Fix' in key:
+                    Origin=FixOrigin
+                    Directions=FixDirs
+                    Spacings=FixSpacings
+                    
+                if 'Mov' in key:
+                    Origin=MovOrigin
+                    Directions=MovDirs
+                    Spacings=MovSpacings
+                    
+                # Convert from PCS to ICS:
+                Contour = PCStoICS(Pts_PCS=Contour, Origin=Origin, 
+                                   Directions=Directions, Spacings=Spacings)
+                
+            # Append Contour to FixContours or MovContours only append 
+            # 'FixOSContour2Pts' or 'MovOSContour2Pts' if i = NumOfPairs - 1:
+            if 'Fix' in key:
+                if ( not '2' in key ) or ( ( '2' in key ) and ( i == NumOfPairs - 1 ) ):
+                    FixContours.append(Contour)
+                
+            if 'Mov' in key:
+                if ( not '2' in key ) or ( ( '2' in key ) and ( i == NumOfPairs - 1 ) ):
+                    MovContours.append(Contour)
+        
+     
+    # Now gather Contour2 in the last contour pair:
+    #FixContour = InterpData['FixOSContour2Pts'][-1]
+    #FixContours.append(FixContour)
+    
+    #MovContour = InterpData['MovOSContour2Pts'][-1]
+    #MovContours.append(MovContour)
+    
+    # Group all contours:
+    AllContours = [FixContours, MovContours]
+    
+    
+    if PlotImagingPlanes:
+        # Get meshgrids:
+        FixMeshgrids = GetMeshGridForImagePlanes(ContourData=FixContourData, 
+                                                 ContourTypeNo=1, 
+                                                 DicomDir=FixDicomDir)
+        
+        MovMeshgrids = GetMeshGridForImagePlanes(ContourData=MovContourData, 
+                                                 ContourTypeNo=3, 
+                                                 DicomDir=MovDicomDir)
+
+        
+        # Group all meshgrids:
+        AllMeshgrids = [FixMeshgrids, MovMeshgrids]                    
+    
+    
+    Colours = ['b', 'r', 'g', 'm', 'y']
+    MarkerSize = 3
+    
+    # Create a figure with two subplots and the specified size:
+    #if ExportPlot:
+    #    #fig = plt.subplots(1, 2, figsize=(14, 14), dpi=300)
+    #    #fig = plt.figure(figsize=(10, 10), dpi=300)
+    #    fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+    #else:
+    #    #fig = plt.subplots(1, 2, figsize=(14, 14))
+    #    #fig = plt.figure(figsize=(10, 10))
+    #    fig = plt.figure(figsize=plt.figaspect(0.5)*1.5) # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+    #ax = plt.axes(projection="3d")
+    
+
+    #if CombinePlots:
+    #    ax = fig.add_subplot(1, 1, 1, projection='3d')
+    
+    # Loop through each list of contours for each sub-plot:
+    for i in range(len(AllContours)):
+        fig = plt.figure(figsize=(14, 14))
+        ax = fig.add_subplot(111, projection='3d')
+    
+        Contours = AllContours[i]
+        
+        # Set up the axes for this sub-plot:
+        #if not CombinePlots:
+        #    ax = fig.add_subplot(2, 1, i+1, projection='3d')
+        
+        # Store all x,y,z coordinates in arrays X, Y and Z:
+        allX = []; allY = []; allZ = []
+            
+        # Loop through each contour:
+        for j in range(len(Contours)):
+            Contour = Contours[j]
+            
+            X = []; Y = []; Z = []
+            
+            # Unpack tuple and append to arrays X, Y and Z:
+            for x, y, z in Contour:
+                X.append(x)
+                Y.append(y)
+                Z.append(z)
+                allX.append(x)
+                allY.append(y)
+                allZ.append(z)
+                
+            # Plot line:
+            ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[i]); 
+        
+        # Define linestyle:
+        #if (i % 2): # i.e. if i is even, it's an interpolated contour
+        #    #LineStyle='dashed'
+        #    LineStyle=(0, (5, 10)) # loosely dashed   
+        #else: # if i is odd, it's not an interpolated contour
+        #    LineStyle='solid'
+            
+            
+        ##fig = plt.figure(figsize=plt.figaspect(0.5)*1.5, projection='3d') # Adjusts the aspect ratio and enlarges the figure (text does not enlarge)
+        ##fig = plt.figure(figsize=plt.figaspect(0.5)*1.5)
+        #fig = plt.figure(figsize=(14, 14))
+        #ax = fig.add_subplot(111, projection='3d')
+        
+        # Plot line:
+        #ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[i]); 
+        ##Axes3D.plot(X, Y, Z, linestyle=LineStyle, linewidth=1, c='gray');
+        
+        #ax.legend(loc='upper left', fontsize='large')
+        
+        #print(len(X), len(Y), len(Z), len(AveZ))
+        
+        # Plot dots:
+        ##ax.scatter3D(X, Y, Z, markersize=MarkerSize, c=Z, cmap='hsv');
+        #ax.scatter3D(X, Y, Z, c=Z, cmap='hsv');
+        ax.scatter3D(allX, allY, allZ, s=MarkerSize, c=Colours[i], cmap='hsv');
+        
+        #print('FixMeshgrids shape =', FixMeshgrids.shape)
+        
+        if PlotImagingPlanes:  
+            Meshgrids = AllMeshgrids[i]
+            
+            # Plot surface:
+            for j in range(len(Meshgrids)):
+            #for j in range(3):
+                ax.plot_surface(Meshgrids[j][0], Meshgrids[j][1], Meshgrids[j][2], alpha=0.2)
+                #ax.plot_trisurf(Meshgrids[j][0], Meshgrids[j][1], Meshgrids[j][2], 
+                #                cmap=cm.jet, linewidth=0.1)
+                #ax.plot_surface(Meshgrids[j][0], Meshgrids[j][1], Meshgrids[j][2], 
+                #                rstride=1, cstride=1, cmap=cm.coolwarm,
+                #                linewidth=0, antialiased=False)
+            
+            #plt.axis('equal') # doesn't work
+            #ax.set_aspect('equal')
+            #plt.axis('square')
+            
+            #axisEqual3D(ax)
+            
+            if i == 0:
+                txt = 'Fixed'
+            else:
+                txt = 'Moving'
+                
+            plt.title(txt + f' image contours between slice {FirstSliceInd}' \
+                      + f' and {LastSliceInd} and interpolation inbetween' \
+                      + ' slices')    
+        
+        if CombinePlots:
+            plt.title('Fixed and Moving image contours between slice ' \
+                      + f'{FirstSliceInd} and {LastSliceInd} \nand ' \
+                      + 'interpolation inbetween slices')
+        #else:
+        #    plt.title(txt + f' image contours between slice {FirstSliceInd}' \
+        #              + f' and {LastSliceInd} \nand interpolation inbetween' \
+        #              + ' slices')
+        
+        # Increment the sub-plot number:
+        i += 1
+
+    
+    #plt.title(f'Interpolation of contours between slice {FirstSliceInd} and ' \
+    #          + f'slice {LastSliceInd}')
+    
+    # Create filename for exported figure:
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + f'_Interpolation_bt_slice_{FirstSliceInd}_and_' \
+                + f'{LastSliceInd}_dP_{dP}.png'
+    
+    if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
+
+
 
 def PlotIntersectingPoints2D_OLD(MovContourData, SliceNum, dP, AnnotatePtNums,
                                  ExportPlot):
@@ -3723,8 +4908,7 @@ def PlotIntersectingPoints2D_OLD(MovContourData, SliceNum, dP, AnnotatePtNums,
     
     for i in range(len(Points)):
         # Unpack tuple and store each x,y tuple in arrays X and Y:
-        X = []
-        Y = []
+        X = []; Y = []
     
         for x, y, z in Points[i]:
             X.append(x)
@@ -3767,8 +4951,8 @@ def PlotIntersectingPoints2D_OLD(MovContourData, SliceNum, dP, AnnotatePtNums,
 
 
 
-def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots, 
-                          ExportPlot):
+def PlotIntersectingPts2D(MovContourData, dP, MaxDistToImagePlane,
+                          AnnotatePtNums, SubPlots, ExportPlot):
     """
     Plot intersecting points.
     
@@ -3842,8 +5026,7 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
         
         for j in range(len(Points)):
             # Unpack tuple and store each x,y tuple in arrays X and Y:
-            X = []
-            Y = []
+            X = []; Y = []
         
             for x, y, z in Points[j]:
                 X.append(x)
@@ -3882,7 +5065,8 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
         if not SubPlots:
             # Create filename for exported figure:
             FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                       + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
+                       + f'_Inters_pts_on_slice_{SliceNum}_dP_{dP}' \
+                       + f'MaxDistToPlane_{MaxDistToImagePlane}.png'
             
             if ExportPlot:
                 plt.savefig(FigFname, bbox_inches='tight')
@@ -3892,8 +5076,9 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
     
     if SubPlots:
         # Create filename for exported figure:
-        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Intersecting' \
-                   + f'_points_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                    + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}_' \
+                    + f'dP_{dP}_MaxDistToPlane_{MaxDistToImagePlane}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
@@ -3903,8 +5088,8 @@ def PlotIntersectingPts2D(MovContourData, dP, AnnotatePtNums, SubPlots,
 
 
 
-def PlotIntersectingPts2DSubPlots(MovContourData, dP, AnnotatePtNums, SubPlots, 
-                                  ExportPlot):
+def PlotIntersectingPts2DSubPlots(MovContourData, dP, MaxDistToImagePlane,
+                                  AnnotatePtNums, SubPlots, ExportPlot):
     """
     Plot intersecting points.
     
@@ -4030,6 +5215,177 @@ def PlotIntersectingPts2DSubPlots(MovContourData, dP, AnnotatePtNums, SubPlots,
             if not SubPlots:
                 # Create filename for exported figure:
                 FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                           + f'_Inters_pts_on_slice_{SliceNum}_dP_{dP}_' \
+                           + f'MaxDistToPlane_{MaxDistToImagePlane}.png'
+                
+                if ExportPlot:
+                    plt.savefig(FigFname, bbox_inches='tight')
+                    
+            # Increment sub-plot iterator:
+            i += 1 
+    
+    FirstSlice = Inds[0]
+    LastSlice = Inds[-1]
+    
+    if SubPlots:
+        # Create filename for exported figure:
+        FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                   + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}_' \
+                   + f'dP_{dP}_MaxDistToPlane_{MaxDistToImagePlane}.png'
+        
+        if ExportPlot:
+            plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
+
+
+def Plot2DSubPlotsOfMovContourData(MovContourData, dP, AnnotatePtNums, SubPlots, 
+                                   ExportPlot):
+    """
+    Plot intersecting points.
+    
+    AnnotatePtNums - Boolean value determines whether points are annotated with
+                     point numbers
+                     
+    SubPlots       - Boolean value determines whether a single figure with 
+                     sub-plots or individual plots are generated.
+                     
+    
+    Note:  
+        I wasn't able to get retain a function that can either plot all results
+        as subplots or as individual figures whilst maintaining equal, shared
+        axes for all subplots.  So the function PlotIntersectingPts2D was split
+        into two functions:  PlotIntersectingPts2D for plotting individual 
+        figures, and PlotIntersectingPts2DSubPlots for plotting subplots.
+                     
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    import time
+    
+    #LineStyle='dashed'
+    #LineStyle=(0, (5, 10)) # loosely dashed  
+    LineStyle='solid'
+    
+    Colours = ['b', 'g', 'r', 'c', 'm', 'k', 'y']
+    
+    #AnnotationPeriod = 5 # annotate every AnnotationPeriod^th point
+    AnnotationPeriod = 10 # annotate every AnnotationPeriod^th point
+    
+    # Get the indices of the slices in ContourData that have the desired 
+    # ContourType value:
+    #Inds = GetIndsOfSliceNumsOfContourType(ContourData=MovContourData, 
+    #                                       ContourTypeNo=3)
+    
+    Inds = []
+    
+    ContourType = MovContourData['ContourType']
+    
+    for s in range(len(ContourType)):
+        # If ContourType[s] is not empty:
+        if ContourType[s]:
+            Inds.append(s)
+    
+    #print('Inds =', Inds, '\n\n')
+    
+    N = len(Inds)
+    
+    # Get the number of rows and columns required of the subplot:
+    if N == 1:
+        Nrows = 1
+        Ncols = 1
+    elif N > 1:
+        Ncols = 2
+        Nrows = - (- N//Ncols) # i.e. floor of N / Ncols
+    else:
+        return
+        
+    #print(f'N = {N}, Nrows = {Nrows}, Ncols = {Ncols}')
+    
+    # Prepare the figure:
+    if ExportPlot:
+        DPI = 300
+    else:
+        DPI = 100
+        
+    if SubPlots:
+        MarkerSize = 2
+    else:
+        MarkerSize = 5
+
+    fig, axs = plt.subplots(Nrows, Ncols, sharex=True, sharey=True, figsize=(5*Ncols, 5*Nrows), dpi=DPI)
+    
+    # Initialise sub-plot iterator:
+    i = 0
+    
+    for r in range(Nrows):
+        for c in range(Ncols):
+            ## Set up the axes for this sub-plot:
+            #if SubPlots:
+            #    ax = fig.add_subplot(Nrows, Ncols, i+1)
+            #else:
+            #    fig = plt.figure(figsize=(10, 10), dpi=DPI)
+            #    ax = fig.add_subplot(111)
+            
+            #print(f'r = {r}, c = {c}, i = {i}, Inds[{i}] = {Inds[i]}')
+            
+            SliceNum = Inds[i]
+            
+            Contours = MovContourData['PointPCS'][SliceNum]
+            
+            for j in range(len(Contours)):
+                Contour = Contours[j]
+                Colour = Colours[j]
+                
+                # Unpack tuple and store each x,y tuple in arrays X and Y:
+                X = []
+                Y = []
+            
+                for x, y, z in Contour:
+                    X.append(x)
+                    Y.append(y)
+                    
+                # Plot line:
+                #ax.plot(X, Y, linestyle=LineStyle, linewidth=1, c='b');
+                axs[r, c].plot(X, Y, linestyle=LineStyle, linewidth=1, c=Colour);    
+                # Plot dots:
+                if True:
+                    #plt.plot(X, Y, '.', markersize=MarkerSize, c='k');
+                    axs[r, c].plot(X, Y, '.', markersize=MarkerSize, c=Colour);
+                
+                # Plot the first and last points with different markers to help
+                # identify them:
+                #plt.plot(X[0], Y[0], '>', markersize=MarkerSize + 5, c=Colours[i]);
+                #plt.plot(X[-1], Y[-1], 's', markersize=MarkerSize + 5, c=Colours[i]);
+                # Annotate with point numbers:
+                if AnnotatePtNums:
+                    P = list(range(len(X))) # list of point numbers
+                    # Annotate every point:
+                    #plt.plot(X, Y, [f'${p}$' for p in P], markersize=MarkerSize, c=Colours[i]);
+                    #plt.text(X, Y, [f'{p}' for p in P], fontsize=MarkerSize+5, c=Colours[i]);
+                    if False:
+                        plt.text(X, Y, [p for p in P], fontsize=MarkerSize+5, c='k');
+                    # Annotate every AnnotationPeriod^th point with the point number:
+                    for p in range(0, len(X), AnnotationPeriod):
+                        #plt.text(X[p], Y[p], p, fontsize=MarkerSize+5, c='k');
+                        axs[r, c].text(X[p], Y[p], p, fontsize=MarkerSize+5, c='k');
+                # Also annotate the last point:
+                #plt.text(X[-1], Y[-1], len(X) - 1, fontsize=MarkerSize+5, c=Colours[i]);
+            
+            #plt.axis('tight') 
+            #plt.axis('equal')
+            #axs[r, c].axis('equal')
+            axs[r, c].set_aspect('equal', adjustable='box')
+            #axs[r, c].set_aspect(1.0/axs[r, c].get_data_ratio(), adjustable='box')
+        
+            #plt.title(f'Intersecting points on Moving slice {SliceNum}')
+            axs[r, c].set_title(f'Intersecting points on Moving slice {SliceNum}')
+            
+            if not SubPlots:
+                # Create filename for exported figure:
+                FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                            + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
                 
                 if ExportPlot:
@@ -4037,6 +5393,9 @@ def PlotIntersectingPts2DSubPlots(MovContourData, dP, AnnotatePtNums, SubPlots,
                     
             # Increment sub-plot iterator:
             i += 1 
+            
+            if i == N:
+                break
     
     FirstSlice = Inds[0]
     LastSlice = Inds[-1]
@@ -4050,8 +5409,6 @@ def PlotIntersectingPts2DSubPlots(MovContourData, dP, AnnotatePtNums, SubPlots,
             plt.savefig(FigFname, bbox_inches='tight')
         
     return
-
-
     
 def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
     """
@@ -4083,8 +5440,7 @@ def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
         Points = PointsJoined[i]
         
         # Unpack tuple and store each x,y tuple in arrays X and Y:
-        X = []
-        Y = []
+        X = []; Y = []
         
         for j in range(len(Points)):
             # Unpack tuple and store each x,y tuple in arrays X and Y:
@@ -4217,3 +5573,116 @@ def PlotPoints(Points, AnnotatePtNums, PlotTitle, ExportPlot):
     return
 
 
+
+
+def PlotContoursAndPlanes3D(Contours, Convert2ICS, PlotImagingPlanes, 
+                            DicomDir, PlotTitle, ExportPlot):
+    """
+    Plot contours (list of a list of points) and imaging planes (if desired).
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    #from mpl_toolkits import mplot3d
+    #from mpl_toolkits import Axes3D
+    from mpl_toolkits.mplot3d import Axes3D
+    #import numpy as np
+    import time
+    
+    if Convert2ICS:
+        from PCStoICS import PCStoICS
+        from GetImageAttributes import GetImageAttributes
+    
+        # Get the image attributes:
+        Origin, Directions, \
+        Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                            Package='pydicom')
+    
+    if PlotImagingPlanes:
+        # Get meshgrids:
+        Meshgrids = GetMeshGridsForImagePlanesInContours(Contours=Contours, 
+                                                         OnlyPlanesWithContours=True, 
+                                                         DicomDir=DicomDir)           
+    
+    C = len(Contours)
+    
+    # Create a list of strings for colours, repeating 6 colours N times so that 
+    # there are sufficient colours for each contour:
+    Colours = ['b', 'r', 'g', 'm', 'y', 'k']
+    n = len(Colours)
+    
+    # Take the ceiling of 
+    N = - ( - C // n )
+    
+    Colours = ['b', 'r', 'g', 'm', 'y', 'k']*N
+    
+    MarkerSize = 3
+    
+    fig = plt.figure(figsize=(14, 14))
+    ax = fig.add_subplot(111, projection='3d')
+        
+    # Loop through all slices:    
+    for s in range(C):
+        Contour = Contours[s]
+        Meshgrid = Meshgrids[s]
+        
+        # Continue if points exist for this slice:
+        if Contour:
+            if Convert2ICS:
+                # Convert from PCS to ICS:
+                Contour = PCStoICS(Pts_PCS=Contour, Origin=Origin, 
+                                   Directions=Directions, Spacings=Spacings)
+                
+
+            X = []; Y = []; Z = []
+            
+            # Unpack tuple and append to arrays X, Y and Z:
+            for x, y, z in Contour:
+                X.append(x)
+                Y.append(y)
+                Z.append(z)
+                
+            # Plot line:
+            ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[s]);
+            
+            # Plot dots:
+            ax.scatter3D(X, Y, Z, s=MarkerSize, c=Colours[s], cmap='hsv');
+        
+            if PlotImagingPlanes:  
+                # Plot surface:
+                ax.plot_surface(Meshgrid[0], Meshgrid[1], Meshgrid[2], alpha=0.2)
+
+                
+                
+        #plt.title('Contours and imaging planes')
+        #plt.title(PlotTitle)
+        ax.set_title(PlotTitle)
+    
+    # Create filename for exported figure:
+    #FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+    #            + f'_Contours_and_image_planes.png'
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + '_' + PlotTitle.replace(' ', '_') + '.png'
+    
+    if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
+
+
+def GetMinMaxIndicesInList(ListOfIndices):
+    
+
+    xInds = []
+    yInds = []
+    zInds = []
+    
+    for xInd, yInd, zInd in ListOfIndices:
+        xInds.append(xInd)
+        yInds.append(yInd)
+        zInds.append(zInd)
+        
+    return min(xInds), max(xInds), min(yInds), max(yInds), min(zInds), \
+           max(zInds), list(set(zInds))

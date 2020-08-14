@@ -1839,7 +1839,7 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
                         
                     else:
                         print(f'\nNot sure what it means for DataShape = {DataShape}.')
-                        return
+                        #return # 13/08
                         
                     
                     
@@ -1944,6 +1944,362 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
         plt.savefig(export_fname, bbox_inches='tight')
         
     return
+
+
+
+def PrepDataForFixMovRegPlotWithContours(FixImage, MovImage, RegImage, 
+                                         FixContours, MovContours,
+                                         SlicesToPlot, Perspective, 
+                                         LogToConsole):
+                                         
+    
+    FixNpa = sitk.GetArrayFromImage(FixImage)
+    MovNpa = sitk.GetArrayFromImage(MovImage)
+    RegNpa = sitk.GetArrayFromImage(RegImage)
+    
+    FixShape = FixNpa.shape # e.g. (30, 256, 212) => (z, x, y)
+    MovShape = MovNpa.shape
+    #RegShape = RegNpa.shape
+    
+    # Get dimensions in [x, y, z] order:
+    FixDims = [FixShape[i] for i in [1, 2, 0]]
+    MovDims = [MovShape[i] for i in [1, 2, 0]]
+    #RegDims = [RegShape[i] for i in [1, 2, 0]]
+    
+    if LogToConsole: 
+        #print(f'\nFixed dims = {FixDims}\nMoving dims = {MovDims}\nRegistered dims = {RegDims}')
+        print(f'Fixed image dims      = {FixDims}')
+        print(f'Moving image dims     = {MovDims}')
+        print(f'Registered image dims = {FixDims}')
+    
+    FixOrigin = FixImage.GetOrigin()
+    MovOrigin = MovImage.GetOrigin()
+    #RegOrigin = RegImage.GetOrigin()
+    
+    FixSpacings = FixImage.GetSpacing() # e.g. (0.8984375, 0.8984375, 5.0) => (x, y, z)
+    MovSpacings = MovImage.GetSpacing()
+    #RegSpacings = RegImage.GetSpacing()
+    
+    FixOrient = [FixImage.GetDirection()[i] for i in range(len(FixImage.GetDirection()))]
+    MovOrient = [MovImage.GetDirection()[i] for i in range(len(MovImage.GetDirection()))]
+    
+    # Reverse the sign of the cross terms so that the vectors are defined in
+    # the same way as Pydicom:
+    for i in [1, 2, 3, 5, 6, 7]:
+        FixOrient[i] = - FixOrient[i]
+        MovOrient[i] = - MovOrient[i]
+        
+    
+    # Number of columns to plot:
+    Ncols = 3
+    
+    
+    # Get the number of slices and aspect ratio (depends on the chosen 
+    # perspective):
+    if Perspective == 'axial':
+        FixNumSlices = FixShape[0] # z
+        MovNumSlices = MovShape[0]
+        #RegNumSlices = RegShape[0]
+        
+        FixAR = FixSpacings[1]/FixSpacings[0] # y/x
+        MovAR = MovSpacings[1]/MovSpacings[0]
+        #RegAR = RegSpacings[1]/RegSpacings[0]
+    
+        
+        if SlicesToPlot == -1: # plot all slices
+            # Number of rows to plot:
+            Nrows = max(FixNumSlices, MovNumSlices)
+            
+            # Create list of slice indices:
+            FixInds = list(range(FixNumSlices))
+            MovInds = list(range(MovNumSlices))
+        
+        else:
+            FixInds = SlicesToPlot
+            MovInds = SlicesToPlot
+            
+            Nrows = len(SlicesToPlot)
+        
+    elif Perspective == 'coronal':
+        FixNumSlices = FixShape[1] # x
+        MovNumSlices = MovShape[1]
+        #RegNumSlices = RegShape[1]
+        
+        #FixAR = FixSpacings[1]/FixSpacings[2] # y/z
+        #MovAR = MovSpacings[1]/MovSpacings[2]
+        #RegAR = RegSpacings[1]/RegSpacings[2]
+        FixAR = FixSpacings[2]/FixSpacings[1] # z/y
+        MovAR = MovSpacings[2]/MovSpacings[1]
+        #RegAR = RegSpacings[2]/RegSpacings[1]
+        
+        """ It's not practical to plot all slices along x because there 
+        will be hundreds of slices, so create a list of indices with a
+        more manageable number. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(FixShape[0], MovShape[0])
+        
+        FixInds = np.linspace(0, FixNumSlices-1, num=Nslices, endpoint=True,
+                              retstep=False, dtype=int)
+        
+        MovInds = np.linspace(0, MovNumSlices-1, num=Nslices, endpoint=True,
+                              retstep=False, dtype=int)
+        
+        Nrows = len(FixInds)
+            
+        if SlicesToPlot != -1: # NOT plot all slices
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            FixInds = [int( ( (SlicesToPlot[i] + 1) )/Nslices*FixNumSlices ) for i in range(len(SlicesToPlot))]
+            MovInds = [int( ( (SlicesToPlot[i] + 1) )/Nslices*MovNumSlices ) for i in range(len(SlicesToPlot))]
+            
+            Nrows = len(FixInds)
+        
+        
+    elif Perspective == 'sagittal':
+        FixNumSlices = FixShape[2] # y
+        MovNumSlices = MovShape[2]
+        #RegNumSlices = RegShape[2]
+        
+        FixAR = FixSpacings[2]/FixSpacings[0] # z/x
+        MovAR = MovSpacings[2]/MovSpacings[0]
+        #RegAR = RegSpacings[2]/RegSpacings[0]
+        
+        """ Same comment as above applies for coronal perspective. """
+        
+        # Arbitrarily divide by the same number of axial slices:
+        Nslices = min(FixShape[0], MovShape[0])
+  
+        FixInds = np.linspace(0, FixNumSlices-1, num=Nslices, endpoint=True,
+                              retstep=False, dtype=int)
+        
+        MovInds = np.linspace(0, MovNumSlices-1, num=Nslices, endpoint=True,
+                              retstep=False, dtype=int)
+        
+        Nrows = len(FixInds)
+            
+        if SlicesToPlot != -1: # NOT plot all slices
+            # Plot the indices in plot_slices normalised by the total number
+            # of rows and as a proportion of the total number of slices:
+            FixInds = [int( ( (SlicesToPlot[i] + 1) )/Nslices*FixNumSlices ) for i in range(len(SlicesToPlot))]
+            MovInds = [int( ( (SlicesToPlot[i] + 1) )/Nslices*MovNumSlices ) for i in range(len(SlicesToPlot))]
+            
+            Nrows = len(MovInds)
+        
+    else:
+        print('Input "perspective" must be "axial", "sagital" or "coronal".')
+        
+        return
+    
+    if LogToConsole:
+        print('\nfix_inds =', FixInds)
+        print('\nmov_inds =', MovInds)
+    
+    # Combine the data for fixed, moving and registered images in a list:
+    Inds = [FixInds, MovInds, FixInds]
+    Npas = [FixNpa, MovNpa, RegNpa]
+    Origins = [FixOrigin, MovOrigin, FixOrigin]
+    Spacings = [FixSpacings, MovSpacings, FixSpacings]
+    Orients = [FixOrient, MovOrient, FixOrient]
+    ARs = [FixAR, MovAR, FixAR]
+    NumSlices = [FixNumSlices, MovNumSlices, FixNumSlices]
+    Txts = ['Fixed slice', 'Moving slice', 'Registered slice']
+    Contours = [FixContours, MovContours, FixContours]
+    
+    return Inds, Npas, Origins, Spacings, Orients, ARs, NumSlices, Txts, \
+           Contours, Nrows, Ncols
+           
+
+
+
+def PlotFixMovRegImagesAndContours(FixImage, MovImage, RegImage, 
+                                   FixContours, MovContours,
+                                   SlicesToPlot, Perspective, ContoursAs, 
+                                   LogToConsole, ExportFig, ExportFname):
+    
+    Inds, Npas, Origins, Spacings, Orients, ARs, NumSlices, Txts, Contours, \
+    Nrows, Ncols = PrepDataForFixMovRegPlotWithContours(FixImage, MovImage, RegImage, 
+                                                        FixContours, MovContours,
+                                                        SlicesToPlot, 
+                                                        Perspective, 
+                                                        LogToConsole)
+    
+    # Create a figure with two subplots and the specified size:
+    if ExportFig:
+        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows), dpi=300)
+    else:
+        plt.subplots(Nrows, Ncols, figsize=(14, 5*Nrows))
+    
+    colours = ['r', 'g', 'b', 'm', 'c', 'y', 'k']
+    
+    LineWidth = 1
+    LineWidth = 0.5
+    
+    MarkerSize = 1
+    
+    n = 0 # sub-plot number
+    
+    # Loop through each slice:
+    for s in range(Nrows):
+        # Loop through each data type:
+        for i in range(Ncols):
+            npa = Npas[i]
+            origin = Origins[i]
+            spacings = Spacings[i]
+            orient = Orients[i]
+            AR = ARs[i]
+            Nslices = NumSlices[i]
+            txt = Txts[i]
+            contours = Contours[i]
+            
+            n += 1 # increment sub-plot number
+            
+            # Plot the image:
+            if s <= len(Inds[i]) - 1:
+                ind = Inds[i][s]
+                
+                plt.subplot(Nrows, Ncols, n)
+                    
+                if Perspective=='axial':
+                    arr = npa[ind,:,:]
+                    
+                    SliceAxis = 'z'
+                    SliceLoc = origin[2] + spacings[2]*s
+                    
+                    SlicePlane = '(X, Y)'
+                    SliceOrient = orient[0:2]
+                    
+                elif Perspective=='sagittal':
+                    arr = np.flipud(npa[:,:,ind]) # flipud to correct orientation
+                    
+                    SliceAxis = 'y'
+                    SliceLoc = origin[1] + spacings[1]*s
+                    
+                    SlicePlane = '(X, Z)'
+                    SliceOrient = [orient[0], orient[2]]
+                    
+                elif Perspective=='coronal':
+                    arr = np.flipud(npa[:,ind,:]) # flipud to correct orientation
+                    
+                    SliceAxis = 'x'
+                    SliceLoc = origin[0] + spacings[0]*s
+                    
+                    SlicePlane = '(Y, Z)'
+                    SliceOrient = orient[1:3]
+                    
+                SliceLoc = round(SliceLoc, 1)
+                
+                SliceOrient = [round(SliceOrient[i], 3) for i in range(len(SliceOrient))]
+                
+                plt.imshow(arr, cmap=plt.cm.Greys_r, aspect=AR);
+                
+                plt.title(txt + f' {ind + 1}/{Nslices}' \
+                          + '\n' + SliceAxis + f'0 = {SliceLoc} mm' \
+                          + '\n' + SlicePlane + f' = {SliceOrient}')
+                plt.axis('off')
+                
+                
+                # Plot contours (currently for axial view only):
+                if Perspective == 'axial':
+                    # Get the shape of the contour data for this slice:
+                    DataShape = np.array(contours[ind]).shape
+                    
+                    #LenDataShape = len(DataShape)
+                    
+                    Ncontours = DataShape[0]
+                    
+                    # If Ncontours != 0, get the Npoints in each contour:
+                    if Ncontours:
+                        # Initialise Npoints for each contour:
+                        Npoints = []
+                        
+                        for c in range(Ncontours):
+                            Npoints.append(len(contours[ind][c]))
+                    else:
+                        Npoints = 0
+                    
+                    if LogToConsole:
+                        print('\n\ntxt =', txt)
+                    
+                        print('\nind =', ind)
+                        
+                        print(f'\nDataShape = {DataShape}')
+                        #print(f'LenDataShape = {LenDataShape}')
+                        
+                        #print(f'\nNcts = {Ncts}')
+                        print(f'\nNcontours[ind={ind}] = {Ncontours}')
+                        
+                        #print(f'\npts[ind={ind}] =\n\n', pts[ind])
+                        print(f'\nNpoints[ind={ind}] = {Npoints}')
+                    
+                    # Plot contours if Ncontours != 0:
+                    if Ncontours:
+                        # Loop through each array of contour points:
+                        for c in range(Ncontours):
+                            # Generate a random colour for this contour:
+                            #FixRegColour = [item/255 for item in list(np.random.choice(range(256), size=3))]
+                            #MovColour = [item/255 for item in list(np.random.choice(range(256), size=3))]
+                            
+                            #FixRegColour = [1, 0, 0] # red
+                            #MovColour = [1, 0, 0] # red
+        
+                            # Number of points in this contour:
+                            Npts = len(contours[ind][c])
+                            #Npts = Npoints[c] # this line or above is fine
+                            
+                            # Initialise lists of x and y coordinates: 
+                            X = []
+                            Y = []
+                            
+                            if LogToConsole:
+                                print(f'\nNpts[ind={ind}][c={c}] = {Npts}')
+                            
+                                print(f'\ncontours[ind={ind}][c={c}] =', contours[ind][c])
+                            
+                            # Unpack tuple of x,y,z coordinates and store in
+                            # lists X and Y:
+                            for x, y, z in contours[ind][c]:
+                                X.append(x)
+                                Y.append(y)
+                
+                            # Flip Y pixel coordinates?:
+                            if False:
+                                N_r, N_c = np.shape(npa[ind,:,:])
+                    
+                                Y = N_c - np.array(Y)
+                            
+                            if ContoursAs=='lines':
+                                
+                                #if i == 1: # i.e. moving
+                                #    plt.plot(X, Y, linewidth=1, c=MovColour)
+                                #    
+                                #else: # i.e. fixed or registered
+                                #    plt.plot(X, Y, linewidth=1, c=FixRegColour)
+                                
+                                plt.plot(X, Y, linewidth=LineWidth, c=colours[c])
+                                plt.plot(X, Y, '.', markersize=MarkerSize, c=colours[c])
+                                
+                                
+                            elif ContoursAs=='dots':
+                                
+                                #if i == 1: # i.e. moving
+                                #    plt.plot(X, Y, '.', markersize=1, c=MovColour)
+                                #    
+                                #else: # i.e. fixed or registered
+                                #    plt.plot(X, Y, '.', markersize=1, c=FixRegColour)
+                                    
+                                plt.plot(X, Y, '.', markersize=MarkerSize, c=colours[c])
+                                
+                            else:
+                                print('\nContoursAs argument must be either',
+                                      '"lines" or "dots".')
+            
+            
+    if ExportFig:
+        plt.savefig(ExportFname, bbox_inches='tight')
+        
+    return
+
 
 
 
