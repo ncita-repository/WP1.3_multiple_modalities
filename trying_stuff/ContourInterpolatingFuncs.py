@@ -2246,9 +2246,8 @@ def SortByClosest(Points):
 
     
 
-def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, 
-             InterpolateAllPts, OnlyKeepClosestIntersPt, MaxDistToImagePlane, 
-             LogToConsole, PlotResults, AnnotatePtNums, ExportResults):
+def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, InterpolateAllPts, 
+             UseInterp, LogToConsole, PlotResults, AnnotatePtNums, ExportResults):
     """
     Copy ROIs from the Fixed to Moving image domain.  
     
@@ -2295,10 +2294,19 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
                             original node.  See Note 4 in the function 
                             InterpolateBetweenContours.
                             
+        UseInterp         - A boolean that determines whether or not 
+                            interpolated contour points will be used when 
+                            searching for intersection points between the line 
+                            segments that join points on adjacent transformed 
+                            contours and the image planes in the Moving domain. 
+    
         LogToConsole      - Log some results to the console.
                             
         PlotResults       - Boolean that denotes whether or not results will be
                             plotted.
+                            
+        AnnotatePtNums     - Boolean value determines whether points are 
+                             annotated with point numbers
         
         ExportResults     - Boolean that denotes whether or not plotted results
                             are to be exported.
@@ -2478,12 +2486,9 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         print('\nFinding intersection of transformed points with the Moving',
               'image planes...\n')
     
-    # Decide whether or not to use the interpolated contours when searching for
-    # intersection points between the line segments that join adjacent contours
-    # and the imaging planes:
-    UseInterp = True
-    #UseInterp = False
-    
+
+    # Choose whether or not the intersection points must lie on the line
+    # segments:
     MustBeOnLineSeg = True
     
     # Get the intersecting points of the contours on the moving planes: 
@@ -2570,7 +2575,6 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
             PlotInterpContours2DSubPlots(InterpData=InterpData, 
                                          FixedOrMoving='Fixed', 
                                          dP=dP, 
-                                         MaxDistToImagePlane=MaxDistToImagePlane,
                                          AnnotatePtNums=False, 
                                          SubPlots=SubPlots, 
                                          ExportPlot=ExportResults)
@@ -2578,7 +2582,6 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
             PlotInterpContours2D(InterpData=InterpData, 
                                  FixedOrMoving='Fixed', 
                                  dP=dP, 
-                                 MaxDistToImagePlane=MaxDistToImagePlane,
                                  AnnotatePtNums=False, 
                                  SubPlots=SubPlots, 
                                  ExportPlot=ExportResults)
@@ -2604,15 +2607,13 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
         # domain:
         if SubPlots:
             PlotIntersectingPts2DSubPlots(MovContourData=MovContourData, 
-                                          dP=dP, 
-                                          MaxDistToImagePlane=MaxDistToImagePlane,
+                                          dP=dP, UseInterp=UseInterp,
                                           AnnotatePtNums=False, 
                                           SubPlots=SubPlots, 
                                           ExportPlot=ExportResults)
         else:
             PlotIntersectingPts2D(MovContourData=MovContourData, 
-                                  dP=dP, 
-                                  MaxDistToImagePlane=MaxDistToImagePlane,
+                                  dP=dP, UseInterp=UseInterp,
                                   AnnotatePtNums=False, 
                                   SubPlots=SubPlots, 
                                   ExportPlot=ExportResults)
@@ -2639,8 +2640,8 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP,
 
         # Create filename for exported figure:
         ExportFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-              + f'_Contour_interp_transf_and_inters_dP_{dP}_' \
-              + f'MaxDistToPlane_{MaxDistToImagePlane}_' + Perspective + '.png'
+              + f'_Contour_interp_transf_and_inters__dP_{dP}__' \
+              + f'UseInterp_{UseInterp}__' + Perspective + '.png'
         
         #ruf.display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im=FixIm, 
         #                                                                 mov_im=MovIm, 
@@ -3097,7 +3098,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
             # Create filename for exported figure:
             FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                        + '_Interp_bt_' + FixedOrMoving \
-                       + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
+                       + f'_slices_{SliceInd1}_and_{SliceInd2}__dP_{dP}.png'
             
             if ExportPlot:
                 plt.savefig(FigFname, bbox_inches='tight')
@@ -3109,7 +3110,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                    + '_Interp_bt_' + FixedOrMoving \
-                   + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+                   + f'_slices_{FirstSlice}_and_{LastSlice}__dP_{dP}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
@@ -3119,8 +3120,7 @@ def PlotInterpContours2D(InterpData, FixedOrMoving, dP, AnnotatePtNums,
 
 
 def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP, 
-                                 MaxDistToImagePlane, AnnotatePtNums, 
-                                 SubPlots, ExportPlot):
+                                 AnnotatePtNums, SubPlots, ExportPlot):
     """
     Plot interpolation results.
     
@@ -3286,7 +3286,7 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP,
                 # Create filename for exported figure:
                 FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                            + '_Interp_bt_' + FixedOrMoving \
-                           + f'_slices_{SliceInd1}_and_{SliceInd2}_dP_{dP}.png'
+                           + f'_slices_{SliceInd1}_and_{SliceInd2}__dP_{dP}.png'
                 
                 if ExportPlot:
                     plt.savefig(FigFname, bbox_inches='tight')
@@ -3301,7 +3301,7 @@ def PlotInterpContours2DSubPlots(InterpData, FixedOrMoving, dP,
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                    + '_Interp_bt_' + FixedOrMoving \
-                   + f'_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+                   + f'_slices_{FirstSlice}_and_{LastSlice}__dP_{dP}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
@@ -4170,7 +4170,7 @@ def PlotInterpolatedContours3D(InterpData, FixContourData, MovContourData, dP,
     # Create filename for exported figure:
     FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                 + f'_Interpolation_bt_slice_{FirstSliceInd}_and_' \
-                + f'{LastSliceInd}_dP_{dP}.png'
+                + f'{LastSliceInd}__dP_{dP}.png'
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
@@ -4425,7 +4425,7 @@ def PlotInterpolatedContours3DNew(InterpData, FixContourData, MovContourData,
     # Create filename for exported figure:
     FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
                 + f'_Interpolation_bt_slice_{FirstSliceInd}_and_' \
-                + f'{LastSliceInd}_dP_{dP}.png'
+                + f'{LastSliceInd}__dP_{dP}.png'
     
     if ExportPlot:
         plt.savefig(FigFname, bbox_inches='tight')
@@ -4506,8 +4506,8 @@ def PlotIntersectingPoints2D_OLD(MovContourData, SliceNum, dP, AnnotatePtNums,
 
 
 
-def PlotIntersectingPts2D(MovContourData, dP, MaxDistToImagePlane,
-                          AnnotatePtNums, SubPlots, ExportPlot):
+def PlotIntersectingPts2D(MovContourData, dP, UseInterp, AnnotatePtNums, 
+                          SubPlots, ExportPlot):
     """
     Plot intersecting points.
     
@@ -4620,8 +4620,8 @@ def PlotIntersectingPts2D(MovContourData, dP, MaxDistToImagePlane,
         if not SubPlots:
             # Create filename for exported figure:
             FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                       + f'_Inters_pts_on_slice_{SliceNum}_dP_{dP}' \
-                       + f'MaxDistToPlane_{MaxDistToImagePlane}.png'
+                       + f'_Inters_pts_on_slice_{SliceNum}__dP_{dP}__' \
+                       + f'UseInterp_{UseInterp}.png'
             
             if ExportPlot:
                 plt.savefig(FigFname, bbox_inches='tight')
@@ -4632,8 +4632,8 @@ def PlotIntersectingPts2D(MovContourData, dP, MaxDistToImagePlane,
     if SubPlots:
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                    + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}_' \
-                    + f'dP_{dP}_MaxDistToPlane_{MaxDistToImagePlane}.png'
+                    + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}__' \
+                    + f'dP_{dP}__UseInterp_{UseInterp}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
@@ -4643,7 +4643,7 @@ def PlotIntersectingPts2D(MovContourData, dP, MaxDistToImagePlane,
 
 
 
-def PlotIntersectingPts2DSubPlots(MovContourData, dP, MaxDistToImagePlane,
+def PlotIntersectingPts2DSubPlots(MovContourData, dP, UseInterp, 
                                   AnnotatePtNums, SubPlots, ExportPlot):
     """
     Plot intersecting points.
@@ -4773,8 +4773,8 @@ def PlotIntersectingPts2DSubPlots(MovContourData, dP, MaxDistToImagePlane,
             if not SubPlots:
                 # Create filename for exported figure:
                 FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                           + f'_Inters_pts_on_slice_{SliceNum}_dP_{dP}_' \
-                           + f'MaxDistToPlane_{MaxDistToImagePlane}.png'
+                           + f'_Inters_pts_on_slice_{SliceNum}__dP_{dP}__' \
+                           + f'UseInterp_{UseInterp}.png'
                 
                 if ExportPlot:
                     plt.savefig(FigFname, bbox_inches='tight')
@@ -4788,8 +4788,8 @@ def PlotIntersectingPts2DSubPlots(MovContourData, dP, MaxDistToImagePlane,
     if SubPlots:
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                   + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}_' \
-                   + f'dP_{dP}_MaxDistToPlane_{MaxDistToImagePlane}.png'
+                   + f'_Inters_pts_bt_slices_{FirstSlice}_and_{LastSlice}__' \
+                   + f'dP_{dP}__UseInterp_{UseInterp}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
@@ -4944,7 +4944,7 @@ def Plot2DSubPlotsOfMovContourData(MovContourData, dP, AnnotatePtNums, SubPlots,
             if not SubPlots:
                 # Create filename for exported figure:
                 FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
-                           + f'_Intersecting_points_on_slice_{SliceNum}_dP_{dP}.png'
+                           + f'_Intersecting_points_on_slice_{SliceNum}__dP_{dP}.png'
                 
                 if ExportPlot:
                     plt.savefig(FigFname, bbox_inches='tight')
@@ -4961,13 +4961,17 @@ def Plot2DSubPlotsOfMovContourData(MovContourData, dP, AnnotatePtNums, SubPlots,
     if SubPlots:
         # Create filename for exported figure:
         FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '_Intersecting' \
-                   + f'_points_between_slices_{FirstSlice}_and_{LastSlice}_dP_{dP}.png'
+                   + f'_points_between_slices_{FirstSlice}_and_{LastSlice}__dP_{dP}.png'
         
         if ExportPlot:
             plt.savefig(FigFname, bbox_inches='tight')
         
     return
     
+
+
+
+
 def PlotJoinedPoints2D(PointsJoined, ExportPlot, SliceNum):
     """
     Plot joined points.

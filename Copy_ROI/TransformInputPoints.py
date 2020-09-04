@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug 12 11:09:41 2020
+Created on Wed Jun 17 14:01:12 2020
 
 @author: ctorti
+
+Note:
+    This function was formerly called "TransformPoints".
+    
 """
 
-
-def TransformPoints(Points, Image, TransformFilter):
-    # Import packages and functions:
+def TransformInputPoints(MovingImage, TransformFilter):
+    # Import packages:
     import SimpleITK as sitk
-    from CreateInputFileForElastix import CreateInputFileForElastix
-    
-    
-    # Create inputpoints.txt for Elastix, containing the contour points to be
-    # transformed:
-    CreateInputFileForElastix(Points)
     
     # Initiate TransformixImageFilter:
     TransformixImFilt = sitk.TransformixImageFilter()
@@ -35,7 +32,7 @@ def TransformPoints(Points, Image, TransformFilter):
     
     # Need to explicitely tell elastix that the image is 3D since by default it 
     # will only transform to 2D:
-    TransformixImFilt.SetMovingImage(Image)
+    TransformixImFilt.SetMovingImage(MovingImage)
     
     # Set up for computing deformation field:
     #TransformixImFilt.ComputeDeformationFieldOn()
