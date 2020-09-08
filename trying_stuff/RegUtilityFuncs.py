@@ -1949,9 +1949,11 @@ def display_all_sitk_images_and_reg_results_with_all_contours_v3(fix_im,
 
 def PrepDataForFixMovRegPlotWithContours(FixImage, MovImage, RegImage, 
                                          FixContours, MovContours,
-                                         SlicesToPlot, Perspective, 
+                                         SlicesToPlot, Perspective,
                                          LogToConsole):
                                          
+    
+    import ContourInterpolatingFuncs as cif
     
     FixNpa = sitk.GetArrayFromImage(FixImage)
     MovNpa = sitk.GetArrayFromImage(MovImage)
@@ -1988,7 +1990,6 @@ def PrepDataForFixMovRegPlotWithContours(FixImage, MovImage, RegImage,
     for i in [1, 2, 3, 5, 6, 7]:
         FixOrient[i] = - FixOrient[i]
         MovOrient[i] = - MovOrient[i]
-        
     
     # Number of columns to plot:
     Ncols = 3
@@ -2121,7 +2122,7 @@ def PlotFixMovRegImagesAndContours(FixImage, MovImage, RegImage,
     Nrows, Ncols = PrepDataForFixMovRegPlotWithContours(FixImage, MovImage, RegImage, 
                                                         FixContours, MovContours,
                                                         SlicesToPlot, 
-                                                        Perspective, 
+                                                        Perspective,
                                                         LogToConsole)
     
     # Create a figure with two subplots and the specified size:
@@ -2199,8 +2200,9 @@ def PlotFixMovRegImagesAndContours(FixImage, MovImage, RegImage,
                 plt.axis('off')
                 
                 
-                # Plot contours (currently for axial view only):
-                if Perspective == 'axial':
+                # Plot contours (currently for axial view only) if they exist
+                # (i.e. if contours[ind] != []):
+                if Perspective == 'axial' and contours[ind]:
                     # Get the shape of the contour data for this slice:
                     DataShape = np.array(contours[ind]).shape
                     
@@ -2276,8 +2278,12 @@ def PlotFixMovRegImagesAndContours(FixImage, MovImage, RegImage,
                                 #else: # i.e. fixed or registered
                                 #    plt.plot(X, Y, linewidth=1, c=FixRegColour)
                                 
-                                plt.plot(X, Y, linewidth=LineWidth, c=colours[c])
-                                plt.plot(X, Y, '.', markersize=MarkerSize, c=colours[c])
+                                #print(f'i = {i}, n = {n}')
+                                
+                                if i != 1:
+                                
+                                    plt.plot(X, Y, linewidth=LineWidth, c=colours[c])
+                                    plt.plot(X, Y, '.', markersize=MarkerSize, c=colours[c])
                                 
                                 
                             elif ContoursAs=='dots':

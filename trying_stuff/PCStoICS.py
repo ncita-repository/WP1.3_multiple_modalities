@@ -199,7 +199,7 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     # Initialise Pts_ICS:
     Pts_ICS = []
     
-    # Loop through each pint in Pts_PCS:
+    # Loop through each point in Pts_PCS:
     for p in range(len(Pts_PCS)):
         # Get the point:
         point = Pts_PCS[p]

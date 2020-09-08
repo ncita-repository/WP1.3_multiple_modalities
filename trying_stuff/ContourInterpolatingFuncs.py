@@ -2666,7 +2666,7 @@ def CopyRois(FixedDicomDir, MovingDicomDir, FixedRoiFpath, dP, InterpolateAllPts
                                            ExportFname=ExportFname)
     
     
-    return PointData, FixContourData, InterpData, MovContourData
+    return PointData, FixContourData, InterpData, MovContourData, FixIm, MovIm, RegIm
     
     
 
@@ -3730,6 +3730,98 @@ def GetMeshGridsForImagePlanes(PlaneNums, DicomDir):
         
         
     return Meshgrids
+
+
+def GetMeshGridsForImagePlanesNEW(DicomDir, Convert2ICS):
+    """
+    Create a list of points that define the grid of pixels that
+    define the extent of the imaging planes for all image planes.
+    
+    Note that the points are in the Patient Coordinate System but will be 
+    converted to the Image Coordinate System if Convert2ICS=True.
+    
+    07/09/2020
+    """
+    
+    from GetImageAttributes import GetImageAttributes
+    import numpy as np
+    #from scipy.interpolate import griddata
+        
+    package = 'pydicom'
+    
+    # Get the image attributes:
+    Origin, Dirs, Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                                      Package=package)
+    
+    Meshgrids = []
+    
+    for s in range(Dims[2]):
+        xMin = Origin[0] + s*Spacings[2]*Dirs[6]
+        yMin = Origin[1] + s*Spacings[2]*Dirs[7]
+        #zMin = Origin[2] + s*Spacings[2]*Dirs[8]
+        
+        xMax = xMin + Dims[0]*Spacings[0]*Dirs[0] + Dims[1]*Spacings[1]*Dirs[3]
+        yMax = yMin + Dims[0]*Spacings[0]*Dirs[1] + Dims[1]*Spacings[1]*Dirs[4]
+        #zMax = zMin + Dims[0]*Spacings[0]*Dirs[2] + Dims[1]*Spacings[1]*Dirs[5]
+        
+        #X = np.linspace(xMin, xMax, 100)
+        X = np.linspace(xMin, xMax, Dims[0])
+        #Y = np.linspace(yMin, yMax, 100)
+        Y = np.linspace(yMin, yMax, Dims[1])
+        #Z = np.linspace(zMin, zMax, 100)
+        
+        #XX, YY, ZZ = np.meshgrid(X, Y, Z)
+        #Meshgrids.append( np.meshgrid(X, Y, Z) )
+        
+        XX, YY = np.meshgrid(X, Y)
+        
+        #YZ, ZZ = np.meshgrid(Y, Z)
+        #ZZ1, ZZ2 = np.meshgrid(Z, Z)
+        #ZZ = Z.reshape(XX.shape)
+        #ZZ = griddata((X, Y), Z, (XX, YY), method='cubic')
+        
+        #ZZ = np.zeros(XX.shape, dtype=float)
+        #ZZ = np.zeros((Dims[0], Dims[1]), dtype=float)
+        ZZ = np.zeros((Dims[1], Dims[0]), dtype=float)
+        
+        for i in range(Dims[0]):
+            for j in range(Dims[1]):
+                #ZZ[i,j] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8]                 
+                ZZ[j,i] = Origin[2] + i*Spacings[0]*Dirs[2] + j*Spacings[1]*Dirs[5] + s*Spacings[2]*Dirs[8] 
+        
+        
+        #print('XX.shape =', XX.shape)
+        #print('YY.shape =', YY.shape)
+        #print('ZZ.shape =', ZZ.shape)
+        
+        if Convert2ICS:
+            # Import function:
+            from PCStoICS import PCStoICS
+            
+            """ This is not an elegant approach (and it's VERY INEFFICIENT) but 
+            a quick means of getting a result. """
+            for i in range(Dims[0]):
+                for j in range(Dims[1]):
+                    PtPCS = [XX[j,i], YY[j,i], ZZ[j,i]]
+                    
+                    PtICS = PCStoICS(Pts_PCS=PtPCS, Origin=Origin, 
+                                     Directions=Dirs, Spacings=Spacings)
+                    
+                    # Over-write the [j,i]^th elements in XX, YY and ZZ:
+                    XX[j,i] = PtICS[0]
+                    YY[j,i] = PtICS[1]
+                    ZZ[j,i] = PtICS[2]
+        
+        
+        
+        Meshgrids.append([XX, YY, ZZ])
+        #Meshgrids.append([XX, YY, ZZ1 + ZZ2])
+        #Meshgrids.append([X, Y, Z])
+        
+        
+    return Meshgrids
+
+
 
 
 
@@ -5149,7 +5241,7 @@ def PlotContoursAndPlanes3D(Contours, Convert2ICS, PlotImagingPlanes,
     #from mpl_toolkits import mplot3d
     #from mpl_toolkits import Axes3D
     from mpl_toolkits.mplot3d import Axes3D
-    #import numpy as np
+    import numpy as np
     import time
     
     if Convert2ICS:
@@ -5161,13 +5253,11 @@ def PlotContoursAndPlanes3D(Contours, Convert2ICS, PlotImagingPlanes,
         Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
                                             Package='pydicom')
     
-    if PlotImagingPlanes:
-        # Get meshgrids:
-        Meshgrids = GetMeshGridsForImagePlanesInContours(Contours=Contours, 
-                                                         OnlyPlanesWithContours=True, 
-                                                         DicomDir=DicomDir)           
+    #print(f'len(Meshgrids) = {len(Meshgrids)}')
     
     C = len(Contours)
+    
+    #print(f'len(Contours) = {C}')
     
     # Create a list of strings for colours, repeating 6 colours N times so that 
     # there are sufficient colours for each contour:
@@ -5183,43 +5273,108 @@ def PlotContoursAndPlanes3D(Contours, Convert2ICS, PlotImagingPlanes,
     
     fig = plt.figure(figsize=(14, 14))
     ax = fig.add_subplot(111, projection='3d')
+    
         
     # Loop through all slices:    
     for s in range(C):
-        Contour = Contours[s]
-        Meshgrid = Meshgrids[s]
+        contours = Contours[s]
+        #meshgrid = Meshgrids[s]
+        
+        # Get the shape of the contour data for this slice:
+        DataShape = np.array(contours).shape
+        
+        #LenDataShape = len(DataShape)
+        
+        Ncontours = DataShape[0]
+        
+        # If Ncontours != 0, get the Npoints in each contour:
+        if Ncontours:
+            # Initialise Npoints for each contour:
+            Npoints = []
+            
+            # Loop through all contours:
+            for c in range(Ncontours):
+                Npoints.append(len(contours[c]))
+        else:
+            Npoints = 0
+        
+        if False: #LogToConsole:
+            print('\n\ntxt =', txt)
+        
+            print('\nind =', ind)
+            
+            print(f'\nDataShape = {DataShape}')
+            #print(f'LenDataShape = {LenDataShape}')
+            
+            #print(f'\nNcts = {Ncts}')
+            print(f'\nNcontours[ind={ind}] = {Ncontours}')
+            
+            #print(f'\npts[ind={ind}] =\n\n', pts[ind])
+            print(f'\nNpoints[ind={ind}] = {Npoints}')
+        
+        
+        
         
         # Continue if points exist for this slice:
-        if Contour:
-            if Convert2ICS:
-                # Convert from PCS to ICS:
-                Contour = PCStoICS(Pts_PCS=Contour, Origin=Origin, 
-                                   Directions=Directions, Spacings=Spacings)
+        if contours:
+            # Loop through each array of contour points:
+            for c in range(len(contours)):
+                contour = contours[c]
                 
-
-            X = []; Y = []; Z = []
-            
-            # Unpack tuple and append to arrays X, Y and Z:
-            for x, y, z in Contour:
-                X.append(x)
-                Y.append(y)
-                Z.append(z)
+                if Convert2ICS:
+                    # Convert from PCS to ICS:
+                    contour = PCStoICS(Pts_PCS=contour, Origin=Origin, 
+                                       Directions=Directions, Spacings=Spacings)
+                    
+    
+                X = []; Y = []; Z = []
                 
-            # Plot line:
-            ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[s]);
-            
-            # Plot dots:
-            ax.scatter3D(X, Y, Z, s=MarkerSize, c=Colours[s], cmap='hsv');
+                # Unpack tuple and append to arrays X, Y and Z:
+                for x, y, z in contour:
+                    X.append(x)
+                    Y.append(y)
+                    Z.append(z)
+                    
+                # Plot line:
+                ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[s]);
+                
+                # Plot dots:
+                ax.scatter3D(X, Y, Z, s=MarkerSize, c=Colours[s], cmap='hsv');
         
-            if PlotImagingPlanes:  
-                # Plot surface:
-                ax.plot_surface(Meshgrid[0], Meshgrid[1], Meshgrid[2], alpha=0.2)
-
-                
-                
         #plt.title('Contours and imaging planes')
         #plt.title(PlotTitle)
         ax.set_title(PlotTitle)
+        
+        
+    if PlotImagingPlanes:
+        # Get meshgrids:
+        #Meshgrids = GetMeshGridsForImagePlanesInContours(Contours=Contours, 
+        #                                                 OnlyPlanesWithContours=OnlyPlanesWithContours, 
+        #                                                 DicomDir=DicomDir)   
+        Meshgrids = GetMeshGridsForImagePlanesNEW(DicomDir=DicomDir) 
+        
+        PlotAllImagePlanes = True
+        PlotAllImagePlanes = False
+        
+        if PlotAllImagePlanes:
+            # Loop through all meshgrids:
+            for s in range(len(Meshgrids)):
+                # Plot surface:
+                ax.plot_surface(Meshgrids[s][0], Meshgrids[s][1], Meshgrids[s][2], 
+                                alpha=0.2)
+        
+        else:
+            # Get indices of slices that contain contours:
+            inds = []
+            
+            for c in range(C):
+                if Contours[c]:
+                    inds.append(c)
+            
+            for i in inds:
+                # Plot surface:
+                ax.plot_surface(Meshgrids[i][0], Meshgrids[i][1], Meshgrids[i][2], 
+                                alpha=0.2)
     
     # Create filename for exported figure:
     #FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
@@ -5232,6 +5387,341 @@ def PlotContoursAndPlanes3D(Contours, Convert2ICS, PlotImagingPlanes,
         
     return
 
+
+
+
+def PlotContoursAndPlanes3DNEW(ContourData, PlotInterpContours, 
+                               PlotImagingPlanes, Convert2ICS,
+                               DicomDir, PlotTitle, ExportPlot):
+    """
+    Plot contours (list of a list of points) and imaging planes (if desired).
+    
+    """
+    
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    #from mpl_toolkits import mplot3d
+    #from mpl_toolkits import Axes3D
+    from mpl_toolkits.mplot3d import Axes3D
+    import numpy as np
+    import time
+    
+    #print(f'len(Meshgrids) = {len(Meshgrids)}')
+    
+    if PlotInterpContours:
+        #C = len(Contours)
+        C = len(ContourData['PointPCS'])
+        
+        Inds = list(range(C))
+    else:
+        # Get Inds of slices that have only original contours:
+        Inds = GetIndsOfSliceNumsOfContourType(ContourData=ContourData, 
+                                               ContourTypeNo=1)
+        
+        C = len(Inds)
+    
+    #print(f'len(Contours) = {C}')
+    
+    # Create a list of strings for colours, repeating 6 colours N times so that 
+    # there are sufficient colours for each contour:
+    Colours = ['b', 'r', 'g', 'm', 'y', 'k']
+    n = len(Colours)
+    
+    # Take the ceiling of 
+    N = - ( - C // n )
+    
+    Colours = ['b', 'r', 'g', 'm', 'y', 'k']*N
+    
+    MarkerSize = 3
+    
+    fig = plt.figure(figsize=(14, 14))
+    ax = fig.add_subplot(111, projection='3d')
+    
+        
+    # Loop through all slices:    
+    for s in range(C):
+        i = Inds[s]
+
+        #contours = Contours[i]
+        contours = ContourData['PointPCS'][i] # <-- dontours parallel to planes but not within bounds
+        #contours = ContourData['PointICS'][i] # <-- contours not parallel to planes
+        #meshgrid = Meshgrids[s]
+        
+        # Get the shape of the contour data for this slice:
+        DataShape = np.array(contours).shape
+        
+        #LenDataShape = len(DataShape)
+        
+        Ncontours = DataShape[0]
+        
+        # If Ncontours != 0, get the Npoints in each contour:
+        if Ncontours:
+            # Initialise Npoints for each contour:
+            Npoints = []
+            
+            # Loop through all contours:
+            for c in range(Ncontours):
+                Npoints.append(len(contours[c]))
+        else:
+            Npoints = 0
+        
+        if False: #LogToConsole:
+            print('\n\ntxt =', txt)
+        
+            print('\nind =', ind)
+            
+            print(f'\nDataShape = {DataShape}')
+            #print(f'LenDataShape = {LenDataShape}')
+            
+            #print(f'\nNcts = {Ncts}')
+            print(f'\nNcontours[ind={ind}] = {Ncontours}')
+            
+            #print(f'\npts[ind={ind}] =\n\n', pts[ind])
+            print(f'\nNpoints[ind={ind}] = {Npoints}')
+        
+        
+        
+        
+        # Continue if points exist for this slice:
+        if contours:
+            # Loop through each array of contour points:
+            for c in range(len(contours)):
+                contour = contours[c]
+                
+                #if Convert2ICS:
+                #    # Convert from PCS to ICS:
+                #    contour = PCStoICS(Pts_PCS=contour, Origin=Origin, 
+                #                       Directions=Directions, Spacings=Spacings)
+                    
+    
+                X = []; Y = []; Z = []
+                
+                # Unpack tuple and append to arrays X, Y and Z:
+                for x, y, z in contour:
+                    X.append(x)
+                    Y.append(y)
+                    Z.append(z)
+                    
+                # Plot line:
+                ax.plot3D(X, Y, Z, linestyle='solid', linewidth=1, c=Colours[s]);
+                
+                # Plot dots:
+                ax.scatter3D(X, Y, Z, s=MarkerSize, c=Colours[s], cmap='hsv');
+        
+        #plt.title('Contours and imaging planes')
+        #plt.title(PlotTitle)
+        ax.set_title(PlotTitle)
+        
+        
+    if PlotImagingPlanes:
+        # Get meshgrids:
+        #Meshgrids = GetMeshGridsForImagePlanesInContours(Contours=Contours, 
+        #                                                 OnlyPlanesWithContours=OnlyPlanesWithContours, 
+        #                                                 DicomDir=DicomDir)   
+        Meshgrids = GetMeshGridsForImagePlanesNEW(DicomDir=DicomDir, 
+                                                  Convert2ICS=Convert2ICS) 
+        
+        PlotAllImagePlanes = True
+        PlotAllImagePlanes = False
+        
+        if PlotAllImagePlanes:
+            # Loop through all meshgrids:
+            for s in range(len(Meshgrids)):
+                # Plot surface:
+                ax.plot_surface(Meshgrids[s][0], Meshgrids[s][1], Meshgrids[s][2], 
+                                alpha=0.2)
+        
+        else:
+            # Get Inds of slices that have only original contours:
+            Inds = GetIndsOfSliceNumsOfContourType(ContourData=ContourData, 
+                                               ContourTypeNo=1)
+        
+            for i in Inds:
+                #print(f'i = {i}')
+                
+                # Plot surface:
+                ax.plot_surface(Meshgrids[i][0], Meshgrids[i][1], Meshgrids[i][2], 
+                                alpha=0.2)
+
+    
+    # Create filename for exported figure:
+    #FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+    #            + f'_Contours_and_image_planes.png'
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + '_' + PlotTitle.replace(' ', '_') + '.png'
+    
+    if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+        
+    return
+
+
+
+
+
+def PlotContoursAndPlanes3D_NEW_2(InterpData, ContourData, FixOrMov,
+                                  PlotImagingPlanes, PlotAllImagePlanes,
+                                  ConvertMeshgrids2ICS, DicomDir, 
+                                  PlotTitle, ExportPlot):
+    
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    #from mpl_toolkits import mplot3d
+    #from mpl_toolkits import Axes3D
+    from mpl_toolkits.mplot3d import Axes3D
+    import numpy as np
+    import time
+    #from PCStoICS import PCStoICS
+    from GetImageAttributes import GetImageAttributes
+    
+    # Get the image attributes:
+    Origin, Directions, \
+    Spacings, Dims = GetImageAttributes(DicomDir=DicomDir, 
+                                        Package='pydicom')
+    
+    
+    #Colours = ['b', 'r', 'g', 'm', 'y', 'k']
+    #n = len(Colours)
+    
+    # Take the ceiling of 
+    #N = - ( - C // n )
+    
+    #Colours = ['b', 'r', 'g', 'm', 'y', 'k']*N
+    
+    MarkerSize = 3
+    
+    fig = plt.figure(figsize=(14, 14))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    
+    # Loop through each row in InterpData and plot the contours:
+    for i in range(len(InterpData['BoundingSliceInds'])):
+        
+        Contour1 = InterpData[FixOrMov + 'OSContour1Pts'][i]
+        Contour2 = InterpData[FixOrMov + 'OSContour2Pts'][i]
+        
+        # Unpack the arrays of x-, y- and z- components for Contour1 and 
+        # Contour2: 
+        X1 = []; Y1 = []; Z1 = []
+                
+        # Unpack tuple and append to arrays X, Y and Z:
+        for x, y, z in Contour1:
+            X1.append(x)
+            Y1.append(y)
+            Z1.append(z)
+            
+        X2 = []; Y2 = []; Z2 = []
+                
+        # Unpack tuple and append to arrays X, Y and Z:
+        for x, y, z in Contour2:
+            X2.append(x)
+            Y2.append(y)
+            Z2.append(z)
+            
+        # Plot contours:
+        ax.plot3D(X1, Y1, Z1, linestyle='solid', linewidth=1, c='b');
+        ax.plot3D(X2, Y2, Z2, linestyle='solid', linewidth=1, c='b');
+        
+        # Plot points:
+        ax.scatter3D(X1, Y1, Z1, s=MarkerSize, c='b', cmap='hsv');
+        ax.scatter3D(X2, Y2, Z2, s=MarkerSize, c='b', cmap='hsv');
+        
+        # Plot the line segments that connect the points in Contour1 and 
+        # Contour2:
+        for p in range(len(X1)):
+            ax.plot3D([X1[p], X2[p]], 
+                      [Y1[p], Y2[p]],
+                      [Z1[p], Z2[p]],
+                      linestyle='dashed', linewidth=1, c='gray');
+        
+    
+    # Plot the imaging planes:
+    if PlotImagingPlanes:
+        # Get meshgrids:  
+        Meshgrids = GetMeshGridsForImagePlanesNEW(DicomDir=DicomDir,
+                                                  Convert2ICS=ConvertMeshgrids2ICS) 
+        
+        #PlotAllImagePlanes = True
+        #PlotAllImagePlanes = False
+        
+        if PlotAllImagePlanes:
+            meshgrids = Meshgrids
+        else:
+            # Get Inds of slices that have only original contours:
+            if FixOrMov == 'Fix':
+                ContourTypeNo = 1
+            else:
+                ContourTypeNo = 3
+                
+            Inds = GetIndsOfSliceNumsOfContourType(ContourData=ContourData, 
+                                                   ContourTypeNo=ContourTypeNo)
+            
+            #print('FixOrMov =', FixOrMov, ', ContourTypeNo =', ContourTypeNo,
+            #      ', Inds =', Inds)
+            
+            #print('\nContourData["ContourType"] =', ContourData['ContourType'])
+        
+            meshgrids = []
+            
+            for i in Inds:
+                meshgrids.append(Meshgrids[i])
+                
+                
+        # Loop through all meshgrids:
+        for s in range(len(meshgrids)):
+            # Plot surface:
+            ax.plot_surface(meshgrids[s][0], meshgrids[s][1], meshgrids[s][2], 
+                            alpha=0.2)
+                
+           
+    
+    # Plot the intersection points of the transformed points on the Moving 
+    # image planes if FixOrMov = 'Mov':
+    if FixOrMov == 'Mov':
+        Contours = ContourData['PointPCS']
+        #Contours = ContourData['PointICS']
+        
+        colours = ['r', 'g', 'm', 'c', 'y', 'k']
+        
+        # Loop through each slice:
+        for s in range(len(Contours)):
+            # Contours for this slice:
+            contours = Contours[s]
+            
+            # If contours != []:
+            if contours:
+                # Loop through each array of contour points:
+                for c in range(len(contours)):
+                    # Initialise lists of x and y coordinates: 
+                    XI = []
+                    YI = []
+                    ZI = []
+                    
+                    # Unpack tuple of x,y,z coordinates and store in
+                    # lists XI, YI and ZI:
+                    for x, y, z in contours[c]:
+                        XI.append(x)
+                        YI.append(y)
+                        ZI.append(z)
+                        
+                        # Plot the contour points as lines and points:
+                        ax.plot3D(XI, YI, ZI, linestyle='solid', linewidth=1, c=colours[c]);
+                        ax.scatter3D(XI, YI, ZI, s=MarkerSize, c=colours[c], cmap='hsv');
+        
+    
+    # Create filename for exported figure:
+    #FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+    #            + f'_Contours_and_image_planes.png'
+    FigFname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) \
+                + '_' + PlotTitle.replace(' ', '_') + '.png'
+    
+    if ExportPlot:
+        plt.savefig(FigFname, bbox_inches='tight')
+    
+    
+    
+    
+    return
 
 
 def GetMinMaxIndicesInList(ListOfIndices):
