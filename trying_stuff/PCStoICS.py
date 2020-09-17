@@ -141,6 +141,7 @@ The expressions simplify to:
 
 def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     # Import packages:
+    import numpy as np
     #import SimpleITK as sitk
     
     """ 
@@ -151,17 +152,48 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     
     # If Pts_PCS is a list of points, the first item will be a list of 
     # [x, y, z] coordinates:
-    if isinstance(Pts_PCS[0], list):
-        # Pts_PCS is a list of P points:
-        P = len(Pts_PCS)
+    #if isinstance(Pts_PCS[0], list):
+    #    # Pts_PCS is a list of P points:
+    #    P = len(Pts_PCS)
+    #    
+    #else:
+    #    # Pts_PCS is a single point:
+    #    P = 1
+    #    
+    #    # Since the for loop below is intended to act on a list of points, 
+    #    # convert the point into a list of length 1:
+    #    Pts_PCS = [Pts_PCS]
         
-    else:
-        # Pts_PCS is a single point:
+        
+    # Get the shape of the list of points:
+    ListShape = np.array(Pts_PCS).shape
+    
+    #print('\nListShape =', ListShape)
+    
+    #  Get the length of ListShape:
+    LenListShape = len(ListShape)
+    
+    #print('\nLenListShape =', LenListShape)
+    
+    if LenListShape == 1:
+        # Pts_PCS is a single point. Turn into a list with one point:
+        Pts_PCS = [Pts_PCS]
+        
+        # The number of points:
         P = 1
         
-        # Since the for loop below is intended to act on a list of points, 
-        # convert the point into a list of length 1:
-        Pts_PCS = [Pts_PCS]
+    else:
+        # The number of points:
+        P = ListShape[0]
+    
+    #print(f'P = {P}')
+    
+    if False:
+        if P == 1:
+            # Since the for loop below is intended to act on a list of points, 
+            # convert the point into a list of length 1:
+            Pts_PCS = [Pts_PCS]
+    
     
     
     # Define S, X, Y and Z:
@@ -200,7 +232,9 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
     Pts_ICS = []
     
     # Loop through each point in Pts_PCS:
-    for p in range(len(Pts_PCS)):
+    for p in range(P):
+        #print(f'Pts_PCS[{p}] = {Pts_PCS[p]}')
+
         # Get the point:
         point = Pts_PCS[p]
         
@@ -235,14 +269,68 @@ def PCStoICS(Pts_PCS, Origin, Directions, Spacings):
         
         #Pts_ICS.append([di*i, dj*j, dk*k])
         Pts_ICS.append([i, j, k])
+
      
-    if P == 1:
-        # Convert Pts_ICS from a list of length 1 to a single point (as was
-        # Pts_PCS):
-        Pts_ICS = Pts_ICS[0]
+    """ Note 14/09:
+        For the points to be interpretted properly by further functions, even
+        a single point should be a list of length 1, so commenting out the 
+        lines below. 
+    """
+    #if P == 1:
+    #    # Convert Pts_ICS from a list of length 1 to a single point (as was
+    #    # Pts_PCS):
+    #    Pts_ICS = Pts_ICS[0]
     
+    #if P == 1:
+    #    Pts_ICS = [Pts_ICS]
     
     return Pts_ICS
+
+
+
+
+
+def PCStoICSnested(Pts_PCS, Origin, Directions, Spacings):
+    """
+    Since PCStoICS cannot currently deal with a nested list of points (e.g. of
+    the form in the dictionary ContourData), this will be handled by calling
+    PCStoICS in this function.
+    """
+    
+    # Initialise the converted points:
+    Pts_ICS = []
+    
+    for s in range(len(Pts_PCS)):
+        Contours_PCS = Pts_PCS[s]
+        
+        if Contours_PCS:
+            #print(f'len(ContoursPCS) = {len(ContoursPCS)}')
+            
+            Contours_ICS = []
+            
+            for c in range(len(Contours_PCS)):
+                #print(f'ContoursPCS[{c}] =', ContoursPCS[c])
+                
+                if Contours_PCS[c]:
+                    Contours_ICS.append(PCStoICS(Pts_PCS=Contours_PCS[c], 
+                                                Origin=Origin, 
+                                                Directions=Directions, 
+                                                Spacings=Spacings))
+                else:
+                    Contours_ICS.append([])
+                    
+            Pts_ICS.append(Contours_ICS)
+            
+        else:
+            Pts_ICS.append([])
+            
+    return Pts_ICS
+    
+    
+    
+    
+    
+     
 
 
     """ PREVIOUS DERIVATIONS: """

@@ -13,3 +13,5 @@ NCITA_coding_task/
 *.csv
 2020-05-28_Outputs/
 *.mat
+*.npy
+*.json

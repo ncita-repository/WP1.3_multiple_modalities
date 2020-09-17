@@ -172,7 +172,7 @@ def GetInputPoints(FixedDicomDir, FixedRoiFpath):
     for i in range(P):
         PtPCS = LUT[i][-1]
         
-        #print('PtPCS =', PtPCS)
+        print('PtPCS =', PtPCS)
         
         #PtICS = PCStoICS(Pts_PCS=[PtPCS], Origin=Origin,
         #                 Directions=Directions, Spacings=Spacings)
@@ -206,10 +206,21 @@ def GetInputPoints(FixedDicomDir, FixedRoiFpath):
                       'PointICS'    : PtsBySliceAndContourICS
                       } 
     
+    
+    # Create a dictionary to store the contour data for both the Fixed (input) 
+    # and Moving (output) image domains, arranged by slices and contours:
+    ContourData = {
+                   'SliceNo'        : SliceNos, 
+                   'FixContourType' : ContourTypeBySlice,
+                   'FixPtsPCS'      : PtsBySliceAndContourPCS#,
+                   #'FixPointsICS'   : PtsBySliceAndContourICS
+                   } 
+    
+    
           
     #print(len(SliceNos))
     #print(len(PtsBySliceAndContourPCS))     
     
     return PtsPCS, PtsBySliceAndContourPCS,\
            PtsICS, PtsBySliceAndContourICS,\
-           LUT, PointData, FixContourData
+           LUT, PointData, FixContourData, ContourData
