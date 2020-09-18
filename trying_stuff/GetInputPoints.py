@@ -172,7 +172,7 @@ def GetInputPoints(FixedDicomDir, FixedRoiFpath):
     for i in range(P):
         PtPCS = LUT[i][-1]
         
-        print('PtPCS =', PtPCS)
+        #print('PtPCS =', PtPCS)
         
         #PtICS = PCStoICS(Pts_PCS=[PtPCS], Origin=Origin,
         #                 Directions=Directions, Spacings=Spacings)
