@@ -9,6 +9,23 @@ Created on Fri Jun 26 11:40:08 2020
 
 def DownloadRoiFromXnat(ProjectLabel, SubjectLabel, ExperimentLabel,
                         DateTimeInLabel, DownloadDir):
+    """
+    Inputs:
+        ProjectLabel    - String containing the XNAT Project label of the ROI 
+                          (e.g. 'ACRIN')
+        SubjectLabel    - String containing the XNAT Subject label of the ROI 
+                          (e.g. 'ACRIN-FMISO-Brain-011')
+        ExperimentLabel - String containing the XNAT Experiment label of the 
+                          ROI (e.g. 'ACRIN-FMISO-Brain-011_MR_4')
+        DateTimeInLabel - String containing part of the date and/or time (i.e.
+                          when the ROI was created) (e.g. '20200511_073405' or
+                          '20200511')
+        DownloadDir     - String containing the path of the directory to export
+                          the ROI
+                          
+    Returns:
+        None
+    """
     
     # Import packages and functions:
     import xnat

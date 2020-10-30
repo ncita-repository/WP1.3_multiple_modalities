@@ -1795,6 +1795,284 @@ def ResampleAllFixedContours(ContourData, dP):
 
 
 
+
+
+
+def ResampleAllTransformedContours(ContourData, dP):
+    """
+    Resample all transformed contours belonging to the Fixed image domain.
+    
+    Inputs:
+        ContourData - Dictionary containing a list of contour points [x, y, z]
+                      arranged along rows for each DICOM slice, and along 
+                      columns for different contours (i.e. a list of lists of 
+                      lists). Slices without contours have empty list ([]).
+        
+        dP          - A float denoting the desired inter-node spacing to use
+                      when super-sampling the contours.
+        
+        
+    Returns:
+        ContourData - Dictionary with resampled contours added.
+    
+    
+    Note:
+        This function is adapted from ResampleAllFixedContours.  This function
+        resamples the transformed Fixed contours rather than the original ones.
+    """
+    # Import packages and functions:
+    import copy
+    #from GetImageAttributes import GetImageAttributes
+    #import importlib
+    #import PCStoICS
+    #importlib.reload(PCStoICS)
+    #from PCStoICS import PCStoICS
+    
+    # Get the indices of the slices that contain contours in the Fixed image:
+    Cinds = GetIndsOfContourDataWithContourType(ContourData=ContourData, 
+                                                ContourTypeNo=1)
+    
+    # The number of contours:
+    C = len(Cinds)
+    
+    #print('Contours exist on slices', Cinds, '\n')
+    
+    # Initialise lists:
+    Contours = []
+    NumContourPts = []
+    #CumPerims = []
+    NormCumPerims = []
+    MinNumNodes = []
+        
+    # Loop through all Inds:
+    for i in Cinds:
+        """ 
+        Note:
+            The list of contours needs to be addressed with [0] since there is
+            at most one contour per slice.
+            
+            The algorithm may need to be generalised should it need to deal 
+            with cases where there is more than one contour per slice.
+        """
+        Contour = ContourData['FixPtsPCS'][i][0]
+        
+        #print(f'\n\ni = {i}\nContour =', Contour)
+        
+        #print(f'There are {len(Contour)} points in the contour on slice {i}.')
+        
+        # Close the contour:
+        Contour.append(Contour[0])
+        
+        # Ensure that the points run clockwise:
+        Contour = ReverseIfAntiClockwise(Contour=Contour)
+        
+        Contours.append(Contour)
+        
+        NumContourPts.append(len(Contour))
+    
+        # Get the cumulative perimeters:
+        CumPerims = GetCumulativePerimeters(Contour=Contour)
+        
+        # Normalise the cumulative perimeters:
+        NormCumPerims.append(NormaliseCumulativePerimeters(CumPerimeters=CumPerims))
+        
+        # The number of nodes required to achieve the minimum inter-node 
+        # spacing of dP:
+        """ 
+        Note:
+            a//b yields floor(a/b)
+            
+            - (-a//b) yields ceil(a/b)
+        """
+        MinNumNodes.append(round(- (- CumPerims[-1] // dP)) )
+        
+    
+    print(f'\nThere are {NumContourPts} nodes in each contour (total of',
+          f'{sum(NumContourPts)} nodes) in all {C} contours.')
+    
+    # The minimum number of nodes that will need to be added:
+    MinNumNodesToAdd = max(MinNumNodes)
+    
+    # Get list representing the contour numbers:
+    ContourNums = list(range(len(Contours)))
+    
+    # Initialise lists:
+    SSContours = []
+    SSIsOrigNodes = []
+    SSNumPts = []
+    
+    # Loop through all Contours:
+    for c in range(C):
+        # For iterable c, the other contour indices are:
+        OtherInds = copy.deepcopy(ContourNums) # start with copy of ContourNums
+        OtherInds.pop(c) # remove c from list
+        
+        # The number of contour points in all contours other than the c^th
+        # contour (i.e. in all contour numbers given by the list OtherInds):
+        NumPtsInOthers = 0
+        
+        for j in OtherInds:
+            NumPtsInOthers += len(Contours[j])
+        
+        # The number of nodes that will have to be added to each contour is the 
+        # MinNumNodesToAdd plus the number of original nodes in all other 
+        # contours (= NumPtsInOthers):
+        NumNodesToAdd = MinNumNodesToAdd + NumPtsInOthers
+        
+        # Get the cumulative super-sampled perimeter:
+        CumSSPerims = GetNormCumulativeSuperSampledPerimeters(CumPerimetersNorm=NormCumPerims[c],
+                                                              NumNodesToAdd=NumNodesToAdd)
+        
+        # Get list of booleans for original (True) and added (False) nodes:
+        IsOrigNode = GetIsOrigNode(Contour=Contours[c], NumNodesToAdd=NumNodesToAdd)
+
+        
+        #if c == 0:
+        #    print('\n')
+        #print(f'c = {c}, NumPtsInOthers = {NumPtsInOthers}, NumNodesToAdd = {NumNodesToAdd}, len(CumSSPerims) = {len(CumSSPerims)}')
+        
+        # Get the nodes per segment:
+        Inds,\
+        IsOrigNodeSorted,\
+        IndsOrigNodes,\
+        NodesToAddPerSegment = GetNodesToAddPerSegment(CumSSPerimNorm=CumSSPerims, 
+                                                       IsOrigNode=IsOrigNode)
+        
+        # Super-sample the contour:
+        SSContour,\
+        SSIsOrigNode = SuperSampleContour(Contour=Contours[c], 
+                                          NodesToAddPerSegment=NodesToAddPerSegment)
+        
+        SSContours.append(SSContour)
+        SSIsOrigNodes.append(SSIsOrigNode)
+        SSNumPts.append(len(SSContour))
+        
+        
+    # Re-order SSContours and SSIsOrigNodes from the 2nd item onwards such that
+    # the integrated line lengths are minimised (i.e. minimal area of the 
+    # surfaces created by linking points in SSContours[0] and SSContours[1], N 
+    # different ways for all N points in SSContours, and so on for 
+    # SSContours[1] and SSContours[2]):
+    for c in range(C - 1):
+        # Find the starting index for SSContours[c+1] that minimises the 
+        # integrated line lengths between it and SSContours[c]:
+        IndMinCumL = FindIndForMinCumLength(Contour1=SSContours[c], 
+                                            Contour2=SSContours[c+1])
+        
+        # Shift the points in SSContours[c+1] and SSIsOrigNodes[c+1]:
+        SSContours[c+1] = ShiftContourPoints(Contour=SSContours[c+1], 
+                                             Shift=IndMinCumL)
+        
+        SSIsOrigNodes[c+1] = ShiftContourPoints(Contour=SSIsOrigNodes[c+1], 
+                                                Shift=IndMinCumL)
+    
+    
+    # Number of points in each super-sampled contour:
+    P = SSNumPts[0]
+    
+    print(f'\nThere are {P} nodes in each super-sampled contour (total of',
+          f'{sum(SSNumPts)} nodes) in all {C} contours.')
+    
+    
+    # Remove all nodes which are not original to all super-sampled contours, 
+    # leaving behind "over-sampled" contours:
+    # Initialise lists:
+    OSContours = [ [] for i in range(C) ]
+    OSIsOrigNodes = [ [] for i in range(C) ]
+    OSNumPts = [ 0 for i in range(C) ]
+    
+    # Loop through each super-sampled point:
+    for p in range(P):
+        # Initialise the list of boolean values of OSIsOrigNodes for each 
+        # point:
+        SSIsOrigNodes_p = []
+        
+        # Loop through each super-sampled contour:
+        for c in range(C):
+            SSIsOrigNodes_p.append(SSIsOrigNodes[c][p])
+            
+        # If the sum of SSIsOrigNodes_p = 0 (i.e. if all entries are False),
+        # point p in all contours are not original nodes.
+        # If the sum is greater than 0, at least one node is original, in which
+        # case, keep this node in the list of over-sampled contours:
+        if sum(SSIsOrigNodes_p) > 0:
+            # Loop through each contour and add this point:
+            for c in range(C):
+                OSContours[c].append(SSContours[c][p])
+                OSIsOrigNodes[c].append(SSIsOrigNodes[c][p])
+                OSNumPts[c] += 1
+    
+    
+    #print('OSNumPts =', OSNumPts)
+    
+        
+    # Number of points in each over-sampled contour:
+    Q = OSNumPts[0]
+    
+    print(f'\nThere are {Q} nodes in each over-sampled contour (total of',
+          f'{sum(OSNumPts)} nodes) in all {C} contours.')        
+    
+    
+    # The number of slices:
+    S = len(ContourData['SliceNo'])
+    
+    #print(f'C = {C}, len(Cinds) = {len(Cinds)}, len(SSContours) = {len(SSContours)}')
+    
+    
+    # Create a new list of super-sampled and over-sampled contours containing 
+    # [] for slices that have no contours:
+    TraSSContoursPCS = [ [] for i in range(S) ]
+    #TraSSContoursICS = [ [] for i in range(S) ]
+    TraSSIsOrigNodes = [ [] for i in range(S) ]
+    TraOSContoursPCS = [ [] for i in range(S) ]
+    #TraOSContoursICS = [ [] for i in range(S) ]
+    TraOSIsOrigNodes = [ [] for i in range(S) ]
+    
+    # Add the non-empty lists:
+    """ Note:
+        The [] around SSContours[c], OSContours[c], SSIsOrigNodes[c] and 
+        OSIsOrigNodes[c] ensures that the list of points (which correspond a 
+        single contour) is itself a list (so that for every slice, there is one 
+        contour with N points, rather than a list of N points).
+    """
+    for c in range(C):
+        #TraSSContoursPCS[Cinds[c]] = SSContours[c]
+        TraSSContoursPCS[Cinds[c]] = [SSContours[c]]
+        
+        #TraOSContoursPCS[Cinds[c]] = OSContours[c]
+        TraOSContoursPCS[Cinds[c]] = [OSContours[c]]
+        
+        #TraSSContoursICS[Cinds[c]] = PCStoICS(Pts_PCS=SSContours[c], 
+        #                                      Origin=FixOrigin, 
+        #                                      Directions=FixDirs, 
+        #                                      Spacings=FixSpacings)
+        
+        #TraOSContoursICS[Cinds[c]] = PCStoICS(Pts_PCS=OSContours[c], 
+        #                                      Origin=FixOrigin, 
+        #                                      Directions=FixDirs, 
+        #                                      Spacings=FixSpacings)
+        
+        #TraSSIsOrigNodes[Cinds[c]] = SSIsOrigNodes[c]
+        TraSSIsOrigNodes[Cinds[c]] = [SSIsOrigNodes[c]]
+        
+        #TraOSIsOrigNodes[Cinds[c]] = OSIsOrigNodes[c]
+        TraOSIsOrigNodes[Cinds[c]] = [OSIsOrigNodes[c]]
+    
+    
+    #print(f'len(TraSSContoursPCS) = {len(TraSSContoursPCS)}')
+    
+    # Add the super-sampled contours to ContourData:
+    ContourData.update({'TraSSPtsPCS' : TraSSContoursPCS,
+                        #'TraSSPointsICS' : TraSSContoursICS,
+                        'TraOSPtsPCS' : TraOSContoursPCS#,
+                        #'TraOSPointsICS' : TraOSContoursICS
+                        })
+    
+    return ContourData
+    
+    
+    
+    
   
     
 
@@ -2151,6 +2429,154 @@ def TransformFixedContours(ContourData, ElastixImFilt, MovIm):
 
 
 
+
+def TransformFixedContours_v2(ContourData, ElastixImFilt, MovIm):
+    """
+    Transform the Fixed contours in ContourData using the transformation 
+    filter from Elastix.
+    
+    Inputs:
+        ContourData   - Dictionary containing a list of contour points 
+                        [x, y, z] arranged along rows for each DICOM slice, 
+                        and along columns for different contours (i.e. a list 
+                        of lists of lists).  Slices without contours have empty 
+                        list ([]).
+        
+        ElastixImFilt - Image transformation filter used by Elastix to 
+                        transform MovingImage to the Fixed image domain.
+                             
+        MovIm         - 3D Moving image as a SimpleITK object
+        
+        
+    Returns:
+        ContourData  - As above but with added entries for the transformed
+                       contour points.
+    
+    
+    Note:
+        This is adapted from TransformFixedContours.  The difference is that for
+        the previous version, the Fixed contour points were resampled prior to
+        transforming.  In this version, the Fixed points will be transformed, and 
+        the resulting points will later be resampled.
+        
+        The keys commented out in the initialisation of the additional keys in
+        ContourData reflect the lists that were inputted in the previous version
+        but not here.
+    """
+
+    # Import packages and functions:
+    from CreateInputFileForElastix import CreateInputFileForElastix
+    from TransformPoints import TransformPoints
+    from ParseTransformixOutput import ParseTransformixOutput
+
+    
+    # Initialise the additional keys to be added to ContourData (to ensure  
+    # that the keys are added in the same order for Mov as for Fix):
+    ContourData.update({
+                        'TraPtsPCS':[],
+                        #'TraSSPtsPCS':[],
+                        #'TraOSPtsPCS':[],
+                        'FixInds':[],
+                        #'FixSSInds':[],
+                        #'FixOSInds':[],
+                        'TraInds':[]#,
+                        #'TraSSInds':[],
+                        #'TraOSInds':[]
+                        })
+    
+    # Initialise a list of all points (along rows, no grouping by slice index):
+    AllPoints = []
+    
+    # The number of slices:
+    S = len(ContourData['FixPtsPCS'])
+
+    # Loop through each slice in ContourData['FixPtsPCS']:
+    for s in range(S):
+        ContourList = ContourData['FixPtsPCS'][s]
+        
+        # If ContourList is not []:
+        if ContourList:
+            """ 
+            Note:
+                The [0] indexing of ContourData['FixPtsPCS'][s] is because 
+                each slice for the Fixed contours consists of a single list  
+                of N points, rather than a list of N points (see the 
+                function ResampleAllFixedContours).
+                
+                This algorithm may need to be modified to deal with the 
+                general case of multiple contours per slice.
+            """
+            Points = ContourList[0]
+        
+            #AllPoints.append(Points)
+            AllPoints.extend(Points)
+            
+    # Create inputpoints.txt for Elastix, containing the contour points to be
+    # transformed:
+    CreateInputFileForElastix(Points=AllPoints)
+
+    # Transform MovingContourPts:
+    TransformPoints(Points=AllPoints, Image=MovIm, 
+                    TransformFilter=ElastixImFilt)
+
+    # Parse outputpoints.txt:
+    PtNos, FixInds, FixPts_PCS,\
+    FixOutInds, TraPts_PCS,\
+    Def_PCS, TraInds = ParseTransformixOutput()
+    
+    
+    
+    # Re-group the transformed data that was parsed into the corresponding rows
+    # and columns (keys) in ContourData.  
+    # Keep track of the number of points/indices that are assigned to each new 
+    # key:
+    N = 0
+    
+    # Loop through each slice:
+    for s in range(S):
+        ContourList = ContourData['FixPtsPCS'][s]
+        
+        # If ContourList != []:
+        if ContourList:
+            Points = ContourList[0] # [0] since only one contour for now
+            
+            # Append the Fixed (input) indices:
+            #ContourData[FixIndsKeys[k]].append(FixInds[N : N + len(Points)])
+            ContourData['FixInds'].append([FixInds[N : N + len(Points)]])
+            
+            # Append the Moving (transformed) indices: 
+            #ContourData[MovIndsKeys[k]].append(MovInds[N : N + len(Points)])
+            ContourData['TraInds'].append([TraInds[N : N + len(Points)]])
+            
+            # Append the Moving (transformed) points:
+            #ContourData[MovPtsKeys[k]].append(MovPts_PCS[N : N + len(Points)])
+            ContourData['TraPtsPCS'].append([TraPts_PCS[N : N + len(Points)]])
+            
+            # Update the number of points/indices that have been assigned:
+            N += len(Points)
+    
+        else:
+            ContourData['FixInds'].append([])
+
+            ContourData['TraInds'].append([])
+
+            ContourData['TraPtsPCS'].append([])
+    
+    
+    """
+    Note:
+        The lists added to ContourData are enclosed within [] to ensure that
+        they are a single list of N points rather than a list of N points.
+    """
+    
+    return ContourData
+    
+    
+    
+    
+
+
+
 def LinkPointsAcrossContours(Contours):
     """
     Link points across contours (coordinates that link the same node across 
@@ -2286,6 +2712,55 @@ def CreateContourSweepData(ContourData):
     return ContourSweepData
     
     
+    
+
+
+def CreateContourSweepData_v2(ContourData):
+    """
+    Create a new dictionary called ContourSweepData, containing the lists of
+    points that link each node across all contours.
+    
+    Inputs:
+        ContourData      - Dictionary containing a list of contour points 
+                           [x, y, z] arranged along rows for each DICOM slice,  
+                           and along columns for different contours (i.e. a  
+                           list of lists of lists). Slices without contours 
+                           have empty list ([]).
+        
+        
+    Returns:
+        ContourSweepData - Dictionary containing the list of points [x, y, z]
+                           that link any given node in each contour, for all
+                           nodes. 
+    
+    Note:
+        This function was adapated from CreateContourSweepData, to work with
+        ContourData that does not have resampled Fixed points ('FixSSPtsPCS'
+        and 'FixOSPtsPCS').
+    """
+    
+    # Create a list of all the keys in ContourData corresponding to the set of
+    # contours to be linked (note only groups of contours with equal length can
+    # be linked):
+    #Keys = ['FixSSPtsPCS', 'FixOSPtsPCS', 'TraSSPtsPCS', 'TraOSPtsPCS']
+    Keys = ['TraSSPtsPCS', 'TraOSPtsPCS']
+    
+    # Initialise the new dictionary:
+    ContourSweepData = {}
+    
+    # Loop through each key in Keys:
+    for key in Keys:
+        SweepAllNodes = LinkPointsAcrossContours(ContourData[key])
+        
+        # Update the dictionary:
+        ContourSweepData.update({key : SweepAllNodes})
+        
+    
+    return ContourSweepData
+    
+    
+    
+    
 
 
     
@@ -2363,9 +2838,127 @@ def GetLinePlaneIntersection(PlaneN, PlaneP, LineP0, LineP1, MustBeOnLineSeg):
         else: 
             # The point does lie on the line segment.
             return IntersP, True
+        
+        
+        
+        
+
+def GetVectorPlaneIntersection(PlaneNorm, PlanePt, Point, Vector, 
+                               MustBeOnLineSeg):
+    """ 
+    Get the intersection between a vector originating from a point and a plane.
+    
+    Inputs:
+        PlaneNorm       - A list of the [x, y, z] components of the plane's 
+                          normal
+                        
+        PlanePt         - A list of the [x, y z] components of a point lying 
+                          on the plane
+
+        Point           - A list of the [x, y, z] components of a point 
+                        
+        Vector          - A list of the [x, y z] components of a vector
+                        
+        MustBeOnLineSeg - Boolean value that determines whether the 
+                          intersection point must lie on the line segment 
+                          (True) or not (False)
+                        
+    Returns:
+        IntersP         - A list of the [x, y, z] components of the point 
+                          that intersects the plane (i.e. projection of a point
+                          onto a plane with vector direction); or None
+                        
+        OnLineSegment   - Boolean value that indicates whether the intersection 
+                          point lies on the line segment (True) or not (False)
+    
+    Adapted from GetLinePlaneIntersection to find the projection of a point
+    in a contour onto a plane given the contour normal vector.
+    """
+    
+    epsilon=1e-6
+    
+    PlaneNorm_dot_V = PlaneNorm[0] * Vector[0] + \
+                      PlaneNorm[1] * Vector[1] + \
+                      PlaneNorm[2] * Vector[2]
+    
+    if abs(PlaneNorm_dot_V) < epsilon:
+        #print("The vector is parallel to the plane")
+        raise RuntimeError("The vector is parallel to the plane")
+        return None, None
+        
+    PlanePt_Pt_V = [Point[0] - PlanePt[0],
+                    Point[1] - PlanePt[1],
+                    Point[2] - PlanePt[2]
+                    ]
+    
+    PlaneNorm_dot_PlanePt_Pt_V = PlaneNorm[0] * PlanePt_Pt_V[0] + \
+                                 PlaneNorm[1] * PlanePt_Pt_V[1] + \
+                                 PlaneNorm[2] * PlanePt_Pt_V[2]
+    
+    factor = - PlaneNorm_dot_PlanePt_Pt_V / PlaneNorm_dot_V
+    
+    IntersPt = [Point[0] + factor * Vector[0],
+                Point[1] + factor * Vector[1],
+                Point[2] + factor * Vector[2]
+                ]
+    
+    #print(f'IntersPt = {IntersPt}; factor = {factor}\n')
+    
+    if MustBeOnLineSeg and ( factor < 0 ) or ( factor > 1 ):
+        # IntersP does not lie on the line segment.
+        return None, None
+        
+    else:
+        if ( factor < 0 ) or ( factor > 1 ):
+            # The point does not lie on the line segment.
+            return IntersPt, False
+        else: 
+            # The point does lie on the line segment.
+            return IntersPt, True
+        
+        
+        
+        
 
 
 
+def GetDistanceFromPointToPlane(PlaneNorm, PlanePt, Pt):
+    """ 
+    Get the intersection between a line and a plane.
+    
+    Inputs:
+        PlaneNorm - A list of the [x, y, z] components of the plane's normal
+                        
+        PlanePt   - A list of the [x, y z] components of a point lying on the 
+                    plane
+
+        Pt        - A list of the [x, y, z] components of a point
+                        
+                        
+    Returns:
+        Dist      - A float of the distance bewteen the point and the plane 
+                        
+    """
+        
+    # Vector from PlanePt to Pt:
+    PtVect = [Pt[0] - PlanePt[0],
+              Pt[1] - PlanePt[1],
+              Pt[2] - PlanePt[2]
+              ]
+    
+    # Dist is the projection of PtV onto PlaneNorm:
+    Dist = PtVect[0] * PlaneNorm[0] + \
+           PtVect[1] * PlaneNorm[1] + \
+           PtVect[2] * PlaneNorm[2]
+    
+        
+    return Dist
+
+
+
+        
+        
+        
 
 def GetIntersectingPointsInMovingPlanes(InterpData, MovingDicomDir, 
                                         UseInterp, MustBeOnLineSeg):
@@ -3029,6 +3622,502 @@ def GetIntersectingPtsFromContourSweepData2(ContourSweepData, MustBeOnLineSeg,
 
 
 
+
+
+def GetIntersectingPtsFromContourSweepData_v3(ContourSweepData, ContourData):
+    """
+    Get the list of intersection points of the "sweep curves" and the image
+    planes.  The "sweep curves" are the curves formed by joining any given
+    node to the same corresponding node in the other contours.
+    
+    At the moment the intersection points will be found both for the 
+    transformed super-sampled contours ('TraSSPtsPCS') and the transformed
+    over-sampled contours ('TraOSPtsPCS'). One could be omitted at a later date 
+    if the other is deemed less useful.
+    
+    This function is adapted from GetIntersectingPtsFromContourSweepData2, which
+    has the additional input 'MovingDicomDir', which is an input to 
+    GetImageAttributes.  The function GetImageAttributes imports SimpleElastix,
+    so this function (GetIntersectingPtsFromContourSweepData2) instead will 
+    search for the files 'MovOrigin.json', 'MovDirs.json', 'MovSpacings.json'
+    and 'MovDims.json' in the current working directory.
+    
+    Inputs:
+        ContourSweepData - Dictionary containing the list of points [x, y, z]
+                           that link any given node in each contour, for all
+                           nodes.
+                           
+        ContourData      - Dictionary containing a list of contour points 
+                           [x, y, z] arranged along rows for each DICOM slice,  
+                           and along columns for different contours (i.e. a  
+                           list of lists of lists). Slices without contours 
+                           have empty list ([]).
+      
+        
+    Returns:
+        ContourData      - As above but with added entries for intersection 
+                           points. 
+                           
+                           
+    Note:
+        Comparison with GetIntersectingPtsFromContourSweepData2: Rather than
+        defining MustBeOnLineSeg and MaxDistToPts, all intersection points with
+        all planes will be found, and OnLineSeg.  Then all intersection points
+        for which OnLineSeg = False other than the first intersection on either
+        side of the cluster of intersection points for which OnLineSeg = True
+        will be discarded.
+                          
+    """
+    
+    # Import packages and functions:
+    #from GetImageAttributes import GetImageAttributes
+    #from PCStoICS import PCStoICS
+    from ImportImageAttributesFromJson import ImportImageAttributesFromJson as ImportImAtt
+
+    # Get the image attributes for the Moving image:
+    MovOrigin, MovDirs, MovSpacings, MovDims = ImportImAtt(FilePrefix='Mov')
+
+    
+    # The imaging plane normal:
+    PlaneNormal = MovDirs[6:9]
+    
+    #print(f'Length of PlaneNormal is {GetVectorLength(PlaneNormal)}')
+    
+    # Initialise a list of contours consisting of the intersecting points 
+    # for each imaging plane:
+    #IntersContours = [[] for i in range(MovDims[2])]
+    
+    # Initialise the list of intersecting points for all planes:
+    #PtsAllPlanes = []
+    
+    #PtsGroupedByPlane = [[] for i in range(MovDims[2])]
+    
+    
+    # The keys in ContourSweepData to loop through:
+    KeysIn = ['TraSSPtsPCS', 'TraOSPtsPCS']
+    
+    for key in KeysIn:
+        
+        SweepData = ContourSweepData[key]
+        
+        # The number of sweep curves (= number of Points in each contour):
+        P = len(SweepData)
+        
+        # The number of points in each sweep (= the number of Contours):
+        C = len(SweepData[0])
+        
+        # Initialise the list of intersection points grouped by plane:
+        PtsGroupedByPlane = []
+        OLSGroupedByPlane = []
+        
+        # Initialise the list of contour type numbers:
+        MovContourType = []
+        
+        # Loop through all imaging planes:
+        for k in range(MovDims[2]):
+            print(f'\nPlane k = {k}')
+            print('^^^^^^^^^^^^^^^')
+    
+            # Need a point lying on the plane - use the plane's origin:
+            PlaneOrigin = [MovOrigin[0] + k*MovSpacings[2]*PlaneNormal[0], 
+                           MovOrigin[1] + k*MovSpacings[2]*PlaneNormal[1], 
+                           MovOrigin[2] + k*MovSpacings[2]*PlaneNormal[2]
+                           ]
+                
+                
+            # Initialise the list of intersecting points for all contour pairs:
+            PtsGroupedByContourPair = []
+            OLSGroupedByContourPair = []
+            
+            # Initialise the list of the number of intersection points for all
+            # contour pairs:
+            NumPtsGroupedByContourPair = []
+            
+            # Loop through each pair of contours:
+            for c in range(C - 1):
+                #print(f'\nc = {c}')
+                
+                # Initialise the list of intersecting points for this pair of
+                # contours:
+                PtsThisContourPair = []
+                OLSThisContourPair = []
+                NumPtsThisContourPair = 0
+                    
+                # Loop through each point:
+                for p in range(P):
+                    # Point0 is the p^th point in the c^th contour, and Point1 
+                    # is the p^th point in the (c+1)^th contour:
+                    Point0 = SweepData[p][c]
+                    Point1 = SweepData[p][c+1]
+
+                    IntersPoint, \
+                    OnLineSeg = GetLinePlaneIntersection(PlaneN=PlaneNormal, 
+                                                         PlaneP=PlaneOrigin,
+                                                         LineP0=Point0,
+                                                         LineP1=Point1,
+                                                         MustBeOnLineSeg='False')
+                    
+                    # Append IntersPoint to InterPtsThisContourPair if 
+                    # IntersPoint is not None: 
+                    if IntersPoint:
+                        PtsThisContourPair.append(IntersPoint)
+                        OLSThisContourPair.append(OnLineSeg)
+                            
+                        # Increment NumPtsThisContourPair:
+                        NumPtsThisContourPair += 1
+                        
+                if PtsThisContourPair:
+                    print(f'\n   Contour pair no {c}:')
+                    print(f'      There were {P} points in these contours.')
+                    print(f'      There were {len(PtsThisContourPair)} intersection points found.')
+                    
+                        
+                # Append PtsThisContourPair to PtsGroupedByContourPair:
+                """ 
+                Ensure that the every pair of contours has a resulting list of
+                intersection point(s) - even if there's only one point 
+                (e.g. [ [x,y,z] ]). 
+                """
+                if NumPtsThisContourPair == 1:
+                    PtsGroupedByContourPair.append([PtsThisContourPair])
+                    OLSGroupedByContourPair.append([OLSThisContourPair])
+                    NumPtsGroupedByContourPair.append(1)
+                else:
+                    PtsGroupedByContourPair.append(PtsThisContourPair)
+                    OLSGroupedByContourPair.append(OLSThisContourPair)
+                    NumPtsGroupedByContourPair.append(len(PtsThisContourPair))
+                
+                ## Append PtsThisContourPair to PtsGroupedByPlane for this k: 
+                #PtsGroupedByPlane[k].append(PtsThisContourPair)
+                
+            
+            # If there were no intersection points for all contour pairs 
+            # PtsGroupedByContourPair may be a list of empty lists 
+            # (e.g. [ [], [], [], [] ]).  If so, reduce the list to a flat
+            # empty list:
+            if sum(NumPtsGroupedByContourPair) == 0:
+                PtsGroupedByContourPair = []
+                OLSGroupedByContourPair = []
+                
+                MovContourType.append(0)
+                
+            else:
+                MovContourType.append(1)
+            
+            # Append PtsGroupedByContourPair to PtsGroupedByPlane:
+            PtsGroupedByPlane.append(PtsGroupedByContourPair)
+            OLSGroupedByPlane.append(OLSGroupedByContourPair)
+
+        
+        # 21/09:
+        # Get the index of the first slice that contains 
+        
+        
+        
+        
+        # Add MovContourType to ContourData (this need only be done once):
+        if key == KeysIn[0]:
+            ContourData.update({'MovContourType' : MovContourType})
+        
+        
+        # Add the intersection points to ContourData (as 'MovSSPtsPCS' and 
+        # 'MovOSPtsPCS' since they lie in the Moving image planes):
+        # The key that will be added to ContourData:
+        KeyPtsOut = key.replace('Tra', 'Mov')
+        KeyOLSOut = KeyPtsOut.replace('PtsPCS', 'OLS')
+        
+        ContourData.update({KeyPtsOut : PtsGroupedByPlane})
+        ContourData.update({KeyOLSOut : OLSGroupedByPlane})
+        
+        
+        # Equate the lengths of the items in ContourData since there may be 
+        # more slices in the Fixed/Moving image stack than in Moving/Fixed:
+        ContourData = EquateListLengthsInContourData(ContourData)
+    
+    return ContourData
+
+
+
+
+
+
+def NormOfTransformedFixedPlanes(FixOrigin, FixDirs, FixSpacings, FixDims, 
+                                 MovIm, ElastixImFilt):
+    """ Compute the unit normal vector of the transformed Fixed planes (which
+    are the planes that the transformed contours will lie in), and hence, the
+    unit normal of the transformed contours.
+    
+    Inputs:
+        FixOrigin     - The ImagePositionPatient (pydicom) for the Fixed image
+                        stack
+                
+                        e.g. [x0, y0, z0]
+    
+        FixDirs       - The direction cosine along x (rows), y (columns) and 
+                        z (slices) for the Fixed image stack
+                     
+                        e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz]
+                    
+                        SimpleITK returns all returns all direction cosines.
+                        For pydicom, the cross product of the x and y vectors 
+                        are used to obtain the z vector.
+        
+        FixSpacings   - The pixel spacings along x, y and z for the Fixed image
+                        stack
+        
+                        e.g. [di, dj, dk]
+                    
+                        SimpleITK returns all pixel spacings.
+                        For pydicom, the SliceThickness is added to the 
+                        PixelSpacing.
+                    
+        FixDims       - The dimensions of the Fixed image stack
+        
+        MovIm         - The SimpleITK 3D image
+        
+        ElastixImFilt - The SimpleITK image transform filter (used for image
+                        registration)
+        
+    Outputs:
+        TraNorm       - The unit normal vector for the transformed planes/
+                        contours
+
+    """
+    from ContourPlottingFuncs import GetPointsInImagePlanes_v2
+    from TransformPoints import TransformPoints
+    from ParseTransformixOutput import ParseTransformixOutput
+    
+        
+    # Generate a list of points in the Fixed planes:
+    PlanesPts = GetPointsInImagePlanes_v2(Origin=FixOrigin, Dirs=FixDirs, 
+                                          Spacings=FixSpacings, Dims=FixDims)
+    
+    # The origin for the last plane:
+    LastPlaneOrig = PlanesPts[-1][0]
+    
+    # The points to transform are the origins of the first plane (SourceOrigin)
+    # and the last plane::
+    InPts = [FixOrigin, LastPlaneOrig]
+    
+    # Transform InPts:
+    TransformPoints(Points=InPts, Image=MovIm, TransformFilter=ElastixImFilt)
+    
+    # Parse outputpoints.txt:
+    PtNos, FixInds, FixPts,\
+    FixOutInds, MovPts,\
+    Defs, MovInds = ParseTransformixOutput()
+    
+    # The z-vector between the origins at the last and first planes:
+    Zvect = [MovPts[1][0] - MovPts[0][0],
+             MovPts[1][1] - MovPts[0][1],
+             MovPts[1][2] - MovPts[0][2]
+             ]
+    
+    ZvectL = GetVectorLength(MovPts[0], MovPts[1])
+    
+    # Normalise Zvect (get the normal unit vector):
+    TraNorm = [Zvect[0] / ZvectL,
+               Zvect[1] / ZvectL,
+               Zvect[2] / ZvectL
+               ]
+    
+    return TraNorm
+
+
+
+
+
+
+def GetProjectionOfContourPtsOnPlanes(ContourPts,
+                                      FixOrigin, FixDirs, FixSpacings, FixDims, 
+                                      MovOrigin, MovDirs, MovSpacings, MovDims,
+                                      MovIm, ElastixImFilt, LogToConsole):
+    """ Get the projection of the points in a contour onto the Moving image 
+    planes.
+    
+    Inputs:
+        ContourPts     - A list of the list of [x, y, z] coordinates that make 
+                         up a contour
+                        
+        FixOrigin      - The ImagePositionPatient (pydicom) for the Fixed image
+                         stack
+                
+                         e.g. [x0, y0, z0]
+    
+        FixDirs        - The direction cosine along x (rows), y (columns) and 
+                         z (slices) for the Fixed image stack
+                     
+                         e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz]
+                    
+                         SimpleITK returns all returns all direction cosines.
+                         For pydicom, the cross product of the x and y vectors 
+                         are used to obtain the z vector.
+        
+        FixSpacings    - The pixel spacings along x, y and z for the Fixed image
+                         stack
+        
+                         e.g. [di, dj, dk]
+                    
+                         SimpleITK returns all pixel spacings.
+                         For pydicom, the SliceThickness is added to the 
+                         PixelSpacing.
+                    
+        FixDims        - The dimensions of the Fixed image stack
+        
+        MovOrigin      - The ImagePositionPatient (pydicom) for the Moving image
+                         stack
+    
+        MovDirs        - The direction cosine along x (rows), y (columns) and 
+                         z (slices) for the Moving image stack
+        
+        MovSpacings    - The pixel spacings along x, y and z for the Moving 
+                         image stack
+                    
+        MovDims        - The dimensions of the Moving image stack
+        
+        MovIm          - The SimpleITK 3D image
+        
+        ElastixImFilt  - The SimpleITK image transform filter (used for image
+                         registration)
+        
+        LogToConsole   - Log some results to the console.
+        
+    Outputs:
+        ProjPtsByPlane - A list (by plane/slice index) of a list (by contours)
+                         of a list of [x, y, z] coordinates of the projection/
+                         intersection of ContourPts and the Moving image 
+                         planes. 
+                         
+                         
+                         
+    Note 23/09/20:
+        At the moment ContourPts must be a list of points, so each non-empty
+        list in ProjPtsByPlane will have a single sub-list (= 1 contour), 
+        containing a sub-list of the intersection/projected points.
+
+    """
+    
+    
+    # Work out the unit normal vector of the transformed image planes
+    # (i.e. the unit normal vector of the transformed contours):
+    TraNorm = NormOfTransformedFixedPlanes(FixOrigin, FixDirs, FixSpacings, 
+                                           FixDims, MovIm, ElastixImFilt)
+    
+    # The number of contour points:
+    P = len(ContourPts)
+
+    # Initialise lists of the projected points (ProjPts), OnLineSegs, and
+    # projected points grouped by slice (ProjPtsByPlane)::
+    ProjPts = []
+    OnLineSegs = []
+    ProjPtsByPlane = [[] for i in range(MovDims[2])]
+    
+    # Loop through all points:
+    for p in range(P):
+        point = ContourPts[p]
+        
+        # Initialise the list of distances and absolute distances for this p:
+        Dists = []
+        AbsDists = []
+        
+        # Loop through all Moving image planes:
+        for k in range(MovDims[2]):
+    
+            # Need a point lying on the plane - use the plane's origin:
+            PlaneOrig = [MovOrigin[0] + k*MovSpacings[2]*MovDirs[6], 
+                         MovOrigin[1] + k*MovSpacings[2]*MovDirs[7], 
+                         MovOrigin[2] + k*MovSpacings[2]*MovDirs[8]
+                         ]
+    
+            dist = GetDistanceFromPointToPlane(PlaneNorm=MovDirs[6:9], 
+                                               PlanePt=PlaneOrig, 
+                                               Pt=point)
+            
+            Dists.append(dist)
+            AbsDists.append(abs(dist))
+            
+    
+        # The index of the closest plane:
+        ind = AbsDists.index(min(AbsDists))
+    
+        if LogToConsole:
+            print(f'Point {p} is closest to Plane {ind} with distance',
+                  f'{Dists[ind]} mm')
+        
+        # The plane origin for the closest plane:
+        PlaneOrig = [MovOrigin[0] + ind*MovSpacings[2]*MovDirs[6], 
+                     MovOrigin[1] + ind*MovSpacings[2]*MovDirs[7], 
+                     MovOrigin[2] + ind*MovSpacings[2]*MovDirs[8]
+                     ]
+        
+        # Get the intersection point between the point and the closest Moving
+        # plane:
+        IntersPt, OnLineSeg = GetVectorPlaneIntersection(PlaneNorm=MovDirs[6:9], 
+                                                         PlanePt=PlaneOrig, 
+                                                         Point=point, 
+                                                         Vector=TraNorm, 
+                                                         MustBeOnLineSeg=False)
+        
+        ProjPts.append(IntersPt)
+        OnLineSegs.append(OnLineSeg)
+        
+        if IntersPt:
+            ProjPtsByPlane[ind].append(IntersPt)
+        
+        if LogToConsole:
+            print(f'The intersection point {IntersPt} and OnLineSeg = {OnLineSeg}\n')
+    
+    
+    if LogToConsole:
+        # The number of points that did not have an intersection point:
+        NumNone = ProjPts.count(None)
+        
+        PercentNone = round(100*ProjPts.count(None)/P, 1)
+        
+        print(f'{NumNone} out of {P} points ({PercentNone} %) did not have',
+              'intersection points')
+        
+        
+    # Convert ProjPtsByPlane into a nested list of lists (for compatibility
+    # with other functions):
+    for k in range(MovDims[2]):
+        if ProjPtsByPlane[k]:
+            ProjPtsByPlane[k] = [ProjPtsByPlane[k]]
+    
+        
+    return ProjPtsByPlane
+
+
+
+
+
+def FlattenListOfPts(ListOfPts):
+    """ 
+    Flatten a list of points of the form [[x0, y0, z0], [x1, y1, z1], ...] to
+    the form [x0, y0, z0, x1, y1, z1, ...] (matching the form required of
+    ContourData in an ROI Collection).
+    
+    Inputs:
+        ListOfPts    - A list of a list of [x, y, z] coordinates
+        
+    Outputs:
+        ListOfCoords - A list of [x, y, z] coordinates flattened from ListOfPts
+    """
+    # Initialise the flattened list:
+    ListOfCoords = []
+    
+    for point in ListOfPts:
+        # Initialise the list of coordinates for this point:
+        coords = []
+        
+        # Loop through each coordinate:
+        for coord in point:
+            # Convert the coordinate to a string and extend coords:
+            coords.append(str(coord))
+        
+        ListOfCoords.extend(coords)
+            
+    return ListOfCoords
 
 
 

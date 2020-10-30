@@ -714,6 +714,58 @@ def GetPointsInImagePlanes(DicomDir):
 
 
 
+def GetPointsInImagePlanes_v2(Origin, Dirs, Spacings, Dims):
+    """
+    Create a closed "contour" of the 4 (+ 1 to close the contour) points that
+    define the extent of the imaging planes.
+    
+    Adapted from GetPointsInImagePlanes but uses image attributes as inputs
+    rather than DicomDir.
+    """
+    
+    # Create "contours" that mark out corners that define each plane in 
+    # SliceNums:
+    Planes = []
+    
+    for s in range(Dims[2]):
+        
+        # Let Point0 be equivalent to the origin moved along s*Spacings[2] in 
+        # the z-direction (Dirs[6:8]):
+        Point0 = [Origin[0] + s*Spacings[2]*Dirs[6], 
+                  Origin[1] + s*Spacings[2]*Dirs[7], 
+                  Origin[2] + s*Spacings[2]*Dirs[8]
+                  ]
+        
+        # Let Point1 be equivalent to Point0 moved along Dims[0]*Spacings[0] in
+        # the x-direction (Dirs[0:2]):
+        Point1 = [Point0[0] + Dims[0]*Spacings[0]*Dirs[0],
+                  Point0[1] + Dims[0]*Spacings[0]*Dirs[1],
+                  Point0[2] + Dims[0]*Spacings[0]*Dirs[2]
+                  ]
+        
+        # Let Point2 be equivalent to Point1 moved along Dims[1]*Spacings[1] in 
+        # the y-direction (Dirs[3:5]):
+        Point2 = [Point1[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point1[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point1[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        # Let Point3 be equivalent to Point0 moved along Dims[1]*Spacings[1] in
+        # the y-direction (Dirs[3:5]):
+        Point3 = [Point0[0] + Dims[1]*Spacings[1]*Dirs[3],
+                  Point0[1] + Dims[1]*Spacings[1]*Dirs[4],
+                  Point0[2] + Dims[1]*Spacings[1]*Dirs[5]
+                  ]
+        
+        
+        Planes.append([Point0, Point1, Point2, Point3, Point0])
+        
+    
+    return Planes
+
+
+
+
 
 def GetPointsInImagePlanesWithContours(ContourData, ContourTypeNo, DicomDir):
     """

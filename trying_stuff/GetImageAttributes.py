@@ -78,6 +78,12 @@ def GetImageAttributes(DicomDir, Package):
         
         
     elif Package=='pydicom':
+        """
+        NOTE:
+            This only gives the correct Directions for an axial stack.
+            The components need to be switched around the coronal or sagittal.
+        """
+        
         # Import packages:
         import numpy as np
         from GetDicoms import GetDicoms
