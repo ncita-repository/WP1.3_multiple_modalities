@@ -394,6 +394,8 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
         
         Directions = SitkIm.GetDirection() 
         
+        SliceThick = None
+        
         
         
     elif Package=='pydicom':
@@ -451,11 +453,11 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
         
         Spacings = [float(item) for item in Dicoms[0].PixelSpacing]
         
-        #SliceThick = float(Dicoms[0].SliceThickness)
+        SliceThick = float(Dicoms[0].SliceThickness)
         
         """ 
-        Don't use SliceThickness - instead use the difference between slices
-        from the IPP.
+        Don't use SliceThickness for the z-component of the voxel spacing. 
+        Instead use the difference between slices from the IPP.
         """
         # Append SliceThick to Spacings:
         #Spacings.append(SliceThick)
@@ -485,7 +487,7 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
             print('\nWarning:')
             print('    The voxel spacings along the scan direction are',
                   'non-uniform with the following unique values:\n')
-            print('   ', UniqueVlengths)
+            print('   ', UniqueVlengths, '\n')
         
         
         # Compare UniqueDz to SliceThickness:    
@@ -502,11 +504,66 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
         
     if LogToConsole:
         print(f'Size = {Size} \n\nSpacings = {Spacings} \n\n',
+              f'SliceThickness = {SliceThick} \n\n',
               f'Positions = {Positions} \n\nDirections = {Directions}')
     
     
-    return Size, Spacings, Positions, Directions
+    return Size, Spacings, SliceThick, Positions, Directions
 
+
+
+
+
+
+
+def CompareSourceTargetImageAttributes(SrcDcmDir, TrgDcmDir):
+#def CompareSrTrgImAttrs(SrcDcmDir, TrgDcmDir):    
+    # Get the image attributes using Pydicom:
+    SrcPydiSize, SrcPydiSpacing, SrcPydiST,\
+    SrcPydiIPP, SrcPydiDir = GetImageAttributes(SrcDcmDir)
+    
+    TrgPydiSize, TrgPydiSpacing, TrgPydiST,\
+    TrgPydiIPP, TrgPydiDir = GetImageAttributes(TrgDcmDir)
+    
+    # Get the Image Attributes for Source and Target using SimpleITK:
+    SrcSitkSize, SrcSitkSpacing, SrcSitkST,\
+    SrcSitkIPP, SrcSitkDir = GetImageAttributes(DicomDir=SrcDcmDir,
+                                                Package='sitk')
+    
+    TrgSitkSize, TrgSitkSpacing, TrgSitkST,\
+    TrgSitkIPP, TrgSitkDir = GetImageAttributes(DicomDir=TrgDcmDir,
+                                                Package='sitk')
+    
+    
+    title = 'Select image attributes for *Source* DICOMs from Pydicom and' \
+            + 'SimpleITK:'
+    ul = '*' * len(title)
+    
+    print('\n' + title)
+    print(ul + '\n')
+    print(f'Pydi Size           = {SrcPydiSize}')
+    print(f'Sitk Size           = {list(SrcSitkSize)}\n')
+    print(f'Pydi Spacing        = {SrcPydiSpacing}')
+    print(f'Sitk Spacing        = {list(SrcSitkSpacing)}\n')
+    print(f'Pydi SliceThickness = {SrcPydiST}')
+    print(f'Pydi Origin         = {SrcPydiIPP[0]}')
+    print(f'Sitk Origin         = {list(SrcSitkIPP[0])}\n\n')
+    
+    title = 'Select image attributes for *Target* DICOMs from Pydicom and SimpleITK:'
+    ul = '*' * len(title)
+    
+    print('\n' + title)
+    print(ul + '\n')
+    print(f'Pydi Size           = {TrgPydiSize}')
+    print(f'Sitk Size           = {list(TrgSitkSize)}\n')
+    print(f'Pydi Spacing        = {TrgPydiSpacing}')
+    print(f'Sitk Spacing        = {list(TrgSitkSpacing)}\n')
+    print(f'Pydi SliceThickness = {TrgPydiST}')
+    print(f'Pydi Origin         = {TrgPydiIPP[0]}')
+    print(f'Sitk Origin         = {list(TrgSitkIPP[0])}\n\n')
+    
+    
+    return
 
 
 
