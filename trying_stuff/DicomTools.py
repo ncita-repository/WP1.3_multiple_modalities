@@ -703,6 +703,10 @@ def InspectDicomStudyDir(StudyDir):
 
 
 def InspectDicomSubjectDir(SubjectDir):
+    """
+    This is not complete.
+    """
+    
     # Get a list of study directories:
     StudyDirs = os.list(SubjectDir)
     
