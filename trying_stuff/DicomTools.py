@@ -9,9 +9,11 @@ Created on Thu Oct 15 10:44:06 2020
 
 # Import packages:
 import os
-import pydicom
+from pydicom import read_file
 import numpy as np
-import natsort
+from natsort import natsorted
+
+from ImageTools import GetImageAttributes
 
 
 
@@ -66,7 +68,7 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
     else:
         if SortMethod in ['natural', 'Natural']:
             # Sort files in natural way:
-            FilePaths = natsort.natsorted(FilePaths)
+            FilePaths = natsorted(FilePaths)
             
         if SortMethod in ['slices', 'Slices']:
             # Create an empty array to store the Positions:
@@ -76,7 +78,7 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
                 #print('\nFilePath =', FilePath)
                 
                 # Read in Dicom:
-                Dicom = pydicom.read_file(FilePath)
+                Dicom = read_file(FilePath)
                 
                 # Parse the Image Position (Patient):
                 Position = [float(item) for item in Dicom.ImagePositionPatient]
@@ -187,7 +189,7 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
         #print('\nfpath =', fpath)
         
         # Read in the DICOM:
-        dicom = pydicom.read_file(fpath)
+        dicom = read_file(fpath)
         
         # Append this DICOM object:
         Dicoms.append(dicom)
@@ -224,3 +226,170 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     #return dicomDict
     #return fpaths, dicoms
     return Dicoms
+
+
+
+
+
+
+def GetDicomSOPuids(DicomDir):
+    """
+    Get a list of SOP Instance UIDs for a DICOM series.
+    
+    Inputs:
+        DicomDir - (String) Directory containing the DICOMs
+        
+    Returns:
+        SOPuids  - List of strings of the SOP UIDs of the DICOMs 
+    """
+    
+    Dicoms = ImportDicoms(DicomDir=DicomDir, SortMethod='slices', 
+                          LogToConsole=False)
+    
+    SOPuids = [] 
+    
+    for dicom in Dicoms:
+        SOPuids.append(dicom.SOPInstanceUID)
+        
+    return SOPuids
+
+
+
+
+
+
+def InspectDicomStudyDir(StudyDir):
+    # First get a list of DICOM scan directories
+    ScanDirs = []
+    ScanDirNames = []
+
+    # Use os to get list of file paths of Dicom-only files:
+    for DirName, SubDirList, FileList in os.walk(StudyDir):
+        #print('DirName =', DirName)
+        #print('SubDirList =', SubDirList)
+        #print('FileList =', FileList)
+        #print('\n\n')
+        
+        DicomsFound = 0
+        
+        for file in FileList:
+            if '.dcm' in file:
+                #print(FileList, 'contains at least 1 DICOM')
+                DicomsFound += 1
+                
+        
+        if DicomsFound:
+            ScanDirs.append(DirName)
+            
+            # DirName is a directory containing DICOMs
+            RootDir, ScanDir = os.path.split(DirName)
+    
+            ScanDirNames.append(ScanDir)
+    
+    
+    # Sort the list of directory names using natsort:
+    ScanDirNames = natsorted(ScanDirNames)
+    
+    """ 
+    The DICOM scan directory names have the form:
+        'N-Label'
+        
+    e.g.:
+        '2-T1 SE SAG IPATX2-05296'
+        
+    where scan number = 2
+    and scan label = 'T1 SE SAG IPATX2-05296'
+    
+    Get the scan numbers and labels separately.
+    """
+    ScanNums = []
+    ScanLabels = []
+    
+    for ScanDirName in ScanDirNames:
+        # Index of first '-':
+        ind = ScanDirName.index('-')
+        
+        ScanNums.append(ScanDirName[0:ind])
+        
+        ScanLabels.append(ScanDirName[ind+1::])
+    
+    
+    # Initialise the Origins, Directions, Spacings, Dims, and FORuids:
+    Origins = []
+    Dirs = []
+    Spacings = []
+    Dims = []
+    FORuids = []
+    
+    # Loop through each Scan directory:
+    for ScanDir in ScanDirs:
+    
+        # Get the Image Attributes:
+        origin, dirs,\
+        spacings, dims = GetImageAttributes(DicomDir=ScanDir, 
+                                            Package='pydicom')
+        
+        # Get the DICOMs:
+        DicomFpaths, Dicoms = ImportDicoms(DirPath=ScanDir, 
+                                           SortMethod='slices', 
+                                           Debug=False)
+        
+        FORuid = Dicoms[0].FrameOfReferenceUID
+        
+        Origins.append(origin)
+        Dirs.append(dirs)
+        Spacings.append(spacings)
+        Dims.append(dims)
+        FORuids.append(FORuid)
+        
+    
+    # Create a dictionary:
+    StudyDict = {'Scan num':ScanNums,
+                 'Scan label':ScanLabels,
+                 #'FOR UID':FORuids,
+                 'Origin':Origins,
+                 'Directions':Dirs,
+                 'Dimensions':Dims,
+                 'Spacings':Spacings
+                 }
+    
+    #return StudyDict, ScanNums, ScanLabels, FORuids, Origins, Dirs, Dims, Spacings
+    return StudyDict
+    
+    
+
+
+
+def InspectDicomSubjectDir(SubjectDir):
+    """
+    This is not complete.
+    """
+    
+    # Get a list of study directories:
+    StudyDirs = os.list(SubjectDir)
+    
+    # Sort using natsort:
+    StudyDirs = natsorted(StudyDirs)
+    
+    
+    """
+    The directory names of the study directories have the form:
+        'MM-DD-YYYY-MOD StudyLabel'
+        
+    where MOD is the modality (e.g. 'MRI', 'PET', 'CT')
+    
+    Get the date, modality and study label separately.
+    """
+    
+    StudyDates = []
+    Modalities = []
+    StudyLabels = []
+    
+    for StudyDir in StudyDirs:
+        # Get the study directory names:
+        StudyDirRoot, StudyDirName = os.path.split(StudyDir)
+
+        #StudyDates.append()
+    
+
+    return

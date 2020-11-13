@@ -11,10 +11,7 @@ Created on Wed Nov 11 11:55:17 2020
 # Import packages and functions:
 import os
 import time
-import copy
-from ImageTools import GetImageAttributes
-
-
+from copy import deepcopy
 
 
 """
@@ -122,6 +119,10 @@ def VerifyCISandCS(CIStoDcmInds, CStoDcmInds, LogToConsole=False):
     
 
 
+
+
+
+
 def AddToRtsSequences(RtsRoi):
     """
     Append the last item in the following sequences in the RTS Object:
@@ -136,13 +137,13 @@ def AddToRtsSequences(RtsRoi):
     """
     
     # Use RtsRoi as a template for NewRtsRoi: 
-    NewRtsRoi = copy.deepcopy(RtsRoi)
+    NewRtsRoi = deepcopy(RtsRoi)
         
     # The last item in Contour Image Sequence:
-    last = copy.deepcopy(RtsRoi.ReferencedFrameOfReferenceSequence[0]\
-                               .RTReferencedStudySequence[0]\
-                               .RTReferencedSeriesSequence[0]\
-                               .ContourImageSequence[-1])
+    last = deepcopy(RtsRoi.ReferencedFrameOfReferenceSequence[0]\
+                          .RTReferencedStudySequence[0]\
+                          .RTReferencedSeriesSequence[0]\
+                          .ContourImageSequence[-1])
     
     # Append to the Contour Image Sequence:
     NewRtsRoi.ReferencedFrameOfReferenceSequence[0]\
@@ -152,8 +153,8 @@ def AddToRtsSequences(RtsRoi):
              .append(last)
 
     # The last item in Contour Sequence:
-    last = copy.deepcopy(RtsRoi.ROIContourSequence[0]\
-                               .ContourSequence[-1])
+    last = deepcopy(RtsRoi.ROIContourSequence[0]\
+                          .ContourSequence[-1])
     
     # Append to the Contour Sequence:
     NewRtsRoi.ROIContourSequence[0]\
@@ -281,19 +282,23 @@ def ModifyRtsTagVals(OrigRtsRoi, NewRtsRoi, FromSliceNum, ToSliceNum, Dicoms,
             # This is the new sequence. Copy from FromSeqNum.
             # Modify the Number of Contour Points to match the value of the 
             # Source contour being copied:
+            val = deepcopy(OrigRtsRoi.ROIContourSequence[0]\
+                                     .ContourSequence[FromOrigSeqNum]\
+                                     .NumberOfContourPoints)
+            
             NewRtsRoi.ROIContourSequence[0]\
                      .ContourSequence[i]\
-                     .NumberOfContourPoints = copy.deepcopy(OrigRtsRoi.ROIContourSequence[0]\
-                                                                      .ContourSequence[FromOrigSeqNum]\
-                                                                      .NumberOfContourPoints)
+                     .NumberOfContourPoints = deepcopy(val)
             
             # Modify the Contour Data to match the value of the Source contour
             # being copied:
+            val = deepcopy(OrigRtsRoi.ROIContourSequence[0]\
+                                     .ContourSequence[FromOrigSeqNum]\
+                                     .ContourData)
+            
             NewRtsRoi.ROIContourSequence[0]\
                      .ContourSequence[i]\
-                     .ContourData = copy.deepcopy(OrigRtsRoi.ROIContourSequence[0]\
-                                                            .ContourSequence[FromOrigSeqNum]\
-                                                            .ContourData)
+                     .ContourData = deepcopy(val)
         
         else:
             # This is an existing sequence. Find the index of OrigCIStoDcmInds 
@@ -307,282 +312,29 @@ def ModifyRtsTagVals(OrigRtsRoi, NewRtsRoi, FromSliceNum, ToSliceNum, Dicoms,
                                           
             # Modify the Number of Contour Points to match the value of the 
             # Source contour being copied:
+            val = deepcopy(OrigRtsRoi.ROIContourSequence[0]\
+                                     .ContourSequence[ind]\
+                                     .NumberOfContourPoints)
+            
             NewRtsRoi.ROIContourSequence[0]\
                      .ContourSequence[i]\
-                     .NumberOfContourPoints = copy.deepcopy(OrigRtsRoi.ROIContourSequence[0]\
-                                                                      .ContourSequence[ind]\
-                                                                      .NumberOfContourPoints)
+                     .NumberOfContourPoints = deepcopy(val)
             
             # Modify the Contour Data to match the value of the Source contour
             # being copied:
+            val = deepcopy(OrigRtsRoi.ROIContourSequence[0]\
+                                     .ContourSequence[ind]\
+                                     .ContourData)
+            
             NewRtsRoi.ROIContourSequence[0]\
                      .ContourSequence[i]\
-                     .ContourData = copy.deepcopy(OrigRtsRoi.ROIContourSequence[0]\
-                                                            .ContourSequence[ind]\
-                                                            .ContourData)
+                     .ContourData = deepcopy(val)
                                           
     return NewRtsRoi
 
 
 
 
-
-
-def GetExtremePoints(Image):
-
-    pts = [Image.TransformIndexToPhysicalPoint((0, 0, 0)), 
-           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), 0, 0)),
-           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), Image.GetHeight(), 0)),
-           Image.TransformIndexToPhysicalPoint((0, Image.GetHeight(), 0)),
-           Image.TransformIndexToPhysicalPoint((0, 0, Image.GetDepth())), 
-           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), 0, Image.GetDepth())),
-           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), Image.GetHeight(), Image.GetDepth())),
-           Image.TransformIndexToPhysicalPoint((0, Image.GetHeight(), Image.GetDepth()))]
-    
-    return pts
-
-
-
-
-
-
-def ConvertPcsPointToIcs(PointPCS, Origin, Directions, Spacings):
-    """
-    Convert a point from the Patient Coordinate System (PCS) to the Image 
-    Coordinate System (ICS).
-    
-    Input:
-        PointPCS   - (List of floats) Points in the Patient Coordinate System, 
-                     e.g. [x, y, z]
-        
-        Origin     - (List of floats) The 3D image origin 
-                     (= ImagePositionPatient of the first slice in the DICOM 
-                     series), e.g. [x0, y0, z0]
-        
-        Directions - (List of floats) The direction cosine along x (rows), 
-                     y (columns) and z (slices) (= the cross product of the 
-                     x and y direction cosines from ImageOrientationPatient 
-                     appended to ImageOrientationPatient),
-                     e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz]
-        
-        Spacings   - (List of floats) The pixel spacings along x, y and z 
-                     (= SliceThickness appended to PixelSpacing), 
-                     e.g. [di, dj, dk]
-    
-        
-    Returns:
-        PointICS   - (List of floats) PointPCS converted to the ICS,
-                     e.g. [x, y, z]
-        
-    
-    Equations:
-    
-    P = S + (di*i).X + (dj*j).Y + (dk*k).Z
-    
-    where P = (Px, Py, Pz) is the point in the Patient Coordinate System
-    
-          S = (Sx, Sy, Sz) is the origin in the Patient Coordinate System (i.e.
-          the ImagePositionPatient)
-          
-          X = (Xx, Xy, Xz) is the direction cosine vector along rows (x) 
-          
-          Y = (Yx, Yy, Yz) is the direction cosine vector along columns (y)
-          
-          Z = (Zx, Zy, Zz) is the direction cosine vector along slices (z)
-          
-          di, dj and dk are the pixel spacings along x, y and z
-          
-          i, j, and k are the row (x), column (y) and slice (z) indices
-          
-          
-    Solve for i, j and k, i.e.:
-        
-        Vx = Xx*di*i + Yx*dj*j + Zx*dk*k
-        
-        Vy = Xy*di*i + Yy*dj*j + Zy*dk*k
-        
-        Vz = Xz*di*i + Yz*dk*k + Zz*dk*k
-        
-    where Vx = Px - Sx
-    
-          Vy = Py - Sy
-          
-          Vz = Pz - Sz
-          
-    Solving for i, j and k results in the expressions:
-        
-        i = (1/di)*d/e
-            
-        j = (1/dj)*( (a/b)*di*i + c/b )
-        
-        k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
-        or
-        k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
-        
-        (either expression for k should be fine)
-        
-    In the case where X = [1, 0, 0]
-                      Y = [0, 1, 0]
-                      Z = [0, 0, 1]
-                      
-    The expressions simplify to:
-        
-        a = 0
-        
-        b = 1
-        
-        c = Vy
-        
-        d = Vx
-        
-        e = 1
-        
-        i = Vx/di
-        
-        j = Vy/dj
-        
-        k = Vz/dk
-        
-    """
-    
-    # Define S, X, Y and Z:
-    S = Origin # the origin
-    
-    X = Directions[0:3] # the row (x) direction cosine vector
-    Y = Directions[3:6] # the column (y) direction cosine vector
-    Z = Directions[6:] # the slice (z) direction cosine vector
-    
-    # The indices of the largest direction cosines along rows, columns and 
-    # slices:
-    ind_i = X.index(max(X)) # typically = 0
-    ind_j = Y.index(max(Y)) # typically = 1
-    ind_k = Z.index(max(Z)) # typically = 2
-
-    # The pixel spacings:
-    di = Spacings[0]
-    dj = Spacings[1]
-    dk = Spacings[2] 
-    
-    # Simplifying expressions:
-    Xx = X[ind_i]
-    Xy = X[ind_j]
-    Xz = X[ind_k]
-    
-    Yx = Y[ind_i]
-    Yy = Y[ind_j]
-    Yz = Y[ind_k]
-    
-    Zx = Z[ind_i]
-    Zy = Z[ind_j]
-    Zz = Z[ind_k]
-    
-    # Define simplifying expressions:
-    Vx = PointPCS[0] - S[0]
-    Vy = PointPCS[1] - S[1]
-    Vz = PointPCS[2] - S[2]
-    
-    a = Xz*Zy/Zz - Xy
-    
-    b = Yy - Yz*Zy/Zz
-    
-    c = Vy - Vz*Zy/Zz
-    
-    d = Vx - (c/b)*Yx - (Zx/Zz)*(Vz - (c/b)*Yz)
-    
-    e = Xx + (a/b)*Yx - (Zx/Zz)*(Xz + (a/b)*Yz)
-    
-    # Solve for i, j and k:
-    i = (1/di)*d/e
-    
-    j = (1/dj)*( (a/b)*di*i + c/b )
-    
-    k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
-    #k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
-    
-    PointICS = [i, j, k]
-    
-    return PointICS
-
-
-
-
-
-
-def ConvertContourDataToIcsPoints(ContourData, DicomDir):
-    """
-    Convert contour data from a flat list of points in the Patient Coordinate
-    System (PCS) to a list of [x, y, z] points in the Image Coordinate System. 
-    
-    Inputs:
-        ContourData - (List of floats) Flat list of points in the PCS,
-                      e.g. [x0, y0, z0, x1, y1, z1, ...]
-        
-        DicomDir    - (String) Directory containing DICOMs
-        
-        
-    Returns:
-        PointsICS   - (List of floats) List of a list of [x, y, z] coordinates
-                      of each point in ContourData converted to the ICS,
-                      e.g. [[x0, y0, z0], [x1, y1, z1], ...]
-    """
-    
-    
-    # Get the image attributes:
-    #Origin, Directions, Spacings, Dimensions = GetImageAttributes(DicomDir)
-    IPPs, Directions, Spacings, Dimensions = GetImageAttributes(DicomDir)
-    
-    # Initialise the array of contour points:
-    PointsICS = []
-    
-    # Iterate for all contour points in threes:
-    for p in range(0, len(ContourData), 3):
-        # The point in Patient Coordinate System:
-        pointPCS = [ContourData[p], ContourData[p+1], ContourData[p+2]]
-        
-        # Convert ptPCS to Image Coordinate System:
-        #pointICS = ConvertPcsPointToIcs(pointPCS, Origin, Directions, Spacings)
-        pointICS = ConvertPcsPointToIcs(pointPCS, IPPs[0], Directions, Spacings)
-        
-        PointsICS.append(pointICS)
-        
-    return PointsICS
-
-
-
-
-
-def UnpackPoints(Points):
-    """
-    Unpack list of a list of [x, y, z] coordinates into lists of x, y and z
-    coordinates.
-    
-    Input:
-        Points - (List of floats) List of a list of [x, y, z] coordinates,
-                 e.g. [[x0, y0, z0], [x1, y1, z1], ...]
-        
-    Returns:
-        X      - (List of floats) List of all x coordinates in Points,
-                 e.g. [x0, x1, x2, ...]
-        
-        Y      - (List of floats) List of all y coordinates in Points,
-                 e.g. [y0, y1, y2, ...]
-        
-        Z      - (List of floats) List of all z coordinates in Points,
-                 e.g. [z0, z1, z2, ...]
-    """
-    
-    # Initialise unpacked lists:
-    X = []
-    Y = []
-    Z = []
-    
-    # Unpack tuple and store in X, Y, Z:
-    for x, y, z in Points:
-        X.append(x)
-        Y.append(y)
-        Z.append(z)
-        
-    return X, Y, Z
 
 
 

@@ -14,7 +14,7 @@ ROI copying tools
 
 # Import packages and functions:
 import pydicom
-import copy
+from copy import deepcopy
 import numpy as np
 import SimpleITK as sitk
 
@@ -22,7 +22,12 @@ import SimpleITK as sitk
 #import DicomTools
 #importlib.reload(DicomTools)
 
-from HelperTools import AddItemToListAndSort
+from GeneralTools import AddItemToListAndSort
+
+from ConversionTools import PixArr2Labmap
+from ConversionTools import PixArr2Image
+from ConversionTools import PixArrForOneFrame
+from ConversionTools import Image2PixArr
 
 from DicomTools import ImportDicoms
 from DicomTools import ImportImage
@@ -49,10 +54,6 @@ from SegTools import GroupListBySegment
 from SegTools import GetRIStoDcmInds
 from SegTools import AddToSegSequences
 from SegTools import ModifySegTagVals
-from SegTools import PixArr2Labmap
-from SegTools import PixArr2Image
-from SegTools import PixArrForOneFrame
-from SegTools import Image2PixArr
 #from SegTools import ExportSegRoi
 
 
@@ -135,10 +136,10 @@ def CopyContourWithinSeries(SrcDcmDir, SrcRtsFpath, FromSliceNum, ToSliceNum,
     """
     if ToSliceNum in SrcCIStoDcmInds:
         # Use SrcRtsRoi as a template for TrgRtsRoi: 
-        TrgRtsRoi = copy.deepcopy(SrcRtsRoi)
+        TrgRtsRoi = deepcopy(SrcRtsRoi)
         
         # Create a new list of CIStoDcmInds:
-        TrgCIStoDcmInds = copy.deepcopy(SrcCIStoDcmInds)
+        TrgCIStoDcmInds = deepcopy(SrcCIStoDcmInds)
         
     else:
         # Increase the length of the sequences:
@@ -265,10 +266,10 @@ def DirectCopyContourAcrossSeries(SrcDcmDir, SrcRtsFpath, FromSliceNum,
     """
     if ToSliceNum in TrgCIStoDcmInds:
         # Use TrgRtsRoi as a template for NewTrgRtsRoi: 
-        NewTrgRtsRoi = copy.deepcopy(TrgRtsRoi)
+        NewTrgRtsRoi = deepcopy(TrgRtsRoi)
         
         # Create a new list of NewTrgCIStoDcmInds:
-        NewTrgCIStoDcmInds = copy.deepcopy(TrgCIStoDcmInds)
+        NewTrgCIStoDcmInds = deepcopy(TrgCIStoDcmInds)
         
     else:
         # Increase the length of the sequences:
@@ -474,10 +475,10 @@ def MappedCopyContourAcrossSeries_OLD(SrcDcmDir, SrcRoiFpath, FromSliceNum,
     """
     if ToSliceNum in TrgCIStoDcmInds:
         # Use TrgRtsRoi as a template for NewTrgRtsRoi: 
-        NewTrgRtsRoi = copy.deepcopy(TrgRtsRoi)
+        NewTrgRtsRoi = deepcopy(TrgRtsRoi)
         
         # Create a new list of NewTrgCIStoDcmInds:
-        NewTrgCIStoDcmInds = copy.deepcopy(TrgCIStoDcmInds)
+        NewTrgCIStoDcmInds = deepcopy(TrgCIStoDcmInds)
         
     else:
         # Increase the length of the sequences:
@@ -587,13 +588,13 @@ def CopySegmentWithinSeries(SrcDcmDir, SrcSegFpath, FromSliceNum, ToSliceNum,
     """
     if ToSliceNum in RIStoDcmInds:
         # Use SegRoi as a template for NewSegRoi: 
-        NewSegRoi = copy.deepcopy(SegRoi)
+        NewSegRoi = deepcopy(SegRoi)
         
         # Create a new list of RIStoDcmInds: <-- not needed?
         #NewRIStoDcmInds = copy.deepcopy(RIStoDcmInds)
         
         # Create a new list of PFFGStoDcmInds:
-        NewPFFGStoDcmInds = copy.deepcopy(PFFGStoDcmInds)
+        NewPFFGStoDcmInds = deepcopy(PFFGStoDcmInds)
         
     else:
         # Increase the length of the sequences:
@@ -636,6 +637,8 @@ def CopySegmentWithinSeries(SrcDcmDir, SrcSegFpath, FromSliceNum, ToSliceNum,
     
     
     return NewSegRoi
+
+
 
 
 
@@ -725,13 +728,13 @@ def DirectCopySegmentAcrossSeries(SrcDcmDir, SrcSegFpath, FromSliceNum,
     """
     if ToSliceNum in TrgRIStoDcmInds:
         # Use TrgSegRoi as a template for NewTrgSeg:
-        NewTrgSeg = copy.deepcopy(TrgSeg)
+        NewTrgSeg = deepcopy(TrgSeg)
         
         # Create a new list of TrgRIStoDcmInds: <-- not needed?
         #NewTrgRIStoDcmInds = copy.deepcopy(TrgRIStoDcmInds)
         
         # Create a new list of PFFGStoDcmInds:
-        NewTrgPFFGStoDcmInds = copy.deepcopy(TrgPFFGStoDcmInds)
+        NewTrgPFFGStoDcmInds = deepcopy(TrgPFFGStoDcmInds)
         
     else:
         # Increase the length of the sequences:
@@ -1313,7 +1316,7 @@ def MappedCopySegmentAcrossSeries(SrcDcmDir, SrcSegFpath, FromSliceNum,
         
         print('\nApplying Case 2b..')
     
-        ToSliceNum = copy.deepcopy(FromSliceNum)
+        ToSliceNum = deepcopy(FromSliceNum)
         
         if LogToConsole:
             print(f'\nCopying slice {FromSliceNum} from Source SEG to slice',
@@ -1329,13 +1332,13 @@ def MappedCopySegmentAcrossSeries(SrcDcmDir, SrcSegFpath, FromSliceNum,
         """
         if ToSliceNum in TrgRIStoDcmInds:
             # Use TrgSeg as a template for NewTrgSegRoi:
-            NewTrgSeg = copy.deepcopy(TrgSeg)
+            NewTrgSeg = deepcopy(TrgSeg)
             
             # Create a new list of TrgRIStoDcmInds: <-- not needed?
-            #NewTrgRIStoDcmInds = copy.deepcopy(TrgRIStoDcmInds)
+            #NewTrgRIStoDcmInds = deepcopy(TrgRIStoDcmInds)
             
             # Create a new list of PFFGStoDcmInds:
-            NewTrgPFFGStoDcmInds = copy.deepcopy(TrgPFFGStoDcmInds)
+            NewTrgPFFGStoDcmInds = deepcopy(TrgPFFGStoDcmInds)
             
         else:
             # Increase the length of the sequences:

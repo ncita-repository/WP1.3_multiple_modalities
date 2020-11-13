@@ -11,13 +11,11 @@ Created on Wed Nov 11 11:54:12 2020
 # Import packages and functions:
 import os
 import time
-import copy
+from copy import deepcopy
 import pydicom
 from pydicom.pixel_data_handlers.numpy_handler import pack_bits
-import SimpleITK as sitk
 import numpy as np
-import matplotlib.pyplot as plt
-from DicomTools import GetDicomSOPuids
+
 
 
 
@@ -293,11 +291,11 @@ def AddToSegSequences_OLD(SegRoi):
     """
     
     # Use SegRoi as a template for NewSegRoi: 
-    NewSegRoi = copy.deepcopy(SegRoi)
+    NewSegRoi = deepcopy(SegRoi)
         
     # The last item in Referenced Instance Sequence:
-    last = copy.deepcopy(SegRoi.ReferencedSeriesSequence[0]\
-                               .ReferencedInstanceSequence[-1])
+    last = deepcopy(SegRoi.ReferencedSeriesSequence[0]\
+                          .ReferencedInstanceSequence[-1])
     
     # Append to the Referenced Instance Sequence:
     NewSegRoi.ReferencedSeriesSequence[0]\
@@ -305,7 +303,7 @@ def AddToSegSequences_OLD(SegRoi):
              .append(last)
              
     # The last item in Per-frame Functional Groups Sequence:
-    last = copy.deepcopy(SegRoi.PerFrameFunctionalGroupsSequence[-1])
+    last = deepcopy(SegRoi.PerFrameFunctionalGroupsSequence[-1])
     
     # Append to the Per-frame Functional Groups Sequence:
     NewSegRoi.PerFrameFunctionalGroupsSequence\
@@ -330,10 +328,10 @@ def AddToPFFGS(SegRoi):
     """
     
     # Use SegRoi as a template for NewSegRoi: 
-    NewSegRoi = copy.deepcopy(SegRoi)
+    NewSegRoi = deepcopy(SegRoi)
              
     # The last item in Per-frame Functional Groups Sequence:
-    last = copy.deepcopy(SegRoi.PerFrameFunctionalGroupsSequence[-1])
+    last = deepcopy(SegRoi.PerFrameFunctionalGroupsSequence[-1])
     
     # Append to the Per-frame Functional Groups Sequence:
     NewSegRoi.PerFrameFunctionalGroupsSequence\
@@ -341,306 +339,6 @@ def AddToPFFGS(SegRoi):
              
     return NewSegRoi
 
-
-
-
-
-
-def PixArr2Labmap(PixelArray, NumOfSlices, FrameToSliceInds):
-    """
-    Convert a 3D SEG pixel array to a 3D SEG labelmap.  The labelmap will 
-    contain the 2D pixel arrays at the same frame position as the slice
-    position of the corresponding DICOM series (with 2D zero masks in-between).
-    
-    Inputs:
-        PixelArray       - (Numpy array) The SEG's PixelData loaded as a 
-                           Numpy array with dtype uint8
-        
-        NumOfSlices      - (Integer) The number of slices in the DICOM series
-        
-        FrameToSliceInds - (List of integers) The DICOM slice numbers that
-                           correspond to each frame in PixelArray,
-                           e.g. PFFGStoDcmInds 
-                           = PerFrameFunctionalGroupsSequence-to-DICOM slice
-                           number
-        
-    Returns:
-        LabelMap         - (Numpy array) A zero-padded version of PixelArray
-                           with dtype uint
-
-    """
-    
-    #print('\nRunning PixArr2Labmap()...')
-    
-    NumOfFrames, NumOfRows, NumOfCols = PixelArray.shape
-    
-    #print(f'\n\nThe maximum value in PixelArray is {PixelArray.max()}')
-    
-    # Initialise LabelMap:
-    #LabelMap = np.zeros((NumOfSlices, NumOfRows, NumOfCols), dtype='bool')
-    LabelMap = np.zeros((NumOfSlices, NumOfRows, NumOfCols), dtype='uint')
-    
-    # Over-write all frames in LabelMap with non-zero 2D masks from PixelArray:
-    for i in range(len(FrameToSliceInds)):
-        # The DICOM slice number for the i^th frame:
-        s = FrameToSliceInds[i]
-        
-        #print(f'\nThe DICOM slice number for the {i}^th frame is {s}')
-        
-        LabelMap[s] = PixelArray[i]
-        
-    
-    #print(f'\n\nThe maximum value in LabelMap is {LabelMap.max()}')
-    
-    #print('\nCompleted running PixArr2Labmap.')
-    
-    return LabelMap
-
-
-
-
-
-def PixArr2Image(PixelArray, Image, FrameToSliceInds):
-    """
-    Convert a 3D SEG pixel array to a 3D SimpleITK image using an intermediate
-    conversion from 3D SEG pixel array to a Numpy array (using PixArr2Labmap).  
-    
-    Inputs:
-        PixelArray       - (Numpy array) The SEG's PixelData loaded as a 
-                           Numpy array with dtype uint8
-                           
-        Image            - (SimpleITK image) The 3D image that PixelArray
-                           relates to
-        
-        FrameToSliceInds - (List of integers) The DICOM slice numbers that
-                           correspond to each frame in PixelArray,
-                           e.g. PFFGStoDcmInds 
-                           = PerFrameFunctionalGroupsSequence-to-DICOM slice
-                           number
-        
-    Returns:
-        LabelMapImage    - (SimpleITK image) A zero-padded version of 
-                           PixelArray
-
-    """
-    
-    #print('\nRunning PixArr2Image()...')
-    
-    ImSize = Image.GetSize()
-    
-    nda = PixArr2Labmap(PixelArray, ImSize[2], FrameToSliceInds)
-    
-    #print('\nContinuing with running PixArr2Image()..')
-    
-    LabelMapImage = sitk.GetImageFromArray(nda)
-    
-    # Set the Origin, Spacing and Direction of LabelMapImage to that of Image:
-    LabelMapImage.SetOrigin(Image.GetOrigin())
-    LabelMapImage.SetSpacing(Image.GetSpacing())
-    LabelMapImage.SetDirection(Image.GetDirection())
-    
-    #print(f'\n\nThe maximum value in nda is {nda.max()}')
-    #print(f'\n\nThe maximum value in LabelMapImage is {ImageMax(LabelMapImage)}')
-    
-    #print('\nCompleted running PixArr2Image().')
-    
-        
-    return LabelMapImage
-
-
-
-
-def Image2PixArr(LabmapImage):
-    """
-    Convert a 3D SimpleITK image to a 3D SEG pixel array.  
-    
-    Inputs:
-        LabelMapImage    - (SimpleITK image) A zero-padded version of 
-                           PixelArray
-        
-        
-    Returns:
-        PixelArray       - (Numpy array) The SEG's PixelData as a Numpy array
-                           with dtype uint8
-                           
-        FrameToSliceInds - (List of integers) The DICOM slice numbers that
-                           correspond to each frame in PixelArray,
-                           e.g. PFFGStoDcmInds 
-                           = PerFrameFunctionalGroupsSequence-to-DICOM slice
-                           number
-
-    """
-    
-    # Convert from SimpleITK image to a Numpy array:
-    LabmapNda = sitk.GetArrayFromImage(LabmapImage)
-    
-    FrameToSliceInds = []
-    
-    # Loop through all frames in LabmapNda:
-    for i in range(LabmapNda.shape[0]):
-        Sum = np.amax(LabmapNda[i])
-        
-        if Sum:
-            # This is a non-zero frame:
-            FrameToSliceInds.append(i)
-            
-            
-    
-    # Initialise PixelArray:
-    PixelArray = np.zeros((len(FrameToSliceInds), 
-                           LabmapNda.shape[1], 
-                           LabmapNda.shape[2]))
-        
-    # Use FrameToSliceInds to index the non-zero frames in LabmapNda:
-    for i in range(len(FrameToSliceInds)):
-        PixelArray[i] = LabmapNda[FrameToSliceInds[i]]
-        
-    
-    return PixelArray, FrameToSliceInds
-        
-
-
-
-
-def PixArrForOneFrame(PixelArray, FrameNum):
-    """
-    Modify a 3D SEG pixel array so that all but one frame has non-zero 2D masks
-    (i.e. set all other frames to zero).  
-    
-    Inputs:
-        PixelArray    - (Numpy array) The SEG's PixelData loaded as a Numpy
-                        array with dtype uint8
-        
-        FrameNum      - (Integer) The number of slices in the DICOM series
-        
-    Returns:
-        NewPixelArray - (Numpy array) New PixelArray
-
-    """
-    
-    NumOfFrames, NumOfRows, NumOfCols = PixelArray.shape
-    
-    # Initialise NewPixelArray:
-    NewPixelArray = np.zeros((1, NumOfRows, NumOfCols), dtype='uint')
-    
-    NewPixelArray[0] = PixelArray[FrameNum]
-            
-    return NewPixelArray
-
-
-
-
-
-def CropNonZerosIn2dMask(Orig2dMask):
-    
-    #print('\nShape of Orig2dMask =', Orig2dMask.shape)
-    
-    # The non-zero elements in the Orig2dMask:
-    non0 = np.nonzero(Orig2dMask)
-    
-    # If there are non-zero elements:
-    if non0[0].size:
-    
-        a = non0[0][0]
-        b = non0[0][-1]
-        
-        c = non0[1][0]
-        d = non0[1][-1]
-    
-        # The non-zero (cropped) array:
-        Cropped2dMask = Orig2dMask[a:b, c:d]
-        
-        #print('\nShape of Cropped2dMask =', Cropped2dMask.shape)
-        
-        return Cropped2dMask
-    
-    else:
-        #print('There were no non-zero elements in the 2D mask.')
-        
-        return non0[0]
-    
-
-
-
-
-def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
-    """ Compare cropped masks of non-zero elements only. """ 
-    
-    # Get the DICOM SOP UIDs:
-    OrigSOPuids = GetDicomSOPuids(DicomDir=OrigDicomDir)
-    NewSOPuids = GetDicomSOPuids(DicomDir=NewDicomDir)
-    
-    # Get the Per-frameFunctionalGroupsSequence-to-DICOM slice indices:
-    OrigPFFGStoDcmInds = GetPFFGStoDcmInds(OrigSegRoi, OrigSOPuids)
-    NewPFFGStoDcmInds = GetPFFGStoDcmInds(NewSegRoi, NewSOPuids)
-    
-    # Combined indices from OrigPFFGStoDcmInds and NewPFFGStoDcmInds:
-    AllInds = OrigPFFGStoDcmInds + NewPFFGStoDcmInds
-    
-    # Remove duplicates:
-    AllInds = list(set(AllInds))
-    
-    
-    # Get the 3D SEG masks:
-    Orig3dMask = OrigSegRoi.pixel_array
-    New3dMask = NewSegRoi.pixel_array
-    
-    OrigShape = Orig3dMask.shape
-    NewShape = New3dMask.shape
-    
-    print(f'Segments exist in OrigSegRoi on slices {OrigPFFGStoDcmInds}')
-    print(f'Shape of Orig3dMask = {OrigShape}')
-    print(f'\nSegments exist in NewSegRoi on slices {NewPFFGStoDcmInds}')
-    print(f'Shape of New3dMask = {NewShape}\n')
-    
-    # Initialise the 3D cropped SEG masks:
-    Orig3dMaskCropped = []
-    New3dMaskCropped = []
-    
-    for i in range(OrigShape[0]):
-        cropped = CropNonZerosIn2dMask(Orig3dMask[i])
-        
-        Orig3dMaskCropped.append(cropped)
-        
-    for i in range(NewShape[0]):
-        cropped = CropNonZerosIn2dMask(New3dMask[i])
-        
-        New3dMaskCropped.append(cropped)
-    
-    
-    Nrows = len(AllInds)
-    
-    Ncols = 2
-    
-    n = 1 # initialised sub-plot number
-    
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows))
-    
-    for i in range(len(AllInds)):
-        SliceNum = AllInds[i]
-        
-        # Does slice SliceNum have a segment in OrigSegRoi or NewSegRoi?
-        if SliceNum in OrigPFFGStoDcmInds:
-            OrigFrameNum = OrigPFFGStoDcmInds.index(SliceNum)
-        
-            ax = plt.subplot(Nrows, Ncols, n, aspect='equal')
-            ax.imshow(Orig3dMaskCropped[OrigFrameNum])
-            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Orig slice {SliceNum}')
-            
-        n += 1 # increment sub-plot number
-        
-        if SliceNum in NewPFFGStoDcmInds:
-            NewFrameNum = NewPFFGStoDcmInds.index(SliceNum)
-    
-            ax = plt.subplot(Nrows, Ncols, n, aspect='equal')
-            ax.imshow(New3dMaskCropped[NewFrameNum])
-            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'New slice {SliceNum}')
-            
-        n += 1 # increment sub-plot number
-    
-    return
 
 
 
@@ -828,7 +526,7 @@ def ModifySegTagVals_OLD(SegRoi, NewSegRoi, FromSliceNum, ToSliceNum, Dicoms,
         # Modify the ImagePositionPatient:  
         NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
                  .PlanePositionSequence[0]\
-                 .ImagePositionPatient = copy.deepcopy(Dicoms[s].ImagePositionPatient)
+                 .ImagePositionPatient = deepcopy(Dicoms[s].ImagePositionPatient)
         
         
         # Modify New3dMask:         
@@ -1054,7 +752,7 @@ def ModifySegTagVals_OLD2(SrcSeg, SrcDicoms, SrcPFFGStoDcmInds, FromSliceNum,
         # Modify the ImagePositionPatient:  
         NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
                  .PlanePositionSequence[0]\
-                 .ImagePositionPatient = copy.deepcopy(TrgDicoms[s].ImagePositionPatient)
+                 .ImagePositionPatient = deepcopy(TrgDicoms[s].ImagePositionPatient)
         
         
         # Modify NewTrg3dMask:         
@@ -1158,7 +856,7 @@ def ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgRoiNums,
     """
     
     # Use TrgSeg as a template for NewTrgSeg:
-    NewTrgSeg = copy.deepcopy(TrgSeg)
+    NewTrgSeg = deepcopy(TrgSeg)
     
     # The original and new number of frames in pixel array:
     OrigN = TrgSeg.pixel_array.shape[0]
@@ -1237,7 +935,7 @@ def ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgRoiNums,
                  .DimensionIndexValues = [r + 1, s + 1]
                      
         # Modify the ImagePositionPatient: 
-        IPP = copy.deepcopy(TrgDicoms[s].ImagePositionPatient)
+        IPP = deepcopy(TrgDicoms[s].ImagePositionPatient)
         
         NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
                  .PlanePositionSequence[0]\

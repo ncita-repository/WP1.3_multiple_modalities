@@ -10,10 +10,18 @@ Created on Wed Nov 11 11:52:36 2020
 # Import packages and functions:
 import os
 import time
-import pydicom
+from pydicom import dcmread
 import SimpleITK as sitk
 import numpy as np
 import matplotlib.pyplot as plt
+
+#import importlib
+#import GeneralTools
+#importlib.reload(GeneralTools)
+from GeneralTools import Unpack
+
+from ConversionTools import GetIndsInContours
+from ConversionTools import ConvertContourDataToIcsPoints
 
 from DicomTools import ImportDicoms
 from DicomTools import GetDicomSOPuids
@@ -22,8 +30,7 @@ from ImageTools import InitialiseImage
 from ImageTools import AddImages
 
 from RtsTools import GetCIStoDcmInds
-from RtsTools import ConvertContourDataToIcsPoints
-from RtsTools import UnpackPoints
+from RtsTools import GetCStoDcmInds
 
 from SegTools import GetPFFGStoDcmInds
 
@@ -36,6 +43,155 @@ PLOTTING FUNCTIONS
 ******************************************************************************
 ******************************************************************************
 """       
+
+
+
+def PlotImageAndContours(Image, ImageType, DicomDir, RtsFpath,
+                         ExportPlot, ExportDir, Label='', dpi=80,
+                         LogToConsole=False):
+    """
+    Image can either be 3D DICOM image or 3D labelmap.
+    """
+    
+    # Convert Image to Numpy array:
+    Nda = sitk.GetArrayFromImage(Image)
+    
+    IndsInContours = GetIndsInContours(RtsFpath, DicomDir)
+    
+    # Import the RTS object:
+    Rts = dcmread(RtsFpath)
+    
+    ContourToSliceNums = GetCStoDcmInds(Rts, GetDicomSOPuids(DicomDir))
+    
+    # The slices to plot are all slice numbers in ContourToSliceNums and all
+    # non-zero masks in Image if ImageType is 'Labelmap':
+    SliceNums = []
+    SliceNums.extend(ContourToSliceNums)
+    
+    if ImageType in ['Labelmap', 'labelmap', 'LabelMap']:
+        Non0inds = []
+        
+        # Get the indices of non-zero arrays in Nda: 
+        for i in range(Nda.shape[0]):
+            if Nda[i].sum() > 0:
+                Non0inds.append(i)
+        
+        #Nnon0s = len(Non0inds)
+        
+        SliceNums.extend(Non0inds)
+        
+        print(f'Non0inds = {Non0inds}')
+        
+    
+    print(f'ContourToSliceNums = {ContourToSliceNums}')
+    
+    SliceNums = list(set(SliceNums))
+    
+    print(f'SliceNums = {SliceNums}')
+    
+    #Nslices = len(SliceNums)
+    
+    # Set the number of subplot rows and columns:
+    #Ncols = np.int8(np.ceil(np.sqrt(Nnon0s)))
+    Ncols = 1
+    
+    # Limit the number of rows to 5 otherwise it's difficult to make sense of
+    # the images:
+    #if Ncols > 5:
+    #    Ncols = 5
+    
+    #Nrows = np.int8(np.ceil(Nnon0s/Ncols))
+    Nrows = len(SliceNums)
+    
+    # Create a figure with two subplots and the specified size:
+    if ExportPlot:
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows), dpi=300)
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=300)
+    else:
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows))
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(15*Ncols, 6*Nrows), dpi=dpi)
+        
+    
+    n = 0 # sub-plot number
+    
+    # List of colours for multiple ROIs per slice (limited to 5 for now):
+    colours = ['r', 'c', 'm', 'y', 'g']
+    
+    # Loop through each slice number in SliceNums: 
+    for s in SliceNums:
+        
+        if LogToConsole:
+                print('\ns =', s)
+                
+        
+        # Only plot if Nda[s] is not empty (i.e. if it is a DICOM 2D image or
+        # a non-empty mask):
+        #if Nda[s].sum() > 0:
+        
+        n += 1 # increment sub-plot number
+        
+        #plt.subplot(Nrows, Ncols, n)
+        #plt.axis('off')
+        ax = plt.subplot(Nrows, Ncols, n)
+
+        #ax = plt.subplot(Nrows, Ncols, n, aspect=AR)
+          
+        # Plot the image:
+        ax.imshow(Nda[s], cmap=plt.cm.Greys_r)
+        #ax.set_aspect(ar)
+        
+        # Does this slice have a contour?
+        if s in ContourToSliceNums:
+            #ind = ContourToSliceNums.index(s)
+            
+            # Find all occurances of slice s in ContourToSliceNums:
+            inds = [i for i, val in enumerate(ContourToSliceNums) if val==s]
+            
+            for i in range(len(inds)):
+                if ImageType in ['DICOM', 'Dicom', 'dicom']:
+                    Points = IndsInContours[inds[i]]
+                    
+                    # Convert contour data from Patient Coordinate System to  
+                    # Image Coordinate System:
+                    Indices = ConvertContourDataToIcsPoints(Points, DicomDir)
+                    
+                else:
+                    # ImageType in ['Labelmap', 'labelmap']
+                    Indices = IndsInContours[inds[i]]
+                
+                
+                # Unpack the indices:
+                X, Y, Z = Unpack(Indices)
+                
+                # Plot the contour points:
+                plt.plot(X, Y, linewidth=0.5, c=colours[i]);
+        
+        
+        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+        
+        ax.set_title(f'Slice {s}')
+        #plt.axis('off')
+        
+            
+            
+    if ExportPlot:
+        CDT = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        ExportFname = CDT + '_' + ImageType + '_' + Label
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+        
+    #print(f'PixAR = {PixAR}')
+    #print(f'AxisAR = {AxisAR}')
+        
+    return
+
 
 
 
