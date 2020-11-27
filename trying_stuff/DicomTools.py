@@ -8,12 +8,16 @@ Created on Thu Oct 15 10:44:06 2020
 
 
 # Import packages:
-import os
-from pydicom import read_file
-import numpy as np
-from natsort import natsorted
+#import os
+#from pydicom import read_file
+#import numpy as np
+#from natsort import natsorted
 
-from ImageTools import GetImageAttributes
+##import importlib
+##import ImageTools
+##importlib.reload(ImageTools)
+
+#from ImageTools import GetImageAttributes
 
 
 
@@ -49,6 +53,11 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
                     -- sorted along the scan direction in ascending order
                     
     """
+    
+    import os
+    from natsort import natsorted
+    from pydicom import read_file
+    import numpy as np
     
     #print('\nSortMethod (input for GetDicomFpaths()) =', SortMethod)
     
@@ -170,6 +179,7 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
         Dicoms    - List of DICOM objects
     """
     
+    from pydicom import read_file
     
     #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
     
@@ -237,10 +247,17 @@ def GetDicomSOPuids(DicomDir):
     Get a list of SOP Instance UIDs for a DICOM series.
     
     Inputs:
-        DicomDir - (String) Directory containing the DICOMs
+    ------
+    
+    DicomDir : string
+        Directory containing the DICOMs.
         
-    Returns:
-        SOPuids  - List of strings of the SOP UIDs of the DICOMs 
+    
+    Outputs:
+    -------
+    
+    SOPuids : list of strings
+        List of the SOP UIDs of the DICOMs.
     """
     
     Dicoms = ImportDicoms(DicomDir=DicomDir, SortMethod='slices', 
@@ -258,7 +275,124 @@ def GetDicomSOPuids(DicomDir):
 
 
 
+def GetDicomUids(DicomDir):
+    """
+    Get the Study, Series, Frame of Reference and SOP Instance UIDs for a DICOM 
+    series.
+    
+    Inputs:
+    ------
+    
+    DicomDir : string
+        Directory containing the DICOMs.
+        
+    
+    Outputs:
+    -------
+    
+    Studyuid : string
+        Study Instance UID of the DICOM series.
+        
+    Seriesuid : string
+        Series Instance UID of the DICOM series.
+        
+    FORuid : string
+        Frame of Reference UID of the DICOM series.
+        
+    SOPuids : list of strings
+        List of the SOP UIDs of the DICOMs.
+    """
+    
+    Dicoms = ImportDicoms(DicomDir=DicomDir, SortMethod='slices', 
+                          LogToConsole=False)
+    
+    SOPuids = [] 
+    
+    for dicom in Dicoms:
+        SOPuids.append(dicom.SOPInstanceUID)
+        
+    Studyuid = Dicoms[0].StudyInstanceUID
+    Seriesuid = Dicoms[0].SeriesInstanceUID
+    FORuid = Dicoms[0].FrameOfReferenceUID
+        
+    return Studyuid, Seriesuid, FORuid, SOPuids
+
+
+
+
+
+
+
+def GetRoiLabels(Roi):
+    """
+    Get the list of contour/segment labels in a RTS/SEG ROI.
+    
+    Inputs:
+        Roi    - ROI Object from a RTS/SEG file
+    
+        
+    Returns:
+        Labels - (List of strings) Contour/Segment labels
+    """
+    
+    Labels = [] 
+    
+    if 'RTSTRUCT' in Roi.Modality:
+        sequences = Roi.StructureSetROISequence
+        
+        for sequence in sequences:
+            label = sequence.ROIName
+            
+            Labels.append(label)
+            
+    elif 'SEG' in Roi.Modality:
+    
+        sequences = Roi.SegmentSequence
+        
+        for sequence in sequences:
+            label = sequence.SegmentLabel
+            
+            Labels.append(label) 
+            
+    else:
+        msg = "The ROI object is not recognised as being RTS or SEG."
+        
+        raise Exception(msg)
+        
+    return Labels
+
+
+
+
+
+
+
+
+
+def IsSameModalities(Roi0, Roi1):
+    """
+    Compare Modality tag of two RTS or two SEG objects. 
+    """
+
+    if Roi0.Modality == Roi1.Modality:
+        return True
+    
+    else:
+        return False
+
+
+
+
+
+
+
+
+
 def InspectDicomStudyDir(StudyDir):
+    import os
+    from natsort import natsorted
+    from ImageTools import GetImageAttributes
+    
     # First get a list of DICOM scan directories
     ScanDirs = []
     ScanDirNames = []
@@ -318,28 +452,25 @@ def InspectDicomStudyDir(StudyDir):
     Origins = []
     Dirs = []
     Spacings = []
-    Dims = []
+    Size = []
     FORuids = []
     
     # Loop through each Scan directory:
     for ScanDir in ScanDirs:
     
         # Get the Image Attributes:
-        origin, dirs,\
-        spacings, dims = GetImageAttributes(DicomDir=ScanDir, 
-                                            Package='pydicom')
+        Studyuid, Seriesuid, FORuid, size, spacings, ST,\
+        IPPs, dirs = GetImageAttributes(ScanDir)
         
         # Get the DICOMs:
         DicomFpaths, Dicoms = ImportDicoms(DirPath=ScanDir, 
                                            SortMethod='slices', 
                                            Debug=False)
         
-        FORuid = Dicoms[0].FrameOfReferenceUID
-        
-        Origins.append(origin)
+        Origins.append(IPPs[0])
         Dirs.append(dirs)
         Spacings.append(spacings)
-        Dims.append(dims)
+        Size.append(size)
         FORuids.append(FORuid)
         
     
@@ -347,10 +478,10 @@ def InspectDicomStudyDir(StudyDir):
     StudyDict = {'Scan num':ScanNums,
                  'Scan label':ScanLabels,
                  #'FOR UID':FORuids,
+                 'Size':Size,
+                 'Spacings':Spacings,
                  'Origin':Origins,
-                 'Directions':Dirs,
-                 'Dimensions':Dims,
-                 'Spacings':Spacings
+                 'Directions':Dirs
                  }
     
     #return StudyDict, ScanNums, ScanLabels, FORuids, Origins, Dirs, Dims, Spacings
@@ -360,10 +491,13 @@ def InspectDicomStudyDir(StudyDir):
 
 
 
-def InspectDicomSubjectDir(SubjectDir):
+def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
     """
     This is not complete.
     """
+    
+    import os
+    from natsort import natsorted
     
     # Get a list of study directories:
     StudyDirs = os.list(SubjectDir)

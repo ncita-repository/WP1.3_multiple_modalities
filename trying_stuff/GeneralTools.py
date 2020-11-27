@@ -7,13 +7,17 @@ Created on Wed Nov 11 11:57:05 2020
 
 
 # Import packages:
-from copy import deepcopy
-import numpy as np
-import matplotlib.pyplot as plt
+#from copy import deepcopy
+#import numpy as np
+#import matplotlib.pyplot as plt
 
-from DicomTools import GetDicomSOPuids
+##import importlib
+##import DicomTools
+##importlib.reload(DicomTools)
 
-from SegTools import GetPFFGStoDcmInds
+#from DicomTools import GetDicomSOPuids
+
+#from SegTools import GetPFFGStoSliceInds
 
 
 
@@ -49,6 +53,50 @@ def ItemsUniqueToWithin(List, epsilon=1e-5):
 
 
 
+
+
+
+def UniqueItems(Nda, NonZero=False):
+    """
+    Get list of unique items in a Numpy data array.
+    
+    Inputs:
+    ------
+    
+    Nda : Numpy data array
+    
+    NonZero : boolean (optional; False by default)
+        If NonZero=True only unique non-zero items will be returned.
+        
+    
+    Outputs:
+    -------
+    
+    UniqueList : List of unique items.
+    """
+    
+    import numpy as np
+    
+    Nda = np.ndarray.flatten(Nda)
+    
+    if NonZero:
+        inds = np.nonzero(Nda)
+        
+        Nda = Nda[inds]
+        
+    #print(f'\nNda.shape = {Nda.shape}')
+        
+    UniqueList = list(set(Nda.tolist()))
+    
+    return UniqueList
+        
+    
+        
+    
+    
+    
+    
+
 def AddItemToListAndSort(OrigList, Item):
     """
     Append an item to a list and return the sorted list. 
@@ -62,6 +110,8 @@ def AddItemToListAndSort(OrigList, Item):
         NewList  - Item appended to OrigList and sorted 
     """
     
+    from copy import deepcopy
+    
     NewList = deepcopy(OrigList)
 
     NewList.append(Item)
@@ -69,6 +119,9 @@ def AddItemToListAndSort(OrigList, Item):
     NewList.sort()
     
     return NewList
+
+
+
 
 
 
@@ -95,11 +148,15 @@ def Unpack(Items):
                  e.g. [z0, z1, z2, ...]
     """
     
+    import numpy as np
+    
     nda = np.array(Items)
     
     if len(nda.shape) < 2:
-        raise Exception("The input argument is a list of length 1.\n",
-                        "There is nothing to unpack.")
+        msg = "The input argument is a list of length 1. There is nothing to" \
+              + " unpack."
+        
+        raise Exception(msg)
         
     dim = nda.shape[1]
     
@@ -113,7 +170,6 @@ def Unpack(Items):
         for x, y in Items:
             X.append(x)
             Y.append(y)
-            Z.append(z)
             
         return X, Y
     
@@ -127,8 +183,48 @@ def Unpack(Items):
         return X, Y, Z
     
     else:
-        raise Exception(f"The input argument has dim = {dim}.\n",
-                        "Only dim = 2 or dim = 3 is allowed.")
+        msg = f"The input argument has dim = {dim}. Only dim = 2 or dim = 3 "\
+              + "is allowed."
+        
+        raise Exception(msg)
+
+
+
+
+
+
+def AreListsEqualToWithinEpsilon(List0, List1, epsilon=1e-06):
+    """
+    Are two lists equal to within epsilon?
+    
+    Default value of epsilon is 1e-06.
+    """
+    
+    import numpy as np
+    
+    # Get the maximum value of their absolute differences:
+    AbsDiffs = abs(np.array(List0) - np.array(List1))
+    MaxAbsDiff = max(AbsDiffs)
+    
+    if MaxAbsDiff < epsilon:
+        IsEqual = True
+    else:
+        IsEqual = False
+        
+    return IsEqual
+
+
+
+
+
+
+def PrintTitle(Title):
+    
+    ul = '*' * len(Title)
+    print('\n' + Title)
+    print(ul + '\n')
+    
+    return
 
 
 
@@ -153,6 +249,8 @@ def GetExtremePoints(Image):
 
 
 def CropNonZerosIn2dMask(Orig2dMask):
+    
+    import numpy as np
     
     #print('\nShape of Orig2dMask =', Orig2dMask.shape)
     
@@ -187,16 +285,20 @@ def CropNonZerosIn2dMask(Orig2dMask):
 def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
     """ Compare cropped masks of non-zero elements only. """ 
     
+    from DicomTools import GetDicomSOPuids
+    from SegTools import GetPFFGStoSliceInds
+    import matplotlib.pyplot as plt
+    
     # Get the DICOM SOP UIDs:
     OrigSOPuids = GetDicomSOPuids(DicomDir=OrigDicomDir)
     NewSOPuids = GetDicomSOPuids(DicomDir=NewDicomDir)
     
-    # Get the Per-frameFunctionalGroupsSequence-to-DICOM slice indices:
-    OrigPFFGStoDcmInds = GetPFFGStoDcmInds(OrigSegRoi, OrigSOPuids)
-    NewPFFGStoDcmInds = GetPFFGStoDcmInds(NewSegRoi, NewSOPuids)
+    # Get the Per-frameFunctionalGroupsSequence-to-slice indices:
+    OrigPFFGStoSliceInds = GetPFFGStoSliceInds(OrigSegRoi, OrigSOPuids)
+    NewPFFGStoSliceInds = GetPFFGStoSliceInds(NewSegRoi, NewSOPuids)
     
-    # Combined indices from OrigPFFGStoDcmInds and NewPFFGStoDcmInds:
-    AllInds = OrigPFFGStoDcmInds + NewPFFGStoDcmInds
+    # Combined indices from OrigPFFGStoSliceInds and NewPFFGStoSliceInds:
+    AllInds = OrigPFFGStoSliceInds + NewPFFGStoSliceInds
     
     # Remove duplicates:
     AllInds = list(set(AllInds))
@@ -209,9 +311,9 @@ def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
     OrigShape = Orig3dMask.shape
     NewShape = New3dMask.shape
     
-    print(f'Segments exist in OrigSegRoi on slices {OrigPFFGStoDcmInds}')
+    print(f'Segments exist in OrigSegRoi on slices {OrigPFFGStoSliceInds}')
     print(f'Shape of Orig3dMask = {OrigShape}')
-    print(f'\nSegments exist in NewSegRoi on slices {NewPFFGStoDcmInds}')
+    print(f'\nSegments exist in NewSegRoi on slices {NewPFFGStoSliceInds}')
     print(f'Shape of New3dMask = {NewShape}\n')
     
     # Initialise the 3D cropped SEG masks:
@@ -241,8 +343,8 @@ def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
         SliceNum = AllInds[i]
         
         # Does slice SliceNum have a segment in OrigSegRoi or NewSegRoi?
-        if SliceNum in OrigPFFGStoDcmInds:
-            OrigFrameNum = OrigPFFGStoDcmInds.index(SliceNum)
+        if SliceNum in OrigPFFGStoSliceInds:
+            OrigFrameNum = OrigPFFGStoSliceInds.index(SliceNum)
         
             ax = plt.subplot(Nrows, Ncols, n, aspect='equal')
             ax.imshow(Orig3dMaskCropped[OrigFrameNum])
@@ -251,8 +353,8 @@ def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
             
         n += 1 # increment sub-plot number
         
-        if SliceNum in NewPFFGStoDcmInds:
-            NewFrameNum = NewPFFGStoDcmInds.index(SliceNum)
+        if SliceNum in NewPFFGStoSliceInds:
+            NewFrameNum = NewPFFGStoSliceInds.index(SliceNum)
     
             ax = plt.subplot(Nrows, Ncols, n, aspect='equal')
             ax.imshow(New3dMaskCropped[NewFrameNum])

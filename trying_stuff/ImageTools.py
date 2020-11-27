@@ -7,13 +7,22 @@ Created on Wed Nov 11 11:56:14 2020
 
 
 
-
 # Import packages and functions:
 #import os
-import SimpleITK as sitk
-import numpy as np
-from GeneralTools import ItemsUniqueToWithin
-from DicomTools import ImportDicoms
+#import SimpleITK as sitk
+#import numpy as np
+#import time
+
+##import importlib
+##import GeneralTools
+##importlib.reload(GeneralTools)
+##import DicomTools
+##importlib.reload(DicomTools)
+
+#from GeneralTools import ItemsUniqueToWithin
+#from DicomTools import ImportDicoms
+
+
 
 
 
@@ -27,26 +36,34 @@ DICOM IMAGE FUNCTIONS
 
 
 
-
 def ImportImage(DicomDir):
     """
     Import a DICOM series as a SimpleITK multi-dimensional image.
     
     Inputs:
-        DicomDir - (String) Directory containing the Source DICOMs
+    ------
         
-    Returns:
-        Image    - (SimpleITK object) SimpleITK image
+    DicomDir : string
+        Directory containing the DICOMs.
+        
+        
+    Outputs:
+    -------
+    
+    Image : SimpleITK object
+        SimpleITK 3D image of the DICOM stack.
     
     """
     
+    import SimpleITK as sitk
     
     
-    SitkReader = sitk.ImageSeriesReader()
-    SitkNames = SitkReader.GetGDCMSeriesFileNames(DicomDir)
-    
-    SitkReader.SetFileNames(SitkNames)
-    Image = SitkReader.Execute()
+    Reader = sitk.ImageSeriesReader()
+    Fnames = Reader.GetGDCMSeriesFileNames(DicomDir)
+    Reader.SetFileNames(Fnames)
+    #Reader.ReadImageInformation() # doesn't exist for ImageSeriesReader; works
+    # for ImageFileReader
+    Image = Reader.Execute()
     Image = sitk.Cast(Image, sitk.sitkFloat32)
     
     
@@ -103,47 +120,57 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
     
     
     Inputs:
-        DicomDir   - (String) Directory containing DICOMs  
+    ------
         
-        Package    - (String) Package to use; acceptable inputs are:
-                     - 'pydicom' (default)
-                     - 'sitk' (SimpleITK)
+    DicomDir : string
+        Directory containing DICOMs.
         
-    Returns:
-        Size       - (List of integers) The size/dimensions of the 3D image 
-                     along x, y and z, e.g. [Columns, Rows, NumOfSlices]
+    Package : string (optional; 'pydicom' by default) 
+        Package to use; acceptable inputs are:
+         - 'pydicom' (default)
+         - 'sitk' (SimpleITK)
+        
+    Outputs:
+    -------
+        
+    Size : list of integers
+        The size/dimensions of the 3D image along x, y and z, 
+        e.g. [Columns, Rows, NumOfSlices]
                      
-        Spacings   - (List of floats) The pixel spacings along x, y and z 
-                     (= SliceThickness appended to PixelSpacing), 
-                     e.g. [di, dj, dk]
+    Spacings : list of floats
+        The pixel spacings along x, y and z (= SliceThickness appended to 
+        PixelSpacing), e.g. [di, dj, dk]
                      
-        Positions  - (List of list of floats) The ImagePositionPatient of all 
-                     slices in the DICOM series, 
-                     e.g. [[x0_0, y0_0, z0_0], [x1_0, y1_0, z1_0], ...]
+    Positions : list of list of floats
+        The ImagePositionPatient of all slices in the DICOM series, 
+        e.g. [[x0_0, y0_0, z0_0], [x1_0, y1_0, z1_0], ...]
         
-        Directions - (List of floats) The direction cosine along x (rows), 
-                     y (columns) and z (slices) 
-                     
-                     Notes:
-                         1) When using Pydicom the cross product of the x and y
-                         direction cosines from ImageOrientationPatient is
-                         used to obtain the direction cosine along x.
-                         
-                         2) There is a sign difference between the cross-terms
-                         obtained from Pydicom and SimpleITK. If the Directions
-                         obtained from Pydicom are:
-                         
-                         [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz],
-                         
-                         the Directions obtained from SimpleITK would be:
-                         
-                         [Xx, -Xy, -Xz, -Yx, Yy, -Yz, -Zx, -Zy, Zz].
-                         
-                         3) When using Pydicom the Directions will not be 
-                         correct for coronal or sagittal image stacks.
+    Directions : list of floats
+        The direction cosine along x (rows), y (columns) and z (slices).
+           
+          
+    Notes:
+    -----
+    
+    1) When using Pydicom the cross product of the x and y direction cosines 
+    from ImageOrientationPatient is used to obtain the direction cosine along x.
+    
+    2) There is a sign difference between the cross-terms obtained from Pydicom
+    and SimpleITK. If the Directions obtained from Pydicom are:
+        [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz],
         
+    the Directions obtained from SimpleITK would be:
+        [Xx, -Xy, -Xz, -Yx, Yy, -Yz, -Zx, -Zy, Zz].
+        
+    3) When using Pydicom the Directions will not be correct for coronal or 
+    sagittal image stacks.    
     """
-
+    
+    import numpy as np
+    from DicomTools import ImportDicoms
+    from GeneralTools import ItemsUniqueToWithin
+    
+    
     if Package=='sitk':
         # Import the image:
         SitkIm = ImportImage(DicomDir)
@@ -161,7 +188,19 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
         
         Directions = SitkIm.GetDirection() 
         
-        SliceThick = None
+        
+        """
+        Since ImageSeriesReader() (invoked in ImportImage()) doesn't allow for
+        calling ReadImageInformation(), it's not straightforward to get 
+        metadata using sitk.  So instead get the FOR UID and SliceThickness 
+        using Pydicom.
+        """
+        # Import the DICOMs:
+        Dicoms = ImportDicoms(DicomDir=DicomDir, 
+                              SortMethod='slices', 
+                              LogToConsole=False)
+        
+        SliceThick = float(Dicoms[0].SliceThickness)
         
         
         
@@ -176,6 +215,7 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
         Dicoms = ImportDicoms(DicomDir=DicomDir, 
                               SortMethod='slices', 
                               LogToConsole=False)
+        
         
         Size = [int(Dicoms[0].Columns), int(Dicoms[0].Rows), len(Dicoms)]
         
@@ -270,9 +310,9 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
     
         
     if LogToConsole:
-        print(f'Size = {Size} \n\nSpacings = {Spacings} \n\n',
-              f'SliceThickness = {SliceThick} \n\n',
-              f'Positions = {Positions} \n\nDirections = {Directions}')
+        print(f'\nSize = {Size} \nSpacings = {Spacings}',
+              f'\nSliceThickness = {SliceThick} \nPositions = {Positions}',
+              f'\nDirections = {Directions}')
     
     
     return Size, Spacings, SliceThick, Positions, Directions
@@ -283,7 +323,7 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
 
 
 
-def CompareSourceTargetImageAttributes(SrcDcmDir, TrgDcmDir):
+def CompareImageAttributes(SrcDcmDir, TrgDcmDir):
 #def CompareSrTrgImAttrs(SrcDcmDir, TrgDcmDir):    
     # Get the image attributes using Pydicom:
     SrcPydiSize, SrcPydiSpacing, SrcPydiST,\
@@ -302,8 +342,7 @@ def CompareSourceTargetImageAttributes(SrcDcmDir, TrgDcmDir):
                                                 Package='sitk')
     
     
-    title = 'Select image attributes for *Source* DICOMs from Pydicom and' \
-            + 'SimpleITK:'
+    title = 'Image attributes for *Source* DICOMs from Pydicom and SimpleITK:'
     ul = '*' * len(title)
     
     print('\n' + title)
@@ -316,7 +355,7 @@ def CompareSourceTargetImageAttributes(SrcDcmDir, TrgDcmDir):
     print(f'Pydi Origin         = {SrcPydiIPP[0]}')
     print(f'Sitk Origin         = {list(SrcSitkIPP[0])}\n\n')
     
-    title = 'Select image attributes for *Target* DICOMs from Pydicom and SimpleITK:'
+    title = 'Image attributes for *Target* DICOMs from Pydicom and SimpleITK:'
     ul = '*' * len(title)
     
     print('\n' + title)
@@ -352,6 +391,9 @@ def InitialiseImage(RefImage):
                    Spacing, Origin and Direction as RefIm
 
     """
+    
+    import SimpleITK as sitk
+    
     NewImage = sitk.Image(RefImage.GetSize(), RefImage.GetPixelID())
     
     NewImage.SetOrigin(RefImage.GetOrigin())
@@ -377,7 +419,9 @@ def ImageMax(Image):
         Maximum - Maximum value of Image
 
     """
-            
+    
+    import SimpleITK as sitk
+    
     MaxImFilt = sitk.MinimumMaximumImageFilter()
     MaxImFilt.Execute(Image)
     
@@ -397,6 +441,8 @@ def ImageMin(Image):
         Minimum - Maximum value of Image
 
     """
+    
+    import SimpleITK as sitk
     
     MaxImFilt = sitk.MinimumMaximumImageFilter()
     MaxImFilt.Execute(Image)
@@ -420,6 +466,8 @@ def OrImages(Image0, Image1):
         ImageOr - Pixel-wise Image0 OR Image1
 
     """
+    
+    import SimpleITK as sitk
             
     OrImageFilt = sitk.OrImageFilter()
     ImageOr = OrImageFilt.Execute(Image0, Image1)
@@ -442,13 +490,86 @@ def AddImages(Image0, Image1):
         ImageSum - Pixel-wise sum of Image0 and Image1
 
     """
-            
+    
+    import SimpleITK as sitk
+    
     AddImFilt = sitk.AddImageFilter()
     ImageSum = AddImFilt.Execute(Image0, Image1)
     
     return ImageSum
 
 
+
+
+
+
+def SumAllLabmapIms(LabmapIms):
+    
+    import SimpleITK as sitk
+    
+    # Initialise labelmap sum:
+    LMImsSum = InitialiseImage(LabmapIms[0])
+    
+    for i in range(len(LabmapIms)):
+        LMImsSum = AddImages(LMImsSum, LabmapIms[i])
+
+    # Convert to numpy arrays:
+    LMImsSumNpa = sitk.GetArrayFromImage(LMImsSum)
+    
+    return LMImsSumNpa
+
+
+
+
+#def AddLabelmaps(Labmap0, Labmap1):
+            
+#def SumAllLabelmapIms(LabmapIms):
+    
+
+
+
+
+
+
+def MeanPixArr(PixArr, binary=True):
+    """
+    Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
+    binary pixel array if binary=True (or undefined).
+    
+    Inputs:
+    ------
+    
+    PixArr : Numpy array
+        PixelData from a SEG file loaded as a Numpy array
+        
+    binary : boolean (optional; True by default)
+        If binary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by 0.5.
+        
+        
+    Outputs:
+    -------
+    
+    MeanPixArr : Numpy array
+        Mean pixel array.
+    """
+    
+    import numpy as np
+    
+    F, R, C = PixArr.shape
+    
+    # Initialise MeanPixArr:
+    MeanPixArr = np.zeros((1, R, C), dtype='uint')
+    
+    
+    result = np.mean(PixArr, axis=0)
+            
+    if binary:
+        MeanPixArr[0] = (result >= 0.5) * result
+    else:
+        MeanPixArr[0] = result
+        
+    return MeanPixArr
 
 
 
@@ -482,6 +603,7 @@ def ResampleImage(Image, RefImage, Interpolation):
         images (e.g. segmentations) so that no new labels are introduced.
     """
 
+    import SimpleITK as sitk
     
     # Define which interpolator to use:
     if 'inear' in Interpolation:
@@ -526,3 +648,193 @@ def ResampleImage(Image, RefImage, Interpolation):
     #sitk.Show(ResImage)
 
     return ResImage
+
+
+
+
+
+
+
+def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
+    """
+    Register two 3D SimpleITK images using SimpleElastix.
+    
+    Inputs:
+    ------
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+        
+    Tx : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  
+        Acceptable values include:
+            'rigid'
+            'affine'
+            'bspline' (i.e. deformable)
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Returns:
+    -------
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    RegImFilt : SimpleITK image filter
+        Elastix image transformation filter used to transform MovIm to FixIm.
+    """
+    
+    import SimpleITK as sitk
+    import time
+    
+    # Start timing:
+    times = []
+    times.append(time.time())
+    
+    # Initiate RegImFilt:
+    RegImFilt = sitk.ElastixImageFilter()
+    #RegImFilt.LogToConsoleOn() # <-- no output in Jupyter
+    RegImFilt.LogToConsoleOff() # <-- no output in Jupyter
+    RegImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+    
+    # Define the fixed and moving images:
+    RegImFilt.SetFixedImage(FixIm)
+    RegImFilt.SetMovingImage(MovIm)
+    
+    # Get the default parameter map template for the chosen transformation:
+    #RegImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
+    #ParamMap = sitk.GetDefaultParameterMap('affine')
+    ParamMap = sitk.GetDefaultParameterMap(Tx)
+    
+    # Re-assign some parameters:
+    ParamMap['AutomaticTransformInitialization'] = ['true']
+    ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+    ParamMap['WriteIterationInfo'] = ['true']
+    ParamMap['MaximumNumberOfIterations'] = ['512']
+    ParamMap['UseDirectionCosines'] = ['true']
+    """ 29/05: Trying this instead of trying to change it for Transformix """
+    #ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0'] 
+    
+    # Print the parameters:
+    #for keys,values in ElastixParamMap.items():
+    #    print(keys, '=', values)
+        
+    # Set the parameter map:
+    RegImFilt.SetParameterMap(ParamMap)
+    
+    if True:#LogToConsole:
+        print('\nPerforming registration...')
+    
+    # Register the 3D images:
+    RegImFilt.Execute()
+    # Get the registered image:
+    RegIm = RegImFilt.GetResultImage()
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if True:#LogToConsole:
+        print(f'Took {Dtime} s to register the 3D image stacks.')
+    
+    return RegIm, RegImFilt
+
+
+
+
+
+
+def TransformImage(Im, RegImFilt):
+    """
+    Transform a 3D SimpleITK image using SimpleElastix.
+    
+    Inputs:
+    ------
+    
+    Im : SimpleITK image 
+        The 3D image to be transformed.
+        
+    RegImFilt : SimpleITK image filter
+        Elastix image transformation filter used to perform image registration.
+        
+        
+    Returns:
+    -------
+    
+    TxIm : SimpleITK image
+        The 3D transformed image.
+    """
+    
+    import SimpleITK as sitk
+    
+    # Initiate TransformixImageFilter:
+    TxImFilt = sitk.TransformixImageFilter()
+    #TxImFilt.LogToConsoleOn() # <-- no output in Jupyter
+    TxImFilt.LogToConsoleOff() # <-- no output in Jupyter
+    TxImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+    
+    # Get the transform parameter map. Start by getting the transfer parameter 
+    # mapused for the registration (= ElastixParamMap):
+    #TxParamMap = RegImFilt.GetParameterMap() 
+    
+    # Set the parameter map:
+    TxImFilt.SetTransformParameterMap(RegImFilt.GetTransformParameterMap())
+    
+    TxImFilt.SetMovingImage(Im)
+    #TxImFilt.SetInterpolator(sitk.sitkNearestNeighbor) <- command not allowed
+    
+    # Set up for computing deformation field:
+    #TxImFilt.ComputeDeformationFieldOn()
+    
+    # Transform Im:
+    TxImFilt.Execute()
+    
+    TxIm = TxImFilt.GetResultImage()
+    
+    return TxIm
+
+
+
+
+
+def BinaryThresholdImage(Im, Threshold=0.5):
+    """
+    Binary threshold a 3D SimpleITK image.
+    
+    Inputs:
+    ------
+    
+    Im : SimpleITK image 
+        The 3D image to be transformed.
+        
+    Threshold : float (optional; 0.5 by default)
+        Lower limit threshold.
+        
+        
+    Returns:
+    -------
+    
+    BinaryIm : SimpleITK image
+        The 3D binary threshold image.
+    """
+    
+    import SimpleITK as sitk
+    
+    BinThreshImFilt = sitk.BinaryThresholdImageFilter()
+    
+    #BinThreshImFilt.SetInput(Im)
+    
+    BinThreshImFilt.SetLowerThreshold(Threshold)
+    BinThreshImFilt.SetUpperThreshold(1)
+    BinThreshImFilt.SetOutsideValue(0)
+    BinThreshImFilt.SetInsideValue(1)
+    
+    #BinThreshImFilt.Execute()
+    #BinIm = BinThreshImFilt.GetOutput()
+    
+    BinIm = BinThreshImFilt.Execute(Im)
+    
+    return BinIm

@@ -8,31 +8,33 @@ Created on Wed Nov 11 11:52:36 2020
 
 
 # Import packages and functions:
-import os
-import time
-from pydicom import dcmread
-import SimpleITK as sitk
-import numpy as np
-import matplotlib.pyplot as plt
+#import os
+#import time
+#from pydicom import dcmread
+#import SimpleITK as sitk
+#import numpy as np
+#import matplotlib.pyplot as plt
 
-#import importlib
-#import GeneralTools
-#importlib.reload(GeneralTools)
-from GeneralTools import Unpack
+##import importlib
+##import GeneralTools
+##importlib.reload(GeneralTools)
+#from GeneralTools import Unpack
 
-from ConversionTools import GetIndsInContours
-from ConversionTools import ConvertContourDataToIcsPoints
+#from ConversionTools import GetIndsInRois
+#from ConversionTools import ConvertContourDataToIcsPoints
 
-from DicomTools import ImportDicoms
-from DicomTools import GetDicomSOPuids
+#from DicomTools import ImportDicoms
+#from DicomTools import GetDicomSOPuids
+#from DicomTools import GetRoiLabels
 
-from ImageTools import InitialiseImage
-from ImageTools import AddImages
+#from ImageTools import InitialiseImage
+#from ImageTools import AddImages
+#from ImageTools import SumAllLabmapIms
 
-from RtsTools import GetCIStoDcmInds
-from RtsTools import GetCStoDcmInds
+#from RtsTools import GetCIStoSliceInds
+#from RtsTools import GetCStoSliceInds
 
-from SegTools import GetPFFGStoDcmInds
+#from SegTools import GetPFFGStoSliceInds
 
 
 
@@ -46,158 +48,20 @@ PLOTTING FUNCTIONS
 
 
 
-def PlotImageAndContours(Image, ImageType, DicomDir, RtsFpath,
-                         ExportPlot, ExportDir, Label='', dpi=80,
-                         LogToConsole=False):
-    """
-    Image can either be 3D DICOM image or 3D labelmap.
-    """
-    
-    # Convert Image to Numpy array:
-    Nda = sitk.GetArrayFromImage(Image)
-    
-    IndsInContours = GetIndsInContours(RtsFpath, DicomDir)
-    
-    # Import the RTS object:
-    Rts = dcmread(RtsFpath)
-    
-    ContourToSliceNums = GetCStoDcmInds(Rts, GetDicomSOPuids(DicomDir))
-    
-    # The slices to plot are all slice numbers in ContourToSliceNums and all
-    # non-zero masks in Image if ImageType is 'Labelmap':
-    SliceNums = []
-    SliceNums.extend(ContourToSliceNums)
-    
-    if ImageType in ['Labelmap', 'labelmap', 'LabelMap']:
-        Non0inds = []
-        
-        # Get the indices of non-zero arrays in Nda: 
-        for i in range(Nda.shape[0]):
-            if Nda[i].sum() > 0:
-                Non0inds.append(i)
-        
-        #Nnon0s = len(Non0inds)
-        
-        SliceNums.extend(Non0inds)
-        
-        print(f'Non0inds = {Non0inds}')
-        
-    
-    print(f'ContourToSliceNums = {ContourToSliceNums}')
-    
-    SliceNums = list(set(SliceNums))
-    
-    print(f'SliceNums = {SliceNums}')
-    
-    #Nslices = len(SliceNums)
-    
-    # Set the number of subplot rows and columns:
-    #Ncols = np.int8(np.ceil(np.sqrt(Nnon0s)))
-    Ncols = 1
-    
-    # Limit the number of rows to 5 otherwise it's difficult to make sense of
-    # the images:
-    #if Ncols > 5:
-    #    Ncols = 5
-    
-    #Nrows = np.int8(np.ceil(Nnon0s/Ncols))
-    Nrows = len(SliceNums)
-    
-    # Create a figure with two subplots and the specified size:
-    if ExportPlot:
-        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows), dpi=300)
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=300)
-    else:
-        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
-        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows))
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(15*Ncols, 6*Nrows), dpi=dpi)
-        
-    
-    n = 0 # sub-plot number
-    
-    # List of colours for multiple ROIs per slice (limited to 5 for now):
-    colours = ['r', 'c', 'm', 'y', 'g']
-    
-    # Loop through each slice number in SliceNums: 
-    for s in SliceNums:
-        
-        if LogToConsole:
-                print('\ns =', s)
-                
-        
-        # Only plot if Nda[s] is not empty (i.e. if it is a DICOM 2D image or
-        # a non-empty mask):
-        #if Nda[s].sum() > 0:
-        
-        n += 1 # increment sub-plot number
-        
-        #plt.subplot(Nrows, Ncols, n)
-        #plt.axis('off')
-        ax = plt.subplot(Nrows, Ncols, n)
 
-        #ax = plt.subplot(Nrows, Ncols, n, aspect=AR)
-          
-        # Plot the image:
-        ax.imshow(Nda[s], cmap=plt.cm.Greys_r)
-        #ax.set_aspect(ar)
-        
-        # Does this slice have a contour?
-        if s in ContourToSliceNums:
-            #ind = ContourToSliceNums.index(s)
-            
-            # Find all occurances of slice s in ContourToSliceNums:
-            inds = [i for i, val in enumerate(ContourToSliceNums) if val==s]
-            
-            for i in range(len(inds)):
-                if ImageType in ['DICOM', 'Dicom', 'dicom']:
-                    Points = IndsInContours[inds[i]]
-                    
-                    # Convert contour data from Patient Coordinate System to  
-                    # Image Coordinate System:
-                    Indices = ConvertContourDataToIcsPoints(Points, DicomDir)
-                    
-                else:
-                    # ImageType in ['Labelmap', 'labelmap']
-                    Indices = IndsInContours[inds[i]]
-                
-                
-                # Unpack the indices:
-                X, Y, Z = Unpack(Indices)
-                
-                # Plot the contour points:
-                plt.plot(X, Y, linewidth=0.5, c=colours[i]);
-        
-        
-        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-        
-        ax.set_title(f'Slice {s}')
-        #plt.axis('off')
-        
-            
-            
-    if ExportPlot:
-        CDT = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-        
-        ExportFname = CDT + '_' + ImageType + '_' + Label
-        
-        ExportFpath = os.path.join(ExportDir, ExportFname)
-        
-        plt.savefig(ExportFpath, bbox_inches='tight')
-        
-        print('\nPlot exported to:\n\n', ExportFpath)
-        
-        
-    #print(f'PixAR = {PixAR}')
-    #print(f'AxisAR = {AxisAR}')
-        
-    return
-
-
-
-
-def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir, 
+def PlotDicomsAndContours_OLD(DicomDir, RtsFpath, ExportPlot, ExportDir, 
                           LogToConsole=False):
     
+    from pydicom import dcmread
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import time
+    import os
+    from DicomTools import ImportDicoms
+    from DicomTools import GetDicomSOPuids
+    from RtsTools import GetCIStoSliceInds
+    from ConversionTools import ConvertContourDataToIndices
+    from GeneralTools import Unpack
     
     
     # Import the DICOMs:
@@ -207,10 +71,10 @@ def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir,
     SOPuids = GetDicomSOPuids(DicomDir=DicomDir)
     
     # Import the RTS ROI:
-    RtsRoi = pydicom.dcmread(RtsFpath)
+    RtsRoi = dcmread(RtsFpath)
     
     # Get the ContourImageSequence-to-DICOM slice indices:
-    CIStoDcmInds = GetCIStoDcmInds(RtsRoi, SOPuids)
+    CIStoSliceInds = GetCIStoSliceInds(RtsRoi, SOPuids)
     
     # Get a list of the Contour Sequences in the ROI:
     ContourSequences = RtsRoi.ROIContourSequence[0].ContourSequence
@@ -220,7 +84,7 @@ def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir,
     
     # All DICOM slices that have contours will be plotted. The number of
     # slices to plot:
-    Nslices = len(CIStoDcmInds)
+    Nslices = len(CIStoSliceInds)
     
     # Set the number of subplot rows and columns:
     Ncols = np.int8(np.ceil(np.sqrt(Nslices)))
@@ -251,7 +115,7 @@ def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir,
         n += 1 # increment sub-plot number
         
         # The DICOM slice number is:
-        s = CIStoDcmInds[i]
+        s = CIStoSliceInds[i]
         
         #plt.subplot(Nrows, Ncols, n)
         #plt.axis('off')
@@ -271,10 +135,10 @@ def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir,
                 
         # Convert contour data from Patient Coordinate System to Image 
         # Coordinate System:
-        PointsICS = ConvertContourDataToIcsPoints(ContourData, DicomDir)
+        PointsICS = ConvertContourDataToIndices(ContourData, DicomDir)
         
         # Unpack the points:
-        X, Y, Z = UnpackPoints(PointsICS)
+        X, Y, Z = Unpack(PointsICS)
         
         # Plot the contour points:
         plt.plot(X, Y, linewidth=0.5, c='red');
@@ -314,10 +178,235 @@ def PlotDicomsAndContours(DicomDir, RtsFpath, ExportPlot, ExportDir,
 
 
 
+def PlotImagesAndContours(Image, ImageType, DicomDir, RtsFpath,
+                          ExportPlot, ExportDir, Label='', dpi=80,
+                          LogToConsole=False):
+    """
+    Image can either be a 3D DICOM image, or 3D labelmap, or a list of 3D 
+    labelmaps.
+    """
+    
+    import SimpleITK as sitk
+    from pydicom import dcmread
+    import matplotlib.pyplot as plt
+    from ConversionTools import GetIndsInRois
+    from DicomTools import GetDicomSOPuids
+    from RtsTools import GetCStoSliceInds
+    from DicomTools import GetRoiLabels
+    from ConversionTools import ConvertContourDataToIndices
+    from GeneralTools import Unpack
+    import time
+    import os
+    
+    # Convert Image to a list of Numpy arrays (even if only one 3D 
+    # DICOM/labelmap):
+    Ndas = []
+    
+    if isinstance(Image, list):
+        for r in range(len(Image)):
+            Ndas.append(sitk.GetArrayFromImage(Image[r]))
+            
+    elif isinstance(Image, sitk.SimpleITK.Image):
+        Ndas.append(sitk.GetArrayFromImage(Image))
+        
+    else:
+        msg = "Image is type " + str(type(Image)) + ". It must either be a " \
+              + "SimpleITK Image or a list of SimpleITK Images"
+                        
+        raise Exception(msg)
+    
+    # Import the RTS object:
+    Rts = dcmread(RtsFpath)
+    
+    
+    IndsInRois = GetIndsInRois(RtsFpath, DicomDir)
+    
+    Nrois = len(IndsInRois)
+    
+    
+    ContourToSliceNumsByRoi = GetCStoSliceInds(Rts, GetDicomSOPuids(DicomDir))
+    
+    print(f'ContourToSliceNumsByRoi = {ContourToSliceNumsByRoi}')
+    
+    # The slices to plot are all slice numbers in ContourToSliceNums and all
+    # non-zero masks in Image if ImageType is 'Labelmap':
+    #SliceNums = []
+    #SliceNums.extend(ContourToSliceNums)
+    
+    # Get all the slice numbers in ContourToSliceNumsByRoi:
+    SliceNums = []
+    
+    for nums in ContourToSliceNumsByRoi:
+        SliceNums.extend(nums)
+        
+    # If ImageType is 'Labelmap' append the slice numbers of any non-zero 
+    # frames:
+    
+    if ImageType in ['Labelmap', 'labelmap', 'LabelMap']:
+        Non0inds = []
+        
+        for r in range(len(Ndas)):
+            # Get the indices of non-zero arrays in Ndas[r]: 
+            for i in range(Ndas[r].shape[0]):
+                if Ndas[r][i].sum() > 0:
+                    Non0inds.append(i)
+            
+            #Nnon0s = len(Non0inds)
+            
+            SliceNums.extend(Non0inds)
+        
+        print(f'Non0inds = {Non0inds}')
+        
+    
+    # Get the list of unique slice numbers:
+    SliceNums = list(set(SliceNums))
+    
+    print(f'SliceNums = {SliceNums}')
+    
+    #Nslices = len(SliceNums)
+    
+    # Set the number of subplot rows and columns:
+    #Ncols = np.int8(np.ceil(np.sqrt(Nnon0s)))
+    Ncols = Nrois
+    
+    # Limit the number of rows to 5 otherwise it's difficult to make sense of
+    # the images:
+    #if Ncols > 5:
+    #    Ncols = 5
+    
+    #Nrows = np.int8(np.ceil(Nnon0s/Ncols))
+    Nrows = len(SliceNums)
+    
+    # Create a figure with two subplots and the specified size:
+    if ExportPlot:
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows), dpi=300)
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=300)
+    else:
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows))
+        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15*Ncols, 6*Nrows), dpi=dpi)
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
+        
+    
+    n = 0 # sub-plot number
+    
+    # List of colours for multiple ROIs per slice (limited to 5 for now):
+    colours = ['r', 'c', 'm', 'y', 'g']
+    
+    # Get ROI labels:
+    RoiLabels = GetRoiLabels(Rts)
+    
+    # Loop through each slice number in SliceNums: 
+    for s in SliceNums:
+        
+        if LogToConsole:
+                print('\ns =', s)
+                
+        
+        # Only plot if Nda[s] is not empty (i.e. if it is a DICOM 2D image or
+        # a non-empty mask):
+        #if Nda[s].sum() > 0:
+        
+        #n += 1 # increment sub-plot number
+        
+        ##plt.subplot(Nrows, Ncols, n)
+        ##plt.axis('off')
+        #ax = plt.subplot(Nrows, Ncols, n)
+
+        #ax = plt.subplot(Nrows, Ncols, n, aspect=AR)
+          
+        # Plot the image:
+        #ax.imshow(Nda[s], cmap=plt.cm.Greys_r)
+        ##ax.set_aspect(ar)
+        
+        
+        # Loop through all ROIs:
+        for r in range(Nrois):
+            n += 1 # increment sub-plot number
+            
+            ax = plt.subplot(Nrows, Ncols, n)
+            
+            # Plot the image:
+            if len(Ndas) > 1:
+                ax.imshow(Ndas[r][s], cmap=plt.cm.Greys_r)
+                
+            else:
+                ax.imshow(Ndas[0][s], cmap=plt.cm.Greys_r)
+            
+            
+            ContourToSliceNums = ContourToSliceNumsByRoi[r]
+            
+            # Does this slice have a contour?
+            if s in ContourToSliceNums:
+                #ind = ContourToSliceNums.index(s)
+                
+                # Find all occurances of slice s in ContourToSliceNums:
+                inds = [i for i, val in enumerate(ContourToSliceNums) if val==s]
+                
+                for i in range(len(inds)):
+                    if ImageType in ['DICOM', 'Dicom', 'dicom']:
+                        Points = IndsInRois[r][inds[i]]
+                        
+                        # Convert contour data from Patient Coordinate System to  
+                        # Image Coordinate System:
+                        Indices = ConvertContourDataToIndices(Points, DicomDir)
+                        
+                    else:
+                        # ImageType in ['Labelmap', 'labelmap']
+                        Indices = IndsInRois[r][inds[i]]
+                    
+                    
+                    # Unpack the indices:
+                    X, Y, Z = Unpack(Indices)
+                    
+                    # Plot the contour points:
+                    plt.plot(X, Y, linewidth=0.5, c=colours[i]);
+                    
+                ax.set_title(f'Slice {s} \n' + RoiLabels[r])
+                
+            else:
+                ax.set_title(f'Slice {s}')
+                
+            
+            
+            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+            
+            #ax.set_title(f'Slice {s}')
+            #plt.axis('off')
+        
+            
+            
+    if ExportPlot:
+        CDT = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        ExportFname = CDT + '_' + ImageType + '_' + Label
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+        
+    #print(f'PixAR = {PixAR}')
+    #print(f'AxisAR = {AxisAR}')
+        
+    return
+
+
+
+
+
 def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir, 
                           LogToConsole):
     
-    
+    from pydicom import dcmread
+    import numpy as np
+    import os
+    import matplotlib.pyplot as plt
+    from DicomTools import ImportDicoms
+    from DicomTools import GetDicomSOPuids
+    from SegTools import GetPFFGStoSliceInds
     
     # Import the DICOMs:
     Dicoms = ImportDicoms(DicomDir=DicomDir)
@@ -326,16 +415,16 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
     SOPuids = GetDicomSOPuids(DicomDir=DicomDir)
     
     # Import the SEG ROI:
-    SegRoi = pydicom.dcmread(SegFpath)
+    SegRoi = dcmread(SegFpath)
     
-    # Get the Per-frameFunctionalGroupsSequence-to-DICOM slice indices:
-    PFFGStoDcmInds = GetPFFGStoDcmInds(SegRoi, SOPuids)
+    # Get the Per-frameFunctionalGroupsSequence-to-slice indices:
+    PFFGStoSliceInds = GetPFFGStoSliceInds(SegRoi, SOPuids)
     
     # The 3D labelmap:
     SegNpa = SegRoi.pixel_array
     
     if LogToConsole:
-        print(f'Segments exist on slices {PFFGStoDcmInds}')
+        print(f'Segments exist on slices {PFFGStoSliceInds}')
         print(f'Shape of PixelData = {SegNpa.shape}\n')
 
     
@@ -345,7 +434,7 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
     # All DICOM slices that have segmentations will be plotted. The number of
     # slices to plot (= number of segments):
     #Nslices = int(SegRoi.NumberOfFrames)
-    Nslices = len(PFFGStoDcmInds)
+    Nslices = len(PFFGStoSliceInds)
     
     # Set the number of subplot rows and columns:
     Ncols = np.int8(np.ceil(np.sqrt(Nslices)))
@@ -374,7 +463,7 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
                 print('\ni =', i)
                 
         # The DICOM slice number is:
-        s = PFFGStoDcmInds[i]
+        s = PFFGStoSliceInds[i]
         
         #plt.subplot(Nrows, Ncols, n)
         #plt.axis('off')
@@ -427,8 +516,8 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
 
 
 
-def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
-                               ImageType, ExportPlot, ExportDir, 
+def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcLabel, TrgLabel, 
+                               Case, ImageType, ExportPlot, ExportDir, 
                                LogToConsole=False, dpi=80):
     
     """ 
@@ -440,6 +529,12 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
     multiple ROIs.
     """
     
+    import SimpleITK as sitk
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    import time
+    
     # If ___Im is an Image (i.e. not a list), redefine it as a list with one 
     # item:  
     if type(SrcIm).__name__ == 'Image':
@@ -450,26 +545,36 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
         
     if type(TrgIm).__name__ == 'Image':
         TrgIm = [TrgIm]
+        
+        
+    if Case == '5':
+        ResOrReg = 'Registered'
+        ResOrReg_short = '_Reg'
+        #print('\nCase = 5 -->', ResOrReg)
+    else:
+        ResOrReg = 'Resampled'
+        ResOrReg_short = '_Resamp'
+        
     
     if LogToConsole:
         print('\nThe Source and Target image size:\n',
                       f'\n   Original Source:  {SrcIm[0].GetSize()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetSize()} \n',
+                      '\n  ', ResOrReg, f'Source: {ResSrcIm[0].GetSize()} \n',
                       f'\n   Target:           {TrgIm[0].GetSize()}')
             
         print('\nThe Source and Target voxel spacings:\n',
                       f'\n   Original Source:  {SrcIm[0].GetSpacing()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetSpacing()} \n',
+                      '\n  ', ResOrReg, f'Source: {ResSrcIm[0].GetSpacing()} \n',
                       f'\n   Target:           {TrgIm[0].GetSpacing()}')
             
         print('\nThe Source and Target Origin:\n',
                       f'\n   Original Source:  {SrcIm[0].GetOrigin()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetOrigin()} \n',
+                      '\n  ', ResOrReg, f'Source: {ResSrcIm[0].GetOrigin()} \n',
                       f'\n   Target:           {TrgIm[0].GetOrigin()}')
             
         print('\nThe Source and Target Direction:\n',
                       f'\n   Original Source:  {SrcIm[0].GetDirection()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetDirection()} \n',
+                      '\n  ', ResOrReg, f'Source: {ResSrcIm[0].GetDirection()} \n',
                       f'\n   Target:           {TrgIm[0].GetDirection()}')
 
     
@@ -551,7 +656,7 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
                 cbar = fig.colorbar(im, ax=ax)
                 cbar.mappable.set_clim(0, MaxVal)
             ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Original Source slice {s}')
+            ax.set_title(f'Original Source ({SrcLabel}) slice {s}')
             
         n += 1 # increment sub-plot number
             
@@ -569,7 +674,7 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
                 cbar = fig.colorbar(im, ax=ax)
                 cbar.mappable.set_clim(0, MaxVal)
             ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Resampled Source slice {s}')
+            ax.set_title(ResOrReg + f' Source ({SrcLabel}) slice {s}')
             
         n += 1 # increment sub-plot number
         
@@ -587,7 +692,7 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
                 cbar = fig.colorbar(im, ax=ax)
                 cbar.mappable.set_clim(0, MaxVal)
             ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Target slice {s}')
+            ax.set_title(f'Target ({TrgLabel}) slice {s}')
             
         n += 1 # increment sub-plot number
         
@@ -597,9 +702,9 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
         CurrentTime = time.strftime("%H%M%S", time.gmtime())
         CurrentDateTime = CurrentDate + '_' + CurrentTime
                       
-        ExportFname = CurrentDateTime + '_Orig' + SrcImLabel + '_Resamp' \
-                      + SrcImLabel + '_' + TrgImLabel + '_' + ImageType \
-                      + '.jpg'
+        ExportFname = CurrentDateTime + '_Case' + Case + '_Orig' + SrcLabel \
+                      + ResOrReg_short + SrcLabel + '_' + TrgLabel + '_' \
+                      + ImageType + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
@@ -616,11 +721,16 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
 def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm, 
                                       SrcLMIms, ResSrcLMIms, 
                                       TrgLMIms, NewTrgLMIms,
-                                      SrcImLabel, TrgImLabel,
+                                      SrcLabel, TrgLabel, Case,
                                       ImageType, ExportPlot, ExportDir, 
                                       LogToConsole=False, dpi=80):
-    
     """ 
+    Note:
+    
+    ResSrcIm = Resampled Source image could instead be a Registered Source
+    image.
+    
+    
     ___Im is a 3D SimpleITK image from DICOMs.
     
     ___LMIms is either be a 3D labelmap as a SimpleITK image, or a list
@@ -631,32 +741,49 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
     
     """
     
+    if Case == '5':
+        ResOrReg = 'Registered'
+        ResOrReg_short = '_Reg'
+        #print('\nCase = 5 -->', ResOrReg)
+    else:
+        ResOrReg = 'Resampled'
+        ResOrReg_short = '_Resamp'
+        #print('\nCase != 5 -->', ResOrReg)
     
     if LogToConsole:
         print('\nThe Source and Target image size:\n',
-                      f'\n   Original Source:  {SrcIm.GetSize()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetSize()} \n',
-                      f'\n   Original Target:  {TrgIm.GetSize()}')#,
-                      #f'\n   New Target:       {NewTrgIm[0].GetSize()}')
+                      f'   Original Source:  {SrcIm.GetSize()} \n',
+                      '  ', ResOrReg, f'Source: {ResSrcIm.GetSize()} \n',
+                      f'   Original Target:  {TrgIm.GetSize()}')#,
+                      #f'   New Target:       {NewTrgIm[0].GetSize()}')
             
         print('\nThe Source and Target voxel spacings:\n',
-                      f'\n   Original Source:  {SrcIm.GetSpacing()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetSpacing()} \n',
-                      f'\n   Original Target:  {TrgIm.GetSpacing()}')#,
-                      #f'\n   New Target:       {NewTrgIm[0].GetSpacing()}')
-            
+                      f'   Original Source:  {SrcIm.GetSpacing()} \n',
+                      '  ', ResOrReg, f'Source: {ResSrcIm.GetSpacing()} \n',
+                      f'   Original Target:  {TrgIm.GetSpacing()}')#,
+                      #f'   New Target:       {NewTrgIm[0].GetSpacing()}')
+        
+        """
         print('\nThe Source and Target Origin:\n',
-                      f'\n   Original Source:  {SrcIm.GetOrigin()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetOrigin()} \n',
-                      f'\n   Original Target:  {TrgIm.GetOrigin()}')#,
-                      #f'\n   New Target:       {NewTrgIm[0].GetOrigin()}')
+                      f'   Original Source:  {SrcIm.GetOrigin()} \n',
+                      f'   Resampled Source: {ResSrcIm.GetOrigin()} \n',
+                      f'   Original Target:  {TrgIm.GetOrigin()}')#,
+                      #f'   New Target:       {NewTrgIm[0].GetOrigin()}')
             
         print('\nThe Source and Target Direction:\n',
-                      f'\n   Original Source:  {SrcIm.GetDirection()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetDirection()} \n',
-                      f'\n   Original Target:  {TrgIm.GetDirection()}')#,
-                      #f'\n   New Target:       {NewTrgIm[0].GetDirection()}')
-        
+                      f'   Original Source:  {SrcIm.GetDirection()} \n',
+                      f'   Resampled Source: {ResSrcIm.GetDirection()} \n',
+                      f'   Original Target:  {TrgIm.GetDirection()}')#,
+                      #f'   New Target:       {NewTrgIm[0].GetDirection()}')
+        """
+    
+    
+    import SimpleITK as sitk
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from ImageTools import SumAllLabmapIms
+    import os
+    import time
     
     if 'Images' in ImageType:
         # Convert from sitk to numpy array:
@@ -676,16 +803,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
             
             if LogToConsole:
                 print(f'\nScrIm has {len(SrcLMIms)} segments')
-                
-            # Add the segments contained in the list of sitk images into a 
-            # single sitk image:
-            SrcLMImsSum = InitialiseImage(SrcLMIms[0])
-            
-            for r in range(len(SrcLMIms)):
-                SrcLMImsSum = AddImages(SrcLMImsSum, SrcLMIms[r])
         
-            # Convert to numpy arrays:
-            SrcLMImsSumNpa = sitk.GetArrayFromImage(SrcLMImsSum)
+            # Add all segments pixel-by-pixel:
+            SrcLMImsSumNpa = SumAllLabmapIms(SrcLMIms)
             
             SrcNslices = SrcLMImsSumNpa.shape[0]
     
@@ -698,15 +818,8 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
             if LogToConsole:
                 print(f'ResScrIm has {len(ResSrcLMIms)} segments')
                 
-            # Add the segments contained in the list of sitk images into a 
-            # single sitk image:
-            ResSrcLMImsSum = InitialiseImage(ResSrcLMIms[0])
-            
-            for r in range(len(ResSrcLMIms)):
-                ResSrcLMImsSum = AddImages(ResSrcLMImsSum, ResSrcLMIms[r])
-                
-            # Convert to numpy arrays:
-            ResSrcLMImsSumNpa = sitk.GetArrayFromImage(ResSrcLMImsSum)
+            # Add all segments pixel-by-pixel:
+            ResSrcLMImsSumNpa = SumAllLabmapIms(ResSrcLMIms)
             
             ResSrcNslices = ResSrcLMImsSumNpa.shape[0]
         
@@ -719,15 +832,8 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
             if LogToConsole:
                 print(f'TrgIm has {len(TrgLMIms)} segments')
                 
-            # Add the segments contained in the list of sitk images into a 
-            # single sitk image:
-            TrgLMImsSum = InitialiseImage(TrgLMIms[0])
-            
-            for r in range(len(TrgLMIms)):
-                TrgLMImsSum = AddImages(TrgLMImsSum, TrgLMIms[r])
-                
-            # Convert to numpy arrays:
-            TrgLMImsSumNpa = sitk.GetArrayFromImage(TrgLMImsSum)
+            # Add all segments pixel-by-pixel:
+            TrgLMImsSumNpa = SumAllLabmapIms(TrgLMIms)
             
             TrgNslices = TrgLMImsSumNpa.shape[0]
         
@@ -740,17 +846,19 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
             if LogToConsole:
                 print(f'NewTrgIm has {len(NewTrgLMIms)} segments')
                 
-            # Add the segments contained in the list of sitk images into a 
-            # single sitk image:
-            NewTrgLMImsSum = InitialiseImage(NewTrgLMIms[0])
-            
-            for r in range(len(NewTrgLMIms)):
-                NewTrgLMImsSum = AddImages(NewTrgLMImsSum, NewTrgLMIms[r])
-                
-            # Convert to numpy arrays:
-            NewTrgLMImsSumNpa = sitk.GetArrayFromImage(NewTrgLMImsSum)
+            # Add all segments pixel-by-pixel:
+            NewTrgLMImsSumNpa = SumAllLabmapIms(NewTrgLMIms)
             
             NewTrgNslices = NewTrgLMImsSumNpa.shape[0]
+            
+            # Convert only the last segment (last labelmap image):
+            NewTrgOnlyNewLM = sitk.GetArrayFromImage(NewTrgLMIms[-1])
+            
+            
+        print('\nThe Source and Target labelmap image size:\n',
+              f'   Original Source:  {SrcLMIms[0].GetSize()} \n',
+              ResOrReg, f'Source: {ResSrcLMIms[0].GetSize()} \n',
+              f'   Original Target:  {TrgLMIms[0].GetSize()}')
             
             
     else:
@@ -764,7 +872,8 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
     Nslices = max(SrcNslices, TrgNslices)
 
     
-    # Get the maxima for all slices for all labelmaps:
+    # Get the maxima for all slices for all labelmaps along x (axis=2) and
+    # y (axis=1):
     if 'Labelmaps' in ImageType:
         SrcMaximaBySlice = np.amax(SrcLMImsSumNpa, axis=(1,2))
         
@@ -773,12 +882,15 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
         TrgMaximaBySlice = np.amax(TrgLMImsSumNpa, axis=(1,2))
         
         NewTrgMaximaBySlice = np.amax(NewTrgLMImsSumNpa, axis=(1,2))
+        
+        NewTrgOnlyNewLmMaximaBySlice = np.amax(NewTrgOnlyNewLM, axis=(1,2))
            
         if LogToConsole:
             print(f'\nSrcMaximaBySlice   = {SrcMaximaBySlice}')
-            print(f'\nResSrcMaximaBySlice = {ResSrcMaximaBySlice}')
-            print(f'\nTrgMaximaBySlice    = {TrgMaximaBySlice}')
-            print(f'\nNewTrgMaximaBySlice = {NewTrgMaximaBySlice}')
+            print(f'ResSrcMaximaBySlice = {ResSrcMaximaBySlice}')
+            print(f'TrgMaximaBySlice    = {TrgMaximaBySlice}')
+            print(f'NewTrgMaximaBySlice = {NewTrgMaximaBySlice}')
+            print(f'NewTrgOnlyNewLmMaximaBySlice = {NewTrgOnlyNewLmMaximaBySlice}')
         
         
         #AllMaxima = [max(SrcMaximaBySlice), max(ResSrcMaximaBySlice),
@@ -813,32 +925,45 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
     # Prepare the figure.
     
     # Set the number of subplot rows and columns:
-    Ncols = 4
+    #Ncols = 4
+    Ncols = 5 # 19/11: Add New Target new segment only in 5th column
     
     if 'Labelmaps' in ImageType:
-        Nrows = np.count_nonzero(np.array(SumOfMaximaBySlice))
+        NonZeroSlices = np.nonzero(SumOfMaximaBySlice)
+        SliceNums = NonZeroSlices[0]
+        
+        #print(f'\nNonZeroSlices = {NonZeroSlices}')
+        
+        #Nrows = np.count_nonzero(np.array(SumOfMaximaBySlice))
+        Nrows = len(SliceNums)
     else:
+        SliceNums = list(range(Nslices))
+        
         Nrows = Nslices
     
     
     # Create a figure with two subplots and the specified size:
     #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=dpi)
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
         
     
     n = 1 # initialised sub-plot number
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
     alpha = 0.2
+    alpha = 0.5
     
     # Define the colormap to use for labelmaps overlaid over DICOMs:
     #cmap = plt.cm.Reds
-    cmap = plt.cm.cool
-    cmap = plt.cm.hsv
+    #cmap = plt.cm.cool
+    #cmap = plt.cm.hsv
+    cmap = plt.cm.nipy_spectral
     
     
-    # Loop through each slice: 
-    for s in range(Nslices):
+    # Loop through each SliceNums: 
+    for s in SliceNums:
+        #print(f's = {s}')
+        
         # Only proceed if labelmaps are not to be displayed or (if they are) at 
         # least one of the labelmaps is non-zero for this slice number:
         if not 'Labelmaps' in ImageType or SumOfMaximaBySlice[s]:
@@ -855,9 +980,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                         im = ax.imshow(SrcLMImsSumNpa[s], cmap=cmap,
                                        alpha=alpha)
                         
-                        #m = 1 if SrcMaximaBySlice[s] < 1 else SrcMaximaBySlice[s]
-                        #cbar = fig.colorbar(im, ax=ax)
-                        #cbar.mappable.set_clim(0, m)
+                        m = 1 if SrcMaximaBySlice[s] < 1 else SrcMaximaBySlice[s]
+                        cbar = fig.colorbar(im, ax=ax)
+                        cbar.mappable.set_clim(0, m)
                     
                 elif 'Labelmaps' in ImageType:
                     # Plot the labelmap only:
@@ -868,7 +993,12 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                     cbar.mappable.set_clim(0, m)
                         
                 ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Original Source slice {s}')
+                if len(SrcLMIms) == 1:
+                    ax.set_title(f'Original Source ({SrcLabel}) slice {s}'\
+                                 + '\n(only segmentation to be copied)')
+                else:
+                    ax.set_title(f'Original Source ({SrcLabel}) slice {s}'\
+                                 + '\n(sum of all segments)')
                  
                 
             n += 1 # increment sub-plot number
@@ -884,9 +1014,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                         im = ax.imshow(ResSrcLMImsSumNpa[s], cmap=cmap,
                                        alpha=alpha)
                         
-                        #m = 1 if ResSrcMaximaBySlice[s] < 1 else ResSrcMaximaBySlice[s]
-                        #cbar = fig.colorbar(im, ax=ax)
-                        #cbar.mappable.set_clim(0, m)
+                        m = 1 if ResSrcMaximaBySlice[s] < 1 else ResSrcMaximaBySlice[s]
+                        cbar = fig.colorbar(im, ax=ax)
+                        cbar.mappable.set_clim(0, m)
                     
                 elif 'Labelmaps' in ImageType:
                     im = ax.imshow(ResSrcLMImsSumNpa[s], cmap=plt.cm.Greys_r)
@@ -896,7 +1026,12 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                     cbar.mappable.set_clim(0, m)
                         
                 ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Resampled Source slice {s}')
+                if len(ResSrcLMIms) == 1:
+                    ax.set_title(ResOrReg + f' Source ({SrcLabel}) slice {s}'\
+                                 + '\n(only segmentation to be copied)')
+                else:
+                    ax.set_title(ResOrReg + f' Source ({SrcLabel}) slice {s}'\
+                                 + '\n(sum of all segments)')
                 
                 
             n += 1 # increment sub-plot number
@@ -912,9 +1047,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                         im = ax.imshow(TrgLMImsSumNpa[s], cmap=cmap,
                                        alpha=alpha)
                         
-                        #m = 1 if TrgMaximaBySlice[s] < 1 else TrgMaximaBySlice[s]
-                        #cbar = fig.colorbar(im, ax=ax)
-                        #cbar.mappable.set_clim(0, m)
+                        m = 1 if TrgMaximaBySlice[s] < 1 else TrgMaximaBySlice[s]
+                        cbar = fig.colorbar(im, ax=ax)
+                        cbar.mappable.set_clim(0, m)
                     
                 elif 'Labelmaps' in ImageType:
                     im = ax.imshow(TrgLMImsSumNpa[s], cmap=plt.cm.Greys_r)
@@ -924,7 +1059,8 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                     cbar.mappable.set_clim(0, m)
                     
                 ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Target slice {s}')
+                ax.set_title(f'Original Target ({TrgLabel}) slice {s}'\
+                             + '\n(sum of all segments)')
                 
             n += 1 # increment sub-plot number
                 
@@ -940,9 +1076,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                         im = ax.imshow(NewTrgLMImsSumNpa[s], cmap=cmap,
                                        alpha=alpha)
                         
-                        #m = 1 if NewTrgMaximaBySlice[s] < 1 else NewTrgMaximaBySlice[s]
-                        #cbar = fig.colorbar(im, ax=ax)
-                        #cbar.mappable.set_clim(0, m)
+                        m = 1 if NewTrgMaximaBySlice[s] < 1 else NewTrgMaximaBySlice[s]
+                        cbar = fig.colorbar(im, ax=ax)
+                        cbar.mappable.set_clim(0, m)
                     
                 elif 'Labelmaps' in ImageType:
                     im = ax.imshow(NewTrgLMImsSumNpa[s], cmap=plt.cm.Greys_r)
@@ -952,7 +1088,39 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
                     cbar.mappable.set_clim(0, m)
                     
                 ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'New Target slice {s}')
+                ax.set_title(f'New Target ({TrgLabel}) slice {s}'\
+                             + '\n(sum of all segments)')
+                
+            n += 1 # increment sub-plot number
+            
+                
+            
+            if s < NewTrgNslices:
+                # Plot the new segment of New Target only:
+                ax = plt.subplot(Nrows, Ncols, n)
+                    
+                if 'Images' in ImageType:      
+                    # Plot the New Target slice:
+                    im = ax.imshow(TrgImNpa[s], cmap=plt.cm.Greys_r)
+                    
+                    if 'Labelmaps' in ImageType:
+                        im = ax.imshow(NewTrgOnlyNewLM[s], cmap=cmap,
+                                       alpha=alpha)
+                        
+                        m = 1 if NewTrgMaximaBySlice[s] < 1 else NewTrgMaximaBySlice[s]
+                        cbar = fig.colorbar(im, ax=ax)
+                        cbar.mappable.set_clim(0, m)
+                    
+                elif 'Labelmaps' in ImageType:
+                    im = ax.imshow(NewTrgOnlyNewLM[s], cmap=plt.cm.Greys_r)
+                    
+                    m = 1 if NewTrgOnlyNewLmMaximaBySlice[s] < 1 else NewTrgOnlyNewLmMaximaBySlice[s]
+                    cbar = fig.colorbar(im, ax=ax)
+                    cbar.mappable.set_clim(0, m)
+                    
+                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                ax.set_title(f'New Target ({TrgLabel}) slice {s}'\
+                             + '\n(only new segment)')
                 
             n += 1 # increment sub-plot number
         
@@ -963,9 +1131,9 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
         CurrentTime = time.strftime("%H%M%S", time.gmtime())
         CurrentDateTime = CurrentDate + '_' + CurrentTime
                       
-        ExportFname = CurrentDateTime + '_Orig' + SrcImLabel + '_Resamp' \
-                      + SrcImLabel + '_' + TrgImLabel + '_New' + TrgImLabel \
-                      + '_' + ImageType + '.jpg'
+        ExportFname = CurrentDateTime + '_Case' + Case + '_Orig' + SrcLabel \
+                      + ResOrReg_short + SrcLabel + '_' + TrgLabel + '_New' \
+                      + TrgLabel + '_' + ImageType + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
