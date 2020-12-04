@@ -12,1332 +12,1593 @@ Old functions from RoiCopyTools.py and others
 """
 
 
-def ModifyRtsTagVals(TrgRts, TrgDicoms, NewTrgContourData, NewTrgRoiNums,
-                     NewTrgCStoSliceInds, FromRoiNum, FromSliceNum, SrcRts,
-                     LogToConsole=False):
+
+
+
+
+
+
+def CopyContourWithinSeries_OLD(SrcDcmDir, SrcRtsFpath, FromSliceNum, ToSliceNum, 
+                            LogToConsole=False):
     """
-    Modify various tag values of the new RTS ROI so that they are consistent
-    with the corresponding tag values of the DICOMs (e.g. SOPClassUID, 
-    SOPInstanceUID), and so that the ROIContourSequence values are consistent
-    with those of the original RTS ROI for existing contours, and with the
-    contour that has been copied from the original RTS ROI.
-         
-    Modify various tag values of the new SEG ROI so that they are consistent
-    with the corresponding tag values of the DICOMs.
-         
+    Copy a single contour on a given slice to another slice within the same
+    DICOM series.
+    
     
     Inputs:
     ------
-                              
-    TrgRts : Pydicom object
-        Original Target RTS ROI Object.
     
-    TrgDicoms : List of Pydicom objects
-        List of DICOM Objects that include the DICOMs that TrgRts relate to.
+    SrcDcmDir : string
     
-    NewTrgContourData : list of floats
-        Flat list of coordinates for Target containing the new ContourData.
+        Directory containing the Source (= Target) DICOMs
+                            
+    SrcRtsFpath : string
     
-    NewTrgRoiNums : List of integers
-        ROI numbers that correspond to each ROI in NewTrgRts.
-    
-    NewTrgCStoSliceInds : List of integers
-        Slice numbers that correspond to each contour in NewTrgRts.
-                           
-    FromRoiNum : integer
-        Source ROI number of the contour that was copied (counting from 0) 
-        (this is only used for generating a new Series Description).
-    
+        Full path of the Source (= Target) DICOM-RTSTRUCT file 
+                             
     FromSliceNum : integer
-        Source slice index in the DICOM stack corresponding to the contour 
-        that was copied (counting from 0) (this is only used for generating a 
-        new Series Description).
-                           
-    SrcRts : Pydicom object
-        Source RTS ROI object (this is only used for generating a new Series 
-        Description).
-                         
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
+    
+        Slice index of the Source (= Target) DICOM stack corresponding to the 
+        contour to be copied (counting from 0)
+                             
+    ToSliceNum : integer
+    
+        Slice index of the Target (= Source) DICOM stack where the contour will
+        be copied to (counting from 0)
+                            
+    LogToConsole : boolean
+    
+        Denotes whether some intermediate results will be logged to the console
+                            
+    
+    Output:
+    ------
         
+    TrgRts : Pydicom object
+    
+        Modified Target (= Source) ROI object 
+    
+    """
+    
+    # Import the Source RTSTRUCT ROI:
+    SrcRts = dcmread(SrcRtsFpath)
+    
+    # Import the Source (= Target) DICOMs:
+    SrcDicoms = ImportDicoms(DicomDir=SrcDcmDir)
+    
+    # Get the Source (= Target) DICOM SOP UIDs:
+    SrcSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    
+    # Get the ContourImageSequence-to-DICOM slice indices, 
+    # and ContourSequence-to-DICOM slice indices for the Source DICOMs:
+    SrcCIStoSliceInds = GetCIStoSliceInds(SrcRts, SrcSOPuids)
+    
+    SrcCStoSliceInds = GetCStoSliceInds(SrcRts, SrcSOPuids)
+    
+    
+    # Verify that a contour exists for FromSliceNum (this check won't be 
+    # necessary in the OHIF-Viewer but a bad input could occur here):
+    if not FromSliceNum in SrcCIStoSliceInds:
+        print(f'\nA contour does not exist on slice {FromSliceNum}.')
         
+        return
+    
+    
+    # Check if ToSliceNum already has a contour:
+    """
+    Note:
+        If slice number ToSliceNum already has a contour, it will be 
+        over-written with the contour data of slice number FromSliceNum.
+        If it doesn't have a contour, ContourImageSequence and 
+        ContourSequence need to be extended by one.
+    """
+    if ToSliceNum in SrcCIStoSliceInds:
+        # Use SrcRts as a template for TrgRts: 
+        TrgRts = deepcopy(SrcRts)
+        
+        # Create a new list of CIStoSliceInds:
+        TrgCIStoSliceInds = deepcopy(SrcCIStoSliceInds)
+        
+    else:
+        # Increase the length of the sequences:
+        TrgRts = AddToRtsSequences(SrcRts)
+        
+        # Create a new list of CIStoSliceInds by adding the index ToSliceNum 
+        # (representing the contour to be added to ContourImageSequence and to
+        # ContourSequence) to SrcCIStoSliceInds:
+        TrgCIStoSliceInds = AppendItemToListAndSort(SrcCIStoSliceInds, ToSliceNum)
+        
+    
+    if LogToConsole:
+        print('\nSrcCIStoSliceInds =', SrcCIStoSliceInds)
+        print('\nTrgCIStoSliceInds =', TrgCIStoSliceInds)
+    
+    # Modify select tags in TrgRts:
+    TrgRts = ModifyRtsTagVals(SrcRts, TrgRts, FromSliceNum, ToSliceNum, 
+                              SrcDicoms, SrcCIStoSliceInds, TrgCIStoSliceInds,
+                              LogToConsole)
+    
+    
+    
+    # Generate a new SOP Instance UID:
+    TrgRts.SOPInstanceUID = generate_uid()
+    
+    # Generate a new Series Instance UID:
+    TrgRts.SeriesInstanceUID = generate_uid()
+    
+    
+    return TrgRts
+
+
+
+
+
+def DirectCopyContourAcrossSeries_OLD(SrcDcmDir, SrcRtsFpath, FromSliceNum, 
+                                  TrgDcmDir, TrgRtsFpath, ToSliceNum, 
+                                  LogToConsole=False):
+    """
+    Make a direct copy of a single contour on a given slice to another slice in 
+    a different DICOM series.  A direct copy implies that the z-coordinates of
+    the Target points (copy of Source points) do not relate to the 
+    z-coordinates of the DICOM slice, since the voxels corresponding to the 
+    Target ROI volume do not relate to the voxels of the Source ROI volume.
+    
+    
+    Inputs:
+    ------
+        
+    SrcDcmDir : string
+    
+        Directory containing the Source DICOMs
+                            
+    SrcRtsFpath : string
+    
+        Full path of the Source DICOM-RTSTRUCT file 
+                             
+    FromSliceNum : integer
+    
+        Slice index of the Source DICOM stack corresponding to the contour to 
+        be copied (counting from 0)
+                       
+    TrgDcmDir : string
+    
+        Directory containing the Target DICOMs
+                            
+    TrgRtsFpath : string
+    
+        Full path of the Target DICOM-RTSTRUCT file 
+                             
+    ToSliceNum : integer
+    
+        Slice index of the Target DICOM stack where the contour will be copied 
+        to (counting from 0)
+                            
+    LogToConsole : boolean
+    
+        Denotes whether some intermediate results will be logged to the console
+         
+                   
     Output:
     ------
         
     NewTrgRts : Pydicom object
-        New Target RTS ROI object.
+    
+        Modified Target ROI object 
+    
     """
     
-    # Get the sequence number that corresponds to the slice number to be 
-    # copied, and the slice number to be copied to:
-    FromSeqNum = OrigCIStoDcmInds.index(FromSliceNum)
-    ToSeqNum = NewCIStoDcmInds.index(ToSliceNum)
+    # Import the Source and Target RTSTRUCT ROI:
+    SrcRts = dcmread(SrcRtsFpath)
+    TrgRts = dcmread(TrgRtsFpath)
+    
+    # Import the Target DICOMs:
+    TrgDicoms = ImportDicoms(DicomDir=TrgDcmDir)
+    
+    # Get the Source and Target DICOM SOP UIDs:
+    SrcSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    TrgSOPuids = GetDicomSOPuids(DicomDir=TrgDcmDir)
+    
+    # Get the ContourImageSequence-to-DICOM slice indices, 
+    # and ContourSequence-to-DICOM slice indices for Source and Target:
+    SrcCIStoSliceInds = GetCIStoSliceInds(SrcRts, SrcSOPuids)
+    
+    SrcCStoSliceInds = GetCStoSliceInds(SrcRts, SrcSOPuids)
+    
+    TrgCIStoSliceInds = GetCIStoSliceInds(TrgRts, TrgSOPuids)
+    
+    TrgCStoSliceInds = GetCStoSliceInds(TrgRts, TrgSOPuids)
+    
+    
+        
+    
+    # Verify that a contour exists for FromSliceNum (this check won't be 
+    # necessary in the OHIF-Viewer but a bad input could occur here):
+    if not FromSliceNum in SrcCIStoSliceInds:
+        print(f'\nA contour does not exist on slice {FromSliceNum} in the',
+              'Source DICOM series.')
+        
+        return
+    
+    # Verify that the slice that a contour is to be copied to exists (this 
+    # check won't be necessary in the OHIF-Viewer but a bad input could occur
+    # here):
+    if not ToSliceNum in list(range(len(TrgDicoms))):
+        print(f'\nThe Target DICOM series does not have slice {ToSliceNum}.')
+        
+        return
+    
+    
+    # Check if ToSliceNum already has a contour:
+    """
+    Note:
+        If slice number ToSliceNum already has a contour, it will be 
+        over-written with the contour data of slice number FromSliceNum.
+        If it doesn't have a contour, ContourImageSequence and 
+        ContourSequence need to be extended by one.
+    """
+    if ToSliceNum in TrgCIStoSliceInds:
+        # Use TrgRts as a template for NewTrgRts: 
+        NewTrgRts = deepcopy(TrgRts)
+        
+        # Create a new list of NewTrgCIStoSliceInds:
+        NewTrgCIStoSliceInds = deepcopy(TrgCIStoSliceInds)
+        
+    else:
+        # Increase the length of the sequences:
+        NewTrgRts = AddToRtsSequences(TrgRts)
+        
+        # Create a new list of TrgCIStoSliceInds by adding the index ToSliceNum 
+        # (representing the contour to be added to ContourImageSequence and to
+        # ContourSequence) to TrgCIStoSliceInds:
+        NewTrgCIStoSliceInds = AppendItemToListAndSort(TrgCIStoSliceInds, ToSliceNum)
+        
     
     if LogToConsole:
-        print(f'\nFromOrigSeqNum = {FromOrigSeqNum} -->',
-              f'OrigCIStoDcmInds[{FromOrigSeqNum}] =',
-              f'{OrigCIStoDcmInds[FromOrigSeqNum]}')
-        
-        print(f'ToNewSeqNum   = {ToNewSeqNum} -->',
-              f'NewCIStoDcmInds[{ToNewSeqNum}] =',
-              f'{NewCIStoDcmInds[ToNewSeqNum]}')
+        print('\nSrcCIStoSliceInds    =', SrcCIStoSliceInds)
+        print('\nTrgCIStoSliceInds    =', TrgCIStoSliceInds)
+        print('\nNewTrgCIStoSliceInds =', NewTrgCIStoSliceInds)
     
-    # Loop through each index in NewCIStoDcmInds and modify the values:
-    for i in range(len(NewCIStoDcmInds)):
-        # The DICOM slice index for the i^th sequence:
-        s = NewCIStoDcmInds[i]
-        
-        if LogToConsole:
-            print(f'\nNewCIStoDcmInds[{i}] = {NewCIStoDcmInds[i]}')
-            print(f'DICOM slice number = {s}')
-        
-        # Modify the Referenced SOP Class UID and Referenced SOP Instance UID 
-        # so that they are consistent with the SOP Class UID and SOP Instance  
-        # UID of their corresponding DICOMs:
-        """ SOPClassUIDs will need to be modified for cases where the contour
-        is being copied across different modality images. Not required for
-        copying within the same series:
-        NewRtsRoi.ReferencedFrameOfReferenceSequence[0]\
-                 .RTReferencedStudySequence[0]\
-                 .RTReferencedSeriesSequence[0]\
-                 .ContourImageSequence[i]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewRts.ReferencedFrameOfReferenceSequence[0]\
-              .RTReferencedStudySequence[0]\
-              .RTReferencedSeriesSequence[0]\
-              .ContourImageSequence[i]\
-              .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
-        
-        """ Ditto:
-        NewRts.ROIContourSequence[0]\
-              .ContourSequence[i]\
-              .ContourImageSequence[0]\
-              .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewRts.ROIContourSequence[0]\
-              .ContourSequence[i]\
-              .ContourImageSequence[0]\
-              .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
-                 
-        
-        
-        # Modify the Contour Number to match the value of the Source contour
-        #  being copied:
-        NewRts.ROIContourSequence[0]\
-              .ContourSequence[i]\
-              .ContourNumber = f"{i + 1}"
-                     
-                     
-        # Modify select values in ROIContourSequence:         
-        if i == ToNewSeqNum: 
-            if LogToConsole:
-                print('\nThis is a new sequence.')
-                print(f'Copying the {FromOrigSeqNum}th sequence from Source',
-                      f'to the {i}th sequence in Target.')
-                
-            # This is the new sequence. Copy from FromSeqNum.
-            # Modify the Number of Contour Points to match the value of the 
-            # Source contour being copied:
-            val = deepcopy(OrigRts.ROIContourSequence[0]\
-                                  .ContourSequence[FromOrigSeqNum]\
-                                  .NumberOfContourPoints)
-            
-            NewRts.ROIContourSequence[0]\
-                  .ContourSequence[i]\
-                  .NumberOfContourPoints = deepcopy(val)
-            
-            # Modify the Contour Data to match the value of the Source contour
-            # being copied:
-            val = deepcopy(OrigRts.ROIContourSequence[0]\
-                                  .ContourSequence[FromOrigSeqNum]\
-                                  .ContourData)
-            
-            NewRts.ROIContourSequence[0]\
-                  .ContourSequence[i]\
-                  .ContourData = deepcopy(val)
-        
-        else:
-            # This is an existing sequence. Find the index of OrigCIStoDcmInds 
-            # for this sequence number (of NewCIStoDcmInds):
-            ind = OrigCIStoDcmInds.index(NewCIStoDcmInds[i])
-            
-            if LogToConsole:
-                print('\nThis is an existing sequence.')
-                print(f'Copying the {ind}th sequence from Source to the {i}th',
-                      f'sequence in Target.')
-                                          
-            # Modify the Number of Contour Points to match the value of the 
-            # Source contour being copied:
-            val = deepcopy(OrigRts.ROIContourSequence[0]\
-                                  .ContourSequence[ind]\
-                                  .NumberOfContourPoints)
-            
-            NewRts.ROIContourSequence[0]\
-                  .ContourSequence[i]\
-                  .NumberOfContourPoints = deepcopy(val)
-            
-            # Modify the Contour Data to match the value of the Source contour
-            # being copied:
-            val = deepcopy(OrigRts.ROIContourSequence[0]\
-                                  .ContourSequence[ind]\
-                                  .ContourData)
-            
-            NewRts.ROIContourSequence[0]\
-                  .ContourSequence[i]\
-                  .ContourData = deepcopy(val)
-                  
-                  
+    # Modify select tags in TrgRts:
+    NewTrgRts = ModifyRtsTagVals(TrgRts, NewTrgRts, FromSliceNum, 
+                                 ToSliceNum, TrgDicoms, 
+                                 TrgCIStoSliceInds, NewTrgCIStoSliceInds,
+                                 LogToConsole)
+    
+    
+    
     # Generate a new SOP Instance UID:
     NewTrgRts.SOPInstanceUID = generate_uid()
     
     # Generate a new Series Instance UID:
     NewTrgRts.SeriesInstanceUID = generate_uid()
-                                          
-    return NewRts
+    
+    
+    return NewTrgRts
 
 
 
 
 
-
-
-
-
-
-def GetSegLabels(SegRoi):
+def MappedCopyContourAcrossSeries_OLD(SrcDcmDir, SrcRoiFpath, FromSliceNum, 
+                                 TrgDcmDir, TrgRoiFpath, LogToConsole):
     """
-    Get the list of segment labels in a SEG ROI.
+    I need to work with labelmaps!!!  See MappedCopySegmentAcrossSeries...
+    
+    Make a relationship-preserving copy of a single contour on a given slice to  
+    a different DICOM series.  Since the relationship is preserved, the voxels 
+    corresponding to the points copied to the Target ROI volume spatially
+    relate to the voxels corresponding to the points copied from the Source ROI
+    volume.
+    
+    There are four possible cases that will need to be accommodated*:
+        
+        2. The Source and Target images have the same FOR, IOP, IPP, PS and ST 
+        
+        3. The Source and Target images have the same FOR and IOP but have
+           different PS and/or ST (if different ST they will likely have 
+           different IPP)
+        
+        4. The Source and Target images have the same FOR but have different
+           IOP and IPP, and possibly different PS and/or ST
+           
+        5. The Source and Target images have different FOR (hence different IPP
+           and IOP), and possibly different ST and/or PS
+        
+    FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
+    IOP = ImageOrientationPatient, ST = SliceThickness, PS = PixelSpacing
+    
+    * The numbering deliberately starts at 2 for consistency with the 5 overall
+    cases.  The first case is covered by another function.
+    
     
     Inputs:
-        SegRoi    - ROI Object from a SEG file
-    
-        
+        SrcDcmDir    - (String) Directory containing the Source DICOMs
+                            
+        SrcRoiFpath  - (String) Full path of the Source DICOM RTSTRUCT/SEG file
+                             
+        FromSliceNum - (Integer) Slice index of the Source DICOM stack 
+                       corresponding to the contour/segment to be copied 
+                       (counting from 0)
+                       
+        TrgDcmDir    - (String) Directory containing the Target DICOMs
+                            
+        TrgRoiFpath  - (String) Full path of the Target DICOM RTSTRUCT/SEG file 
+                            
+        LogToConsole - (Boolean) Denotes whether or not some intermediate
+                       results will be logged to the console
+                            
     Returns:
-        SegLabels - (List of strings) Segment labels
+        NewTrgRoi  - Modified Target ROI object 
+    
     """
     
-    SegLabels = [] 
+    # Import the Source and Target RTSTRUCT/SEG ROI:
+    SrcRoi = pydicom.dcmread(SrcRoiFpath)
+    TrgRoi = pydicom.dcmread(TrgRoiFpath)
     
-    sequences = SegRoi.SegmentSequence
+    # Get the modality of the ROI:
+    SrcModality = SrcRoi.Modality
+    TrgModality = TrgRoi.Modality
     
-    for sequence in sequences:
-        label = sequence.SegmentLabel
-        
-        SegLabels.append(label)
-        
-    return SegLabels
-
-
-
-
-
-
-
-
-def VerifyCISandCS(CIStoDcmInds, CStoDcmInds, LogToConsole=False):
-    """
-    CIS and CS will only be the same if there is only one ROI so this function
-    is of limited use.
-    
-    
-    
-    Verify that the ContourImageSequence-to-DICOM slice indeces and the
-    ContourSequence-to-DICOM slice indeces are the same.
-    
-    Inputs:
-        CIStoDcmInds - List of integers of the DICOM slice numbers that 
-                      correspond to each Contour Image Sequence
-        
-        CStoDcmInds  - List of integers of the DICOM slice numbers that 
-                      correspond to each Contour Sequence
-        
-    Returns:
-        (Boolean) True/False if they match/do not match  
-    """
-    
-    if CIStoDcmInds != CStoDcmInds:
-        if LogToConsole:
-            print('\nThe ContourImageSequence-to-DICOM slice indices are not',
-                  'the same as the ContourSequence-to-DICOM slice indices.')
-            
-        return False
-    
-    else:
-        return True
-    
-    
-
-
-
-
-
-
-def GetDIVsGroupedByRoi_OLD1(SegRoi):
-    """
-    Get the DimensionIndexValues in a SEG ROI grouped by common ROI.
-    
-    Inputs:
-        SegRoi - ROI Object from a SEG file
-        
-        
-    Returns:
-        DIVs   - (List of lists of integers) Dimension Index Values grouped by
-                 ROI
-        
-        
-    Note:
-        DIVs is a nested list of lists of the form:
-            
-        [ [ [1, 10], [1, 11], [1, 12], ... ],
-          [ [2, 6], [2, 7], [2, 8], ... ],
-          ... 
-         ]
-          
-         
-        where each list of index values that belong to a common ROI are 
-        separated into separate lists.  If there's only one ROI, the list of
-        index values will still be nested in a list to maintain continuity:
-            
-        [ [ [1, 10], [1, 11], [1, 12], ... ]
-         ]
-    """
-    
-    # Get the flat list of DIVs:
-    FlatList = GetDIVs(SegRoi) 
-        
-    # Group the DIVs by common ROI.
-    
-    # Get the list of ROI numbers:
-    RoiNums = []
-    
-    for DIV in FlatList:
-        RoiNums.append(DIV[0])
-        
-        
-    UniqueRoiNums = list(set(RoiNums))
-    
-    
-    if len(UniqueRoiNums) == 1:
-        DimIndVals = [FlatList]
+    # Both modalities should be the same.  Return if not:
+    if SrcModality == TrgModality:
+        Modality = SrcModality
         
     else:
-        DimIndVals = []
+        print(f'\nThe Source ({SrcModality}) and Target ({TrgModality})',
+              'modalities are different.')
         
-        RoiNum = 1 # initial value
+        return
+    
+    # Import the Source and Target DICOMs:
+    SrcDicoms = ImportDicoms(DicomDir=SrcDcmDir, SortMethod='slices', Debug=False)
+    TrgDicoms = ImportDicoms(DicomDir=TrgDcmDir, SortMethod='slices', Debug=False)
+    
+    # Get the Source and Target DICOM SOP UIDs:
+    SrcSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    TrgSOPuids = GetDicomSOPuids(DicomDir=TrgDcmDir)
+    
+    # Get the ContourImageSequence-to-DICOM slice indices and
+    # ContourSequence-to-DICOM slice indices, or the 
+    # ReferencedImageSequence-to-DICOM slice indices and 
+    # PerFrameFunctionalGroupsSequence-to-DICOM slice indices for Source and 
+    # Target:
+    if Modality == 'RTSTRUCT':
+        SrcCIStoSliceInds = GetCIStoSliceInds(SrcRoi, SrcSOPuids)
+    
+        SrcCStoSliceInds = GetCStoSliceInds(SrcRoi, SrcSOPuids)
         
-        ListThisRoi = [] # initialise
+        TrgCIStoSliceInds = GetCIStoSliceInds(TrgRoi, TrgSOPuids)
         
-        for i in range(len(FlatList)):
+        TrgCStoSliceInds = GetCStoSliceInds(TrgRoi, TrgSOPuids)
+        
+        # Both indices should be the same.  Return if not:
+        if not VerifyCISandCS(SrcCIStoSliceInds, SrcCStoSliceInds, LogToConsole):
+            return
+        
+        if not VerifyCISandCS(TrgCIStoSliceInds, TrgCStoSliceInds, LogToConsole):
+            return
+        
+        # Verify that a contour exists for FromSliceNum (this check won't be 
+        # necessary in the OHIF-Viewer but a bad input could occur here):
+        if not FromSliceNum in SrcCIStoSliceInds:
+            print(f'\nA contour does not exist on slice {FromSliceNum} in the',
+                  'Source DICOM series.')
             
-            if FlatList[i][0] == RoiNum:
-                ListThisRoi.append(FlatList[i])
+            return
+        
+    if Modality == 'SEG':
+        SrcRIStoSliceInds = GetRIStoSliceInds(SrcRoi, SrcSOPuids)
+    
+        SrcPFFGStoSliceInds = GetPFFGStoSliceInds(SrcRoi, SrcSOPuids)
+        
+        TrgRIStoSliceInds = GetRIStoSliceInds(TrgRoi, TrgSOPuids)
+        
+        TrgPFFGStoSliceInds = GetPFFGStoSliceInds(TrgRoi, TrgSOPuids)
+        
+        # Verify that a segment exists for FromSliceNum (this check won't be 
+        # necessary in the OHIF-Viewer but a bad input could occur here):
+        if not FromSliceNum in SrcPFFGStoSliceInds:
+            print(f'\nA segment does not exist on slice {FromSliceNum} in the',
+                  'Source DICOM series.')
+            
+            return
+    
+    
+    
+    # Get the image attributes:
+    SrcSize, SrcSpacings, SrcST, SrcIPPs,\
+    SrcDirs = GetImageAttributes(SrcDcmDir)
+    
+    TrgSize, TrgSpacings, TrgST, TrgIPPs,\
+    TrgDirs = GetImageAttributes(TrgDcmDir)
+    
+    
+    # Check which case follows:
+    if SrcFORuid == TrgFORuid:
+        if SrcDirs == TrgDirs:
+            if SrcSpacings == TrgSpacings:
+                Case = 2
                 
             else:
-                DimIndVals.append(ListThisRoi)
-                
-                RoiNum += 1 # increment
-                
-                ListThisRoi = [] # re-initialise
-                
-                ListThisRoi.append(FlatList[i])
-        
+                Case = 3
             
-        DimIndVals.append(ListThisRoi)
-             
-    return DimIndVals
-
-
-
-
-
-
-
-def GetDIVsGroupedByRoi_OLD2(SegRoi):
-    """
-    Get the DimensionIndexValues in a SEG ROI grouped by common ROI.
+        else:
+            Case = 4
     
-    Inputs:
-        SegRoi - ROI Object from a SEG file
-        
-        
-    Returns:
-        DIVs   - (List of lists of integers) Dimension Index Values grouped by
-                 ROI
-        
-        
+    else:
+        Case = 5
+    
+    
+    
+    
+    
+    
+    
+    # Check if ToSliceNum already has a contour:
+    """
     Note:
-        DIVs is a nested list of lists of the form:
-            
-        [ [ [1, 10], [1, 11], [1, 12], ... ],
-          [ [2, 6], [2, 7], [2, 8], ... ],
-          ... 
-         ]
-          
-         
-        where each list of index values that belong to a common ROI are 
-        separated into separate lists.  If there's only one ROI, the list of
-        index values will still be nested in a list to maintain continuity:
-            
-        [ [ [1, 10], [1, 11], [1, 12], ... ]
-         ]
+        If slice number ToSliceNum already has a contour, it will be 
+        over-written with the contour data of slice number FromSliceNum.
+        If it doesn't have a contour, ContourImageSequence and 
+        ContourSequence need to be extended by one.
     """
-    
-    # Get the flat list of DIVs:
-    FlatList = GetDIVs(SegRoi) 
+    if ToSliceNum in TrgCIStoSliceInds:
+        # Use TrgRtsRoi as a template for NewTrgRtsRoi: 
+        NewTrgRtsRoi = deepcopy(TrgRtsRoi)
         
-    # Group the DIVs by common ROI.
-    
-    # Get the list of ROI numbers:
-    RoiNums = []
-    
-    for DIV in FlatList:
-        RoiNums.append(DIV[0])
-        
-        
-    UniqueRoiNums = list(set(RoiNums))
-    
-    
-    if len(UniqueRoiNums) == 1:
-        DimIndVals = [FlatList]
+        # Create a new list of NewTrgCIStoSliceInds:
+        NewTrgCIStoSliceInds = deepcopy(TrgCIStoSliceInds)
         
     else:
-        DimIndVals = []
+        # Increase the length of the sequences:
+        NewTrgRtsRoi = AddToRtsSequences(TrgRtsRoi)
         
-        for n in range(len(UniqueRoiNums)):
-            ListThisRoi = [] # initialise
-            
-            for i in range(len(FlatList)):
-                if FlatList[i][0] == n:
-                    ListThisRoi.append(FlatList[i])
+        # Create a new list of TrgCIStoSliceInds by adding the index ToSliceNum 
+        # (representing the contour to be added to ContourImageSequence and to
+        # ContourSequence) to TrgCIStoSliceInds:
+        NewTrgCIStoSliceInds = AppendItemToListAndSort(TrgCIStoSliceInds, ToSliceNum)
         
-            DimIndVals.append(ListThisRoi)
-             
-    return DimIndVals
-
-
-
-
-
-
-def AddToSegSequences_OLD(SegRoi):
-    """
-    Append the last item in the following sequences in the SEG Object: 
-        Referenced Instance Sequence
-        Per-frame Functional Groups Sequence
-    
-    Inputs:
-        SegRoi    - ROI Object from a SEG file
-        
-    Returns:
-        NewSegRoi - Modified ROI Object with sequences lengthened by one
-    """
-    
-    # Use SegRoi as a template for NewSegRoi: 
-    NewSegRoi = deepcopy(SegRoi)
-        
-    # The last item in Referenced Instance Sequence:
-    last = deepcopy(SegRoi.ReferencedSeriesSequence[0]\
-                          .ReferencedInstanceSequence[-1])
-    
-    # Append to the Referenced Instance Sequence:
-    NewSegRoi.ReferencedSeriesSequence[0]\
-             .ReferencedInstanceSequence\
-             .append(last)
-             
-    # The last item in Per-frame Functional Groups Sequence:
-    last = deepcopy(SegRoi.PerFrameFunctionalGroupsSequence[-1])
-    
-    # Append to the Per-frame Functional Groups Sequence:
-    NewSegRoi.PerFrameFunctionalGroupsSequence\
-             .append(last)
-             
-    return NewSegRoi
-
-
-
-
-
-def ResampleImage(Image, RefImage, Method, Interpolation):#, RefImageSpacings):
-    
-    #NewSrcImage = sitk.Resample(image=SrcImage, 
-    #                            size=TrgSitkSize,
-    #                            transform=sitk.Transform(),
-    #                            interpolator=sitk.sitkLinear,
-    #                            outputOrigin=TrgSitkOrigin,
-    #                            outputSpacing=TrgSitkSpacing,
-    #                            outputDirection=TrgSitkDirection,
-    #                            defaultPixelValue=0,
-    #                            outputPixelType=TrgImage.GetPixelID())
-    
-    
-    # Define which interpolator to use:
-    """ 
-    Use the linear (or BSpline) interpolator for intensity images, and
-    NearestNeighbour for binary images (e.g. segmentation) so that no new
-    labels are introduced.
-    """
-    
-    if 'inear' in Interpolation:
-        Interpolator = sitk.sitkLinear
-    if 'pline' in Interpolation:
-        Interpolator = sitk.sitkBSpline
-    if ('earest' and 'eighbo' or 'nn' or 'NN') in Interpolation:    
-        Interpolator = sitk.sitkNearestNeighbor
-            
-        
-    #print('\nUsing', Interpolation, 'interpolation\n')
-    
-    Dimension = Image.GetDimension()
-    
-
-    
-    if 'ResampleImageFilter' in Method:
-        Resampler = sitk.ResampleImageFilter()
-        
-        Resampler.SetReferenceImage(RefImage)
-        
-        Resampler.SetInterpolator(Interpolator)
-        
-        if 'Identity' in Method:
-            Resampler.SetTransform(sitk.Transform())
-        if 'Affine' in Method:
-            Resampler.SetTransform(sitk.AffineTransform(Dimension))
-            
-            
-        #print(f'\nImage.GetPixelIDValue() = {Image.GetPixelIDValue()}')
-        
-        Resampler.SetOutputSpacing(RefImage.GetSpacing())
-        Resampler.SetSize(RefImage.GetSize())
-        Resampler.SetOutputDirection(RefImage.GetDirection())
-        Resampler.SetOutputOrigin(RefImage.GetOrigin())
-        #Resampler.SetDefaultPixelValue(Image.GetPixelIDValue())
-        Resampler.SetDefaultPixelValue(0)
-        
-        #print('\n')
-        #Resampler.AddCommand(sitk.sitkProgressEvent, lambda: print("\rProgress: {0:03.1f}%...".format(100*Resampler.GetProgress()),end=''))
-        #Resampler.AddCommand(sitk.sitkProgressEvent, lambda: sys.stdout.flush())
-        
-        ResImage = Resampler.Execute(Image)
-    
-    
-    
-    if 'Resample2' in Method:
-        """
-        Use the 2nd method listed in the SimpleITK Transforms and Resampling 
-        tutorial (the new Size, Spacing, Origin and Direction will be 
-        determined intrinsically from RefImage):
-            
-        https://github.com/InsightSoftwareConsortium/SimpleITK-Notebooks/blob/master/Python/21_Transforms_and_Resampling.ipynb
-        
-        Also follow the example here:
-            
-        https://gist.github.com/zivy/79d7ee0490faee1156c1277a78e4a4c4
-        """
-        
-        # Define the transform which maps RefImage to Image with the 
-        # translation mapping the image origins to each other:
-        Transform = sitk.AffineTransform(Dimension)
-        #Transform.SetMatrix(Image.GetDirection())                                      # <-- 9:55 on 30/10
-        Transform.SetMatrix(RefImage.GetDirection())                                    # <-- 9:55 on 30/10
-        #Transform.SetTranslation(np.array(Image.GetOrigin()) - RefImage.GetOrigin())   # <-- 9:55 on 30/10
-        Transform.SetTranslation(np.array(RefImage.GetOrigin()) - Image.GetOrigin())    # <-- 9:55 on 30/10
-        
-        if 'Centres' in Method:
-            # Use the TransformContinuousIndexToPhysicalPoint to compute an 
-            # indexed point's physical coordinates as this takes into account  
-            # size, spacing and direction cosines. 
-            """
-            For the vast majority of images the direction cosines are the 
-            identity matrix, but when this isn't the case simply multiplying 
-            the central index by the spacing will not yield the correct 
-            # coordinates resulting in a long debugging session. 
-            """
-            RefCentre = np.array(RefImage.TransformContinuousIndexToPhysicalPoint(np.array(RefImage.GetSize())/2.0))
-            
-            # Modify the transformation to align the centres of the original 
-            # and reference image instead of their origins:
-            CenteringTransform = sitk.TranslationTransform(Dimension)
-            
-            ImageCentre = np.array(Image.TransformContinuousIndexToPhysicalPoint(np.array(Image.GetSize())/2.0))
-            
-            CenteringTransform.SetOffset(np.array(Transform.GetInverse().TransformPoint(ImageCentre) - RefCentre))
-            
-            CenteredTransform = sitk.Transform(Transform)
-            
-            CenteredTransform.AddTransform(CenteringTransform)
-
-            ResImage = sitk.Resample(Image, RefImage, CenteredTransform, 
-                                     Interpolator, Image.GetPixelIDValue())
-            
-            
-        if 'Origins' in Method:
-            ResImage = sitk.Resample(Image, RefImage, Transform, Interpolator, 
-                                     Image.GetPixelIDValue())
-        
-        
-    
-    
-    if 'Resample3' in Method:
-        """
-        Use the 3rd method listed in the SimpleITK Transforms and Resampling 
-        tutorial (explicitly define the new Size, Spacing, Origin and 
-        Direction):
-            
-        https://github.com/InsightSoftwareConsortium/SimpleITK-Notebooks/blob/master/Python/21_Transforms_and_Resampling.ipynb
-        """
-        
-        NewSize = RefImage.GetSize()
-        NewOrigin = RefImage.GetOrigin()
-        NewSpacing = RefImage.GetSpacing()
-        NewDirection = RefImage.GetDirection()
-        
-        
-        # Define the transform which maps RefImage to Image with the 
-        # translation mapping the image origins to each other:
-        Transform = sitk.AffineTransform(Dimension)
-        #Transform.SetMatrix(Image.GetDirection())                                     # <-- 10:03 on 30/10
-        Transform.SetMatrix(RefImage.GetDirection())                                   # <-- 10:03 on 30/10
-        #Transform.SetTranslation(np.array(Image.GetOrigin()) - RefImage.GetOrigin())  # <-- 10:03 on 30/10
-        Transform.SetTranslation(np.array(RefImage.GetOrigin()) - Image.GetOrigin())   # <-- 10:03 on 30/10
-        
-        if 'Centres' in Method:
-            # Use the TransformContinuousIndexToPhysicalPoint to compute an 
-            # indexed point's physical coordinates as this takes into account  
-            # size, spacing and direction cosines. 
-            """
-            For the vast majority of images the direction cosines are the 
-            identity matrix, but when this isn't the case simply multiplying 
-            the central index by the spacing will not yield the correct 
-            # coordinates resulting in a long debugging session. 
-            """
-            RefCentre = np.array(RefImage.TransformContinuousIndexToPhysicalPoint(np.array(RefImage.GetSize())/2.0))
-            
-            # Modify the transformation to align the centres of the original 
-            # and reference image instead of their origins:
-            CenteringTransform = sitk.TranslationTransform(Dimension)
-            
-            ImageCentre = np.array(Image.TransformContinuousIndexToPhysicalPoint(np.array(Image.GetSize())/2.0))
-            
-            CenteringTransform.SetOffset(np.array(Transform.GetInverse().TransformPoint(ImageCentre) - RefCentre))
-            
-            CenteredTransform = sitk.Transform(Transform)
-            
-            CenteredTransform.AddTransform(CenteringTransform)
-        
-            ResImage = sitk.Resample(Image, NewSize, CenteredTransform, 
-                                     Interpolator, NewOrigin, NewSpacing, 
-                                     NewDirection, Image.GetPixelIDValue())  
-            
-            
-        if 'Origins' in Method:
-            ResImage = sitk.Resample(Image, NewSize, Transform, 
-                                     Interpolator, NewOrigin, NewSpacing, 
-                                     NewDirection, Image.GetPixelIDValue())  
-            
-            
-            
-            
-    if Method == 'NotCorrect':
-        """ 
-        Use the 3rd method listed in the SimpleITK Transforms and Resampling 
-        tutorial (explicitly define the new Size, Spacing, Origin and 
-        Direction):
-            
-        https://github.com/InsightSoftwareConsortium/SimpleITK-Notebooks/blob/master/Python/21_Transforms_and_Resampling.ipynb
-        """
-        
-        ExtremePts = GetExtremePoints(RefImage)
-        
-        Affine = sitk.Euler3DTransform(RefImage.TransformContinuousIndexToPhysicalPoint([size/2 for size in RefImage.GetSize()]),
-                                       RefImage.GetAngleX(), 
-                                       RefImage.GetAngleY(), 
-                                       RefImage.GetAngleZ(), 
-                                       RefImage.GetTranslation())
-        
-        InvAffine = Affine.GetInverse()
-        
-        # Transformed ExtremePts:
-        TxExtremePts = [InvAffine.TransformPoint(pt) for pt in ExtremePts]
-        
-        min_x = min(TxExtremePts)[0]
-        min_y = min(TxExtremePts, key=lambda p: p[1])[1]
-        min_z = min(TxExtremePts, key=lambda p: p[2])[2]
-        max_x = max(TxExtremePts)[0]
-        max_y = max(TxExtremePts, key=lambda p: p[1])[1]
-        max_z = max(TxExtremePts, key=lambda p: p[2])[2]
-        
-        NewSpacing = RefImage.GetSpacing()
-        #NewDirection = np.eye(3).flatten()
-        NewDirection = RefImage.GetDirection()
-        #NewOrigin = [min_x, min_y, min_z]
-        NewOrigin = RefImage.GetOrigin()
-        
-        #NewSize = [math.ceil((max_x - min_x)/NewSpacing[0]), 
-        #           math.ceil((max_y - min_y)/NewSpacing[1]),
-        #           math.ceil((max_z - min_z)/NewSpacing[2])]
-        NewSize = RefImage.GetSize()
-        
-        ResImage = sitk.Resample(Image, NewSize, Affine, Interpolator, 
-                                 NewOrigin, NewSpacing, NewDirection)
-    
-    
-    #sitk.Show(ResImage)
-
-    return ResImage
-
-
-
-
-
-
-
-
-
-def ModifySegTagVals_OLD(SegRoi, NewSegRoi, FromSliceNum, ToSliceNum, Dicoms,
-                     OrigPFFGStoDcmInds, NewPFFGStoDcmInds, LogToConsole):
-    """
-    Modify various tag values of the new SEG ROI so that they are consistent
-    with the corresponding tag values of the DICOMs.
-         
-    
-    Inputs:
-        SegRoi             - Original ROI Object from a SEG file
-        
-        NewSegRoi          - New SEG ROI Object
-        
-        FromSliceNum       - (Integer) Slice index in the Source DICOM stack
-                             corresponding to the segmentation to be copied 
-                             (counting from 0)
-                          
-        ToSliceNum         - (Integer) Slice index in the Target DICOM stack 
-                             where the segmentation will be copied to (counting 
-                             from 0)
-                          
-        Dicoms             - A list of DICOM Objects that include the DICOMs 
-                             that SegRoi relate to
-                            
-        OrigPFFGStoDcmInds - (List of integers) DICOM slice numbers that 
-                             correspond to each Per-frame Functional Groups  
-                             Sequence in SegRoi
-                          
-        NewPFFGStoDcmInds  - (List of integers) DICOM slice numbers that 
-                             correspond to each Per-frame Functional Groups 
-                             Sequence in NewSegRoi
-                             
-        LogToConsole       - (Boolean) Denotes whether or not some intermediate
-                             results will be logged to the console
-        
-
-        *** I don't need the following but kept here for now:    
-              
-        OrigRIStoDcmInds   - (List of integers) DICOM slice numbers that 
-                             correspond to each Referenced Instance Sequence in 
-                             SegRoi
-                            
-        NewRIStoDcmInds    - (List of integers) DICOM slice numbers that 
-                             correspond to each Referenced Instance Sequence in 
-                             NewSegRoi
-        ***
-        
-    Returns:
-        NewSegRoi         - Modified new SEG ROI Object
-    """
-    
-    # Get the sequence number that corresponds to the slice number to be 
-    # copied, and the slice number to be copied to:
-    FromOrigSeqNum = OrigPFFGStoDcmInds.index(FromSliceNum)
-        
-    ToNewSeqNum = NewPFFGStoDcmInds.index(ToSliceNum)
     
     if LogToConsole:
-        print(f'\nFromOrigSeqNum = {FromOrigSeqNum} -->',
-              f'OrigPFFGStoDcmInds[{FromOrigSeqNum}] =',
-              f'{OrigPFFGStoDcmInds[FromOrigSeqNum]}')
-        
-        print(f'ToNewSeqNum    = {ToNewSeqNum} -->',
-              f'NewPFFGStoDcmInds[{ToNewSeqNum}] =',
-              f'{NewPFFGStoDcmInds[ToNewSeqNum]}')
+        print('\nSrcCIStoSliceInds    =', SrcCIStoSliceInds)
+        print('\nTrgCIStoSliceInds    =', TrgCIStoSliceInds)
+        print('\nNewTrgCIStoSliceInds =', NewTrgCIStoSliceInds)
+    
+    # Modify select tags in TrgRtsRoi:
+    NewTrgRtsRoi = ModifyRtsTagVals(TrgRtsRoi, NewTrgRtsRoi, FromSliceNum, 
+                                    ToSliceNum, TrgDicoms, 
+                                    TrgCIStoSliceInds, NewTrgCIStoSliceInds,
+                                    LogToConsole)
     
     
-    # Modify the Number of Frames in NewSegRoi:
-    #NewSegRoi.NumberOfFrames = str(int(SegRoi.NumberOfFrames) + 1)
-    
-    # The 2D array to be copied is:
-    #MaskToCopy = SegRoi.pixel_array[FromSliceNum]
-    
-    # The original 3D mask is:
-    #Orig3dMask = NewSegRoi.pixel_array
-    Orig3dMask = SegRoi.pixel_array
-    
-    # Let the new 3D mask be the original 3D mask with the last 2D mask 
-    # appended to it:
-    #New3dMask = np.append(Orig3dMask, Orig3dMask[-1], axis=0)
-    
-    # The shape of Orig3dMask:
-    OrigShape = Orig3dMask.shape
-    
-    print('\nThe shape of the original 3D mask is', OrigShape)
-    
-    """
-    # Re-shape New3DMask from (NumOfFrames, Rows, Columns) to 
-    # (Rows, Columns, NumOfFrames):
-    New3dMask = np.reshape(Orig3dMask, (OrigShape[1], OrigShape[2], OrigShape[0]))
-    
-    # Stack the last 2D array to the 3D array:
-    New3dMask = np.dstack((New3dMask, New3dMask[:,:,-1]))
-    
-    # The shape of New3dMask:
-    NewShape = New3dMask.shape
-    
-    # Reshape New3dMask to the original form:
-    New3dMask = np.reshape(New3dMask, (NewShape[2], NewShape[0], NewShape[1]))
-    """
-    
-    OrigNframes = OrigShape[0]
-    OrigNrows = OrigShape[1]
-    OrigNcols = OrigShape[2]
-    
-    NewNframes = OrigNframes + 1
-    
-    # Modify the Number of Frames in NewSegRoi:
-    NewSegRoi.NumberOfFrames = str(NewNframes)
-    
-    # Create an empty 3D array with required shape:
-    #New3dMask = np.zeros((NewNframes, OrigNrows, OrigNcols), dtype=int)
-    New3dMask = np.zeros((NewNframes, OrigNrows, OrigNcols), dtype=bool)
-    
-    
-    # The shape of New3dMask:
-    #NewShape = New3dMask.shape
-    #
-    #print('\nThe shape of the new 3D mask is', NewShape)
-    #
-    # Convert New3dMask to bytes:
-    #NewSegRoi.PixelArray = ConvertNumpyArrayToPixelArray(New3dMask) 
-    #""" Note: The function ConvertNumpyArrayToPixelArray doesn't yet exist! """
-    #
-    #NewSegRoi.PixelData = New3dMask.tobytes()
-    
-    
-    # Loop through each frame/sequence in NewSegRoi, modifying the relevant tag 
-    # values and New3dMask:
-    for i in range(NewNframes):
-        # The DICOM slice index for the i^th sequence:
-        s = NewPFFGStoDcmInds[i]
-        
-        if LogToConsole:
-            print(f'\nNewPFFGStoDcmInds[{i}] = {NewPFFGStoDcmInds[i]}')
-            print(f'DICOM slice number = {s}')
-        
-        # Modify the Referenced SOP Class UID and Referenced SOP Instance UID 
-        # so that they are consistent with the SOP Class UID and SOP Instance  
-        # UID of their corresponding DICOMs:
-        """ SOPClassUIDs will need to be modified for cases where the contour
-        is being copied across different modality images. Not required for
-        copying within the same series:
-        NewSegRoi.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewSegRoi.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
-        
-        """ Ditto:
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
-                 
-        
-        # Modify the tags in FrameContentSequence:
-        #NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-        #         .FrameContentSequence[0]\
-        #         .StackID = f'{i + 1}'
-                 
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .InStackPositionNumber = i + 1
-                 
-        
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .DimensionIndexValues = [1, 1, i + 1]
-                     
-        # Modify the ImagePositionPatient:  
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .PlanePositionSequence[0]\
-                 .ImagePositionPatient = deepcopy(Dicoms[s].ImagePositionPatient)
-        
-        
-        # Modify New3dMask:         
-        if i == ToNewSeqNum:
-            if LogToConsole:
-                print('\nThis is a new sequence.')
-                print(f'Copying the {FromOrigSeqNum}th sequence from Source',
-                      f'to the {i}th sequence in Target.')
-                
-            # This is the new sequence. Set the i^th 2D mask in New3DMask 
-            # equal to the FromSeqNum^th 2D mask in Orig3dMask:
-            New3dMask[i] = Orig3dMask[FromOrigSeqNum]
-            #New3dMask[i,:,:] = Orig3dMask[FromOrigSeqNum,:,:]
-        
-        else:
-            # This is an existing sequence. Find the index of 
-            # OrigPFFGStoDcmInds for this sequence number (of 
-            # NewPFFGStoDcmInds):
-            ind = OrigPFFGStoDcmInds.index(NewPFFGStoDcmInds[i])
-            
-            if LogToConsole:
-                print('\nThis is an existing sequence.')
-                print(f'Copying the {ind}th sequence from Source to the {i}th',
-                      f'sequence in Target.')
-                                          
-            # Set the i^th 2D mask in New3DMask equal to the ind^th 2D mask in 
-            # Orig3dMask:
-            New3dMask[i] = Orig3dMask[ind]
-            #New3dMask[i,:,:] = Orig3dMask[ind,:,:]
-        
-    
-    # The shape of New3dMask:
-    NewShape = New3dMask.shape
-    
-    print('\nThe shape of the new 3D mask is', NewShape)
-    
-    # Ravel (to 1D array) New3dMask and pack bits 
-    # (see https://github.com/pydicom/pydicom/issues/1230):
-    packed = pack_bits(New3dMask.ravel())
-    
-    # Convert New3dMask to bytes:
-    #NewSegRoi.PixelData = New3dMask.tobytes() <-- doesn't work
-    NewSegRoi.PixelData = packed + b'\x00' if len(packed) % 2 else packed
-                                          
-    return NewSegRoi
-
-
-
-
-
-
-def ModifySegTagVals_OLD2(SrcSeg, SrcDicoms, SrcPFFGStoDcmInds, FromSliceNum, 
-                     TrgSeg, TrgDicoms, TrgPFFGStoDcmInds, ToSliceNum, 
-                     NewTrgSeg, NewTrgPFFGStoDcmInds, LogToConsole=False):
-    """
-    Modify various tag values of the new SEG ROI so that they are consistent
-    with the corresponding tag values of the DICOMs.
-         
-    
-    Inputs:
-        SrcSeg               - (Pydicom Object) Source SEG ROI Object
-        
-        SrcDicoms            - (List of Pydicom Objects) List of DICOM Objects
-                               that include the DICOMs that SrcSeg relate to
-        
-        SrcPFFGStoDcmInds    - (List of integers) The DICOM slice numbers that 
-                               correspond to each Per-frame Functional Groups  
-                               Sequence in SrcSeg
-        
-        FromSliceNum         - (Integer) Slice index in the Source DICOM stack
-                               corresponding to the segmentation to be copied 
-                               (counting from 0)
-                               
-        TrgSeg               - (Pydicom Object) Original Target SEG ROI Object
-        
-        TrgDicoms            - (List of Pydicom Objects) List of DICOM Objects
-                               that include the DICOMs that TrgSeg relate to
-        
-        TrgPFFGStoDcmInds    - (List of integers) DICOM slice numbers that 
-                               correspond to each Per-frame Functional Groups  
-                               Sequence in TrgSeg
-                               
-        ToSliceNum           - (Integer) Slice index in the Target DICOM stack 
-                               where the segmentation will be copied to 
-                               (counting from 0)
-                               
-        NewTrgSeg            - (Pydicom Object) New Target SEG ROI Object
-                          
-        NewTrgPFFGStoDcmInds - (List of integers) DICOM slice numbers that 
-                               correspond to each Per-frame Functional Groups 
-                               Sequence in NewTrgSeg
-                             
-        LogToConsole         - (Boolean) Denotes whether or not intermediate
-                               results will be logged to the console
-        
-
-        *** I don't need the following but kept here for now:    
-              
-        OrigRIStoDcmInds     - (List of integers) DICOM slice numbers that 
-                               correspond to each Referenced Instance Sequence 
-                               in SegRoi
-                            
-        NewRIStoDcmInds      - (List of integers) DICOM slice numbers that 
-                               correspond to each Referenced Instance Sequence 
-                               in NewSegRoi
-        ***
-        
-    Returns:
-        NewTrgSeg            - Modified new SEG ROI Object
-    """
-    
-    # Get the sequence number that corresponds to the slice number to be 
-    # copied, and the slice number to be copied to:
-    FromSrcSeqNum = SrcPFFGStoDcmInds.index(FromSliceNum)
-        
-    ToNewTrgSeqNum = NewTrgPFFGStoDcmInds.index(ToSliceNum)
-    
-    if LogToConsole:
-        print(f'\nFromSrcSeqNum     = {FromSrcSeqNum} -->',
-              f'ScrPFFGStoDcmInds[{FromSrcSeqNum}] =',
-              f'{SrcPFFGStoDcmInds[FromSrcSeqNum]}')
-        
-        print(f'ToNewTrgSeqNum    = {ToNewTrgSeqNum} -->',
-              f'NewTrgPFFGStoDcmInds[{ToNewTrgSeqNum}] =',
-              f'{NewTrgPFFGStoDcmInds[ToNewTrgSeqNum]}')
-    
-    
-    # Modify the Number of Frames in NewSegRoi:
-    #NewSegRoi.NumberOfFrames = str(int(SegRoi.NumberOfFrames) + 1)
-    
-    # The 2D array to be copied is:
-    #MaskToCopy = SegRoi.pixel_array[FromSliceNum]
-    
-    # The original 3D mask is:
-    Src3dMask = SrcSeg.pixel_array
-    Trg3dMask = TrgSeg.pixel_array
-    
-    # Let the new 3D mask be the original 3D mask with the last 2D mask 
-    # appended to it:
-    #New3dMask = np.append(Orig3dMask, Orig3dMask[-1], axis=0)
-    
-    # The shape of Trg3dMask:
-    OrigShape = Trg3dMask.shape
-    
-    print('\nThe shape of the original Target 3D mask is', OrigShape)
-    
-    OrigNframes = OrigShape[0]
-    OrigNrows = OrigShape[1]
-    OrigNcols = OrigShape[2]
-    
-    NewNframes = OrigNframes + 1
-    
-    # Modify the Number of Frames in NewTrgSeg:
-    NewTrgSeg.NumberOfFrames = str(NewNframes)
-    
-    # Create an empty 3D array with required shape:
-    NewTrg3dMask = np.zeros((NewNframes, OrigNrows, OrigNcols), dtype=int) # 05/11/20
-    #NewTrg3dMask = np.zeros((NewNframes, OrigNrows, OrigNcols), dtype=bool) # 05/11/20
-    
-    
-    # Loop through each frame/sequence in NewTrgSeg, modifying the relevant tag 
-    # values and NewTrg3dMask:
-    for i in range(NewNframes):
-        # The DICOM slice index for the i^th sequence:
-        s = NewTrgPFFGStoDcmInds[i]
-        
-        if LogToConsole:
-            print(f'\nNewTrgPFFGStoDcmInds[{i}] = {NewTrgPFFGStoDcmInds[i]}')
-            print(f'DICOM slice number = {s}')
-        
-        # Modify the Referenced SOP Class UID and Referenced SOP Instance UID 
-        # so that they are consistent with the SOP Class UID and SOP Instance  
-        # UID of their corresponding DICOMs:
-        """ SOPClassUIDs will need to be modified for cases where the contour
-        is being copied across different modality images. Not required for
-        copying within the same series:
-        NewSegRoi.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewTrgSeg.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
-        
-        """ Ditto:
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
-                 
-        
-        # Modify the tags in FrameContentSequence:
-        #NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-        #         .FrameContentSequence[0]\
-        #         .StackID = f'{i + 1}'
-            
-        """ 
-        I can't find InStackPositionNumber in a SEG file created in the
-        OHIF-Viewer.  It seems that this tag is generated from RTS-to-SEG 
-        conversions using James' Java tool. 
-        Commenting this out for now.
-        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .InStackPositionNumber = i + 1
-        """
-                 
-        
-        """ This is wrong - the DIVs need to be indexed against the items in 
-        the Referenced Instance Sequence (and the first dimension needs to 
-        relate to the ROI number as there can be more than one)!
-        """
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .DimensionIndexValues = [1, 1, i + 1]
-                     
-        # Modify the ImagePositionPatient:  
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .PlanePositionSequence[0]\
-                 .ImagePositionPatient = deepcopy(TrgDicoms[s].ImagePositionPatient)
-        
-        
-        # Modify NewTrg3dMask:         
-        if i == ToNewTrgSeqNum:
-            if LogToConsole:
-                print('\nThis is a new sequence.')
-                print(f'Copying the {FromSrcSeqNum}th sequence from Source',
-                      f'to the {i}th sequence in Target.')
-                
-            # This is the new sequence. Set the i^th 2D mask in NewTrg3DMask 
-            # equal to the FromSrcSeqNum^th 2D mask in Src3dMask:
-            NewTrg3dMask[i] = Src3dMask[FromSrcSeqNum]
-            #New3dMask[i,:,:] = Orig3dMask[FromOrigSeqNum,:,:]
-        
-        else:
-            # This is an existing sequence. Find the index of 
-            # TrgPFFGStoDcmInds for this sequence number (of 
-            # NewTrgPFFGStoDcmInds):
-            ind = TrgPFFGStoDcmInds.index(NewTrgPFFGStoDcmInds[i])
-            
-            if LogToConsole:
-                print('\nThis is an existing sequence.')
-                print(f'Copying the {ind}th sequence from Target to the {i}th',
-                      f'sequence in Target.')
-                                          
-            # Set the i^th 2D mask in NewTrg3DMask equal to the ind^th 2D mask
-            # in Trg3dMask:
-            NewTrg3dMask[i] = Trg3dMask[ind]
-            #New3dMask[i,:,:] = Orig3dMask[ind,:,:]
-        
-    
-    # The shape of NewTrg3dMask:
-    NewShape = NewTrg3dMask.shape
-    
-    print('\nThe shape of the new 3D mask is', NewShape)
-    
-    # Ravel (to 1D array) NewTrg3dMask and pack bits 
-    # (see https://github.com/pydicom/pydicom/issues/1230):
-    packed = pack_bits(NewTrg3dMask.ravel())
-    
-    # Convert NewTrg3dMask to bytes:
-    #NewSegRoi.PixelData = New3dMask.tobytes() <-- doesn't work
-    NewTrgSeg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
-                                          
-    return NewTrgSeg
-
-
-
-
-
-
-
-def ModifySegTagVals_OLD3(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgRoiNums,  
-                     NewTrgPFFGStoDcmInds, FromRoiNum, FromSliceNum, SrcSeg,
-                     ToRoiNum, LogToConsole=False):
-    """
-    Modify various tag values of the new SEG ROI so that they are consistent
-    with the corresponding tag values of the DICOMs.
-         
-    
-    Inputs:                              
-        TrgSeg               - (Pydicom Object) Original Target SEG ROI Object
-        
-        TrgDicoms            - (List of Pydicom Objects) List of DICOM Objects
-                               that include the DICOMs that TrgSeg relate to
-        
-        NewTrgPixArr         - (Numpy array) New Target SEG pixel array
-        
-        NewTrgRoiNums        - (List of integers) ROI numbers that correspond 
-                               to each frame in NewTrgSeg
-        
-        NewTrgPFFGStoDcmInds - (List of integers) DICOM slice numbers that 
-                               correspond to each frame in NewTrgSeg (which 
-                               will also become the Per-frame Functional Groups 
-                               Sequence to DICOM slice numbers)
-                               
-        FromRoiNum           - (Integer) Source ROI number of the segmentation 
-                               that was copied (counting from 0) (this is only 
-                               used for generating a new Series Description) 
-        
-        FromSliceNum         - (Integer) Source slice index in the DICOM stack
-                               corresponding to the segmentation that was  
-                               copied (counting from 0) (this is only used for  
-                               generating a new Series Description)
-                               
-        SrcSeg               - (Pydicom Object) Source SEG ROI Object (this is 
-                               only used for generating a new Series 
-                               Description)
-        
-        ToRoiNum             - (Integer) Target ROI number that the 
-                               segmentation was copied to (counting from 0) 
-                               (this is only used for generating a new Series
-                               Description) 
-                             
-        LogToConsole         - (Boolean) Denotes whether or not intermediate
-                               results will be logged to the console
-        
-        ***
-        
-    Returns:
-        NewTrgSeg            - (Pydicom Object) New Target SEG ROI Object
-    """
-    
-    # Use TrgSeg as a template for NewTrgSeg:
-    NewTrgSeg = deepcopy(TrgSeg)
-    
-    # The original and new number of frames in pixel array:
-    OrigN = TrgSeg.pixel_array.shape[0]
-    NewN = NewTrgPixArr.shape[0]
-    
-    # Increase the length of the Per-Frame Functional Groups Sequence in 
-    # NewTrgSeg:
-    for i in range(NewN - OrigN):
-        NewTrgSeg = AddToPFFGS(NewTrgSeg)
-            
-    
-    # Loop through each frame/sequence in NewTrgSeg, modifying the relevant tag 
-    # values and NewTrg3dMask:
-    for i in range(NewN):
-        # The DICOM slice index for the i^th sequence:
-        s = NewTrgPFFGStoDcmInds[i]
-        
-        # The ROI Number (Segment number):
-        r = NewTrgRoiNums[i]
-        
-        if LogToConsole:
-            print(f'\nNewTrgPFFGStoDcmInds[{i}] = {NewTrgPFFGStoDcmInds[i]}')
-            print(f'DICOM slice number = {s}')
-        
-        # Modify the Referenced SOP Class UID and Referenced SOP Instance UID 
-        # so that they are consistent with the SOP Class UID and SOP Instance  
-        # UID of their corresponding DICOMs:
-        """ SOPClassUIDs will need to be modified for cases where the contour
-        is being copied across different modality images. Not required for
-        copying within the same series:
-        NewSegRoi.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewTrgSeg.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
-        
-        """ Ditto:
-        NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
-        """
-        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
-                 
-        
-        # Modify the tags in FrameContentSequence:
-        #NewSegRoi.PerFrameFunctionalGroupsSequence[i]\
-        #         .FrameContentSequence[0]\
-        #         .StackID = f'{i + 1}'
-            
-        """ 
-        I can't find InStackPositionNumber in a SEG file created in the
-        OHIF-Viewer.  It seems that this tag is generated from RTS-to-SEG 
-        conversions using James' Java tool. 
-        Commenting this out for now.
-        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .InStackPositionNumber = i + 1
-        """
-        
-        # Modify the Dimension Index Values using the RoiNum and SliceNum:
-        """
-        Note: r and s are integers starting from 0.  Need to add 1 to them so 
-        that the integers in DIVs start from 1.
-        """        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .DimensionIndexValues = [r + 1, s + 1]
-                     
-        # Modify the ImagePositionPatient: 
-        IPP = deepcopy(TrgDicoms[s].ImagePositionPatient)
-        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .PlanePositionSequence[0]\
-                 .ImagePositionPatient = IPP
-                 
-        # Modify the Referenced Segment Number (= RoiNum + 1):
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .SegmentIdentificationSequence[0]\
-                 .ReferencedSegmentNumber = r + 1
-                 
-        
-        print(f'\nFrame number = {i}')
-        print(f'DICOM slice number = {s}')
-        print(f'Roi/Segment number = {r}')
-        
-        
-    
-    # The shape of NewTrgPixArr:
-    NewShape = NewTrgPixArr.shape
-    
-    print('\nThe shape of the new 3D pixel array is', NewShape)
-    
-    # Ravel (to 1D array) NewTrgPixArr and pack bits 
-    # (see https://github.com/pydicom/pydicom/issues/1230):
-    packed = pack_bits(NewTrgPixArr.ravel())
-    
-    # Convert NewTrgPixArr to bytes:
-    #NewSegRoi.PixelData = NewTrgPixArr.tobytes() <-- doesn't work
-    NewTrgSeg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
-    
-    # Modify the Number of Frames:
-    NewTrgSeg.NumberOfFrames = f"{len(NewTrgPFFGStoDcmInds)}"
     
     # Generate a new SOP Instance UID:
-    NewTrgSeg.SOPInstanceUID = pydicom.uid.generate_uid()
+    NewTrgRtsRoi.SOPInstanceUID = pydicom.uid.generate_uid()
     
     # Generate a new Series Instance UID:
-    NewTrgSeg.SeriesInstanceUID = pydicom.uid.generate_uid()
+    NewTrgRtsRoi.SeriesInstanceUID = pydicom.uid.generate_uid()
     
-    # Modify the Series Description:
-    NewTrgSegSD = 'RPCopy_of_R' + str(FromRoiNum) + '_s' + str(FromSliceNum) \
-                  + '_in_' + SrcSeg.SeriesDescription + '_to_R' + str(ToRoiNum)\
-                  + '_in_' + TrgSeg.SeriesDescription
+    
+    return NewTrgRtsRoi
+
+
+
+
+
+
+
+
+
+
+
+
+
+def CopyRts_OLD(SrcDcmDir, SrcRtsFpath, FromSliceNum, FromRoiLabel,
+            TrgDcmDir, TrgRtsFpath=None, ToSliceNum=None, 
+            LogToConsole=False):
+                                
+    """
+    Modified on 30/11/20.
+    
+    25/11: This was copied from CopySeg as a template so much of the 
+    code has not yet been modified...
+    
+    
+    Make a Direct or Relationship-preserving copy of a single contour in a
+    given ROI on a given slice to a new ROI in an existing RTS, or 
+    in a newly created RTS (if an existing RTS is not provided). 
+    
+    For Direct copies the in-plane coordinates (currently the (x,y) coords) 
+    will be preserved only, whilst for a Relationship-preserving copy, all
+    coordinates are spatially preserved.
+    
+    There are five possible Main Use Cases (indicated by the numbers 1 to 5)
+    and two Sub-cases (indicated by the letters a or b) that apply for a subset
+    of the Main Use Cases that are accommodated:
+    
+    1a. Direct copy of the Source contour in FromRoiLabel on slice  
+        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+        The Source and Target images are the same. 
+    
+    1b. Relationship-preserving copy of the Source segmentation in FromRoiLabel 
+        on slice FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+        The Source and Target images are the same. 
+        
+    2a. Direct copy of the Source contour in FromRoiLabel on slice 
+        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR, IOP, IPP, and VS.
+    
+    2b. Relationship-preserving copy of the Source contour in FromRoiLabel 
+        on slice FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR, IOP, IPP, and VS. 
+    
+    3a. Direct copy of the Source contour in FromRoiLabel on slice 
+        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR and IOP but have 
+        different VS (they will likely also have different IPP).
+        
+    3b. Relationship-preserving copy of the Source contour in FromRoiLabel 
+        on slice FromSliceNum to a new ROI for any number of slices in 
+        Target.
+        The Source and Target images have the same FOR and IOP but have 
+        different VS (they will likely also have different IPP).
+    
+    4.  Relationship-preserving copy of the Source contour in FromRoiLabel 
+        on slice FromSliceNum to a new ROI for any number of slices in 
+        Target.
+        The Source and Target images have the same FOR but have different IOP 
+        and IPP, and possibly different VS.
+       
+    5.  Relationship-preserving copy of the Source contour in FromRoiLabel 
+        on slice FromSliceNum to a new ROI for any number of slices in 
+        Target.
+        The Source and Target images have different FOR, IPP and IOP, and 
+        possibly different VS.
+        
+    FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
+    IOP = ImageOrientationPatient, VS = Voxel spacings
+    
+    
+    
+    Inputs:
+    ------
+    
+    SrcDcmDir : string
+        Directory containing the Source DICOMs.
+                            
+    SrcRoiFpath : string
+        Full path of the Source DICOM RTS file.
+                             
+    FromSliceNum : integer
+        Slice index of the Source DICOM stack corresponding to the contour to
+        be copied (counting from 0).
+                       
+    FromRoiLabel : string
+        All or part of the Source ROI label containing the contour to be
+        copied.
+                       
+    TrgDcmDir : string
+        Directory containing the Target DICOMs.
+                            
+    TrgRtsFpath : string (default = None)
+        Full path of the Target DICOM RTS file. Default value is None, e.g. 
+        if there is no DICOM RTS for the Target Series.
+        
+    ToSliceNum : integer (default = None)
+        Slice index within the Target DICOM stack where the contour is to
+        be copied to (counting from 0).  This only applies for Direct copies,
+        hence the default value None.
+                        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+          
                   
-    #NewTrgSegSD = 'Case3d_RPCopy'
+    Outputs:
+    -------
+        
+    SrcImage : SimpleITK object
+        Source 3D image.
+        
+    _SrcImage : SimpleITK object
+        Source 3D case-dependent image. If Main use case:
+             = 1 or 2: SrcImage is returned unchanged.
+             = 3 or 4: SrcImage resampled to TrgImage (ResSrcImage is returned).
+             = 5: SrcImage registered to TrgImage (RegSrcImage is returned).
+        
+    TrgImage : SimpleITK object
+        Target 3D image.
+        
+    SrcLabmapIms : List of SimpleITK objects
+        List of Source 3D labelmaps - one labelmap per segment.
     
-    NewTrgSeg.SeriesDescription = NewTrgSegSD
-                                          
-    return NewTrgSeg
+    _SrcLabmapIms : List of SimpleITK objects
+        List of Source 3D case-dependent image - one labelmap per segment. If 
+        Main use case:
+            = 1 or 2: SrcLabmapIms is returned unchanged.
+            = 3 or 4: Each SrcLabmapIm in ScrLabmapIms is resampled to TrgImage 
+            (ResSrcLabmapIms is returned).
+            = 5: Each SrcLabmapIm in SrcLabmapIms is registered to TrgImage 
+            (RegSrcLabmapIms is returned).
+    
+    SrcLabmapToCopyIm : SimpleITK object
+        Source 3D labelmap of the segmentation in FromSegLabel to be copied.
+        
+    _SrcLabmapToCopyIm : SimpleITK object
+        Source 3D case-dependent image - one labelmap per segment. If Main use 
+        case:
+            = 1 or 2: SrcLabmapToCopyIm is returned unchanged.
+            = 3 or 4: SrcLabmapToCopyIm is resampled to TrgImage 
+            (ResSrcLabmapToCopyIm is returned).
+            = 5: SrcLabmapToCopyIm is registered to TrgImage 
+            (RegSrcLabmapToCopyIm is returned).
+    
+    TrgLabmapIms : List of SimpleITK objects
+        List of Target 3D labelmaps - one labelmap per segment, if a Target SEG
+        exists.  If not a list with a single empty 3D image is returned.
+    
+    NewTrgLabmapIms : List of SimpleITK objects
+        List of new Target 3D labelmaps - one labelmap per segment.  If a 
+        Target exists, the first n labelmaps are the same labelmaps in 
+        TrgLabmapIms, and the final item is the labelmap that was copied.  If 
+        not, a list with a single 3D labelmap is returned - the labelmap that
+        was copied.  The new labelmap (last item in NewTrgLabmapIms) is case-
+        dependent.  If Main use case:
+            = 1 or 2: The new labelmap is simply SrcLabmapToCopyIm unchanged.
+            = 3 or 4: The new labelmap is SrcLabmapToCopyIm resampled to 
+            TrgImage (ResSrcLabmapToCopyIm is returned).
+            = 5: The new labelmap is SrcLabmapToCopyIm transformed to the
+            Target domain (TxSrcLabmapToCopyIm is returned).
+    
+    SrcRts : Pydicom object
+        Source RTS object.
+        
+    TrgRts : Pydicom object
+        Original Target RTS object or a copy of SrcRts if TrgRtsFpath = ''.
+        
+    NewTrgRts : Pydicom object
+        New/modified Target RTS object.
+    
+    SrcDicoms : List of Pydicom objects
+        List of Source DICOM objects.
+    
+    TrgDicoms : List of Pydicom objects
+        List of Target DICOM objects.
+    """
+    
+    
+    # Determine which Use Case applies:
+    UseCase = WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole)
+    
+    if True:#LogToConsole:
+        #print(f'\nCase {UseCase} applies.')
+        title = f'Case {UseCase} applies.'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+    
+    """ 
+    **************************************************************************
+    Import the list of DICOM objects, 3D images, RTSs and Target ContourData. 
+    **************************************************************************
+    """
+    SrcDicoms = ImportDicoms(SrcDcmDir) # not needed but useful
+    TrgDicoms = ImportDicoms(TrgDcmDir) # needed for ModifyRtsTagVals
+    
+    SrcImage = ImportImage(SrcDcmDir)
+    TrgImage = ImportImage(TrgDcmDir)
+    
+    SrcRts = dcmread(SrcRtsFpath)
+    
+    if TrgRtsFpath: # if TrgRtsFpath is not empty
+        TrgRts = dcmread(TrgRtsFpath)
+        
+        TrgPtsByRoi = GetPtsByRoi(RtsFpath=TrgRtsFpath, DicomDir=TrgDcmDir)
+    else:
+        TrgPtsByRoi = []
+    
+    
+    # Compare the modalities of the ROIs:
+    if TrgRtsFpath:
+        if not IsSameModalities(SrcRts, TrgRts):
+            msg = f"The Source ({SrcRts.Modality}) and Target " \
+                  + "({TrgRts.Modality} modalities are different."
+            
+            raise Exception(msg)
+    
+    
+    """ 
+    **************************************************************************
+    Get the number of ROIs, their labels and the ROI number containing the ROI
+    to be copied. 
+    **************************************************************************
+    """
+    SrcNumOfRois = len(SrcRts.ROIContourSequence)
+    
+    SrcRoiLabels = GetRoiLabels(SrcRts)
+    
+    if not FromRoiLabel in SrcRoiLabels:
+        raise Exception("There is no Source ROI with label " + FromRoiLabel\
+                        + ".")
+        
+    FromRoiNum = SrcRoiLabels.index(FromRoiLabel)
+    
+    if TrgRtsFpath:
+        TrgNumOfRois = len(TrgRts.ROIContourSequence)
+    
+        TrgRoiLabels = GetRoiLabels(TrgRts)
+        
+        #if 'a' in UseCase:
+        #    """ 
+        #    This is a direct copy. Is this the first time a contour is being
+        #    copied from FromRoiLabel to TrgRts? If so ToRoiNum = 0 (the copied
+        #    contour will be the first and only contour in the first and only
+        #    ROI).  If not, ToRoiNum will be ... will always be 0. """ 
+        #    # Has 
+        #    if FromRoiLabel in TrgRoiLabels:
+                
+    
+    if True:#LogToConsole:
+        if TrgRtsFpath:
+            msg = f'\nThe Source RTS has {SrcNumOfRois} ROIs with ' \
+                  + f'label(s) {SrcRoiLabels} \nand the Target RTS has ' \
+                  + f'{TrgNumOfRois} ROIs with label(s) {TrgRoiLabels}'
+        else:
+            msg = f'\nThe Source RTS has {SrcNumOfRois} ROIs with ' \
+                  + f'label(s) {SrcRoiLabels}'
+            
+        print(msg)
+    
+    
+        
+    
+    """
+    **************************************************************************
+    Get the DICOM SOP UIDs, the ContourImageSequence-to-slice indices
+    (CIStoSliceInds), the ContourSequence-to-slice indices (CStoSliceInds), 
+    and the CStoSliceInds grouped by ROI (CStoSliceIndsByRoi).
+    **************************************************************************
+    """
+    
+    SrcSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    TrgSOPuids = GetDicomSOPuids(DicomDir=TrgDcmDir)
+    
+    #SrcCIStoSliceInds = GetCIStoSliceInds(Rts=SrcRts, SOPuids=SrcSOPuids)
+    
+    SrcCStoSliceInds = GetCStoSliceInds(Rts=SrcRts, SOPuids=SrcSOPuids)
+    
+    SrcNumOfConsByRoi = GetNumOfContoursByRoi(Rts=SrcRts)
+    
+    SrcCStoSliceIndsByRoi = GroupListByRoi(ListToGroup=SrcCStoSliceInds, 
+                                           NumOfConsByRoi=SrcNumOfConsByRoi)
+    
+    
+    if TrgRtsFpath:
+        TrgCIStoSliceInds = GetCIStoSliceInds(Rts=TrgRts, SOPuids=TrgSOPuids)
+    
+        TrgCStoSliceInds = GetCStoSliceInds(Rts=TrgRts, SOPuids=TrgSOPuids)
+        
+        TrgNumOfConsByRoi = GetNumOfContoursByRoi(Rts=TrgRts)
+        
+        TrgCStoSliceIndsByRoi = GroupListByRoi(ListToGroup=TrgCStoSliceInds, 
+                                               NumOfConsByRoi=TrgNumOfConsByRoi)
+        
+        if True:#LogToConsole:
+            print('\nThe Source series has contours on slices    ',
+                  f'{SrcCStoSliceIndsByRoi} \nand the Target series has',
+                  f'contours on slices {TrgCStoSliceIndsByRoi}',
+                  '\n(grouped by ROI) \n(***Note: Counting from 0.***)')
+    
+    else:
+        TrgCIStoSliceInds = []
+    
+        TrgCStoSliceInds = []
+        
+        TrgNumOfConsByRoi = []
+        
+        TrgCStoSliceIndsByRoi = []
+        
+        if True:#LogToConsole:
+            print('The Source series has contours on slices',
+                  f'{SrcCStoSliceIndsByRoi} \n(grouped by ROI)',
+                  '\n(***Note: Counting from 0.***)')
+    
+    
+    """ 
+    Verify that a contour exists for FromSliceNum (this check won't be 
+    necessary in the OHIF-Viewer but a bad input could occur here).
+    """
+    if not FromSliceNum in SrcCStoSliceInds:
+        msg = "The Source series does not have a contour on slice " \
+              + f"{FromSliceNum}"
+        
+        raise Exception(msg)
+        
+        return
+    
+    
+    
+    
+    """
+    **************************************************************************
+    Create a 3D labelmap (as a SimpleITK image) for the segmentation to be 
+    copied.
+    **************************************************************************
+    """    
+    
+    # Convert the contour data to be copied to a 2D mask:
+    SrcPixArrToCopy = GetMaskFromRts(RtsFpath=SrcRtsFpath, 
+                                     FromRoiLabel=FromRoiLabel, 
+                                     FromSliceNum=FromSliceNum, 
+                                     DicomDir=SrcDcmDir, 
+                                     RefImage=SrcImage)
+    
+    # Convert the pixel array (frame) to be to be copied into an SimpleITK
+    # image:
+    """ This isn't required for Use Cases 1a/b and 2a/b. """
+    SrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+                                     FrameToSliceInds=[FromSliceNum],
+                                     RefIm=SrcImage)
+    
+    
+    """
+    **************************************************************************
+    Create a list of 3D labelmaps (as SimpleITK images) for all segmentations
+    in all segments.
+    
+    This isn't needed but is created since the function returns SrcLabmapIms.
+    **************************************************************************
+    """
+    
+    SrcLabmapIms = GetLabmapImsByRoi(RtsFpath=SrcRtsFpath, 
+                                     DicomDir=SrcDcmDir, 
+                                     CStoSliceIndsByRoi=SrcCStoSliceIndsByRoi, 
+                                     RefIm=SrcImage)
+    
+    if TrgRtsFpath:
+        TrgLabmapIms = GetLabmapImsByRoi(RtsFpath=TrgRtsFpath, 
+                                     DicomDir=TrgDcmDir, 
+                                     CStoSliceIndsByRoi=TrgCStoSliceIndsByRoi, 
+                                     RefIm=TrgImage)
+    else:
+        """ 
+        This isn't needed but create a list of a single empty image since the 
+        function returns TrgLabmapIms 
+        """
+        # Initialise the Target labelmap:
+        TrgLabmapIms = []
+        TrgLabmapIms.append(InitialiseImage(TrgImage))
+    
+    
+    
+    
+    
+    
+    """
+    **************************************************************************
+    What follows is UseCase-specific.
+    **************************************************************************
+    """
+    
+    if 'a' in UseCase:
+        """ 
+        This is common for all Direct copy sub-use cases.
+        """
+        
+        # The contour points to be copied:
+        SrcPtsToCopy = GetPtsInContour(RtsFpath=SrcRtsFpath, 
+                                       DicomDir=SrcDcmDir, 
+                                       RoiNum=FromRoiNum, 
+                                       SliceNum=FromSliceNum)
+        
+        
+        
+    if UseCase == '1a' or UseCase == '2a':
+        """
+        Main use case = 1 or 2:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            voxel spacings, and either are the same series (Main use case = 1) 
+            or different series (Main use case = 2).
+            
+        Sub-case = a:
+            Direct copy of the contour on slice FromSliceNum in ROI 
+            FromRoiLabel for Source to a new ROI on slice ToSliceNum for Target.
+        
+        """
+        
+        #print(f'\nApplying Case 2a..\n')
+        if UseCase == '1a':
+            title = 'Applying Case 1a..'
+        else:
+            title = 'Applying Case 2a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        SrcSize, SrcSpacings, SrcST,\
+        SrcIPPs, SrcDirs = GetImageAttributes(DicomDir=SrcDcmDir)
+        
+        # Convert SrcPtsToCopy to indices:
+        SrcIndsToCopy = ContourToIndices(Points=SrcPtsToCopy, 
+                                         Origin=SrcIPPs[0], 
+                                         Directions=SrcDirs, 
+                                         Spacings=SrcSpacings)
+        
+        # Change the z-component (k) of the indices to ToSliceNum:
+        SrcIndsToCopy = ChangeZinds(Indices=SrcIndsToCopy, NewZind=ToSliceNum)
+        
+        # Convert back to physical points:
+        SrcPtsToCopy = Inds2Pts(Indices=SrcIndsToCopy, 
+                                Origin=SrcIPPs[0], 
+                                Directions=SrcDirs, 
+                                Spacings=SrcSpacings)
+        
+        # The new Target ContourImageSequence-to-slice indices are the original
+        # list with ToSliceNum appended to it and sorted if this image was not
+        # already in ContourImageSequence:
+        if not ToSliceNum in TrgCIStoSliceInds:
+            NewTrgCIStoSliceInds = AppendItemToListAndSort(OrigList=TrgCIStoSliceInds, 
+                                                           ItemToAppend=ToSliceNum)
+        
+        # The new Target ContourSequence-to-slice indices are the original list
+        # with ToSliceNum appended to it:
+        NewTrgCStoSliceInds = deepcopy(TrgCStoSliceInds)
+        NewTrgCStoSliceInds.append(ToSliceNum)
+        
+        # and for ContourSequence-to-slice indices, append [ToSliceNum]:
+        NewTrgCStoSliceIndsByRoi = deepcopy(TrgCStoSliceIndsByRoi)
+        NewTrgCStoSliceIndsByRoi.append([ToSliceNum])
+        
+        
+        
+    
+    if UseCase == '1b' or UseCase == '2b':
+        """
+        Main use case = 1 or 2:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            voxel spacings, and either are the same series (Main use case = 1) 
+            or different series (Main use case = 2).
+            
+        Sub-case = b:
+            Relationship-preserving copy of the contour on slice FromSliceNum 
+            (specified) in ROI FromRoiLabel for Source to a new ROI on 
+            FromSliceNum (since ToSliceNum = FromSliceNum) for Target.
+        """
+        
+        #print('\nApplying Case 2b..\n')
+        if UseCase == '2a':
+            title = 'Applying Case 2a..'
+        else:
+            title = 'Applying Case 2b..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        if LogToConsole:
+            #ToSliceNum = deepcopy(FromSliceNum)
+            
+            print(f'\nCopying slice {FromSliceNum} from Source RTS to slice',
+                  #f'{ToSliceNum} in Target SEG..')
+                  f'{FromSliceNum} in Target RTS..')
+        
+        # The new Target ContourSequence-to-slice indices is the original one
+        # with [FromSliceNum] appended to it:
+        NewTrgCStoSliceInds = deepcopy(TrgCStoSliceInds)
+        NewTrgCStoSliceInds.append(FromSliceNum)
+        
+        NewTrgCStoSliceIndsByRoi = deepcopy(TrgCStoSliceIndsByRoi)
+        NewTrgCStoSliceIndsByRoi.append([FromSliceNum])
+        
+        
+    if '1' in UseCase or '2' in UseCase:
+        """
+        What follows is common to UseCase 1a, 1b, 2a and 2b.
+        """
+        
+        # Change SrcPtsToCopy to ContourData format (i.e. flat list of 
+        # coordinates):
+        SrcContourDataToCopy = Pts2ContourData(Points=SrcPtsToCopy)
+        
+        # Add SrcContourDataToCopy to the TrgContourData:
+        NewTrgPtsByRoi = deepcopy(TrgPtsByRoi)
+        NewTrgPtsByRoi.append(SrcPtsToCopy)
+        
+        # The new Target ROI numbers:
+        NewTrgRoiNums = []
+        
+        print('')
+        
+        for RoiNum in range(len(NewTrgCStoSliceIndsByRoi)):
+            # The number of contours for this ROI number:
+            Ncontours = len(NewTrgCStoSliceIndsByRoi[RoiNum])
+            
+            print(f'RoiNum = {RoiNum}, Ncontours = {Ncontours}')
+            
+            NewTrgRoiNums.extend([RoiNum]*Ncontours)
+        
+        
+        if LogToConsole:
+            print('\nTrgCStoSliceInds    =', TrgCStoSliceInds)
+            print('\nNewTrgCStoSliceInds =', NewTrgCStoSliceInds)
+            
+        print(f'\nThere are {len(NewTrgCStoSliceInds)} contours in',
+              'NewTrgContourData')
+        print(f'NewTrgCStoSliceInds: {NewTrgCStoSliceInds}')
+        print(f'NewTrgRoiNums: {NewTrgRoiNums}')
+        
+        """
+        26/11: Continue modifying this
+        """
+        
+        if not TrgRtsFpath:
+            # Target does not have an existing RTS, so initialise a new RTS 
+            # object:
+            TrgRts = InitialiseRts(Dicoms=TrgDicoms, Image=TrgImage,
+                                   RtsTemplate=SrcRts, 
+                                   LogToConsole=LogToConsole)
+        
+        # Modify select tags in NewTrgRts:
+        NewTrgRts = ModifyRtsTagVals(TrgRts, TrgDicoms, NewTrgPtsByRoi, 
+                                     NewTrgRoiNums, NewTrgCIStoSliceInds, 
+                                     NewTrgCStoSliceIndsByRoi, FromRoiNum, 
+                                     FromSliceNum, SrcRts, LogToConsole)
+        
+        
+        """ 30/11: Need to continue modifying below... """
+        
+        
+        """ Note:
+            
+        The following variables:
+            
+        ResSrcImage
+        SrcLabmapIms
+        ResSrcLabmapIms
+        SrcLabmapToCopyIm
+        ResSrcLabmapToCopyIm
+        NewTrgLabmapIms
+        
+        were not used for this case but this main function outputs:
+        
+        return SrcImage, ResSrcImage, TrgImage,\
+               SrcLabmapIms, ResSrcLabmapIms,\
+               SrcLabmapToCopyIm, ResSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               NewTrgSeg
+               
+        So create:
+            
+        SrcLabmapToCopyIm
+        NewTrgLabmapIms
+        
+        even though they're not needed for this case, and return 
+        SrcLabmapToCopyIm for ResSrcLabmapToCopyIm, and SrcLabmapIms for
+        ResSrcLabmapIms.
+        """
+        
+        # This is already done prior to spitting to different use cases:
+        #SrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+        #                                 FrameToSliceInds=[ToSliceNum], 
+        #                                 RefIm=TrgImage)
+        
+        ResSrcLabmapIms = []
+        
+        
+        ResSrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+                                            #FrameToSliceInds=F2SInds,
+                                            FrameToSliceInds=[ToSliceNum], 
+                                            RefIm=TrgImage)
+        
+        # Create NewTrgLabmapIms even though it's not needed:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # then append the Source labelmap to be copied:    
+        NewTrgLabmapIms.append(SrcLabmapToCopyIm)
+        
+        
+        return SrcImage, SrcImage, TrgImage,\
+               SrcLabmapIms, SrcLabmapIms,\
+               SrcLabmapToCopyIm, SrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
+               
+        
+        """
+        23/10:  Still need to verify that Case 2 provides the expected results.
+        
+        26/10:  Resampling will need to be performed if the origins are not the
+        same... 19/11: Now WhichUseCase() checks the origins and if they are
+        not the same it's considered UseCase 3.
+        """
+        
+    
+    
+    
+    if '3' in UseCase:
+        """
+        What follows is common to both UseCase 3a and 3b.
+        """
+        
+        # Resample the Source image:
+        """ This is not required but useful info """
+        ResSrcImage = ResampleImage(Image=SrcImage, 
+                                    RefImage=TrgImage, 
+                                    Interpolation='Linear')
+        
+        if LogToConsole:                            
+            print('Results after resampling Source image:\n')
+            
+            print('The Source and Target image size:\n',
+                          f'   Original Source:  {SrcImage.GetSize()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetSize()} \n',
+                          f'   Target:           {TrgImage.GetSize()}')
+                
+            print('The Source and Target voxel spacings:\n',
+                          f'   Original Source:  {SrcImage.GetSpacing()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetSpacing()} \n',
+                          f'   Target:           {TrgImage.GetSpacing()}')
+                
+            print('The Source and Target Origin:\n',
+                          f'   Original Source:  {SrcImage.GetOrigin()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetOrigin()} \n',
+                          f'   Target:           {TrgImage.GetOrigin()}')
+                
+            print('The Source and Target Direction:\n',
+                          f'   Original Source:  {SrcImage.GetDirection()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetDirection()} \n',
+                          f'   Target:           {TrgImage.GetDirection()}')
+                                   
+                                    
+        # Resample the Source labelmap images:
+        """ This is not required but useful info """
+        ResSrcLabmapIms = []
+        
+        for SrcLabmapIm in SrcLabmapIms:
+            ResSrcLabmapIm = ResampleImage(Image=SrcLabmapIm, 
+                                           RefImage=TrgImage, 
+                                           Interpolation='NearestNeighbor')
+            
+            ResSrcLabmapIms.append(ResSrcLabmapIm)
+        
+        
+        
+        # Resample the Source labelmap to be copied:
+        ResSrcLabmapToCopyIm = ResampleImage(Image=SrcLabmapToCopyIm, 
+                                             RefImage=TrgImage, 
+                                             Interpolation='NearestNeighbor')
+        
+        #nda = sitk.GetArrayFromImage(ResSrcLabmapToCopyIm)
+        #unique = UniqueItems(Nda=nda, NonZero=False)
+        #print(f'\nThere are {len(unique)} unique items in ResSrcLabmapToCopyIm')
+        
+        
+    if UseCase == '3a':
+        """
+        Main use case = 3:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            but different voxel spacings.  
+            
+        Sub-case = a:
+            Direct copy of the segmentation on slice FromSliceNum (specified) 
+            in segment FromSegLabel for Source to a new segment on slice  
+            ToSliceNum (specified) for Target.
+        """
+        
+        #print(f'\nApplying Case 3a..\n')
+        title = 'Applying Case 3a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        # Convert the resampled Source labelmap-to-be-copied image to a Numpy
+        # array:
+        ResSrcPixArrToCopy,\
+        F2SInds = Image2PixArr(LabmapIm=ResSrcLabmapToCopyIm)
+        
+        unique = UniqueItems(Nda=ResSrcPixArrToCopy, NonZero=False)
+        print(f'\nThere are {len(unique)} unique items in ResSrcPixArrToCopy')
+        
+        print(f'\nThe segmentation on FromSliceNum = {FromSliceNum} has been',
+              f'resampled to {ResSrcPixArrToCopy.shape[0]} frames:',
+              f'{F2SInds}')
+        
+        """
+        For Direct copy 1 segment is always copied to 1 frame, so if after
+        resampling there is more than one frame, either all but one of frames 
+        will need to be ignored, or all frames will need to be averaged or a
+        logical OR operation performed on all frames, etc.
+        """
+        if ResSrcPixArrToCopy.shape[0] > 1:
+            print(f'\nResSrcPixArrToCopy has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames so the pixel arrays will be averaged...')
+            
+            # Take pixel-by-pixel mean across all frames in ResSrcPixArrToCopy:
+            ResSrcPixArrToCopy = MeanPixArr(ResSrcPixArrToCopy)
+            
+            print(f'\nResSrcPixArrToCopy now has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames')
+        else:
+            print(f'\nResSrcPixArrToCopy has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames')
+            
+        
+        # Shift the the in-plane elements in the resampled Source frame that is
+        # to be copied:
+        ResSrcPixArrToCopy = ShiftFrame(Frame=ResSrcPixArrToCopy, 
+                                        PixShift=PixShift)
+        
+        print(f'\nAfter shifting the frame, ResSrcPixArrToCopy has',
+              f'{ResSrcPixArrToCopy.shape[0]} frames')
+        
+        unique = UniqueItems(Nda=ResSrcPixArrToCopy, NonZero=False)
+        print(f'\nThere are {len(unique)} unique items in ResSrcPixArrToCopy',
+              'after shifting the frame.')
+        
+        # Convert the shifted resampled pixel array back to a SimpleITK image:
+        """
+        For Direct copy 1 segment is always copied to 1 frame, hence
+        FrameToSliceInds=[ToSliceNum].
+        """
+        ResSrcLabmapToCopyIm = PixArr2Image(PixArr=ResSrcPixArrToCopy,
+                                            #FrameToSliceInds=F2SInds,
+                                            FrameToSliceInds=[ToSliceNum], 
+                                            RefIm=TrgImage)
+        
+        
+        
+    if UseCase == '3b':
+        """
+        Main use case = 3:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            but different voxel spacings.  
+            
+        Sub-case = b:
+            Relationship-preserving copy of segmentation on slice FromSliceNum 
+            (specified) in segment FromSegLabel for Source to a new segment 
+            with any number of segmentations on any number of slices for Target. 
+        """
+        
+        #print(f'\nApplying Case 3b..')
+        title = 'Applying Case 3a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        
+    if '3' in UseCase:
+        """
+        The following is common to UseCase 3a and 3b.
+        """
+        
+        # Create a list of new Target Labelmap images including the existing 
+        # labelmaps...:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # ... and append the resampled Source labelmap to be copied:    
+        NewTrgLabmapIms.append(ResSrcLabmapToCopyIm)
+        
+        print(f'\nlen(NewTrgLabmapIms) = {len(NewTrgLabmapIms)}')
+        
+        # Convert each labelmap image in NewTrgLabmapIms to a pixel array:
+        NewTrgPixArrBySeg = []
+        NewTrgPFFGStoSliceIndsBySeg = []
+        NewTrgPFFGStoSliceInds = []
+        NewTrgSegNumsBySeg = []
+        NewTrgSegNums = []
+        
+        print('')
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            PixArr, F2SInds = Image2PixArr(LabmapIm=NewTrgLabmapIms[SegNum])
+            
+            unique = UniqueItems(Nda=PixArr, NonZero=False)
+
+            print(f'   SegNum = {SegNum}, F2SInds = {F2SInds}')
+            print(f'   There are {len(unique)} unique items in PixArr')
+            
+            NewTrgPixArrBySeg.append(PixArr)
+            
+            NewTrgPFFGStoSliceIndsBySeg.append(F2SInds)
+            
+            NewTrgPFFGStoSliceInds.extend(F2SInds)
+            
+            NewTrgSegNumsBySeg.append([SegNum]*len(F2SInds))
+            
+            NewTrgSegNums.extend([SegNum]*len(F2SInds))
+            
+        
+        # Combine all frames:
+        NewTrgPixArr = np.zeros((len(NewTrgPFFGStoSliceInds), 
+                                 PixArr.shape[1], 
+                                 PixArr.shape[2]))
+        
+        n = 0
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            for i in range(len(NewTrgPFFGStoSliceIndsBySeg[SegNum])):
+                NewTrgPixArr[n] = NewTrgPixArrBySeg[SegNum][i]
+                
+                n += 1
+        
+        
+        print(f'\nThe new Target pixel array has shape {NewTrgPixArr.shape}')
+        print(f'\nNewTrgPFFGStoSliceInds: {NewTrgPFFGStoSliceInds}')
+        print(f'NewTrgPFFGStoSliceIndsBySeg: {NewTrgPFFGStoSliceIndsBySeg}')
+        print(f'\nNewTrgSegNums: {NewTrgSegNums}')
+        print(f'NewTrgSegNumsBySeg: {NewTrgSegNumsBySeg}')
+        
+        
+        unique = UniqueItems(Nda=NewTrgPixArr, NonZero=False)
+        #unique = UniqueItems(Nda=NewTrgPixArr, NonZero=True)
+        
+        #print(f'\nUnique items in NewTrgPixArr = {unique}')
+        print(f'\nThere are {len(unique)} unique items in NewTrgPixArr')
+        
+        if not TrgSegFpath:
+            # Target does not have an existing SEG, so initialise a new SEG 
+            # object:
+            TrgSeg = InitialiseSeg(TrgDicoms, NewTrgPFFGStoSliceInds,
+                                   TrgImage, SrcSeg, LogToConsole)
+        
+        # Create new Target SEG object and modify the tags accordingly:
+        NewTrgSeg = ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, 
+                                     NewTrgSegNums, NewTrgPFFGStoSliceInds, 
+                                     FromSegNum, FromSliceNum, SrcSeg, 
+                                     LogToConsole)
+        
+        
+        if LogToConsole:
+            print('\n\n')
+            title = 'Results after resampling Source LabelMap image and ' \
+                    + 'Source-to-copy LabelMap image:'
+            ul = '*' * len(title)
+            
+            print('\n' + title)
+            print(ul)
+            
+            print('\n*The Source and Target labelmap image size:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetSize()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetSize()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetSize()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetSize()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetSize()}')
+                
+            print('\n*The Source and Target labelmap image voxel spacings:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetSpacing()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetSpacing()} \n',
+                          f'   Source-to-copy            {SrcLabmapToCopyIm.GetSpacing()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetSpacing()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetSpacing()}')
+                
+            print('\n*The Source and Target labelmap image Origin:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetOrigin()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetOrigin()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetOrigin()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetOrigin()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetOrigin()}')
+                
+            print('\n*The Source and Target labelmap image Direction:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetDirection()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetDirection()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetDirection()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetDirection()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetDirection()}')
+        
+        
+        
+        if LogToConsole:
+            #SrcLabmapImMax = ImageMax(SrcLabmapIm)
+            #SrcLabmapImMin = ImageMin(SrcLabmapIm)
+            
+            #ResSrcLabmapImMax = ImageMax(ResSrcLabmapIm)
+            #ResSrcLabmapImMin = ImageMin(ResSrcLabmapIm)
+            
+            SrcLabmapToCopyImMax = ImageMax(SrcLabmapToCopyIm)
+            SrcLabmapToCopyImMin = ImageMin(SrcLabmapToCopyIm)
+            
+            ResSrcLabmapToCopyImMax = ImageMax(ResSrcLabmapToCopyIm)
+            ResSrcLabmapToCopyImMin = ImageMin(ResSrcLabmapToCopyIm)
+            
+            TrgLabmapImMax = ImageMax(TrgLabmapIm)
+            TrgLabmapImMin = ImageMin(TrgLabmapIm)
+            
+            print('\n*The Source and Target labelmap image minimum:*\n',
+                          #f'   Source:                   {SrcLabmapImMin} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapImMin} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyImMin} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyImMin} \n',
+                          f'   Target:                   {TrgLabmapImMin}')
+            
+            print('\n*The Source and Target labelmap image maximum:*\n',
+                          #f'   Source:                   {SrcLabmapImMax} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapImMax} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyImMax} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyImMax} \n',
+                          f'   Target:                   {TrgLabmapImMax}')
+            
+        
+        return SrcImage, ResSrcImage, TrgImage,\
+               SrcLabmapIms, ResSrcLabmapIms,\
+               SrcLabmapToCopyIm, ResSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
+    
+         
+        
+        
+    if UseCase == '4':
+        """
+        Main use case = 4:
+            Source and Target have the same FrameOfReferenceUID and origins, 
+            but different IOP and voxel spacings.  
+            
+        Does UseCase 4 require sub-cases?...
+        
+        Don't have test data set to develop this yet.
+        On 17/11 Simon said he would ask Jess for "data with different 
+        angulations".
+        """
+        
+        """ need to continue """
+        
+        #print(f'\nApplying Case 4..')
+        title = 'Applying Case 4..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        
+    if UseCase == '5':
+        """
+        Main use case = 5:
+            Source and Target have the different FrameOfReferenceUID.  
+            
+        Does UseCase 5 require sub-cases?...
+        """
+        
+        
+        #print(f'\nApplying Case 5..')
+        title = 'Applying Case 5..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        # Register the images using an affine transformation:
+        RegSrcImage, RegImFilt = RegisterImages(FixIm=TrgImage, MovIm=SrcImage, 
+                                                Tx='affine',
+                                                LogToConsole=LogToConsole)
+        
+        # Transform SrcLabmapToCopyIm:
+        TxSrcLabmapToCopyIm = TransformImage(Im=SrcLabmapToCopyIm, 
+                                             RegImFilt=RegImFilt)
+        
+        # Binary threshold TxSrcLabmapToCopyIm:
+        TxSrcLabmapToCopyIm = BinaryThresholdImage(Im=TxSrcLabmapToCopyIm, 
+                                                   Threshold=0.5)
+        
+        # Transform all Source labelmap images:
+        """ This is not required but useful info """
+        TxSrcLabmapIms = []
+        
+        for SrcLabmapIm in SrcLabmapIms:
+            TxSrcLabmapIm = TransformImage(Im=SrcLabmapIm, 
+                                           RegImFilt=RegImFilt)
+            
+            TxSrcLabmapIm = BinaryThresholdImage(Im=TxSrcLabmapIm, 
+                                                 Threshold=0.5)
+            
+            TxSrcLabmapIms.append(TxSrcLabmapIm)
+        
+        
+        """
+        24/11: The labelmaps in TxSrcLabmapIms look odd.
+        """
+        
+        # Create a list of new Target Labelmap images including the existing 
+        # labelmaps...:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # ... and append the transformed Source labelmap to be copied:    
+        NewTrgLabmapIms.append(TxSrcLabmapToCopyIm)
+        
+        print(f'\nlen(NewTrgLabmapIms) = {len(NewTrgLabmapIms)}')
+        
+        # Convert each labelmap image in NewTrgLabmapIms to a pixel array:
+        NewTrgPixArrBySeg = []
+        NewTrgPFFGStoSliceIndsBySeg = []
+        NewTrgPFFGStoSliceInds = []
+        NewTrgSegNumsBySeg = []
+        NewTrgSegNums = []
+        
+        print('')
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            PixArr, F2SInds = Image2PixArr(LabmapIm=NewTrgLabmapIms[SegNum])
+            
+            unique = UniqueItems(Nda=PixArr, NonZero=False)
+
+            print(f'   SegNum = {SegNum}, F2SInds = {F2SInds}')
+            print(f'   There are {len(unique)} unique items in PixArr')
+            
+            NewTrgPixArrBySeg.append(PixArr)
+            
+            NewTrgPFFGStoSliceIndsBySeg.append(F2SInds)
+            
+            NewTrgPFFGStoSliceInds.extend(F2SInds)
+            
+            NewTrgSegNumsBySeg.append([SegNum]*len(F2SInds))
+            
+            NewTrgSegNums.extend([SegNum]*len(F2SInds))
+            
+        
+        # Combine all frames:
+        NewTrgPixArr = np.zeros((len(NewTrgPFFGStoSliceInds), 
+                                 PixArr.shape[1], 
+                                 PixArr.shape[2]))
+        
+        n = 0
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            for i in range(len(NewTrgPFFGStoSliceIndsBySeg[SegNum])):
+                NewTrgPixArr[n] = NewTrgPixArrBySeg[SegNum][i]
+                
+                n += 1
+        
+        
+        print(f'\nThe new Target pixel array has shape {NewTrgPixArr.shape}')
+        print(f'\nNewTrgPFFGStoSliceInds: {NewTrgPFFGStoSliceInds}')
+        print(f'NewTrgPFFGStoSliceIndsBySeg: {NewTrgPFFGStoSliceIndsBySeg}')
+        print(f'\nNewTrgSegNums: {NewTrgSegNums}')
+        print(f'NewTrgSegNumsBySeg: {NewTrgSegNumsBySeg}')
+        
+        
+        unique = UniqueItems(Nda=NewTrgPixArr, NonZero=False)
+        #unique = UniqueItems(Nda=NewTrgPixArr, NonZero=True)
+        
+        #print(f'\nUnique items in NewTrgPixArr = {unique}')
+        print(f'\nThere are {len(unique)} unique items in NewTrgPixArr')
+        
+        if not TrgSegFpath:
+            # Target does not have an existing SEG, so initialise a new SEG 
+            # object:
+            TrgSeg = InitialiseSeg(TrgDicoms, NewTrgPFFGStoSliceInds,
+                                   TrgImage, SrcSeg, LogToConsole)
+        
+        # Create new Target SEG object and modify the tags accordingly:
+        NewTrgSeg = ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, 
+                                     NewTrgSegNums, NewTrgPFFGStoSliceInds, 
+                                     FromSegNum, FromSliceNum, SrcSeg, 
+                                     LogToConsole)
+        
+        #NewTrgSeg = deepcopy(TrgSeg)
+        
+        return SrcImage, RegSrcImage, TrgImage,\
+               SrcLabmapIms, TxSrcLabmapIms,\
+               SrcLabmapToCopyIm, TxSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
 
 
 
@@ -3545,782 +3806,1239 @@ def MappedCopySegAcrossSeries(SrcDcmDir, SrcSegFpath, FromSliceNum, FromSegLabel
 
     
 
-    
-def Plot_Src_ResSrc_Trg_Images_OLD(SrcIm, ResSrcIm, TrgIm, SrcImLabel, TrgImLabel,
-                               ImageType, ExportPlot, ExportDir, 
-                               LogToConsole=False, dpi=80):
-    
-    if LogToConsole:
-        print('\nThe Source and Target image size:\n',
-                      f'\n   Original Source:  {SrcIm.GetSize()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetSize()} \n',
-                      f'\n   Target:           {TrgIm.GetSize()}')
-            
-        print('\nThe Source and Target voxel spacings:\n',
-                      f'\n   Original Source:  {SrcIm.GetSpacing()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetSpacing()} \n',
-                      f'\n   Target:           {TrgIm.GetSpacing()}')
-            
-        print('\nThe Source and Target Origin:\n',
-                      f'\n   Original Source:  {SrcIm.GetOrigin()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetOrigin()} \n',
-                      f'\n   Target:           {TrgIm.GetOrigin()}')
-            
-        print('\nThe Source and Target Direction:\n',
-                      f'\n   Original Source:  {SrcIm.GetDirection()} \n',
-                      f'\n   Resampled Source: {ResSrcIm.GetDirection()} \n',
-                      f'\n   Target:           {TrgIm.GetDirection()}')
 
+
+def CopySeg_OLD(SrcDcmDir, SrcSegFpath, FromSliceNum, FromSegLabel,
+            TrgDcmDir, TrgSegFpath=None, ToSliceNum=None, 
+            LogToConsole=False):
+                                
+    """
+    New version created on 30/11/20.
     
+    Make a direct or relationship-preserving copy of a single segmentation in a
+    given segment on a given slice to a new segment in an existing SEG, or 
+    in a newly created SEG (if an existing SEG is not provided). 
     
-    # Convert from SimpleITK image to Numpy arrays:
-    SrcNpa = sitk.GetArrayFromImage(SrcIm)
-    ResSrcNpa = sitk.GetArrayFromImage(ResSrcIm)
-    TrgNpa = sitk.GetArrayFromImage(TrgIm)
+    For direct copies the in-plane coordinates (currently the (x,y) coords) 
+    will be preserved only, whilst for a relationship-preserving copy, all
+    coordinates are spatially preserved.
     
-    # Prepare the figure:
-    Nslices = max(SrcIm.GetSize()[2], TrgIm.GetSize()[2])
+    There are five possible Main Use Cases (indicated by the numbers 1 to 5)
+    and two Sub-cases (indicated by the letters a or b) that apply for a subset
+    of the Main Use Cases that are accommodated:
     
-    # Set the number of subplot rows and columns:
-    Ncols = 3
+    1a. Direct copy of the Source segmentation in FromSegLabel on slice  
+        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+        The Source and Target images are the same. 
     
-    Nrows = Nslices
-    
-    
-    # Create a figure with two subplots and the specified size:
-    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=dpi)
+    1b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
+        on slice FromSliceNum to a new segment for slice ToSliceNum in Target. 
+        The Source and Target images are the same. 
         
+    2a. Direct copy of the Source segmentation in FromSegLabel on slice 
+        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR, IOP, IPP, and VS.
     
-    n = 1 # initialised sub-plot number
+    2b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
+        on slice FromSliceNum to a new segment for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR, IOP, IPP, and VS. 
     
-    # Loop through each slice: 
-    for i in range(Nslices):
-        #if LogToConsole:
-        #        print('\ni =', i)
+    3a. Direct copy of the Source segmentation in FromSegLabel on slice 
+        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+        The Source and Target images have the same FOR and IOP but have 
+        different VS (they will likely also have different IPP).
         
-        #plt.subplot(Nrows, Ncols, n)
-        #plt.axis('off')
-        #ax = plt.subplot(Nrows, Ncols, n)
-
-        #ax = plt.subplot(Nrows, Ncols, n, aspect=AR)
-         
-        # Plot the Original Source slice:
-        if i < SrcIm.GetSize()[2]:
-            #maximum = SrcNpa[i].max()
-            maximum = np.amax(SrcNpa[i])
-            if maximum <= 1:
-                maximum = 1
-            
-            ax = plt.subplot(Nrows, Ncols, n)
-            im = ax.imshow(SrcNpa[i], cmap=plt.cm.Greys_r)
-            cbar = fig.colorbar(im, ax=ax)
-            cbar.mappable.set_clim(0, maximum)
-            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Original Source slice {i}')
-            
-        n += 1 # increment sub-plot number
-            
-        # Plot the Resampled Source slice:
-        if i < ResSrcIm.GetSize()[2]:
-            #maximum = ResSrcNpa[i].max()
-            maximum = np.amax(ResSrcNpa[i])
-            if maximum <= 1:
-                maximum = 1
-                
-            ax = plt.subplot(Nrows, Ncols, n)
-            im = ax.imshow(ResSrcNpa[i], cmap=plt.cm.Greys_r)
-            cbar = fig.colorbar(im, ax=ax)
-            cbar.mappable.set_clim(0, maximum)
-            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Resampled Source slice {i}')
-            
-        n += 1 # increment sub-plot number
-        
-        # Plot the Target slice:
-        if i < TrgIm.GetSize()[2]:
-            #maximum = TrgNpa[i].max()
-            maximum = np.amax(TrgNpa[i])
-            if maximum <= 1:
-                maximum = 1
-                
-            ax = plt.subplot(Nrows, Ncols, n)
-            im = ax.imshow(TrgNpa[i], cmap=plt.cm.Greys_r)
-            cbar = fig.colorbar(im, ax=ax)
-            cbar.mappable.set_clim(0, maximum)
-            ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-            ax.set_title(f'Target slice {i}')
-            
-        n += 1 # increment sub-plot number
-        
-      
+    3b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
+        on slice FromSliceNum to a new segment for any number of slices in 
+        Target.
+        The Source and Target images have the same FOR and IOP but have 
+        different VS (they will likely also have different IPP).
     
-    #print(f'PixAR = {PixAR}')
-    #print(f'AxisAR = {AxisAR}')
+    4.  Relationship-preserving copy of the Source segmentation in FromSegLabel 
+        on slice FromSliceNum to a new segment for any number of slices in 
+        Target.
+        The Source and Target images have the same FOR but have different IOP 
+        and IPP, and possibly different VS.
+       
+    5.  Relationship-preserving copy of the Source segmentation in FromSegLabel 
+        on slice FromSliceNum to a new segment for any number of slices in 
+        Target.
+        The Source and Target images have different FOR, IPP and IOP, and 
+        possibly different VS.
+        
+    FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
+    IOP = ImageOrientationPatient, VS = Voxel spacings
     
-    if ExportPlot:
-        # Short version of Interpolation for exported filename:
-        #if 'inear' in Interpolation:
-        #    Interp = 'Lin'
-        #if 'pline' in Interpolation:
-        #    Interp = 'BSp'
-        #if ('earest' and 'eighbo' or 'nn' or 'NN') in Interpolation:    
-        #    Interp = 'NN'
-            
-        # Short version of ResampleImageFilter:
-        #if Method == 'ResampleImageFilter':
-        #    Method = 'ResampleImFilt'
-            
-        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
-        CurrentTime = time.strftime("%H%M%S", time.gmtime())
-        CurrentDateTime = CurrentDate + '_' + CurrentTime
     
-        #ExportFname = CurrentDateTime + '_Orig' + SrcImLabel + '_Resamp' \
-        #              + SrcImLabel + '_' + TrgImLabel + '_images_' \
-        #              + Method + '_' + Interp + '.jpg'
-                      
-        ExportFname = CurrentDateTime + '_Orig' + SrcImLabel + '_Resamp' \
-                      + SrcImLabel + '_' + TrgImLabel + '_' + ImageType \
-                      + '.jpg'
+    
+    Inputs:
+    ------
+    
+    SrcDcmDir : string
+        Directory containing the Source DICOMs.
+                            
+    SrcSegFpath : string
+        Full path of the Source DICOM SEG file.
+                             
+    FromSliceNum : integer
+        Slice index of the Source DICOM stack corresponding to the segmentation
+        to be copied (counting from 0).
+                       
+    FromSegLabel : string
+        All or part of the Source segment label containing the segmentation to 
+        be copied.
+                       
+    TrgDcmDir : string
+        Directory containing the Target DICOMs.
+                            
+    TrgSegFpath : string (default = None)
+        Full path of the Target DICOM SEG file. Default value is None, e.g. 
+        if there is no DICOM SEG for the Target Series.
         
-        ExportFpath = os.path.join(ExportDir, ExportFname)
+    ToSliceNum : integer (default = None)
+        Slice index within the Target DICOM stack where the segmentation is to
+        be copied to (counting from 0).  This only applies for Direct copies,
+        hence the default value None.
+                        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+          
+                  
+    Outputs:
+    -------
         
-        plt.savefig(ExportFpath, bbox_inches='tight')
+    SrcImage : SimpleITK object
+        Source 3D image.
         
-        print('\nPlot exported to:\n\n', ExportFpath)
+    _SrcImage : SimpleITK object
+        Source 3D case-dependent image. If Main use case:
+             = 1 or 2: SrcImage is returned unchanged.
+             = 3 or 4: SrcImage resampled to TrgImage (ResSrcImage is returned).
+             = 5: SrcImage registered to TrgImage (RegSrcImage is returned).
         
-    return
-
-
-
-
-
-
-
-def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm, NewTrgIm,
-                                      SrcImLabel, TrgImLabel,
-                                      ImageType, ExportPlot, ExportDir, 
-                                      LogToConsole=False, dpi=80):
+    TrgImage : SimpleITK object
+        Target 3D image.
+        
+    SrcLabmapIms : List of SimpleITK objects
+        List of Source 3D labelmaps - one labelmap per segment.
+    
+    _SrcLabmapIms : List of SimpleITK objects
+        List of Source 3D case-dependent image - one labelmap per segment. If 
+        Main use case:
+            = 1 or 2: SrcLabmapIms is returned unchanged.
+            = 3 or 4: Each SrcLabmapIm in ScrLabmapIms is resampled to TrgImage 
+            (ResSrcLabmapIms is returned).
+            = 5: Each SrcLabmapIm in SrcLabmapIms is registered to TrgImage 
+            (RegSrcLabmapIms is returned).
+    
+    SrcLabmapToCopyIm : SimpleITK object
+        Source 3D labelmap of the segmentation in FromSegLabel to be copied.
+        
+    _SrcLabmapToCopyIm : SimpleITK object
+        Source 3D case-dependent image - one labelmap per segment. If Main use 
+        case:
+            = 1 or 2: SrcLabmapToCopyIm is returned unchanged.
+            = 3 or 4: SrcLabmapToCopyIm is resampled to TrgImage 
+            (ResSrcLabmapToCopyIm is returned).
+            = 5: SrcLabmapToCopyIm is registered to TrgImage 
+            (RegSrcLabmapToCopyIm is returned).
+    
+    TrgLabmapIms : List of SimpleITK objects
+        List of Target 3D labelmaps - one labelmap per segment, if a Target SEG
+        exists.  If not a list with a single empty 3D image is returned.
+    
+    NewTrgLabmapIms : List of SimpleITK objects
+        List of new Target 3D labelmaps - one labelmap per segment.  If a 
+        Target exists, the first n labelmaps are the same labelmaps in 
+        TrgLabmapIms, and the final item is the labelmap that was copied.  If 
+        not, a list with a single 3D labelmap is returned - the labelmap that
+        was copied.  The new labelmap (last item in NewTrgLabmapIms) is case-
+        dependent.  If Main use case:
+            = 1 or 2: The new labelmap is simply SrcLabmapToCopyIm unchanged.
+            = 3 or 4: The new labelmap is SrcLabmapToCopyIm resampled to 
+            TrgImage (ResSrcLabmapToCopyIm is returned).
+            = 5: The new labelmap is SrcLabmapToCopyIm transformed to the
+            Target domain (TxSrcLabmapToCopyIm is returned).
+    
+    SrcSeg : Pydicom object
+        Source SEG object.
+        
+    TrgSeg : Pydicom object
+        Original Target SEG object or a copy of SrcSeg if TrgSegFpath = ''.
+        
+    NewTrgSeg : Pydicom object
+        New/modified Target SEG object.
+    
+    SrcDicoms : List of Pydicom objects
+        List of Source DICOM objects.
+    
+    TrgDicoms : List of Pydicom objects
+        List of Target DICOM objects.
+    
+    
+        
+    Notes:
+    -----
+    
+    16/11:  Removed ToSegLabel from list of inputs. Rather than copying to an
+    existing segment copy to a new one.
+    
+    18/11:  The presence of ToSliceNum will indicate that a direct copy is to 
+    be made. The default value of ToSliceNum will be None, which will indicate
+    that a relationship-preserving copy is to be made.
+    """
+    
+    
+    # Determine which Use Case applies:
+    UseCase = WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole)
+    
+    if True:#LogToConsole:
+        #print(f'\nCase {UseCase} applies.')
+        title = f'Case {UseCase} applies.'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
     
     """ 
-    SrcIm/ResSrcIm/TrgIm could either be a SimpleITK image,
-    i.e. type(SrcIm).__name__ == 'Image', or a list of SimpleITK images,
-    i.e. type(SrcIm).__name__ == 'list'.
+    **************************************************************************
+    Import the list of DICOM objects, 3D images and SEGs. 
+    **************************************************************************
+    """
+    SrcDicoms = ImportDicoms(SrcDcmDir) # not needed but useful
+    TrgDicoms = ImportDicoms(TrgDcmDir) # needed for ModifySegTagVals
     
-    e.g. SrcIm can be a list of sitk images of the labelmaps for each of 
-    multiple ROIs.
+    SrcImage = ImportImage(SrcDcmDir)
+    TrgImage = ImportImage(TrgDcmDir)
+    
+    SrcSeg = dcmread(SrcSegFpath)
+    
+    SrcPixArr = SrcSeg.pixel_array
+    
+    if TrgSegFpath: # if TrgSegFpath is not empty
+        TrgSeg = dcmread(TrgSegFpath)
+    
+    
+    # Compare the modalities of the ROIs:
+    if TrgSegFpath:
+        if not IsSameModalities(SrcSeg, TrgSeg):
+            msg = f"The Source ({SrcSeg.Modality}) and Target " \
+                  + "({TrgSeg.Modality} modalities are different."
+            
+            raise Exception(msg)
+    
+    
+    """ 
+    **************************************************************************
+    Get the number of segments and the segment labels. 
+    **************************************************************************
+    """
+    SrcNumOfSegs = len(SrcSeg.SegmentSequence)
+    if TrgSegFpath:
+        TrgNumOfSegs = len(TrgSeg.SegmentSequence)
+    
+    SrcSegLabels = GetRoiLabels(SrcSeg)
+    #SrcNumOfSegs = len(SrcSegLabels)
+    
+    if TrgSegFpath:
+        TrgSegLabels = GetRoiLabels(TrgSeg)
+        #TrgNumOfSegs = len(TrgSegLabels)
+    else:
+        TrgSegLabels = [] # 26/11
+    
+    if True:#LogToConsole:
+        if TrgSegFpath:
+            msg = f'\nThe Source SEG has {SrcNumOfSegs} segments with ' \
+                  + f'label(s) {SrcSegLabels} \nand the Target SEG has ' \
+                  + f'{TrgNumOfSegs} segments with label(s) {TrgSegLabels}'
+        else:
+            msg = f'\nThe Source SEG has {SrcNumOfSegs} segments with ' \
+                  + f'label(s) {SrcSegLabels}'
+            
+        print(msg)
+    
+    
+    
+    """ 
+    **************************************************************************
+    Get the DimensionIndexValues (which relate the segments to the item in the
+    Referenced Instance Sequence) and group by segment (required for 
+    SrcFrameNumsBySeg).
+    **************************************************************************
+    
+    Note:
+        The DIVs are integers that start from 1 (unlike the RIS or PFFGS which 
+        begin at 0)!
+    """
+    SrcDIVs = GetDIVs(SrcSeg)
+    if TrgSegFpath:
+        TrgDIVs = GetDIVs(TrgSeg)
+    
+    SrcDIVsBySeg = GroupListBySegment(ListToGroup=SrcDIVs, DIVs=SrcDIVs)
+    if TrgSegFpath:
+        TrgDIVsBySeg = GroupListBySegment(ListToGroup=TrgDIVs, DIVs=TrgDIVs)
+    
+    if True:#LogToConsole:
+        if TrgSegFpath:
+            msg = '\nThe Source SEG DimensionIndexValues grouped by segment '\
+                  + f'are \n{SrcDIVsBySeg} \n(***Note: Counting from 1.***)'\
+                  + '\n\nand the Target SEG DimensionIndexValues grouped by '\
+                  + f'segment are \n{TrgDIVsBySeg} \n(***Note: Counting from '\
+                  + '1.***)'
+        else:
+            msg = '\nThe Source SEG DimensionIndexValues grouped by segment '\
+                  + f'are \n{SrcDIVsBySeg} \n(***Note: Counting from 1.***)'
+            
+        print(msg)
+        
+    
+    """
+    **************************************************************************
+    Get the DICOM SOP UIDs, PerFrameFunctionalGroupsSequence-to-slice 
+    indices (PFFGStoSliceInds) and PFFGStoSliceInds grouped by segment
+    (PFFGStoSliceIndsBySeg), and the frame numbers grouped by segment 
+    (required for PixArr2ImagesBySeg()).
+    **************************************************************************
+    
+    Note:
+        The PFFGStoSliceInds and FrameNums are integers that start from 0 (unlike 
+        the DIVs which begin at 1)!
     """
     
-    # If ___Im is an Image (i.e. not a list), redefine it as a list with one 
-    # item:  
-    if type(SrcIm).__name__ == 'Image':
-        SrcIm = [SrcIm]
-        
-    if type(ResSrcIm).__name__ == 'Image':
-        ResSrcIm = [ResSrcIm]
-        
-    if type(TrgIm).__name__ == 'Image':
-        TrgIm = [TrgIm]
-        
-    if type(NewTrgIm).__name__ == 'Image':
-        NewTrgIm = [NewTrgIm]
+    SrcSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    TrgSOPuids = GetDicomSOPuids(DicomDir=TrgDcmDir)
     
+    SrcPFFGStoSliceInds = GetPFFGStoSliceInds(SrcSeg, SrcSOPuids)
+    
+    SrcPFFGStoSliceIndsBySeg = GroupListBySegment(ListToGroup=SrcPFFGStoSliceInds, 
+                                                  DIVs=SrcDIVs)
+    
+    SrcFrameNums = list(range(len(SrcPFFGStoSliceInds)))
+    
+    SrcFrameNumsBySeg = GroupListBySegment(ListToGroup=SrcFrameNums, 
+                                           DIVs=SrcDIVs)
+    
+    if TrgSegFpath:
+        TrgPFFGStoSliceInds = GetPFFGStoSliceInds(TrgSeg, TrgSOPuids)
+        
+        TrgPFFGStoSliceIndsBySeg = GroupListBySegment(ListToGroup=TrgPFFGStoSliceInds, 
+                                                      DIVs=TrgDIVs)
+        
+        TrgFrameNums = list(range(len(TrgPFFGStoSliceInds)))
+        
+        TrgFrameNumsBySeg = GroupListBySegment(ListToGroup=TrgFrameNums, 
+                                               DIVs=TrgDIVs)
+        
+        if True:#LogToConsole:
+            print('\nThe Source series has segmentations on slices    ',
+                  f'{SrcPFFGStoSliceIndsBySeg} \nand the Target series has',
+                  f'segmentations on slices {TrgPFFGStoSliceIndsBySeg}',
+                  '\n(grouped by segment) \n(***Note: Counting from 0.***)')
+    
+    else:
+        TrgPFFGStoSliceInds = []
+        
+        TrgPFFGStoSliceIndsBySeg = []
+        
+        TrgFrameNums = []
+        
+        TrgFrameNumsBySeg = []
+        
+        if True:#LogToConsole:
+            print('The Source series has segmentations on slices',
+                  f'{SrcPFFGStoSliceIndsBySeg} \n(grouped by segment)',
+                  '\n(***Note: Counting from 0.***)')
+    
+    
+    """ 
+    Verify that a segment exists for FromSliceNum (this check won't be 
+    necessary in the OHIF-Viewer but a bad input could occur here).
+    """
+    if not FromSliceNum in SrcPFFGStoSliceInds:
+        msg = "The Source series does not have a segmentation on slice " \
+              + f"{FromSliceNum}"
+        
+        raise Exception(msg)
+        
+        return
+    
+    
+    
+    
+    """
+    **************************************************************************
+    Create a 3D labelmap (as a SimpleITK image) for the segmentation to be 
+    copied.
+    **************************************************************************
+    """    
     
     if LogToConsole:
-        print(f'\nScrIm has {len(SrcIm)} segments')
-        print(f'ResScrIm has {len(ResSrcIm)} segments')
-        print(f'TrgIm has {len(TrgIm)} segments')
-        print(f'NewTrgIm has {len(NewTrgIm)} segments')
+        msg = 'Creating labelmap for *Source* segmentation to be copied...'
+        PrintTitle(msg)
+    
+    # Determine which Source segment contains the segmentation to be copied:
+    """
+    Note:
+        SegNum is equivalent to SegmentNumber in SegmentSequence.
+    """
+    FromSegNum = [i for i, s in enumerate(SrcSegLabels) if FromSegLabel in s]
+    FromSegNum = FromSegNum[0]
+    
+    if TrgSegFpath:
+        # Determine which Target segment the Source segmentation is to be 
+        # copied to:
+        #ToSegNum = [i for i, s in enumerate(TrgSegLabels) if ToSegLabel in s]
+        #ToSegNum = ToSegNum[0]
+        
+        # The segment will be added to a new segment:
+        ToSegNum = len(TrgSegLabels) + 1
+    
+        #print(f'\nFromSegNum = {FromSegNum} \nToSegNum = {ToSegNum}') # 26/11
+        
+    else:
+        #print(f'\nFromSegNum = {FromSegNum}') # 26/11
+        ToSegNum = 0 # 26/11
+        
+    print(f'\nFromSegNum = {FromSegNum} \nToSegNum = {ToSegNum}') # 26/11
+    
+    # Determine which frame number in PixelArray corresponds to FromSliceNum:
+    #FromFrameNum = SrcPFFGStoSliceIndsByRoi[FromRoiNum].index(FromSliceNum)  
+    """
+    The problem with the above is that it's the frame number within the subset
+    of frames pertaining to the segmentation given by FromSegNum - it doesn't  
+    relate to the frame number in PixelArray (which contains all frames for all 
+    segmentations).
+    """
+    n = 0 # initialise frame number counter
+    
+    for SegNum in range(SrcNumOfSegs):
+        if SegNum == FromSegNum:
+            """ 
+            This segment contains the frame to be copied, whose position is
+            given by the index of FromSliceNum is in SrcPFFGStoSliceIndsBySeg[SegNum]
+            plus any frames that preceeded it (i.e. the frame counter n).
+            """
+            FromFrameNum = n + SrcPFFGStoSliceIndsBySeg[SegNum].index(FromSliceNum)
+            
+        else:
+            # Add to the frame counter the number of frames in this segment:
+            n += len(SrcPFFGStoSliceIndsBySeg[SegNum]) 
+            #n -= 1 # 19/11: Subtract 1 so that FromFrameNum begins from 0
     
     
-    if LogToConsole:
-        print('\nThe Source and Target image size:\n',
-                      f'\n   Original Source:  {SrcIm[0].GetSize()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetSize()} \n',
-                      f'\n   Original Target:  {TrgIm[0].GetSize()}',
-                      f'\n   New Target:       {NewTrgIm[0].GetSize()}')
-            
-        print('\nThe Source and Target voxel spacings:\n',
-                      f'\n   Original Source:  {SrcIm[0].GetSpacing()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetSpacing()} \n',
-                      f'\n   Original Target:  {TrgIm[0].GetSpacing()}',
-                      f'\n   New Target:       {NewTrgIm[0].GetSpacing()}')
-            
-        print('\nThe Source and Target Origin:\n',
-                      f'\n   Original Source:  {SrcIm[0].GetOrigin()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetOrigin()} \n',
-                      f'\n   Original Target:  {TrgIm[0].GetOrigin()}',
-                      f'\n   New Target:       {NewTrgIm[0].GetOrigin()}')
-            
-        print('\nThe Source and Target Direction:\n',
-                      f'\n   Original Source:  {SrcIm[0].GetDirection()} \n',
-                      f'\n   Resampled Source: {ResSrcIm[0].GetDirection()} \n',
-                      f'\n   Original Target:  {TrgIm[0].GetDirection()}',
-                      f'\n   New Target:       {NewTrgIm[0].GetDirection()}')
+    print(f'\nFromSliceNum = {FromSliceNum} relates to FromFrameNum =',
+          f'{FromFrameNum} in PixelArray (***Note: Counting from 0.***)')
 
     
-    """
-    The code below works but it's less efficient than what follows, i.e.
-    instead of converting from sitk images to numpy and adding the segments,
-    it's more efficient to add the segments as sitk images the convert to 
-    numpy.
-    
-    # Convert from SimpleITK image to Numpy arrays, assigning different values
-    # for each ROI (i.e. 1, 2, 3, ...):
-    SrcNpas = []
-    ResSrcNpas = []
-    TrgNpas = []
-    NewTrgNpas = []
-    
-    # Loop through all ROIs:
-    for r in range(len(SrcIm)):
-        SrcNpas.append(sitk.GetArrayFromImage(SrcIm[r]))
-        #SrcNpas.append((r + 1)*sitk.GetArrayFromImage(SrcIm[r]))
-        
-    for r in range(len(ResSrcIm)):
-        ResSrcNpas.append(sitk.GetArrayFromImage(ResSrcIm[r]))
-        #ResSrcNpas.append((r + 1)*sitk.GetArrayFromImage(ResSrcIm[r]))
-        
-    for r in range(len(TrgIm)):
-        TrgNpas.append(sitk.GetArrayFromImage(TrgIm[r]))
-        #TrgNpas.append((r + 1)*sitk.GetArrayFromImage(TrgIm[r]))
-        
-    for r in range(len(NewTrgIm)):
-        NewTrgNpas.append(sitk.GetArrayFromImage(NewTrgIm[r]))
-            
+    # Create a new pixel array that only contains the frame to be copied:
+    SrcPixArrToCopy = GetFrameFromPixArr(PixArr=SrcPixArr, 
+                                         FrameNum=FromFrameNum)
     
     if LogToConsole:
-        print(f'\nlen(SrcNpas)    = {len(SrcNpas)}')
-        print(f'len(ResSrcNpas) = {len(ResSrcNpas)}')
-        print(f'len(TrgNpas)    = {len(TrgNpas)}')
-        print(f'len(NewTrgNpas) = {len(NewTrgNpas)}')
-        
-        print(f'\nSrcNpas[0].shape    = {SrcNpas[0].shape}')
-        print(f'ResSrcNpas[0].shape = {ResSrcNpas[0].shape}')
-        print(f'TrgNpas[0].shape    = {TrgNpas[0].shape}')
-        print(f'NewTrgNpas[0].shape = {NewTrgNpas[0].shape}')
-        
-    # Take the sum of the labelmaps for all ROIs:
-    SrcNpaSum = np.zeros((SrcNpas[0].shape))
-    ResSrcNpaSum = np.zeros((ResSrcNpas[0].shape))
-    TrgNpaSum = np.zeros((TrgNpas[0].shape))
-    NewTrgNpaSum = np.zeros((NewTrgNpas[0].shape))
+        print(f'\nSrcPixArrToCopy.max() = {SrcPixArrToCopy.max()}')
     
-    for r in range(len(SrcNpas)):
-        SrcNpaSum += SrcNpas[r]
-        
-        if r == 0:
-            print('')
-        print(f'r = {r}, np.amax(SrcNpaSum) = {np.amax(SrcNpaSum)}')
-        
-    for r in range(len(ResSrcNpas)):
-        ResSrcNpaSum += ResSrcNpas[r]
-        
-        if r == 0:
-            print('')
-        print(f'r = {r}, np.amax(ResSrcNpaSum) = {np.amax(ResSrcNpaSum)}')
-        
-    for r in range(len(TrgNpas)):
-        TrgNpaSum += TrgNpas[r]
-        
-        if r == 0:
-            print('')
-        print(f'r = {r}, np.amax(TrgNpaSum) = {np.amax(TrgNpaSum)}')
-        
-    for r in range(len(NewTrgNpas)):
-        NewTrgNpaSum += NewTrgNpas[r]
-        
-        if r == 0:
-            print('')
-        print(f'r = {r}, np.amax(NewTrgNpaSum) = {np.amax(NewTrgNpaSum)}')
-        
-        
-    print(f'\nSrcNpaSum.shape    = {SrcNpaSum.shape}')
-    print(f'ResSrcNpaSum.shape = {ResSrcNpaSum.shape}')
-    print(f'TrgNpaSum.shape    = {TrgNpaSum.shape}')
-    print(f'NewTrgNpaSum.shape = {NewTrgNpaSum.shape}')
+    
+    """ 
+    Not needed for Case 2 but kept here for now since the function outputs
+    SrcLabmapToCopyIm.
     """
-    
-    
-    # Add the segments contained in the list of sitk images into a single sitk
+    # Convert the pixel array (frame) to be to be copied into an SimpleITK
     # image:
-    SrcImSum = InitialiseImage(SrcIm[0])
-    for r in range(len(SrcIm)):
-        SrcImSum = AddImages(SrcImSum, SrcIm[r])
+    SrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+                                     FrameToSliceInds=[FromSliceNum],
+                                     RefIm=SrcImage)
+    
+    if LogToConsole:
+        print(f'\nMax value of SrcLabmapToCopyIm = {ImageMax(SrcLabmapToCopyIm)}')
         
-    ResSrcImSum = InitialiseImage(ResSrcIm[0])
-    for r in range(len(ResSrcIm)):
-        ResSrcImSum = AddImages(ResSrcImSum, ResSrcIm[r])
+    #print(f'\n---> SrcLabmapToCopyIm.GetSize() = {SrcLabmapToCopyIm.GetSize()}')
+    
+    
+    
+    
+    
+    
+    """
+    **************************************************************************
+    Create a list of 3D labelmaps (as SimpleITK images) for all segmentations
+    in all segments.
+    
+    This isn't needed but is created since the function returns SrcLabmapIms. 
+    **************************************************************************
+    """
+    
+    if LogToConsole:
+        PrintTitle('Creating 3D labelmaps for *Source*...')
+    print(f'\nThe Source pixel array has shape {SrcPixArr.shape}')
+    
+    SrcLabmapIms = PixArr2ImagesBySeg(PixArr=SrcPixArr, 
+                                      FrameToSliceIndsBySeg=SrcPFFGStoSliceIndsBySeg,
+                                      FrameNumsBySeg=SrcFrameNumsBySeg,
+                                      RefIm=SrcImage)
+    
+    if TrgSegFpath:
+        TrgPixArr = TrgSeg.pixel_array
         
-    TrgImSum = InitialiseImage(TrgIm[0])
-    for r in range(len(TrgIm)):
-        TrgImSum = AddImages(TrgImSum, TrgIm[r])
-       
-    NewTrgImSum = InitialiseImage(NewTrgIm[0])
-    for r in range(len(NewTrgIm)):
-        NewTrgImSum = AddImages(NewTrgImSum, NewTrgIm[r])
-    
-        
-    # Convert to numpy arrays:
-    SrcNpaSum = sitk.GetArrayFromImage(SrcImSum)
-    ResSrcNpaSum = sitk.GetArrayFromImage(ResSrcImSum)
-    TrgNpaSum = sitk.GetArrayFromImage(TrgImSum)
-    NewTrgNpaSum = sitk.GetArrayFromImage(NewTrgImSum)
-    
-    
-    #Nslices = max(SrcIm.GetSize()[2], TrgIm.GetSize()[2])
-
-    #SrcNslices = SrcNpas[0].shape[0]
-    #ResSrcNslices = ResSrcNpas[0].shape[0]
-    #TrgNslices = TrgNpas[0].shape[0]
-    #NewTrgNslices = NewTrgNpas[0].shape[0]
-    
-    SrcNslices = SrcNpaSum.shape[0]
-    ResSrcNslices = ResSrcNpaSum.shape[0]
-    TrgNslices = TrgNpaSum.shape[0]
-    NewTrgNslices = NewTrgNpaSum.shape[0]
-    
-    Nslices = max(SrcNslices, TrgNslices)
-
-    
-    # Get the maxima for all slices for all labelmaps:
-    if 'Labelmaps' in ImageType:
-        SrcMaximaBySlice = np.amax(SrcNpaSum, axis=(1,2))
-        
-        ResSrcMaximaBySlice = np.amax(ResSrcNpaSum, axis=(1,2))
-            
-        TrgMaximaBySlice = np.amax(TrgNpaSum, axis=(1,2))
-        
-        NewTrgMaximaBySlice = np.amax(NewTrgNpaSum, axis=(1,2))
-           
         if LogToConsole:
-            print(f'\nSrcMaximaBySlice   = {SrcMaximaBySlice}')
-            print(f'\nResSrcMaximaBySlice = {ResSrcMaximaBySlice}')
-            print(f'\nTrgMaximaBySlice    = {TrgMaximaBySlice}')
-            print(f'\nNewTrgMaximaBySlice = {NewTrgMaximaBySlice}')
+            PrintTitle('Creating 3D labelmaps for *Target*...')
+        print(f'The Target pixel array has shape {TrgPixArr.shape}')
         
-        
-        #AllMaxima = [max(SrcMaximaBySlice), max(ResSrcMaximaBySlice),
-        #             max(TrgMaximaBySlice), max(NewTrgMaximaBySlice)]
-            
-        
-        # Determine which slices have at least one non-zero labelmap across all
-        # labelmaps:
-        SumOfMaximaBySlice = []
-        
-        for s in range(Nslices):
-            count = 0
-            
-            if s < SrcNslices:
-                count += SrcMaximaBySlice[s]
-                
-            if s < ResSrcNslices:
-                count += ResSrcMaximaBySlice[s]
-                
-            if s < TrgNslices:
-                count += TrgMaximaBySlice[s]
-                
-            if s < NewTrgNslices:
-                count += NewTrgMaximaBySlice[s]
-                
-            SumOfMaximaBySlice.append(count)
-        
-        
-        #print(f'\nSumOfMaximaBySlice = {SumOfMaximaBySlice}')
-        
-    
-    # Prepare the figure.
-    
-    # Set the number of subplot rows and columns:
-    Ncols = 4
-    
-    if 'Labelmaps' in ImageType:
-        Nrows = np.count_nonzero(np.array(SumOfMaximaBySlice))
+        TrgLabmapIms = PixArr2ImagesBySeg(PixArr=TrgPixArr, 
+                                          FrameToSliceIndsBySeg=TrgPFFGStoSliceIndsBySeg,
+                                          FrameNumsBySeg=TrgFrameNumsBySeg, 
+                                          RefIm=TrgImage)
     else:
-        Nrows = Nslices
-    
-    
-    # Create a figure with two subplots and the specified size:
-    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=dpi)
+        """ 
+        This isn't needed but create a list of a single empty image since the 
+        function returns TrgLabmapIms 
+        """
+        # Initialise the Target labelmap:
+        TrgLabmapIms = []
+        TrgLabmapIms.append(InitialiseImage(TrgImage))
+        
         
     
-    n = 1 # initialised sub-plot number
     
-    # Define the colourmaps to use for each ROI:
-    #cmaps = [plt.cm.spring, plt.cm.cool, plt.cm.autumn, plt.cm.winter, 
-    #         plt.cm.hsv, plt.cm.jet]
     
-    # Loop through each slice: 
-    for s in range(Nslices):
-        # Only proceed if ImageType is not 'Labelmaps' or (if it is) at least 
-        # one of the labelmaps is non-zero for this slice number:
-        if not 'Labelmaps' in ImageType or SumOfMaximaBySlice[s]:
-            # Plot the Original Source slice:
-            if s < SrcNslices:
-                ax = plt.subplot(Nrows, Ncols, n)
-                
-                # Loop through all ROIs:
-                #maxima = []
-                #for r in range(len(SrcNpas)):
-                #    im = ax.imshow(SrcNpas[r][s], cmap=plt.cm.Greys_r)
-                #    #im = ax.imshow(SrcNpas[r][s], cmap=cmaps[r])
-                #    #maxima.append(np.amax(SrcNpas[r][s]))
-                
-                im = ax.imshow(SrcNpaSum[s], cmap=plt.cm.Greys_r)
-                
-                if 'Labelmaps' in ImageType:
-                    m = 1 if SrcMaximaBySlice[s] < 1 else SrcMaximaBySlice[s]
-                    cbar = fig.colorbar(im, ax=ax)
-                    cbar.mappable.set_clim(0, m)
-                    
-                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Original Source slice {s}')
-                
-            n += 1 # increment sub-plot number
-                
-            # Plot the Resampled Source slice:
-            if s < ResSrcNslices:
-                ax = plt.subplot(Nrows, Ncols, n)
-                
-                #maxima = []
-                #npa = np.zeros()
-                #for r in range(len(ResSrcNpas)):
-                #    im = ax.imshow(ResSrcNpas[r][s], cmap=plt.cm.Greys_r)
-                #    #im = ax.imshow(ResSrcNpas[r][s], cmap=cmaps[r])
-                #    #maxima.append(np.amax(ResSrcNpas[r][s]))
-                
-                im = ax.imshow(ResSrcNpaSum[s], cmap=plt.cm.Greys_r)
-                
-                if 'Labelmaps' in ImageType:
-                    m = 1 if ResSrcMaximaBySlice[s] < 1 else ResSrcMaximaBySlice[s]
-                    cbar = fig.colorbar(im, ax=ax)
-                    cbar.mappable.set_clim(0, m)
-                    
-                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Resampled Source slice {s}')
-                
-            n += 1 # increment sub-plot number
+    
+    
+    """
+    **************************************************************************
+    What follows is UseCase-specific.
+    **************************************************************************
+    """
+    
+    if 'a' in UseCase:
+        """ 
+        This is common for all Direct copy sub-use cases.
+        """
+        
+        print(f'\nCopying slice {FromSliceNum} from Source SEG to slice',
+                  f'{ToSliceNum} in Target SEG..')
+        
+        # Get pixel shift between FromSliceNum and ToSliceNum:
+        PixShift = GetPixelShiftBetweenSlices(SrcImage, FromSliceNum, 
+                                              ToSliceNum)
+        
+        print(f'\nPixShift = {PixShift}')
+        
+        
+        
+    if UseCase == '1a' or UseCase == '2a':
+        """
+        Main use case = 1 or 2:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            voxel spacings, and either are the same series (Main use case = 1) 
+            or different series (Main use case = 2).
             
-            # Plot the Target slice:
-            if s < TrgNslices:
-                ax = plt.subplot(Nrows, Ncols, n)
-                
-                #maxima = []
-                #for r in range(len(TrgNpas)):
-                #    im = ax.imshow(TrgNpas[r][s], cmap=plt.cm.Greys_r)
-                #    #im = ax.imshow(TrgNpas[r][s], cmap=cmaps[r])
-                #    #maxima.append(np.amax(TrgNpas[r][s]))
-                
-                im = ax.imshow(TrgNpaSum[s], cmap=plt.cm.Greys_r)
-                
-                if 'Labelmaps' in ImageType:
-                    m = 1 if TrgMaximaBySlice[s] < 1 else TrgMaximaBySlice[s]
-                    cbar = fig.colorbar(im, ax=ax)
-                    cbar.mappable.set_clim(0, m)
-                    
-                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'Target slice {s}')
-                
-            n += 1 # increment sub-plot number
+        Sub-case = a:
+            Direct copy of the segmentation on slice FromSliceNum in segment 
+            FromSegLabel for Source to a new segment on slice ToSliceNum for 
+            Target.
+        
+        """
+        
+        #print(f'\nApplying Case 2a..\n')
+        if UseCase == '1a':
+            title = 'Applying Case 1a..'
+        else:
+            title = 'Applying Case 2a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        # The new list of Target PerFrameFunctionalGroupsSequence-to-DICOM
+        # slice index = the original list with ToSliceNum appended to it:
+        NewTrgPFFGStoSliceInds = deepcopy(TrgPFFGStoSliceInds)
+        NewTrgPFFGStoSliceInds.append(ToSliceNum)
+        
+        # Similarly for the new Target PerFrameFunctionalGroupsSequence-to-
+        # DICOM slice index grouped by segment:
+        NewTrgPFFGStoSliceIndsBySeg = deepcopy(TrgPFFGStoSliceIndsBySeg)
+        NewTrgPFFGStoSliceIndsBySeg.append([ToSliceNum])
+        
+        
+        # Shift the the in-plane elements in the Source frame that is to be 
+        # copied:
+        SrcPixArrToCopy = ShiftFrame(Frame=SrcPixArrToCopy, 
+                                     PixShift=PixShift)
+        
+        
+    
+    if UseCase == '1b' or UseCase == '2b':
+        """
+        Main use case = 1 or 2:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            voxel spacings, and either are the same series (Main use case = 1) 
+            or different series (Main use case = 2).
             
-            # Plot the New Target slice:
-            if s < NewTrgNslices:
-                ax = plt.subplot(Nrows, Ncols, n)
-                
-                #for r in range(len(NewTrgNpas)):
-                #    im = ax.imshow(NewTrgNpas[r][s], cmap=plt.cm.Greys_r)
-                
-                im = ax.imshow(NewTrgNpaSum[s], cmap=plt.cm.Greys_r)
-                
-                if 'Labelmaps' in ImageType:
-                    m = 1 if NewTrgMaximaBySlice[s] < 1 else NewTrgMaximaBySlice[s]
-                    cbar = fig.colorbar(im, ax=ax)
-                    cbar.mappable.set_clim(0, m)
-                    
-                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                ax.set_title(f'New Target slice {s}')
-                
-            n += 1 # increment sub-plot number
-        
-    
-    if ExportPlot:
-        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
-        CurrentTime = time.strftime("%H%M%S", time.gmtime())
-        CurrentDateTime = CurrentDate + '_' + CurrentTime
-                      
-        ExportFname = CurrentDateTime + '_Orig' + SrcImLabel + '_Resamp' \
-                      + SrcImLabel + '_' + TrgImLabel + '_New' + TrgImLabel \
-                      + '_' + ImageType + '.jpg'
-        
-        ExportFpath = os.path.join(ExportDir, ExportFname)
-        
-        plt.savefig(ExportFpath, bbox_inches='tight')
-        
-        print('\nPlot exported to:\n\n', ExportFpath)
-        
-    return
-
-
-
-
-
-
-
-def ExportSegRoi(TrgSegRoi, SrcSegFpath, NamePrefix, ExportDir):
-    """
-    Export contour ROI Object to disc.
-    
-    
-    Inputs:
-        TrgSegRoi   - Target SEG ROI object to be exported
-        
-        SrcSegFpath - (String) Full path of the Source DICOM SEG file (used to
-                      generate the filename of the new SEG file)
-        
-        NamePrefix  - (String) Prefix to be added to the assigned filename and
-                      Content Label (e.g. 'MR4_S9_s23_to_MR4_S9_s22') 
-                            
-        ExportDir   - (String) Directory where the SEG is to be exported
-                           
-    
-                            
-    Returns:
-        TrgSegFpath - (String) Full path of the exported Target DICOM SEG file
-    
-    """
-    
-    """
-    The following was moved into the main function ModifySegTagVals:
-    # Generate a new SOP Instance UID:
-    SegRoi.SOPInstanceUID = pydicom.uid.generate_uid()
-    
-    # Generate a new Series Instance UID:
-    SegRoi.SeriesInstanceUID = pydicom.uid.generate_uid()
-    """
-    
-    # Get the filename of the original SEG file:
-    SrcSegFname = os.path.split(SrcSegFpath)[1]
-    
-    # Modify the Content Date and Time to the present:
-    NewDate = time.strftime("%Y%m%d", time.gmtime())
-    NewTime = time.strftime("%H%M%S", time.gmtime())
-    
-    #TrgSegRoi.ContentDate = NewDate
-    #TrgSegRoi.ContentTime = NewTime
-    
-    FnamePrefix = NewDate + '_' + NewTime + '_' + NamePrefix + '_from_' 
-    
-    ContentLabelPrefix = NamePrefix + '_from_'
-    
-    # Modify the Content Label (this appears under Name in XNAT):
-    #TrgSegRoi.ContentLabel = 'Copy_of_' + TrgSegRoi.ContentLabel
-    TrgSegRoi.ContentLabel = ContentLabelPrefix + TrgSegRoi.ContentLabel
-    
-    # Modify Content Description:
-    TrgSegRoi.ContentDescription = ContentLabelPrefix \
-                                   + TrgSegRoi.ContentDescription
-                                   
-    # Modify the Series Description as with the Content Label:
-    TrgSegRoi.SeriesDescription = ContentLabelPrefix \
-                                  + TrgSegRoi.SeriesDescription
-    
-    
-    
-    # Create a new filename (this will appear under Label in XNAT):
-    #TrgRoiFname = 'New_' + SrcSegFname + '_' + NewDate + '_' + NewTime
-    #TrgRoiFname = FnamePrefix + '_SEG_' + NewDate + '_' + NewTime + '_' \
-    #              + SrcSegFname
-    TrgSegFname = FnamePrefix + SrcSegFname
-    
-    TrgSegFpath = os.path.join(ExportDir, TrgSegFname)
-    
-    TrgSegRoi.save_as(TrgSegFpath)
-        
-    print('\nSEG ROI exported to:\n\n', TrgSegFpath)
-    
-    return TrgSegFpath
-
-
-
-
-
-
-def Compare2dMasksFrom3dMasksOLD(OrigSegRoi, NewSegRoi, OrigSliceNum, NewSliceNum,
-                              OrigDicomDir, NewDicomDir):
-    """ Compare cropped masks of non-zero elements only. """ 
-    
-    # Get the DICOM SOP UIDs:
-    OrigSOPuids = GetDicomSOPuids(DicomDir=OrigDicomDir)
-    NewSOPuids = GetDicomSOPuids(DicomDir=NewDicomDir)
-    
-    # Get the Per-frameFunctionalGroupsSequence-to-DICOM slice indices:
-    OrigPFFGStoDcmInds = GetPFFGStoDcmInds(OrigSegRoi, OrigSOPuids)
-    NewPFFGStoDcmInds = GetPFFGStoDcmInds(NewSegRoi, NewSOPuids)
-    
-    # Get the 3D SEG masks:
-    Orig3dMask = OrigSegRoi.pixel_array
-    New3dMask = NewSegRoi.pixel_array
-    
-    OrigShape = Orig3dMask.shape
-    NewShape = New3dMask.shape
-    
-    print(f'Segments exist in OrigSegRoi on slices {OrigPFFGStoDcmInds}')
-    print(f'Shape of Orig3dMask = {OrigShape}')
-    print(f'\nSegments exist in NewSegRoi on slices {NewPFFGStoDcmInds}')
-    print(f'Shape of New3dMask = {NewShape}\n')
-    
-    
-    # Initialise Orig2dMaskCropped and New2dMaskCropped:
-    Orig2dMaskCropped = np.zeros((1, 1))
-    New2dMaskCropped = np.zeros((1, 1))
-    
-    
-    # Does slice OrigSliceNum in OrigSegRoi have a segment?
-    if OrigSliceNum in OrigPFFGStoDcmInds:
-        # A segment frame exists for OrigSliceNum:
-        OrigFrame = True
-        
-        # Get the frame number for this slice number:
-        OrigFrameNum = OrigPFFGStoDcmInds.index(OrigSliceNum)
-        
-        Orig2dMask = OrigSegRoi.pixel_array[OrigFrameNum]
-        
-        print(f'Shape of Orig2dMask = Orig3dMask[{OrigFrameNum}] = {Orig2dMask.shape}')
-    
-        #print('Cropping Orig2dMask to array of non-zero elements..')
-    
-        Orig2dMaskCropped = CropNonZerosIn2dMask(Orig2dMask)
-        #Orig2dMaskCropped = CropNonZerosIn2dMask(Orig3dMask[OrigFrameNum])
-        
-    else:
-        OrigFrame = False
-        
-        print(f'A segment does not exist on slice {OrigSliceNum} in OrigSegRoi.')
-        
-    
-    # Does slice NewSliceNum in NewSegRoi have a segment?
-    if NewSliceNum in NewPFFGStoDcmInds:
-        # A segment frame exists for NewSliceNum:
-        NewFrame = True
-        
-        # Get the frame number for this slice number:
-        NewFrameNum = NewPFFGStoDcmInds.index(NewSliceNum)
-        
-        New2dMask = NewSegRoi.pixel_array[NewFrameNum]
-    
-        print(f'Shape of New2dMask = New3dMask[{NewFrameNum}]  = {New2dMask.shape}')
-    
-        #print('Cropping New2dMask to array of non-zero elements..')
-        
-        New2dMaskCropped = CropNonZerosIn2dMask(New2dMask)
-        #New2dMaskCropped = CropNonZerosIn2dMask(New3dMask[FrameNum])
+        Sub-case = b:
+            Relationship-preserving copy of segmentation on slice FromSliceNum 
+            in segment FromSegLabel for Source to a new segment on FromSliceNum 
+            (since ToSliceNum = FromSliceNum) for Target.
         
         
-    else:
-        NewFrame = False
+        26/10: It's seems that having the same FOR does not guarantee the same
+        origin.  Series 9 and 6 for Subject 011, MR4 have different origins!
+        So need to check whether origins are the same?...
         
-        print(f'A segment does not exist on slice {NewSliceNum} in NewSegRoi.')
-    
-    
-    # Proceed only if either cropped arrays are not empty (i.e. if at least one
-    # of the 2D masks had non-zero elements):
-    if Orig2dMaskCropped.any() or New2dMaskCropped.any():
-    
+        17/11:  This case is up-to-date now but maintaining the same outputs
+        for different cases is very messy and inefficient (e.g. see creation of
+        unnecessary variables for Case 2b).
+        
+        18/11:  Added check if origins are the same in WhichUseCase().
+        """
+        
+        #print('\nApplying Case 2b..\n')
+        if UseCase == '2a':
+            title = 'Applying Case 2a..'
+        else:
+            title = 'Applying Case 2b..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        if LogToConsole:
+            #ToSliceNum = deepcopy(FromSliceNum)
+            
+            print(f'\nCopying slice {FromSliceNum} from Source SEG to slice',
+                  #f'{ToSliceNum} in Target SEG..')
+                  f'{FromSliceNum} in Target SEG..')
+        
+        # The new list of Target PerFrameFunctionalGroupsSequence-to-slice
+        # index = the original list with FromSliceNum appended to it:
+        NewTrgPFFGStoSliceInds = deepcopy(TrgPFFGStoSliceInds)
+        NewTrgPFFGStoSliceInds.append(FromSliceNum)
+        
+        # Similarly for the new Target PerFrameFunctionalGroupsSequence-to-
+        # slice index grouped by segment:
+        NewTrgPFFGStoSliceIndsBySeg = deepcopy(TrgPFFGStoSliceIndsBySeg)
+        NewTrgPFFGStoSliceIndsBySeg.append([FromSliceNum])
+        
+        
+        
+    if '1' in UseCase or '2' in UseCase:
+        """
+        What follows is common to UseCase 1a, 1b, 2a and 2b.
+        """
+        
+        # The new Target segment numbers are:
+        NewTrgSegNums = []
+        
         print('')
         
-        fig, ax = plt.subplots(1, 2)
-        
-        if Orig2dMaskCropped.any():
-            print('Shape of Orig2dMaskCropped =', Orig2dMaskCropped.shape)
+        for SegNum in range(len(NewTrgPFFGStoSliceIndsBySeg)):
+            # The number of frames for this segment number:
+            Nframes = len(NewTrgPFFGStoSliceIndsBySeg[SegNum])
             
-            ax = plt.subplot(1, 2, 1, aspect='equal')
-            ax.imshow(Orig2dMaskCropped)
-        
-        else:
-            if OrigFrame:
-                print(f'Frame {OrigFrameNum} in OrigSegRoi does not have any',
-                      'non-zero elements.')
-        
-        if New2dMaskCropped.any():
-            print('Shape of New2dMaskCropped  =', New2dMaskCropped.shape)
-        
-            ax = plt.subplot(1, 2, 2, aspect='equal')
-            ax.imshow(New2dMaskCropped)
-        
-        else:
-            if NewFrame:
-                print(f'Frame {NewFrameNum} in NewSegRoi does not have any',
-                      'non-zero elements.')
+            print(f'SegNum = {SegNum}, Nframes = {Nframes}')
             
-    else:
-        if OrigFrame and NewFrame:
-            print(f'Frame {OrigFrameNum} and {NewFrameNum} does not have any',
-                  'non-zero elements in OrigSegRoi and NewSegRoi.')
-    
-    return
-
-
-
-
-
-
-
-def DELETE_THIS_AddToRIStoDcmInds(RIStoDcmInds, ToSliceNum):
-    """
-    Append the DICOM slice number (ToSliceNum) representing the segmentation to 
-    be added to the Referenced Instance Sequence to RIStoDcmInds (the 
-    ReferencedInstanceSequence-to-DICOM slice indeces), and sort the list of 
-    indeces.
-    
-    Inputs:
-        RIStoDcmInds    - List of integers of the DICOM slice numbers that 
-                          correspond to each Referenced Instance Sequence
+            NewTrgSegNums.extend([SegNum]*Nframes)
+            
         
-        ToSliceNum      - (Integer) Slice index in the Target DICOM stack where
-                          the segmentation will be copied to (counting from 0)
+        # The new Target pixel array = original Target pixel array with
+        # SrcPixArrToCopy added to it:
+        NewTrgPixArr = np.zeros((len(NewTrgPFFGStoSliceInds), 
+                                 TrgPixArr.shape[1], 
+                                 TrgPixArr.shape[2]))
         
-    Returns:
-        NewRIStoDcmInds - Modified and sorted list of RIStoDcmInds with the  
-                          slice index to be copied
-    """
-    
-    NewRIStoDcmInds = copy.deepcopy(RIStoDcmInds)
-
-    NewRIStoDcmInds.append(ToSliceNum)
-    
-    NewRIStoDcmInds.sort()
-    
-    return NewRIStoDcmInds
-
-
-
-
-def DELETE_THIS_AddToPFFGStoDcmInds(PFFGStoDcmInds, ToSliceNum):
-    """
-    Append the DICOM slice number (ToSliceNum) representing the segmentation to 
-    be added to the Per-frame Functional Groups Sequence to PFFGStoDcmInds (the 
-    PerFrameFunctionalGroupsSequence-to-DICOM slice indeces), and sort the list 
-    of indeces.
-    
-    Inputs:
-        PFFGStoDcmInds    - List of integers of the DICOM slice numbers that 
-                            correspond to each Per-frame Functional Groups 
-                            Sequence
+        #print(f'\nTrgPixArr.shape = {TrgPixArr.shape}')
+        #print(f'NewTrgPixArr.shape = {NewTrgPixArr.shape}')
+        #print(f'SrcPixArrToCopy.shape = {SrcPixArrToCopy.shape}')
         
-        ToSliceNum        - (Integer) Slice index in the Target DICOM stack 
-                            where the segmentation will be copied to (counting 
-                            from 0)
+        NewTrgPixArr[:TrgPixArr.shape[0]] = TrgPixArr
+        NewTrgPixArr[-1] = SrcPixArrToCopy
         
-    Returns:
-        NewPFFGStoDcmInds - Modified and sorted list of PFFGStoDcmInds with the 
-                            slice index to be copied
-    """
+        
+        if LogToConsole:
+            print('\nTrgPFFGStoSliceInds    =', TrgPFFGStoSliceInds)
+            print('\nNewTrgPFFGStoSliceInds =', NewTrgPFFGStoSliceInds)
+            
+        print(f'\nThere are {NewTrgPixArr.shape[0]} frames in NewTrgPixArr')
+        print(f'NewTrgPFFGStoSliceInds: {NewTrgPFFGStoSliceInds}')
+        print(f'NewTrgSegNums: {NewTrgSegNums}')
+        
+        if not TrgSegFpath:
+            # Target does not have an existing SEG, so initialise a new SEG 
+            # object:
+            TrgSeg = InitialiseSeg(TrgDicoms, NewTrgPFFGStoSliceInds,
+                                   TrgImage, SrcSeg, LogToConsole)
+        
+        # Modify select tags in NewTrgSeg:
+        NewTrgSeg = ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, 
+                                     NewTrgSegNums, NewTrgPFFGStoSliceInds, 
+                                     FromSegNum, FromSliceNum, SrcSeg, 
+                                     LogToConsole=False)
+        
+        
+        
+        """ Note:
+            
+        The following variables:
+            
+        ResSrcImage
+        SrcLabmapIms
+        ResSrcLabmapIms
+        SrcLabmapToCopyIm
+        ResSrcLabmapToCopyIm
+        NewTrgLabmapIms
+        
+        were not used for this case but this main function outputs:
+        
+        return SrcImage, ResSrcImage, TrgImage,\
+               SrcLabmapIms, ResSrcLabmapIms,\
+               SrcLabmapToCopyIm, ResSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               NewTrgSeg
+               
+        So create:
+            
+        SrcLabmapToCopyIm
+        NewTrgLabmapIms
+        
+        even though they're not needed for this case, and return 
+        SrcLabmapToCopyIm for ResSrcLabmapToCopyIm, and SrcLabmapIms for
+        ResSrcLabmapIms.
+        """
+        
+        # This is already done prior to spitting to different use cases:
+        #SrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+        #                                 FrameToSliceInds=[ToSliceNum], 
+        #                                 RefIm=TrgImage)
+        
+        ResSrcLabmapIms = []
+        
+        
+        ResSrcLabmapToCopyIm = PixArr2Image(PixArr=SrcPixArrToCopy,
+                                            #FrameToSliceInds=F2SInds,
+                                            FrameToSliceInds=[ToSliceNum], 
+                                            RefIm=TrgImage)
+        
+        # Create NewTrgLabmapIms even though it's not needed:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # then append the Source labelmap to be copied:    
+        NewTrgLabmapIms.append(SrcLabmapToCopyIm)
+        
+        
+        return SrcImage, SrcImage, TrgImage,\
+               SrcLabmapIms, SrcLabmapIms,\
+               SrcLabmapToCopyIm, SrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
+               
+        
+        """
+        23/10:  Still need to verify that Case 2 provides the expected results.
+        
+        26/10:  Resampling will need to be performed if the origins are not the
+        same... 19/11: Now WhichUseCase() checks the origins and if they are
+        not the same it's considered UseCase 3.
+        """
+        
     
-    NewPFFGStoDcmInds = copy.deepcopy(PFFGStoDcmInds)
+    
+    
+    if '3' in UseCase:
+        """
+        What follows is common to both UseCase 3a and 3b.
+        """
+        
+        # Resample the Source image:
+        """ This is not required but useful info """
+        ResSrcImage = ResampleImage(Image=SrcImage, 
+                                    RefImage=TrgImage, 
+                                    Interpolation='Linear')
+        
+        if LogToConsole:                            
+            print('Results after resampling Source image:\n')
+            
+            print('The Source and Target image size:\n',
+                          f'   Original Source:  {SrcImage.GetSize()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetSize()} \n',
+                          f'   Target:           {TrgImage.GetSize()}')
+                
+            print('The Source and Target voxel spacings:\n',
+                          f'   Original Source:  {SrcImage.GetSpacing()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetSpacing()} \n',
+                          f'   Target:           {TrgImage.GetSpacing()}')
+                
+            print('The Source and Target Origin:\n',
+                          f'   Original Source:  {SrcImage.GetOrigin()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetOrigin()} \n',
+                          f'   Target:           {TrgImage.GetOrigin()}')
+                
+            print('The Source and Target Direction:\n',
+                          f'   Original Source:  {SrcImage.GetDirection()} \n',
+                          f'   Resampled Source: {ResSrcImage.GetDirection()} \n',
+                          f'   Target:           {TrgImage.GetDirection()}')
+                                   
+                                    
+        # Resample the Source labelmap images:
+        """ This is not required but useful info """
+        ResSrcLabmapIms = []
+        
+        for SrcLabmapIm in SrcLabmapIms:
+            ResSrcLabmapIm = ResampleImage(Image=SrcLabmapIm, 
+                                           RefImage=TrgImage, 
+                                           Interpolation='NearestNeighbor')
+            
+            ResSrcLabmapIms.append(ResSrcLabmapIm)
+        
+        
+        
+        # Resample the Source labelmap to be copied:
+        ResSrcLabmapToCopyIm = ResampleImage(Image=SrcLabmapToCopyIm, 
+                                             RefImage=TrgImage, 
+                                             Interpolation='NearestNeighbor')
+        
+        #nda = sitk.GetArrayFromImage(ResSrcLabmapToCopyIm)
+        #unique = UniqueItems(Nda=nda, NonZero=False)
+        #print(f'\nThere are {len(unique)} unique items in ResSrcLabmapToCopyIm')
+        
+        
+    if UseCase == '3a':
+        """
+        Main use case = 3:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            but different voxel spacings.  
+            
+        Sub-case = a:
+            Direct copy of the segmentation on slice FromSliceNum in segment 
+            FromSegLabel for Source to a new segment on slice ToSliceNum for 
+            Target.
+        """
+        
+        #print(f'\nApplying Case 3a..\n')
+        title = 'Applying Case 3a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        # Convert the resampled Source labelmap-to-be-copied image to a Numpy
+        # array:
+        ResSrcPixArrToCopy,\
+        F2SInds = Image2PixArr(LabmapIm=ResSrcLabmapToCopyIm)
+        
+        unique = UniqueItems(Nda=ResSrcPixArrToCopy, NonZero=False)
+        print(f'\nThere are {len(unique)} unique items in ResSrcPixArrToCopy')
+        
+        print(f'\nThe segmentation on FromSliceNum = {FromSliceNum} has been',
+              f'resampled to {ResSrcPixArrToCopy.shape[0]} frames:',
+              f'{F2SInds}')
+        
+        """
+        For Direct copy 1 segment is always copied to 1 frame, so if after
+        resampling there is more than one frame, either all but one of frames 
+        will need to be ignored, or all frames will need to be averaged or a
+        logical OR operation performed on all frames, etc.
+        """
+        if ResSrcPixArrToCopy.shape[0] > 1:
+            print(f'\nResSrcPixArrToCopy has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames so the pixel arrays will be averaged...')
+            
+            # Take pixel-by-pixel mean across all frames in ResSrcPixArrToCopy:
+            ResSrcPixArrToCopy = MeanPixArr(ResSrcPixArrToCopy)
+            
+            print(f'\nResSrcPixArrToCopy now has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames')
+        else:
+            print(f'\nResSrcPixArrToCopy has {ResSrcPixArrToCopy.shape[0]}',
+                  'frames')
+            
+        
+        # Shift the the in-plane elements in the resampled Source frame that is
+        # to be copied:
+        ResSrcPixArrToCopy = ShiftFrame(Frame=ResSrcPixArrToCopy, 
+                                        PixShift=PixShift)
+        
+        print(f'\nAfter shifting the frame, ResSrcPixArrToCopy has',
+              f'{ResSrcPixArrToCopy.shape[0]} frames')
+        
+        unique = UniqueItems(Nda=ResSrcPixArrToCopy, NonZero=False)
+        print(f'\nThere are {len(unique)} unique items in ResSrcPixArrToCopy',
+              'after shifting the frame.')
+        
+        # Convert the shifted resampled pixel array back to a SimpleITK image:
+        """
+        For Direct copy 1 segment is always copied to 1 frame, hence
+        FrameToSliceInds=[ToSliceNum].
+        """
+        ResSrcLabmapToCopyIm = PixArr2Image(PixArr=ResSrcPixArrToCopy,
+                                            #FrameToSliceInds=F2SInds,
+                                            FrameToSliceInds=[ToSliceNum], 
+                                            RefIm=TrgImage)
+        
+        
+        
+    if UseCase == '3b':
+        """
+        Main use case = 3:
+            Source and Target have the same FrameOfReferenceUID, IOP, origins, 
+            but different voxel spacings.  
+            
+        Sub-case = b:
+            Relationship-preserving copy of segmentation on slice FromSliceNum 
+            in segment FromSegLabel for Source to a new segment with any number 
+            of segmentations on any number of slices for Target. 
+        """
+        
+        #print(f'\nApplying Case 3b..')
+        title = 'Applying Case 3a..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        
+    if '3' in UseCase:
+        """
+        The following is common to UseCase 3a and 3b.
+        """
+        
+        # Create a list of new Target Labelmap images including the existing 
+        # labelmaps...:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # ... and append the resampled Source labelmap to be copied:    
+        NewTrgLabmapIms.append(ResSrcLabmapToCopyIm)
+        
+        print(f'\nlen(NewTrgLabmapIms) = {len(NewTrgLabmapIms)}')
+        
+        # Convert each labelmap image in NewTrgLabmapIms to a pixel array:
+        NewTrgPixArrBySeg = []
+        NewTrgPFFGStoSliceIndsBySeg = []
+        NewTrgPFFGStoSliceInds = []
+        NewTrgSegNumsBySeg = []
+        NewTrgSegNums = []
+        
+        print('')
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            PixArr, F2SInds = Image2PixArr(LabmapIm=NewTrgLabmapIms[SegNum])
+            
+            unique = UniqueItems(Nda=PixArr, NonZero=False)
 
-    NewPFFGStoDcmInds.append(ToSliceNum)
+            print(f'   SegNum = {SegNum}, F2SInds = {F2SInds}')
+            print(f'   There are {len(unique)} unique items in PixArr')
+            
+            NewTrgPixArrBySeg.append(PixArr)
+            
+            NewTrgPFFGStoSliceIndsBySeg.append(F2SInds)
+            
+            NewTrgPFFGStoSliceInds.extend(F2SInds)
+            
+            NewTrgSegNumsBySeg.append([SegNum]*len(F2SInds))
+            
+            NewTrgSegNums.extend([SegNum]*len(F2SInds))
+            
+        
+        # Combine all frames:
+        NewTrgPixArr = np.zeros((len(NewTrgPFFGStoSliceInds), 
+                                 PixArr.shape[1], 
+                                 PixArr.shape[2]))
+        
+        n = 0
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            for i in range(len(NewTrgPFFGStoSliceIndsBySeg[SegNum])):
+                NewTrgPixArr[n] = NewTrgPixArrBySeg[SegNum][i]
+                
+                n += 1
+        
+        
+        print(f'\nThe new Target pixel array has shape {NewTrgPixArr.shape}')
+        print(f'\nNewTrgPFFGStoSliceInds: {NewTrgPFFGStoSliceInds}')
+        print(f'NewTrgPFFGStoSliceIndsBySeg: {NewTrgPFFGStoSliceIndsBySeg}')
+        print(f'\nNewTrgSegNums: {NewTrgSegNums}')
+        print(f'NewTrgSegNumsBySeg: {NewTrgSegNumsBySeg}')
+        
+        
+        unique = UniqueItems(Nda=NewTrgPixArr, NonZero=False)
+        #unique = UniqueItems(Nda=NewTrgPixArr, NonZero=True)
+        
+        #print(f'\nUnique items in NewTrgPixArr = {unique}')
+        print(f'\nThere are {len(unique)} unique items in NewTrgPixArr')
+        
+        if not TrgSegFpath:
+            # Target does not have an existing SEG, so initialise a new SEG 
+            # object:
+            TrgSeg = InitialiseSeg(TrgDicoms, NewTrgPFFGStoSliceInds,
+                                   TrgImage, SrcSeg, LogToConsole)
+        
+        # Create new Target SEG object and modify the tags accordingly:
+        NewTrgSeg = ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, 
+                                     NewTrgSegNums, NewTrgPFFGStoSliceInds, 
+                                     FromSegNum, FromSliceNum, SrcSeg, 
+                                     LogToConsole)
+        
+        
+        if LogToConsole:
+            print('\n\n')
+            title = 'Results after resampling Source LabelMap image and ' \
+                    + 'Source-to-copy LabelMap image:'
+            ul = '*' * len(title)
+            
+            print('\n' + title)
+            print(ul)
+            
+            print('\n*The Source and Target labelmap image size:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetSize()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetSize()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetSize()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetSize()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetSize()}')
+                
+            print('\n*The Source and Target labelmap image voxel spacings:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetSpacing()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetSpacing()} \n',
+                          f'   Source-to-copy            {SrcLabmapToCopyIm.GetSpacing()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetSpacing()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetSpacing()}')
+                
+            print('\n*The Source and Target labelmap image Origin:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetOrigin()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetOrigin()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetOrigin()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetOrigin()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetOrigin()}')
+                
+            print('\n*The Source and Target labelmap image Direction:*\n',
+                          #f'   Source:                   {SrcLabmapIm.GetDirection()} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapIm.GetDirection()} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyIm.GetDirection()} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyIm.GetDirection()} \n',
+                          f'   Target:                   {TrgLabmapIm.GetDirection()}')
+        
+        
+        
+        if LogToConsole:
+            #SrcLabmapImMax = ImageMax(SrcLabmapIm)
+            #SrcLabmapImMin = ImageMin(SrcLabmapIm)
+            
+            #ResSrcLabmapImMax = ImageMax(ResSrcLabmapIm)
+            #ResSrcLabmapImMin = ImageMin(ResSrcLabmapIm)
+            
+            SrcLabmapToCopyImMax = ImageMax(SrcLabmapToCopyIm)
+            SrcLabmapToCopyImMin = ImageMin(SrcLabmapToCopyIm)
+            
+            ResSrcLabmapToCopyImMax = ImageMax(ResSrcLabmapToCopyIm)
+            ResSrcLabmapToCopyImMin = ImageMin(ResSrcLabmapToCopyIm)
+            
+            TrgLabmapImMax = ImageMax(TrgLabmapIm)
+            TrgLabmapImMin = ImageMin(TrgLabmapIm)
+            
+            print('\n*The Source and Target labelmap image minimum:*\n',
+                          #f'   Source:                   {SrcLabmapImMin} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapImMin} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyImMin} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyImMin} \n',
+                          f'   Target:                   {TrgLabmapImMin}')
+            
+            print('\n*The Source and Target labelmap image maximum:*\n',
+                          #f'   Source:                   {SrcLabmapImMax} \n',
+                          #f'   Resampled Source:         {ResSrcLabmapImMax} \n',
+                          f'   Source-to-copy:           {SrcLabmapToCopyImMax} \n',
+                          f'   Resampled Source-to-copy: {ResSrcLabmapToCopyImMax} \n',
+                          f'   Target:                   {TrgLabmapImMax}')
+            
+        
+        return SrcImage, ResSrcImage, TrgImage,\
+               SrcLabmapIms, ResSrcLabmapIms,\
+               SrcLabmapToCopyIm, ResSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
     
-    NewPFFGStoDcmInds.sort()
+         
+        
+        
+    if UseCase == '4':
+        """
+        Main use case = 4:
+            Source and Target have the same FrameOfReferenceUID and origins, 
+            but different IOP.  The voxel spacings may be the same or different.  
+            
+        Does UseCase 4 require sub-cases?...
+        
+        Don't have test data set to develop this yet.
+        On 17/11 Simon said he would ask Jess for "data with different 
+        angulations".
+        """
+        
+        """ need to continue """
+        
+        #print(f'\nApplying Case 4..')
+        title = 'Applying Case 4..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        
+        
+    if UseCase == '5':
+        """
+        Main use case = 5:
+            Source and Target have the different FrameOfReferenceUID (hence
+            different IOP and origins) and may have the same or different voxel 
+            spacings.  
+            
+            Relationship-preserving copy of segmentation on slice FromSliceNum 
+            in segment FromSegLabel for Source to a new segment with any number 
+            of segmentations on any number of slices for Target. 
     
-    return NewPFFGStoDcmInds
+            
+        Does UseCase 5 require sub-cases?...
+        """
+        
+        
+        #print(f'\nApplying Case 5..')
+        title = 'Applying Case 5..'
+        ul = '*' * len(title)
+        print('\n' + title)
+        print(ul + '\n')
+        
+        # Register the images using an affine transformation:
+        RegSrcImage, RegImFilt = RegisterImages(FixIm=TrgImage, MovIm=SrcImage, 
+                                                Tx='affine',
+                                                LogToConsole=LogToConsole)
+        
+        # Transform SrcLabmapToCopyIm:
+        TxSrcLabmapToCopyIm = TransformImage(Im=SrcLabmapToCopyIm, 
+                                             RegImFilt=RegImFilt)
+        
+        # Binary threshold TxSrcLabmapToCopyIm:
+        TxSrcLabmapToCopyIm = BinaryThresholdImage(Im=TxSrcLabmapToCopyIm, 
+                                                   Threshold=0.5)
+        
+        # Transform all Source labelmap images:
+        """ This is not required but useful info """
+        TxSrcLabmapIms = []
+        
+        for SrcLabmapIm in SrcLabmapIms:
+            TxSrcLabmapIm = TransformImage(Im=SrcLabmapIm, 
+                                           RegImFilt=RegImFilt)
+            
+            TxSrcLabmapIm = BinaryThresholdImage(Im=TxSrcLabmapIm, 
+                                                 Threshold=0.5)
+            
+            TxSrcLabmapIms.append(TxSrcLabmapIm)
+        
+        
+        """
+        24/11: The labelmaps in TxSrcLabmapIms look odd.
+        """
+        
+        # Create a list of new Target Labelmap images including the existing 
+        # labelmaps...:
+        NewTrgLabmapIms = []
+        
+        if TrgSegFpath:
+            # Append the existing labelmaps for Target:
+            for TrgLabmapIm in TrgLabmapIms:
+                NewTrgLabmapIms.append(TrgLabmapIm)
+            
+        # ... and append the transformed Source labelmap to be copied:    
+        NewTrgLabmapIms.append(TxSrcLabmapToCopyIm)
+        
+        print(f'\nlen(NewTrgLabmapIms) = {len(NewTrgLabmapIms)}')
+        
+        # Convert each labelmap image in NewTrgLabmapIms to a pixel array:
+        NewTrgPixArrBySeg = []
+        NewTrgPFFGStoSliceIndsBySeg = []
+        NewTrgPFFGStoSliceInds = []
+        NewTrgSegNumsBySeg = []
+        NewTrgSegNums = []
+        
+        print('')
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            PixArr, F2SInds = Image2PixArr(LabmapIm=NewTrgLabmapIms[SegNum])
+            
+            unique = UniqueItems(Nda=PixArr, NonZero=False)
+
+            print(f'   SegNum = {SegNum}, F2SInds = {F2SInds}')
+            print(f'   There are {len(unique)} unique items in PixArr')
+            
+            NewTrgPixArrBySeg.append(PixArr)
+            
+            NewTrgPFFGStoSliceIndsBySeg.append(F2SInds)
+            
+            NewTrgPFFGStoSliceInds.extend(F2SInds)
+            
+            NewTrgSegNumsBySeg.append([SegNum]*len(F2SInds))
+            
+            NewTrgSegNums.extend([SegNum]*len(F2SInds))
+            
+        
+        # Combine all frames:
+        NewTrgPixArr = np.zeros((len(NewTrgPFFGStoSliceInds), 
+                                 PixArr.shape[1], 
+                                 PixArr.shape[2]))
+        
+        n = 0
+        
+        for SegNum in range(len(NewTrgLabmapIms)):
+            for i in range(len(NewTrgPFFGStoSliceIndsBySeg[SegNum])):
+                NewTrgPixArr[n] = NewTrgPixArrBySeg[SegNum][i]
+                
+                n += 1
+        
+        
+        print(f'\nThe new Target pixel array has shape {NewTrgPixArr.shape}')
+        print(f'\nNewTrgPFFGStoSliceInds: {NewTrgPFFGStoSliceInds}')
+        print(f'NewTrgPFFGStoSliceIndsBySeg: {NewTrgPFFGStoSliceIndsBySeg}')
+        print(f'\nNewTrgSegNums: {NewTrgSegNums}')
+        print(f'NewTrgSegNumsBySeg: {NewTrgSegNumsBySeg}')
+        
+        
+        unique = UniqueItems(Nda=NewTrgPixArr, NonZero=False)
+        #unique = UniqueItems(Nda=NewTrgPixArr, NonZero=True)
+        
+        #print(f'\nUnique items in NewTrgPixArr = {unique}')
+        print(f'\nThere are {len(unique)} unique items in NewTrgPixArr')
+        
+        if not TrgSegFpath:
+            # Target does not have an existing SEG, so initialise a new SEG 
+            # object:
+            TrgSeg = InitialiseSeg(TrgDicoms, NewTrgPFFGStoSliceInds,
+                                   TrgImage, SrcSeg, LogToConsole)
+        
+        # Create new Target SEG object and modify the tags accordingly:
+        NewTrgSeg = ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, 
+                                     NewTrgSegNums, NewTrgPFFGStoSliceInds, 
+                                     FromSegNum, FromSliceNum, SrcSeg, 
+                                     LogToConsole)
+        
+        #NewTrgSeg = deepcopy(TrgSeg)
+        
+        return SrcImage, RegSrcImage, TrgImage,\
+               SrcLabmapIms, TxSrcLabmapIms,\
+               SrcLabmapToCopyIm, TxSrcLabmapToCopyIm,\
+               TrgLabmapIms, NewTrgLabmapIms,\
+               SrcSeg, TrgSeg, NewTrgSeg,\
+               SrcDicoms, TrgDicoms
+    
+        
+        
+    """
+    The following was moved to each UseCase since some of the outputs don't
+    exist for some cases (e.g. resampled Source image for Case 2b). """
+    #return SrcImage, ResSrcImage, TrgImage,\
+    #       SrcLabmapIms, ResSrcLabmapIms,\
+    #       SrcLabmapToCopyIm, ResSrcLabmapToCopyIm,\
+    #       TrgLabmapIms, NewTrgLabmapIms,\
+    #       NewTrgSeg

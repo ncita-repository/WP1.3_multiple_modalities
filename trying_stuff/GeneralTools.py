@@ -56,14 +56,14 @@ def ItemsUniqueToWithin(List, epsilon=1e-5):
 
 
 
-def UniqueItems(Nda, NonZero=False):
+def UniqueItems(Items, NonZero=False):
     """
-    Get list of unique items in a Numpy data array.
+    Get list of unique items in a list or Numpy data array.
     
     Inputs:
     ------
     
-    Nda : Numpy data array
+    Items : list or Numpy data array
     
     NonZero : boolean (optional; False by default)
         If NonZero=True only unique non-zero items will be returned.
@@ -72,23 +72,36 @@ def UniqueItems(Nda, NonZero=False):
     Outputs:
     -------
     
-    UniqueList : List of unique items.
+    UniqueItems : list or Numpy data array
+        List or Numpy array of unique items.
     """
     
     import numpy as np
+    from copy import deepcopy
     
-    Nda = np.ndarray.flatten(Nda)
+    OrigItems = deepcopy(Items)
+    
+    # If Items is a list convert to a Numpy array:
+    if isinstance(Items, list):
+        #Items = np.ndarray.flatten(Items)
+        Items = np.array(Items)
     
     if NonZero:
-        inds = np.nonzero(Nda)
+        inds = np.nonzero(Items)
         
-        Nda = Nda[inds]
+        Items = Items[inds]
         
-    #print(f'\nNda.shape = {Nda.shape}')
-        
-    UniqueList = list(set(Nda.tolist()))
+    #print(f'\nItems.shape = {Items.shape}')
     
-    return UniqueList
+    #UniqueItems = list(set(Items.tolist()))
+    UniqueItems = np.unique(Items)
+    
+    # If Items was a list convert back to a list:
+    if isinstance(OrigItems, list):
+        UniqueItems = list(UniqueItems)
+
+    
+    return UniqueItems
         
     
         
@@ -97,24 +110,32 @@ def UniqueItems(Nda, NonZero=False):
     
     
 
-def AddItemToListAndSort(OrigList, Item):
+def AppendItemToListAndSort(OrigList, ItemToAppend):
     """
     Append an item to a list and return the sorted list. 
     
     Inputs:
-        OrigList - List of items 
+    ------
+    
+    OrigList : list
+        The list to append to. 
         
-        Item     - Item to add to List
+    ItemToAppend : string, integer or float
+        The item to append to OrigList.
         
-    Returns:
-        NewList  - Item appended to OrigList and sorted 
+        
+    Outputs:
+    -------
+    
+    NewList : list
+        OrigList with ItemToAppend appended to it and sorted. 
     """
     
     from copy import deepcopy
     
     NewList = deepcopy(OrigList)
 
-    NewList.append(Item)
+    NewList.append(ItemToAppend)
     
     NewList.sort()
     
@@ -364,3 +385,320 @@ def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
         n += 1 # increment sub-plot number
     
     return
+
+
+
+
+
+
+
+
+
+def GetPhysicalShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1):
+    """
+    Get the physical shift between SliceNum0 in Image0 and SliceNum1 in Image1
+    based on the origins of the two slices (i.e. Image0[0,0,SliceNum0] and
+    Image1[0,0,SliceNum1]).
+    
+    Inputs:
+    ------
+    
+    Image0 : SimpleITK image
+    
+    SliceNum0 : integer
+        The slice number in Image0.
+    
+    Image1 : SimpleITK image
+    
+    SliceNum1 : integer
+        The slice number in Image1.
+    
+    
+    Outputs:
+    -------
+    
+    mmShift : Numpy array
+        Shift in mm between Image0[0,0,SliceNum0] and Image1[0,0,SliceNum1].
+    """
+    
+    import numpy as np
+    
+    mmShift = np.array(Image1.TransformIndexToPhysicalPoint([0,0,SliceNum1])) \
+            - np.array(Image0.TransformIndexToPhysicalPoint([0,0,SliceNum0]))
+            
+    return mmShift
+
+
+
+
+
+
+
+def GetPixelShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1, RefImage,
+                               Fractional=False):
+    """
+    Get the shift in pixels between SliceNum0 in Image0 and SliceNum1 in Image1
+    based on the origins of the two slices (i.e. Image0[0,0,SliceNum0] and
+    Image1[0,0,SliceNum1]).
+    
+    Inputs:
+    ------
+    
+    Image0 : SimpleITK image
+    
+    SliceNum0 : integer
+        The slice number in Image0.
+    
+    Image1 : SimpleITK image
+    
+    SliceNum1 : integer
+        The slice number in Image1.
+        
+    RefImage : SimpleITK image
+        The reference image whose voxel spacings will be used to convert the
+        physical shift to pixels.
+    
+    Fractional : boolean (optional; False by default)
+        If True the pixel shift will be rounded to the nearest integer value.
+    
+    
+    Outputs:
+    -------
+    
+    PixShift : Numpy array
+        Shift in pixels between Image0[0,0,SliceNum0] and Image1[0,0,SliceNum1].
+    """
+    
+    import numpy as np
+    
+    mmShift = GetPhysicalShiftBetweenSlices(Image0, SliceNum0, 
+                                            Image1, SliceNum1)
+    
+    PixSpacing = np.array(RefImage.GetSpacing())
+    
+    PixShift = mmShift/PixSpacing
+    
+    if not Fractional:
+        PixShift = np.round(PixShift).astype('int')
+            
+    return PixShift
+
+
+
+
+
+
+    
+def ShiftFrame(Frame, PixShift):
+    """
+    Shift the items in a 2D frame.
+    
+    Inputs:
+    ------
+    
+    Frame : Numpy array
+        A 2D frame from PixelData with shape (1, R, C), where R = number of 
+        rows, and C = number of columns.
+        
+    PixShift : Numpy array
+        Shift in pixels (e.g. [di, dj, dz].
+        
+    
+    Outputs:
+    -------
+    
+    ShiftedFrame : Numpy array
+        Shifted frame with shape (1, R, C). Only the x- and y-components are 
+        shifted.
+
+    """
+    
+    import numpy as np
+    
+    F, R, C = Frame.shape
+    
+    if F > 1:
+        msg = f"'Frame' must be a 2D frame with shape (1, R, C) but has shape"\
+              + f" ({F}, {R}, {C})."
+        
+        raise Exception(msg)
+    
+    # Initialise ShiftedFrame:
+    ShiftedFrame = np.zeros((1, R, C), dtype='uint')
+    #ShiftedFrame = np.empty_like(Frame, dtype='uint') # this creates 42,932
+    # unique values for some reason!
+    
+    #unique = UniqueItems(Nda=Frame, NonZero=False)
+    #print(f'\n---> There are {len(unique)} unique items in Frame')
+    #unique = UniqueItems(Nda=ShiftedFrame, NonZero=False)
+    #print(f'\n---> There are {len(unique)} unique items in the initialised',
+    #      f'ShiftedFrame: {unique[:11]}...')
+    
+    di, dj, dk = PixShift
+    
+    ##ShiftedFrame[0, dj:, di:] = Frame[0, :-(1+dj), :-(1+di)]
+    ##ShiftedFrame[0, :-(1+dj), :-(1+di)] = Frame[0, dj:, di:]
+    #ShiftedFrame[0, :R-dj, :C-di] = Frame[0, dj:, di:]
+    
+    if di > 0 and dj > 0:
+        ShiftedFrame[0, dj:, di:] = Frame[0, :-dj, :-di]
+        
+    elif di < 0 and dj < 0:
+        ShiftedFrame[0, :dj, :di] = Frame[0, -dj:, -di:]
+        
+    elif di > 0 and dj < 0:
+        ShiftedFrame[0, :dj, di:] = Frame[0, -dj:, :-di]
+        
+    elif di < 0 and dj > 0:
+        ShiftedFrame[0, dj:, :di] = Frame[0, :-dj, -di:]
+        
+    elif di == 0 and dj > 0:
+        ShiftedFrame[0, dj:, :] = Frame[0, :-dj, :]
+        
+    elif di == 0 and dj < 0:
+        ShiftedFrame[0, :dj, :] = Frame[0, -dj:, :]
+        
+    elif di > 0 and dj == 0:
+        ShiftedFrame[0, :, di:] = Frame[0, :, :-di]
+        
+    elif di < 0 and dj == 0:
+        ShiftedFrame[0, :, :di] = Frame[0, :, -di:]
+        
+    elif di == 0 and dj == 0:
+        ShiftedFrame[0] = Frame[0]
+        
+    #unique = UniqueItems(Nda=ShiftedFrame, NonZero=False)
+    #print(f'\n---> There are {len(unique)} unique items in the ShiftedFrame',
+    #      'after shifting.')
+            
+    return ShiftedFrame
+
+
+
+
+
+
+
+
+def ChangeZinds(Indices, NewZind):
+    """
+    Re-assign the z-components of a list of indeces.
+    
+    Inputs:
+    ------
+    
+    Indices : list of a list of integers
+        List (for each point) of a list (for each dimension) of indices, 
+        e.g. [[i0, j0, k0], [i1, j1, k1], ...].
+        
+    NewZind : integer
+        The value to re-assign to the z-components (i.e. k) of Indeces.
+    
+    
+        
+    Ouputs:
+    ------
+    
+    Indices : list of a list of integers
+        List (for each point) of a list (for each dimension) of the indices 
+        with modified z-components, e.g. [[i0, j0, k0], [i1, j1, k1], ...].
+    """
+    
+    if not isinstance(NewZind, int):
+        raise Exception(f"NewZind = {NewZind} must be an integer.")
+    
+    for i in range(len(Indices)):
+        Indices[i][2] = NewZind
+        
+    return Indices
+
+
+
+
+
+
+
+
+def MeanPixArr(PixArr, binary=True):
+    """
+    Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
+    binary pixel array if binary=True (or undefined).
+    
+    Inputs:
+    ------
+    
+    PixArr : Numpy array
+        PixelData from a SEG file loaded as a Numpy array
+        
+    binary : boolean (optional; True by default)
+        If binary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by 0.5.
+        
+        
+    Outputs:
+    -------
+    
+    MeanPixArr : Numpy array
+        Mean pixel array.
+    """
+    
+    import numpy as np
+    
+    F, R, C = PixArr.shape
+    
+    # Initialise MeanPixArr:
+    MeanPixArr = np.zeros((1, R, C), dtype='uint')
+    
+    
+    result = np.mean(PixArr, axis=0)
+            
+    if binary:
+        MeanPixArr[0] = (result >= 0.5) * result
+    else:
+        MeanPixArr[0] = result
+        
+    return MeanPixArr
+
+
+
+
+
+
+
+def Distance(item0, item1):
+    """
+    Compute the distance between points or indices.  
+    
+    Inputs:
+        item0    - (List of floats/integers) A 2D/3D point or point indices
+        
+        item1    - (List of floats/integers) A 2D/3D point or point indices
+        
+    Returns:
+        distance - (Scalar float/integer) Distance between item0 and item1 in
+                   Euclidean space or in pixels
+
+    """
+    
+    SumOfDims = len(item0) + len(item1)
+    
+    if SumOfDims == 4:
+        # 2D points/indices.
+        distance = ((item0[0] - item1[0])**2 \
+                    + (item0[1] - item1[1])**2)**0.5
+                    
+        return distance
+        
+    elif SumOfDims == 6:
+        # 3D points/indices.
+        distance = ((item0[0] - item1[0])**2 \
+                    + (item0[1] - item1[1])**2 \
+                    + (item0[2] - item1[2])**2)**0.5
+                    
+        return distance
+        
+        
+    else:
+        msg = "The inputs must both be 2D or 3D lists of points/indices."
+        
+        raise Exception(msg)

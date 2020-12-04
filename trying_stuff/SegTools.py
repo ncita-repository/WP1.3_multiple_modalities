@@ -29,6 +29,137 @@ SEGMENT FUNCTIONS
 ******************************************************************************
 """      
 
+def GetSegNum_OLD(Seg, Label):
+    """
+    Get the segment number that matches the segment label provided.
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object.
+        
+    Label : string
+        All or part of the segment label containing the segmentation of
+        interest.
+                       
+                            
+    Outputs:
+    -------
+    
+    SegNum : integer
+        The index of the segment that matches SegLabel.
+    """
+    
+    from DicomTools import GetRoiLabels
+    
+    RoiLabels = GetRoiLabels(Seg)
+    
+    #SegNum = RoiLabels.index(RoiLabel)
+    SegNum = [i for i, label in enumerate(RoiLabels) if Label in label]
+    
+    if not SegNum:
+        raise Exception("There are no segments in the SEG that match {Label}.")
+        
+    return SegNum[0]
+
+
+
+
+
+
+
+def GetFrameNums(Seg, SegLabel, DicomDir):
+    """
+    Get the frame number(s) in a SEG's pixel array that matches the segment 
+    label provided.
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object.
+        
+    SegLabel : string
+        All or part of the segment label containing the segmentation of
+        interest.
+    
+    DicomDir : string
+        Directory containing the corresponding DICOMs.
+    
+                            
+    Outputs:
+    -------
+    
+    FrameNums : list of integer
+        List of the frame numbers that correspond to all frames in the SEG's 
+        pixel array that belongs to the segment of interest.  If only one frame 
+        corresponds to the segment, the returned list will be of length one 
+        (e.g. [3]).
+        
+    PFFGStoSliceInds : list of integers
+        List of the slice numbers that correspond to each Per-frame Functional 
+        Groups Sequence in the segment of interest. 
+    """
+    
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import GetRoiNum
+    
+    # Get the DimensionIndexValues (DIVs) and group the DIVs by segment.
+    """ Note:  The DIVs are integers that start from 1. """
+    DIVs = GetDIVs(Seg)
+    
+    # Get the DICOM SOP UIDs:
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    # Get the PerFrameFunctionalGroupsSequence-to-slice indices
+    # (PFFGStoSliceInds) and PFFGStoSliceInds grouped by segment
+    # (PFFGStoSliceIndsBySeg):
+    """ Note:  The PFFGStoSliceInds are integers that start from 0. """
+    PFFGStoSliceInds = GetPFFGStoSliceInds(Seg, SOPuids)
+    
+    PFFGStoSliceIndsBySeg = GroupListBySegment(ListToGroup=PFFGStoSliceInds, 
+                                               DIVs=DIVs)
+    
+    SegNum = GetRoiNum(Seg, SegLabel)
+    
+    # The PFFGStoSliceInds for the segment of interest:
+    PFFGStoSliceInds = PFFGStoSliceIndsBySeg[SegNum]
+    
+    # The number of segments:
+    S = len(PFFGStoSliceIndsBySeg)
+    
+    # The number of frames in the segment of interest:
+    F = len(PFFGStoSliceInds)
+    
+    n = 0 # initialise frame number counter
+    
+    FrameNums = []
+    
+    for s in range(S):
+        if s == SegNum:
+            """ 
+            This segment contains the frame(s) of interest, which are given by
+            the index of PFFGStoSliceInds[f] in PFFGStoSliceIndsBySeg[s] plus 
+            any frames that preceeded it (i.e. the frame counter n).
+            """
+            
+            for f in range(F):
+                FrameNum = n + PFFGStoSliceIndsBySeg[s].index(PFFGStoSliceInds[f])
+                
+                FrameNums.append(FrameNum)
+            
+        else:
+            # Add to the frame counter the number of frames in this segment:
+            n += len(PFFGStoSliceIndsBySeg[s])
+    
+    return FrameNums, PFFGStoSliceInds
+
+
+
+
+
+
 
 
 def GetRSOPuidsInRIS(Seg):
@@ -142,8 +273,8 @@ def GetRSOPuidsInPFFGS(Seg):
 
 def GetPFFGStoSliceInds(Seg, SOPuids):
     """
-    Get the slice numbers that correspond to each Per-frame Functional Groups
-    Sequence in a SEG ROI.
+    Get a list of the slice numbers that correspond to each Per-frame 
+    Functional Groups Sequence in a SEG ROI.
     
     Inputs:
     ------
@@ -159,8 +290,8 @@ def GetPFFGStoSliceInds(Seg, SOPuids):
     -------
         
     PFFGStoSliceInds : list of integers
-        Slice numbers that correspond to each Per-frame Functional Groups 
-        Sequence in Seg.
+        List (for each frame) of the slice numbers that correspond to each 
+        Per-frame Functional Groups Sequence in Seg.
     """
     
     # Get the list of Referenced SOP Instance UIDs:
@@ -178,6 +309,47 @@ def GetPFFGStoSliceInds(Seg, SOPuids):
 
 
 
+
+
+def GetPFFGStoSliceIndsBySeg(Seg, SOPuids):
+    """
+    Get a list (per segment) of the slice numbers that correspond to each 
+    Per-frame Functional Groups Sequence in a SEG ROI.
+    
+    Inputs:
+    ------
+        
+    Seg : Pydcom object
+        ROI object from a SEG file.
+        
+    SOPuids : list of strings
+        SOP UIDs of the DICOMs.
+        
+    
+    Outputs:
+    -------
+        
+    PFFGStoSliceIndsBySeg : list of a list of integers
+        List (for each segment) of a list (for each frame) of the slice numbers 
+        that correspond to each Per-frame Functional Groups Sequence in Seg.
+    """
+    
+    PFFGStoSliceInds = GetPFFGStoSliceInds(Seg, SOPuids)
+    
+    DIVs = GetDIVs(Seg)
+    
+    PFFGStoSliceIndsBySeg = GroupListBySegment(ListToGroup=PFFGStoSliceInds, 
+                                               DIVs=DIVs)
+    
+    return PFFGStoSliceIndsBySeg
+
+
+
+
+
+
+    
+    
 def GetDIVs(Seg):
     """
     Get the DimensionIndexValues in a SEG ROI.
@@ -491,7 +663,344 @@ def ChangeNumOfSegSequences(Seg, Dicoms, NumOfFrames, LogToConsole=False):
 
 
 
-def InitialiseSeg(Dicoms, PFFGStoSliceInds, Image, SegTemplate,
+def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
+    """
+    Extract a single (2D) frame from a 3D pixel array that matches a given
+    segment label.  
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object.
+    
+    DicomDir : string
+        Directory containing the corresponding DICOMs.
+    
+    SegLabel : string
+        All or part of the Source segment label containing the segmentation to 
+        be copied.
+    
+    SliceNum : integer
+        Slice index of the Source DICOM stack corresponding to the segmentation
+        to be copied (counting from 0).
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+        
+    
+    Outputs:
+    -------
+    
+    Frame : Numpy array
+        Frame from PixArr.
+    """
+    
+    import numpy as np
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import GetRoiLabels
+    from DicomTools import GetRoiNum
+    
+    SegLabels = GetRoiLabels(Seg)
+    
+    # Determine which segment contains the segmentation to be copied, and
+    # the corresponding frame number in the pixel array:
+    """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
+    SegNum = GetRoiNum(Seg, SegLabel)
+    
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    PFFGStoSliceIndsBySeg = GetPFFGStoSliceIndsBySeg(Seg, SOPuids)
+    
+    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[SegNum]
+    
+    if not SliceNum in PFFGStoSliceIndsInSeg:
+        raise Exception(f"There is no segmentation in segment {SegLabel} for "\
+                        + "slice {SliceNum} in the SEG.")
+    
+    # Get the corresponding FrameNum:
+    
+    n = 0 # initialise frame number counter
+    
+    for i in range(len(SegLabels)):
+        if i == SegNum:
+            """ 
+            This segment contains the frame to be copied, whose position is
+            given by the index of FromSliceNum in 
+            SrcPFFGStoSliceIndsBySeg[i] plus any frames that preceeded it 
+            (i.e. the frame counter n).
+            """
+            FrameNum = n + PFFGStoSliceIndsBySeg[i].index(SliceNum)
+            
+        else:
+            # Add to the frame counter the number of frames in this segment:
+            n += len(PFFGStoSliceIndsBySeg[i]) 
+    
+    
+    if LogToConsole:
+        print(f'\nSliceNum = {SliceNum} relates to FrameNum = {FrameNum} in',
+              'PixelArray (***Note: Counting from 0.***)')
+    
+    PixArr = Seg.pixel_array
+    
+    if len(PixArr.shape) < 3:
+        """ This is a single-frame PixArr, i.e. shape (1, R, C). """
+        R, C = PixArr.shape
+    else:
+        """ This is a multi-frame PixArr, i.e. shape (AllF, R, C). """
+        AllF, R, C = PixArr.shape
+    
+    # Initialise Frame:
+    Frame = np.zeros((1, R, C), dtype='uint')
+    
+    Frame[0] = PixArr[FrameNum]
+            
+    return Frame
+
+
+
+
+
+
+
+
+def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
+    """
+    Extract all frames from a 3D pixel array that match a given segment label.  
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object.
+    
+    DicomDir : string
+        Directory containing the corresponding DICOMs.
+    
+    SegLabel : string
+        All or part of the Source segment label containing the segmentation to 
+        be copied.
+    
+    SliceNum : integer
+        Slice index of the Source DICOM stack corresponding to the segmentation
+        to be copied (counting from 0).
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+        
+    
+    Outputs:
+    -------
+    
+    Frame : Numpy array
+        Frame from PixArr.
+    """
+    
+    import numpy as np
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import GetRoiNum
+    
+    # Determine which segment contains the segmentation to be copied, and
+    # the corresponding frame number in the pixel array:
+    """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
+    SegNum = GetRoiNum(Seg, SegLabel)
+    
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    PFFGStoSliceIndsBySeg = GetPFFGStoSliceIndsBySeg(Seg, SOPuids)
+    
+    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[SegNum]
+    
+    # The number of frames in the segment of interest:
+    F = len(PFFGStoSliceIndsInSeg)
+    
+    PixArr = Seg.pixel_array
+    
+    if len(PixArr.shape) < 3:
+        """ This is a single-frame PixArr, i.e. shape (1, R, C). """
+        R, C = PixArr.shape
+    else:
+        """ This is a multi-frame PixArr, i.e. shape (AllF, R, C). """
+        AllF, R, C = PixArr.shape
+    
+    Frames = np.zeros((F, R, C), dtype='uint')
+    
+    for f in range(F):
+        SliceNum = PFFGStoSliceIndsInSeg[f]
+        
+        Frame = GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, 
+                                   LogToConsole)
+        
+        Frames[f] = Frame
+    
+    if LogToConsole:
+        print(f'\nFrames.shape = {Frames.shape}')
+            
+    return Frames
+
+
+
+
+
+
+
+
+def GetPixArrInSeg(Seg, DicomDir, SegLabel):
+    """
+    Get the frames in a SEG's pixel array that belong to a segment with
+    specified label.
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object.
+        
+    DicomDir : string 
+        Directory containing the corresponding DICOMs.
+        
+    SegLabel : string
+        All or part of the Source segment label containing the segment of 
+        interest.
+                       
+                            
+    Outputs:
+    -------
+    
+    PixArrInSeg : Numpy array
+        Sub-array of the SEG's pixel array that contains the frames that belong
+        to the segment of interest. 
+        
+    PFFGStoSliceIndsInSeg : List of integers
+        List (for each segmentation) of the slice numbers that correspond to 
+        each frame in PixArr.
+    """
+    
+    import numpy as np
+    
+    AllPixArr = Seg.pixel_array
+    
+    AllF, R, C = AllPixArr.shape
+    
+    # Get the frame numbers of the SEG's pixel array that correspond to the 
+    # segment of interest, and the corresponding Per-frame Functional Groups
+    # Sequence-to-slice indices:
+    FrameNumsInSeg, PFFGStoSliceIndsInSeg = GetFrameNums(Seg, SegLabel, 
+                                                         DicomDir)
+    
+    F = len(FrameNumsInSeg)
+    
+    PixArrInSeg = np.zeros((F, R, C), dtype='uint')
+    
+    for i in range(F):  
+        PixArrInSeg[i] = AllPixArr[FrameNumsInSeg[i]]
+    
+        
+    return PixArrInSeg, PFFGStoSliceIndsInSeg
+
+
+
+
+
+
+
+
+def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds, 
+                    PixArrToAdd, PFFGStoSliceIndsToAdd):
+    """
+    Add frame(s) from a pixel array to an existing pixel array.
+       
+    
+    Inputs:
+    ------
+    
+    OrigPixArr : Numpy array
+        A FxRxC (Frames x Rows x Columns) array of all frames that belong to
+        the segment of interest. 
+        
+    OrigPFFGStoSliceInds : list of integers
+        List (for each segmentation) of slice numbers that correspond to each 
+        frame in OrigPixArr.
+        
+    PixArrToAdd : Numpy array
+        A FxRxC (Frames x Rows x Columns) array of all frames that originated
+        from a single segmentation.  F will be one if a single segmentation is
+        to be copied, but may be greater than one, if, for example, the 
+        segmentation to be copied was resampled to a number of segmentations.
+        
+    PFFGStoSliceIndsToAdd : list of integers
+        List (for each segmentation) of slice numbers that correspond to each 
+        frame in PixArrToAdd.
+        
+        
+    Outputs:
+    -------
+    
+    NewPixArr : Numpy array
+        A FxRxC (Frames x Rows x Columns) array of all frames in 
+        OrigPixArrInSeg and PixArrToAddToSeg. Note that F will not necessarily
+        be the sum of the number of frames in OrigPixArrInSeg and 
+        PixArrToAddToSeg.  Some frames in both pixel arrays may correspond
+        to the same slice number, in which case, any duplicate frame(s) in
+        OrigPixArrInSeg will be over-written with the frame(s) in
+        PixArrToAddToSeg that correspond to the same slice number.
+        
+    NewPFFGStoSliceInds : list of integers
+        Modified list (for each segmentation) of slice numbers that correspond   
+        to each frame in NewPixArr.
+    """
+    
+    import numpy as np
+    from GeneralTools import UniqueItems
+    
+    # Combine OrigPFFGStoSliceInds and PFFGStoSliceIndsToAdd:
+    NewPFFGStoSliceInds = OrigPFFGStoSliceInds + PFFGStoSliceIndsToAdd
+    
+    # Remove any duplicate slice numbers:
+    NewPFFGStoSliceInds = UniqueItems(NewPFFGStoSliceInds)
+    
+    F = len(NewPFFGStoSliceInds)
+    
+    OrigF, R, C = OrigPixArr.shape
+    
+    NewPixArr = np.zeros((F, R, C), dtype='uint')
+    
+    for FrameNum in range(F):
+        # The corresponding slice number for this frame:
+        SliceNum = NewPFFGStoSliceInds[FrameNum]
+        
+        if SliceNum in PFFGStoSliceIndsToAdd:
+            """
+            This frame is to be over-written by the corresponding frame in
+            PixArrToAdd.
+            """
+            
+            ind = PFFGStoSliceIndsToAdd.index(SliceNum)
+            
+            NewPixArr[FrameNum] = PixArrToAdd[ind]
+            
+        else:
+            """
+            This existing frame (in OrigPixArr) is to be preserved.
+            """
+            
+            ind = OrigPFFGStoSliceInds.index(SliceNum)
+            
+            NewPixArr[FrameNum] = OrigPixArr[ind]
+    
+    
+    return NewPixArr, NewPFFGStoSliceInds
+
+
+
+
+
+
+
+
+
+
+def InitialiseSeg(SegTemplate, SegNum, PFFGStoSliceInds, DicomDir, 
                   LogToConsole=False):
     """
     Initialise a SEG object based on an existing SEG object (SegTemplate).
@@ -499,21 +1008,21 @@ def InitialiseSeg(Dicoms, PFFGStoSliceInds, Image, SegTemplate,
     
     Inputs:
     ------
-                              
-    Dicoms : List of Pydicom objects
-        List of DICOM Objects that relate to the SEG object to be created.
     
-    PFFGStoSliceInds : List of integers
-        Slice numbers that correspond to each frame in PixArr.
-        
-    Image : SimpleITK image
-        3D SimpleITK image of the DICOM stack that relates to the new SEG 
-        object (required to obtain the SliceThickness and Spacing Between
-        Slices in Pixel Measures Sequence)
-                           
     SegTemplate : Pydicom object
         SEG object that will be used as a template to create the new object.
-                         
+
+    SegNum : integer
+        The index of the segment that contains the segmentation to be copied 
+        (counting from 0). 
+        
+    PFFGStoSliceInds : List of integers
+        List (for each segmentation) of the slice numbers that correspond to 
+        each frame in the SEG's pixel array.
+                    
+    DicomDir : string
+        Directory containing the corresponding DICOMs.
+    
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
         
@@ -525,37 +1034,45 @@ def InitialiseSeg(Dicoms, PFFGStoSliceInds, Image, SegTemplate,
         New SEG object.
     """
     
+    from pydicom.uid import generate_uid
+    import time
     from copy import deepcopy
+    from DicomTools import ImportDicoms
+    from ImageTools import GetImageAttributes
     
-    # Use SegTemplate as a template for NewSeg:
+    # Use SegTemplate as a template for Seg:
     Seg = deepcopy(SegTemplate)
     
-    # Modify various tags to match the values in Dicoms:
-    """
-    Note:
+    # Generate a new SOP Instance UID:
+    Seg.SOPInstanceUID = generate_uid()
     
-    The following changes are made in ModifySegTagVals():
-        - a new SOP Instance UID is generated
-        - a new Series Instance UID is generated
-        - Series Description will be modified
-        - Referenced SOP Instance UIDs in Referenced Series Sequence will be
-        modified
-        - Segment Label for the new (last) segment will be modified
-        - Image Orientation Patient (in Shared Functional Groups Sequence) will
-        be modified
-    """
+    # Generate a new Series Instance UID:
+    Seg.SeriesInstanceUID = generate_uid()
+    
+    # Modify the Series Description:
+    Seg.SeriesDescription = 'Segmentation(s)_copied_from_' \
+                            + Seg.SeriesDescription
+    
+    # Modify the Content Date and Time to the present:
+    NewDate = time.strftime("%Y%m%d", time.gmtime())
+    NewTime = time.strftime("%H%M%S", time.gmtime())
+    
+    Seg.ContentDate = NewDate
+    Seg.ContentTime = NewTime
+    
+    
+    Dicoms = ImportDicoms(DicomDir)
+    
+    Size, Spacings, ST,\
+    IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
+    
+    # Modify various tags to match the values in Dicoms:
     Seg.StudyDate = Dicoms[0].StudyDate
     Seg.SeriesDate = Dicoms[0].SeriesDate
-    Seg.ContentDate = Dicoms[0].ContentDate
+    #Seg.ContentDate = Dicoms[0].ContentDate
     Seg.StudyTime = Dicoms[0].StudyTime
     Seg.SeriesTime = Dicoms[0].SeriesTime
-    Seg.ContentTime = Dicoms[0].ContentTime
-    
-    # Modify the number of seguences in NewSeg:
-    Seg = ChangeNumOfSegSequences(Seg=Seg, Dicoms=Dicoms, 
-                                  NumOfFrames=len(PFFGStoSliceInds), 
-                                  LogToConsole=LogToConsole)
-    
+    #Seg.ContentTime = Dicoms[0].ContentTime
     Seg.PatientName = Dicoms[0].PatientName
     Seg.PatientID = Dicoms[0].PatientID
     Seg.PatientBirthDate = Dicoms[0].PatientBirthDate
@@ -568,66 +1085,139 @@ def InitialiseSeg(Dicoms, PFFGStoSliceInds, Image, SegTemplate,
     Seg.Rows = Dicoms[0].Rows
     Seg.Columns = Dicoms[0].Columns
     
+    Seg.SharedFunctionalGroupsSequence[0]\
+       .PlaneOrientationSequence[0]\
+       .ImageOrientationPatient = Dicoms[0].ImageOrientationPatient
+       
+    """ The SliceThickness appears to be the z-Spacing rather than the
+    SliceThickness from the DICOM metadata. """
+    Seg.SharedFunctionalGroupsSequence[0]\
+       .PixelMeasuresSequence[0]\
+       .SliceThickness = f"{Spacings[2]}"
     
     Seg.SharedFunctionalGroupsSequence[0]\
        .PixelMeasuresSequence[0]\
-       .SliceThickness = f"{Image.GetSpacing()[2]}"
-    
-    Seg.SharedFunctionalGroupsSequence[0]\
-       .PixelMeasuresSequence[0]\
-       .SpacingBetweenSlices = f"{Image.GetSpacing()[2]}"
+       .SpacingBetweenSlices = f"{Spacings[2]}"
 
     Seg.SharedFunctionalGroupsSequence[0]\
        .PixelMeasuresSequence[0]\
        .PixelSpacing = Dicoms[0].PixelSpacing
        
-    return Seg
-    
-    
-
-
-
-
-
-
-def ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgSegNums,  
-                     NewTrgPFFGStoSliceInds, FromSegNum, FromSliceNum, SrcSeg,
-                     LogToConsole=False):
+       
+    """ 
+    Modify the number of sequences in ReferencedInstanceSequence (RIS). 
+    The number of sequences RIS should be equal to the number of DICOMs.
     """
-    Modify various tag values of the new SEG ROI so that they are consistent
-    with the corresponding tag values of the DICOMs.
+    # The original and required number of sequences in 
+    # ReferencedInstanceSequence:
+    OrigRIS = len(Seg.ReferencedSeriesSequence[0].ReferencedInstanceSequence)
+
+    ReqRIS = len(Dicoms)
+    
+    # Add/remove sequences by appending/popping the last sequence N times, 
+    # where N is the difference between ReqRIS and OrigRIS:
+    if ReqRIS > OrigRIS:
+        for i in range(ReqRIS - OrigRIS):
+            Seg.ReferencedSeriesSequence[0]\
+               .ReferencedInstanceSequence\
+               .append(deepcopy(Seg.ReferencedSeriesSequence[0]\
+                                   .ReferencedInstanceSequence[-1]))          
+    else:
+        for i in range(OrigRIS - ReqRIS):
+            Seg.ReferencedSeriesSequence[0]\
+               .ReferencedInstanceSequence.pop()
+    
+    
+    """ 
+    Modify the number of sequences in SegmentSequence. 
+    There must be only one. Preserve the sequence that relates to the segment
+    of interest and remove any others.
+    """
+    
+    # Over-write the first SegmentSequence with the sequence to be preserved:
+    Seg.SegmentSequence[0] = deepcopy(Seg.SegmentSequence[SegNum])
+    
+    OrigSS = len(Seg.SegmentSequence)
+    
+    ReqSS = 1
+    
+    if OrigSS > ReqSS:
+        for i in range(OrigSS - ReqSS):
+            Seg.SegmentSequence.pop()
+    
+    
+    """ 
+    Modify the number of sequences in Per-FrameFunctionGroupsSequence. 
+    The number of sequences must be equal to the length of PFFGStoSliceInds.
+    """
+
+    OrigPFFGS = len(Seg.PerFrameFunctionalGroupsSequence)
+    
+    ReqPFFGS = len(PFFGStoSliceInds)
+    
+    if ReqPFFGS > OrigPFFGS:
+        for i in range(ReqPFFGS - OrigPFFGS):
+            Seg.PerFrameFunctionalGroupsSequence\
+               .append(deepcopy(Seg.PerFrameFunctionalGroupsSequence[-1]))          
+    else:
+        for i in range(OrigPFFGS - ReqPFFGS):
+            Seg.PerFrameFunctionalGroupsSequence.pop()
+
+    
+    
+    """
+    Output some results to the console.
+    """
+    if True:#LogToConsole:       
+        NewRIS = len(Seg.ReferencedSeriesSequence[0].ReferencedInstanceSequence)
+        
+        NewSS = len(Seg.SegmentSequence)
+        
+        NewPFFGS = len(Seg.PerFrameFunctionalGroupsSequence)
+        
+        print(f'\nThere are {ReqRIS} DICOMs and there were {OrigRIS}',
+              f'sequences in ReferencedSeriesSequence. Now there are {NewRIS}',
+              'sequences.')
+        
+        print(f'\nThere were {OrigSS} sequences in SegmentSequence.',
+              f'Now there are {NewSS} sequences.')
+        
+        print(f'\nThere are {ReqPFFGS} segmentations and there were',
+              f'{OrigPFFGS} sequences in PerFrameFunctionalGroupsSequence.',
+              f'Now there are {NewPFFGS} sequences.')
+        
+    return Seg
+
+    
+    
+    
+
+
+
+
+
+
+
+def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
+    """
+    Modify various tag values of a SEG so that they are consistent with the
+    corresponding tag values of the DICOMs.
          
     
     Inputs:
     ------
                               
-    TrgSeg : Pydicom object
-        Original Target SEG ROI Object.
+    Seg : Pydicom object
+        The SEG ROI object to modify.
+     
+    PixArr : Numpy array
+        The SEG's pixel array.
     
-    TrgDicoms : List of Pydicom objects
-        List of DICOM Objects that include the DICOMs that TrgSeg relate to.
+    PFFGStoSliceInds : List of integers
+        List of slice numbers that correspond to each frame in PixArr.
     
-    NewTrgPixArr : Numpy array
-        New Target SEG pixel array.
-    
-    NewTrgSegNums : List of integers
-        Segment numbers that correspond to each frame in NewTrgSeg.
-    
-    NewTrgPFFGStoSliceInds : List of integers
-        Slice numbers that correspond to each frame in NewTrgSeg.
-                           
-    FromSegNum : integer
-        Source segment number of the segmentation that was copied (counting  
-        from 0) (this is only used for generating a new Series Description).
-    
-    FromSliceNum : integer
-        Source slice index in the DICOM stack corresponding to the segmentation 
-        that was copied (counting from 0) (this is only used for generating a 
-        new Series Description).
-                           
-    SrcSeg : Pydicom object
-        Source SEG ROI object (this is only used for generating a new Series 
-        Description).
+    DicomDir : string
+        Directory containing the corresponding DICOMs.
                          
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
@@ -636,138 +1226,93 @@ def ModifySegTagVals(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgSegNums,
     Output:
     ------
         
-    NewTrgSeg : Pydicom object
-        Modified Target SEG ROI object.
+    Seg : Pydicom object
+        Modified SEG ROI object.
     """
     
-    from copy import deepcopy
+    from DicomTools import ImportDicoms
     from pydicom.pixel_data_handlers.numpy_handler import pack_bits
-    from pydicom.uid import generate_uid
     
-    # Use TrgSeg as a template for NewTrgSeg:
-    NewTrgSeg = deepcopy(TrgSeg)
+    F, R, C = PixArr.shape
     
-    # The original and new number of frames in pixel array:
-    OrigF = TrgSeg.pixel_array.shape[0]
-    NewF = NewTrgPixArr.shape[0]
+    P = len(PFFGStoSliceInds)
     
-    # Increase the length of the Per-Frame Functional Groups Sequence in 
-    # NewTrgSeg:
-    for i in range(NewF - OrigF):
-        NewTrgSeg = AddToPFFGS(NewTrgSeg)
-            
+    if not F == P:
+        raise Exception(f"There are {F} frames in PixArr and {P} indices in "\
+                        + "PFFGStoSliceInds. They must be equal.")
     
-    # Loop through each frame/sequence in NewTrgSeg, modifying the relevant tag 
-    # values:
-    for i in range(NewF):
+    
+    Dicoms = ImportDicoms(DicomDir)
+    
+    RIS = len(Seg.ReferencedSeriesSequence[0].ReferencedInstanceSequence)
+             
+    if not RIS == len(Dicoms):
+        raise Exception(f"There are {len(Dicoms)} DICOMs and {RIS} sequences "\
+                        + "in ReferencedInstanceSequence. They must be equal.")
+    
+    # Modify the Referenced Instance Sequence:
+    for i in range(len(Dicoms)):
+        Seg.ReferencedSeriesSequence[0]\
+           .ReferencedInstanceSequence[i]\
+           .ReferencedSOPInstanceUID = Dicoms[i].SOPInstanceUID
+    
+    
+    Seg.NumberOfFrames = f"{F}"
+    
+    # Modify the Segment Sequence:
+    Seg.SegmentSequence[0].SegmentNumber = 1
+    
+    # Get the Referenced SOP Instance UIDs in the Referenced Instance Sequence:
+    RefSOPs = GetRSOPuidsInRIS(Seg)
+    
+    # Modify PerFrameFunctionalGroupsSequence:
+    for i in range(P):
         # The slice index for the i^th sequence:
-        s = NewTrgPFFGStoSliceInds[i]
-        
-        # The new Target segment number:
-        r = NewTrgSegNums[i]
+        s = PFFGStoSliceInds[i]
         
         if LogToConsole:
-            print(f'\nNewTrgPFFGStoSliceInds[{i}] = {NewTrgPFFGStoSliceInds[i]}')
+            print(f'\nPFFGStoSliceInds[{i}] = {PFFGStoSliceInds[i]}')
             print(f'DICOM slice number = {s}')
         
-        # Modify the Referenced SOP Instance UID:
-        NewTrgSeg.ReferencedSeriesSequence[0]\
-                 .ReferencedInstanceSequence[i]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
+        Seg.PerFrameFunctionalGroupsSequence[i]\
+           .DerivationImageSequence[0]\
+           .SourceImageSequence[0]\
+           .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
         
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .DerivationImageSequence[0]\
-                 .SourceImageSequence[0]\
-                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
-        
-        # Modify the Dimension Index Values using the RoiNum and SliceNum:
+        # Modify the Dimension Index Values (DIVs):
         """
-        Note: r and s are integers starting from 0.  Need to add 1 to them so 
-        that the integers in DIVs start from 1.
-        """        
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .FrameContentSequence[0]\
-                 .DimensionIndexValues = [r + 1, s + 1]
-                     
-        # Modify the ImagePositionPatient: 
-        IPP = deepcopy(TrgDicoms[s].ImagePositionPatient)
+        Since there is always only one segment, the first integer in the DIV 
+        will always be 1, as is the Referenced Segment Number. The second 
+        integer will be the 1 + the index of the SOP Instance UID for the s^th 
+        DICOM within RefSOPs (+1 since ind is an integer counting from 0, 
+        whereas the DIVs are integers counting from 1).
+        """
+        ind = RefSOPs.index(Dicoms[s].SOPInstanceUID)
         
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .PlanePositionSequence[0]\
-                 .ImagePositionPatient = IPP
-                 
-        # Modify the Referenced Segment Number (= RoiNum + 1):
-        NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
-                 .SegmentIdentificationSequence[0]\
-                 .ReferencedSegmentNumber = r + 1
-                 
+        Seg.PerFrameFunctionalGroupsSequence[i]\
+           .FrameContentSequence[0]\
+           .DimensionIndexValues = [1, ind + 1]
         
-        print(f'\nFrame number       = {i}')
-        print(f'DICOM slice number = {s}')
-        print(f'Segment number     = {r}')
-        
-        
+        Seg.PerFrameFunctionalGroupsSequence[i]\
+           .PlanePositionSequence[0]\
+           .ImagePositionPatient = Dicoms[s].ImagePositionPatient
+           
+        Seg.PerFrameFunctionalGroupsSequence[i]\
+           .SegmentIdentificationSequence[0]\
+           .ReferencedSegmentNumber = 1
     
     
-    # The original and new number of segments:
-    """
-    Since the copied segmentation will be copied to a new segment NewS is 
-    always OrigS + 1.
-    """
-    OrigS = len(TrgSeg.SegmentSequence)
-    NewS = OrigS + 1
+    # Ravel (to 1D array) PixArr and pack bits (see
+    # https://github.com/pydicom/pydicom/issues/1230):
+    packed = pack_bits(PixArr.ravel())
     
-    # Increase the length of the Segment Sequence in NewTrgSeg:
-    for i in range(NewS - OrigS):
-        NewTrgSeg = AddToSS(NewTrgSeg)
-        
-        
-        
-    #print(f'The new Target pixel array has shape {NewTrgPixArr.shape}')
+    # Convert PixArr to bytes:
+    #Seg.PixelData = PixArr.tobytes() <-- doesn't work
+    Seg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
     
-    # Ravel (to 1D array) NewTrgPixArr and pack bits 
-    # (see https://github.com/pydicom/pydicom/issues/1230):
-    packed = pack_bits(NewTrgPixArr.ravel())
-    
-    # Convert NewTrgPixArr to bytes:
-    #NewSegRoi.PixelData = NewTrgPixArr.tobytes() <-- doesn't work
-    NewTrgSeg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
-    
-    # Modify the Number of Frames:
-    NewTrgSeg.NumberOfFrames = f"{len(NewTrgPFFGStoSliceInds)}"
-    
-    # Generate a new SOP Instance UID:
-    #NewTrgSeg.SOPInstanceUID = pydicom.uid.generate_uid()
-    NewTrgSeg.SOPInstanceUID = generate_uid()
-    
-    # Generate a new Series Instance UID:
-    #NewTrgSeg.SeriesInstanceUID = pydicom.uid.generate_uid()
-    NewTrgSeg.SeriesInstanceUID = generate_uid()
-    
-    # The segmentation was copied to a new segment with number:
-    ToSegNum = NewTrgSegNums[-1] 
-    """ verify the above """
-    
-    # Modify the Series Description:
-    NewTrgSegSD = 'RPCopy_of_Seg' + str(FromSegNum) + '_s' + str(FromSliceNum) \
-                  + '_in_' + SrcSeg.SeriesDescription + '_to_Seg' \
-                  + str(ToSegNum) + '_in_' + TrgSeg.SeriesDescription
-                  
-    #NewTrgSegSD = 'Case3d_RPCopy'
-    
-    NewTrgSeg.SeriesDescription = NewTrgSegSD
-    
-    # Modify the Segment Label of the last (new) segment:
-    FromSegLabel = deepcopy(NewTrgSeg.SegmentSequence[FromSegNum].SegmentLabel)
-    
-    NewSegLabel = 'NEW_' + FromSegLabel
-    
-    #print(f'\n--> FromSegNum = {FromSegNum}, ToSegNum = {ToSegNum}')
-    #print(f'\n--> len(NewTrgSeg.SegmentSequence) = {len(NewTrgSeg.SegmentSequence)}')
-    
-    NewTrgSeg.SegmentSequence[ToSegNum].SegmentLabel = NewSegLabel
                                           
-    return NewTrgSeg
+    return Seg
+
 
 
 
@@ -825,4 +1370,3 @@ def ExportSegRoi(NewTrgSeg, SrcSegFpath, TrgSegFpath, NamePrefix, FromSliceNum,
     print('\nNew Target SEG ROI exported to:\n\n', NewTrgSegFpath)
     
     return NewTrgSegFpath
-

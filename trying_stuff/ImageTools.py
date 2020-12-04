@@ -519,57 +519,8 @@ def SumAllLabmapIms(LabmapIms):
     return LMImsSumNpa
 
 
-
-
-#def AddLabelmaps(Labmap0, Labmap1):
-            
-#def SumAllLabelmapIms(LabmapIms):
     
 
-
-
-
-
-
-def MeanPixArr(PixArr, binary=True):
-    """
-    Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
-    binary pixel array if binary=True (or undefined).
-    
-    Inputs:
-    ------
-    
-    PixArr : Numpy array
-        PixelData from a SEG file loaded as a Numpy array
-        
-    binary : boolean (optional; True by default)
-        If binary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by 0.5.
-        
-        
-    Outputs:
-    -------
-    
-    MeanPixArr : Numpy array
-        Mean pixel array.
-    """
-    
-    import numpy as np
-    
-    F, R, C = PixArr.shape
-    
-    # Initialise MeanPixArr:
-    MeanPixArr = np.zeros((1, R, C), dtype='uint')
-    
-    
-    result = np.mean(PixArr, axis=0)
-            
-    if binary:
-        MeanPixArr[0] = (result >= 0.5) * result
-    else:
-        MeanPixArr[0] = result
-        
-    return MeanPixArr
 
 
 
@@ -800,7 +751,7 @@ def TransformImage(Im, RegImFilt):
 
 
 
-def BinaryThresholdImage(Im, Threshold=0.5):
+def BinaryThresholdImage(Im, Thresh=0.5):
     """
     Binary threshold a 3D SimpleITK image.
     
@@ -810,7 +761,7 @@ def BinaryThresholdImage(Im, Threshold=0.5):
     Im : SimpleITK image 
         The 3D image to be transformed.
         
-    Threshold : float (optional; 0.5 by default)
+    Thresh : float (optional; 0.5 by default)
         Lower limit threshold.
         
         
@@ -827,8 +778,14 @@ def BinaryThresholdImage(Im, Threshold=0.5):
     
     #BinThreshImFilt.SetInput(Im)
     
-    BinThreshImFilt.SetLowerThreshold(Threshold)
-    BinThreshImFilt.SetUpperThreshold(1)
+    """
+    Setting an upper threshold (e.g. to 1) removes all pixels that exceed 1,
+    and for some reason, transformed binary labelmap images result in all sorts
+    of non-binary values (including negative values).
+    """
+    
+    BinThreshImFilt.SetLowerThreshold(Thresh)
+    #BinThreshImFilt.SetUpperThreshold(1)
     BinThreshImFilt.SetOutsideValue(0)
     BinThreshImFilt.SetInsideValue(1)
     

@@ -49,134 +49,6 @@ PLOTTING FUNCTIONS
 
 
 
-def PlotDicomsAndContours_OLD(DicomDir, RtsFpath, ExportPlot, ExportDir, 
-                          LogToConsole=False):
-    
-    from pydicom import dcmread
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import time
-    import os
-    from DicomTools import ImportDicoms
-    from DicomTools import GetDicomSOPuids
-    from RtsTools import GetCIStoSliceInds
-    from ConversionTools import ConvertContourDataToIndices
-    from GeneralTools import Unpack
-    
-    
-    # Import the DICOMs:
-    Dicoms = ImportDicoms(DicomDir=DicomDir)
-    
-    # Get the DICOM SOP UIDs:
-    SOPuids = GetDicomSOPuids(DicomDir=DicomDir)
-    
-    # Import the RTS ROI:
-    RtsRoi = dcmread(RtsFpath)
-    
-    # Get the ContourImageSequence-to-DICOM slice indices:
-    CIStoSliceInds = GetCIStoSliceInds(RtsRoi, SOPuids)
-    
-    # Get a list of the Contour Sequences in the ROI:
-    ContourSequences = RtsRoi.ROIContourSequence[0].ContourSequence
-    
-    
-    # Prepare the figure.
-    
-    # All DICOM slices that have contours will be plotted. The number of
-    # slices to plot:
-    Nslices = len(CIStoSliceInds)
-    
-    # Set the number of subplot rows and columns:
-    Ncols = np.int8(np.ceil(np.sqrt(Nslices)))
-    
-    # Limit the number of rows to 5 otherwise it's difficult to make sense of
-    # the images:
-    if Ncols > 5:
-        Ncols = 5
-    
-    Nrows = np.int8(np.ceil(Nslices/Ncols))
-    
-    # Create a figure with two subplots and the specified size:
-    if ExportPlot:
-        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows), dpi=300)
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows), dpi=300)
-    else:
-        #fig, ax = plt.subplots(Nrows, Ncols, figsize=(15, 9*Nrows))
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 6*Nrows))
-        
-    
-    n = 0 # sub-plot number
-    
-    # Loop through each slice: 
-    for i in range(Nslices):
-        if LogToConsole:
-                print('\ni =', i)
-                
-        n += 1 # increment sub-plot number
-        
-        # The DICOM slice number is:
-        s = CIStoSliceInds[i]
-        
-        #plt.subplot(Nrows, Ncols, n)
-        #plt.axis('off')
-        ax = plt.subplot(Nrows, Ncols, n)
-
-        #ax = plt.subplot(Nrows, Ncols, n, aspect=AR)
-          
-        # Plot the DICOM pixel array:
-        ax.imshow(Dicoms[s].pixel_array, cmap=plt.cm.Greys_r)
-        #ax.set_aspect(ar)
-        
-        # Get the Contour Sequence that corresponds to this slice:
-        ContourSequence = ContourSequences[i]
-        
-        # Get the Contour Data:
-        ContourData = [float(item) for item in ContourSequence.ContourData]
-                
-        # Convert contour data from Patient Coordinate System to Image 
-        # Coordinate System:
-        PointsICS = ConvertContourDataToIndices(ContourData, DicomDir)
-        
-        # Unpack the points:
-        X, Y, Z = Unpack(PointsICS)
-        
-        # Plot the contour points:
-        plt.plot(X, Y, linewidth=0.5, c='red');
-        
-        
-        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-        
-        ax.set_title(f'Slice {s}')
-        #plt.axis('off')
-        
-            
-            
-    if ExportPlot:
-        RtsFullFname = os.path.split(RtsFpath)[1]
-        
-        RtsFname = os.path.splitext(RtsFullFname)[0]
-        
-        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
-        CurrentTime = time.strftime("%H%M%S", time.gmtime())
-        CurrentDateTime = CurrentDate + '_' + CurrentTime
-        
-        ExportFname = CurrentDateTime + '_' + RtsFname
-        
-        ExportFpath = os.path.join(ExportDir, ExportFname)
-        
-        plt.savefig(ExportFpath, bbox_inches='tight')
-        
-        print('\nPlot exported to:\n\n', ExportFpath)
-        
-        
-    #print(f'PixAR = {PixAR}')
-    #print(f'AxisAR = {AxisAR}')
-        
-    return
-
-
-
-
 
 def PlotImagesAndContours(Image, ImageType, DicomDir, RtsFpath,
                           ExportPlot, ExportDir, Label='', dpi=80,
@@ -940,6 +812,10 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
         SliceNums = list(range(Nslices))
         
         Nrows = Nslices
+        
+    
+    #if ExportPlot:
+    #    dpi = 120
     
     
     # Create a figure with two subplots and the specified size:
@@ -1134,6 +1010,473 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
         ExportFname = CurrentDateTime + '_Case' + Case + '_Orig' + SrcLabel \
                       + ResOrReg_short + SrcLabel + '_' + TrgLabel + '_New' \
                       + TrgLabel + '_' + ImageType + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+    return
+
+
+
+
+
+
+
+def PlotPixelArrays(ListOfPixArrs, ListOfFrameToSliceInds, ListOfPlotTitles, 
+                    AddTxt=None, ExportPlot=False, ExportDir=None, dpi=80, 
+                    LogToConsole=False):
+    """ 
+    Note:
+    
+    ListOfPixArrs is a list (which could be of length 1) of pixel arrays.
+    
+    ListOfFrameToSliceInds is a list (which could be of length 1) of 
+    FrameToSliceInds.
+    
+    ListOfPlotTitles is a list (which could be of length 1) of text for each
+    plot title.
+    """
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    import time
+    from copy import deepcopy
+    
+    for i in range(len(ListOfFrameToSliceInds)):
+        print(f'\nListOfPlotTitles[{i}] = {ListOfPlotTitles[i]}')
+        
+        print(f'\nListOfFrameToSliceInds[{i}] = {ListOfFrameToSliceInds[i]}')
+        
+        print(f'\nListOfPixArrs[{i}].shape = {ListOfPixArrs[i].shape}')
+    
+    
+    if len(ListOfFrameToSliceInds) > 1:
+        # Get the slice numbers that cover all FrameToSliceInds in 
+        # ListOfFrameToSliceInds:
+        AllSliceNums = []
+        
+        for FrameToSliceInds in ListOfFrameToSliceInds:
+            for SliceInd in FrameToSliceInds:
+                AllSliceNums.append(SliceInd)
+        
+        # Reduce to unique slice numbers:
+        AllSliceNums = list(set(AllSliceNums))    
+    else:
+        AllSliceNums = deepcopy(ListOfFrameToSliceInds[0])
+    
+        
+    # Get the maxima for all frames for all pixel arrays along x (axis=2) and
+    # y (axis=1):
+    ListOfMaximaByFrame = []
+    
+    for PixArr in ListOfPixArrs:
+    
+        ListOfMaximaByFrame.append(np.amax(PixArr, axis=(1,2)))
+    
+    
+    if LogToConsole:
+        print(f'\nListOfMaximaByFrame = {ListOfMaximaByFrame}')
+    
+    
+    
+    # Prepare the figure.
+    
+    # Set the number of subplot rows and columns:
+    Ncols = len(ListOfPixArrs)
+    Nrows = len(AllSliceNums)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
+        
+    
+    n = 1 # initialised sub-plot number
+    
+    # Loop through each AllSliceNums: 
+    for SliceNum in AllSliceNums:
+        #print(f's = {SliceNum}')
+        
+        # Loop through each pixel array:
+        for p in range(len(ListOfPixArrs)):
+            PixArr = ListOfPixArrs[p]
+            
+            Frame2SliceInds = ListOfFrameToSliceInds[p]
+            
+            PlotTitle = ListOfPlotTitles[p]
+            
+            MaximaByFrame = ListOfMaximaByFrame[p]
+            
+            if SliceNum in Frame2SliceInds:
+                FrameNum = Frame2SliceInds.index(SliceNum)
+                
+                Frame = PixArr[FrameNum]
+                
+                ax = plt.subplot(Nrows, Ncols, n)
+                
+                im = ax.imshow(Frame, cmap=plt.cm.Greys_r)
+                
+                #m = 1 if MaximaByFrame[FrameNum] < 1 else MaximaByFrame[FrameNum]
+                cbar = fig.colorbar(im, ax=ax)
+                #cbar.mappable.set_clim(0, m)
+                        
+                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                if AddTxt:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum} Frame {FrameNum} \n'\
+                                + AddTxt
+                else:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum} Frame {FrameNum}'
+                ax.set_title(plotTitle)
+                
+            n += 1 # increment sub-plot number
+        
+    
+    if ExportPlot:
+        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        CurrentDateTime = CurrentDate + '_' + CurrentTime
+    
+        if AddTxt:
+            AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
+            AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
+            AddTxt = AddTxt.replace('\n', '')
+        else:
+            AddTxt = ''
+            
+        ExportFname = CurrentDateTime + '_PixArrs_' + AddTxt + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+    return
+
+
+
+
+
+
+
+
+
+def PlotPixelArraysFromSegs(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
+                            SegLabel, AddTxt=None, ExportPlot=False,
+                            ExportDir=None, dpi=80, LogToConsole=False):
+    """ 
+    Note:
+    
+    ListOfSegs is a list (which could be of length 1) of SEG (Pydicom) objects.
+    
+    ListOfPlotTitles is a list (which could be of length 1) of text for each
+    plot title.
+    """
+    
+    import importlib
+    import SegTools
+    importlib.reload(SegTools)
+    import DicomTools
+    importlib.reload(DicomTools)
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    import time
+    from copy import deepcopy
+    from SegTools import GetPFFGStoSliceIndsBySeg
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import GetRoiNum
+    from SegTools import GetFramesFromPixArr
+    
+    ListOfPixArrs = []
+    ListOfFrameToSliceInds = []
+    ListOfSegNums = []
+    
+    for i in range(len(ListOfSegs)):
+        if LogToConsole:
+            print(f'\nListOfPlotTitles[{i}] = {ListOfPlotTitles[i]}')
+            
+        SegNum = GetRoiNum(ListOfSegs[i], SegLabel)
+        
+        ListOfSegNums.append(SegNum)
+        
+        #PixArr = ListOfSegs[i].pixel_array # this contains all segments!
+        PixArr = GetFramesFromPixArr(ListOfSegs[i], ListOfDicomDirs[i], 
+                                     SegLabel, LogToConsole)
+        
+        """
+        If PixArr has a single frame it will have shape (NumOfRows, NumOfCols).
+        For compatibility with multi-framed pixel arrays, convert single-framed
+        pixel arrays to shape (1, NumOfRows, NumOfCols).
+        """
+        if len(PixArr.shape) < 3:
+            R, C = PixArr.shape
+            
+            PixArr = np.reshape(PixArr, (1, R, C))
+        
+        ListOfPixArrs.append(PixArr)
+        
+        if LogToConsole:      
+            print(f'ListOfPixArrs[{i}].shape = {ListOfPixArrs[i].shape}')
+        
+        SOPuids = GetDicomSOPuids(ListOfDicomDirs[i])
+        
+        PFFGStoSliceIndsBySeg = GetPFFGStoSliceIndsBySeg(ListOfSegs[i], SOPuids)
+        
+        ListOfFrameToSliceInds.append(PFFGStoSliceIndsBySeg[SegNum])
+        
+        if LogToConsole:
+            print(f'ListOfFrameToSliceInds[{i}] = {ListOfFrameToSliceInds[i]}')
+    
+    
+    if len(ListOfFrameToSliceInds) > 1:
+        # Get the slice numbers that cover all FrameToSliceInds in 
+        # ListOfFrameToSliceInds:
+        AllSliceNums = []
+        
+        for FrameToSliceInds in ListOfFrameToSliceInds:
+            for SliceInd in FrameToSliceInds:
+                AllSliceNums.append(SliceInd)
+        
+        # Reduce to unique slice numbers:
+        AllSliceNums = list(set(AllSliceNums))    
+    else:
+        AllSliceNums = deepcopy(ListOfFrameToSliceInds[0])
+    
+        
+    # Get the maxima for all frames for all pixel arrays along x (axis=2) and
+    # y (axis=1):
+    #ListOfMaximaByFrame = []
+    #
+    #for PixArr in ListOfPixArrs:
+    #
+    #    ListOfMaximaByFrame.append(np.amax(PixArr, axis=(1,2)))
+    #
+    #
+    #if LogToConsole:
+    #    print(f'\nListOfMaximaByFrame = {ListOfMaximaByFrame}')
+    
+    
+    
+    # Prepare the figure.
+    
+    # Set the number of subplot rows and columns:
+    Ncols = len(ListOfPixArrs)
+    Nrows = len(AllSliceNums)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
+        
+    
+    n = 1 # initialised sub-plot number
+    
+    # Loop through each AllSliceNums: 
+    for SliceNum in AllSliceNums:
+        #print(f's = {SliceNum}')
+        
+        # Loop through each pixel array:
+        for p in range(len(ListOfPixArrs)):
+            PixArr = ListOfPixArrs[p]
+            
+            Frame2SliceInds = ListOfFrameToSliceInds[p]
+            
+            PlotTitle = ListOfPlotTitles[p]
+            
+            #MaximaByFrame = ListOfMaximaByFrame[p]
+            
+            if SliceNum in Frame2SliceInds:
+                FrameNum = Frame2SliceInds.index(SliceNum)
+                
+                Frame = PixArr[FrameNum]
+                
+                ax = plt.subplot(Nrows, Ncols, n)
+                
+                im = ax.imshow(Frame, cmap=plt.cm.Greys_r)
+                
+                #m = 1 if MaximaByFrame[FrameNum] < 1 else MaximaByFrame[FrameNum]
+                #cbar = fig.colorbar(im, ax=ax)
+                #cbar.mappable.set_clim(0, m)
+                
+                fig.colorbar(im, ax=ax)
+                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                if AddTxt:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum}, Frame {FrameNum} \n'\
+                                + AddTxt
+                else:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum}, Frame {FrameNum}'
+                ax.set_title(plotTitle)
+                
+            n += 1 # increment sub-plot number
+        
+    
+    if ExportPlot:
+        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        CurrentDateTime = CurrentDate + '_' + CurrentTime
+    
+        if AddTxt:
+            AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
+            AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
+            AddTxt = AddTxt.replace('\n', '')
+        else:
+            AddTxt = ''
+            
+        ExportFname = CurrentDateTime + '_PixArrs_' + AddTxt + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+    return
+
+
+
+
+
+
+def PlotContoursFromRtss(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
+                         RoiLabel, AddTxt=None, ExportPlot=False,
+                         ExportDir=None, dpi=80, LogToConsole=False):
+    """ 
+    Note:
+    
+    ListOfRtss is a list (which could be of length 1) of RTS (Pydicom) objects.
+    
+    ListOfPlotTitles is a list (which could be of length 1) of text for each
+    plot title.
+    """
+    
+    import importlib
+    import RtsTools
+    importlib.reload(RtsTools)
+    import DicomTools
+    importlib.reload(DicomTools)
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    import time
+    from copy import deepcopy
+    from RtsTools import GetCStoSliceIndsByRoi
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import GetRoiNum
+    from RtsTools import GetPtsInRoi
+    from GeneralTools import Unpack
+    
+    ListOfContours = []
+    ListOfContourToSliceInds = []
+    ListOfRoiNums = []
+    
+    for i in range(len(ListOfRtss)):
+        if LogToConsole:
+            print(f'\nListOfPlotTitles[{i}] = {ListOfPlotTitles[i]}')
+            
+        RoiNum = GetRoiNum(ListOfRtss[i], RoiLabel)
+        
+        ListOfRoiNums.append(RoiNum)
+        
+        Contours = GetPtsInRoi(ListOfRtss[i], ListOfDicomDirs[i], RoiLabel)
+        
+        ListOfContours.append(Contours)
+        
+        if LogToConsole:      
+            print(f'len(ListOfContours) = {len(ListOfContours)}')
+        
+        SOPuids = GetDicomSOPuids(ListOfDicomDirs[i])
+        
+        CStoSliceIndsByRoi = GetCStoSliceIndsByRoi(ListOfRtss[i], SOPuids)
+        
+        ListOfContourToSliceInds.append(CStoSliceIndsByRoi[RoiNum])
+        
+        if LogToConsole:
+            print(f'ListOfContourToSliceInds[{i}] = {ListOfContourToSliceInds[i]}')
+    
+    
+    if len(ListOfContourToSliceInds) > 1:
+        # Get the slice numbers that cover all CSToSliceInds in 
+        # ListOfSliceToSliceInds:
+        AllSliceNums = []
+        
+        for ContourToSliceInds in ListOfContourToSliceInds:
+            for SliceInd in ContourToSliceInds:
+                AllSliceNums.append(SliceInd)
+        
+        # Reduce to unique slice numbers:
+        AllSliceNums = list(set(AllSliceNums))    
+    else:
+        AllSliceNums = deepcopy(ListOfContourToSliceInds[0])
+    
+    
+    # Prepare the figure.
+    
+    # Set the number of subplot rows and columns:
+    Ncols = len(ListOfRtss)
+    Nrows = len(AllSliceNums)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
+        
+    
+    n = 1 # initialised sub-plot number
+    
+    # Loop through each AllSliceNums: 
+    for SliceNum in AllSliceNums:
+        #print(f's = {SliceNum}')
+        
+        # Loop through each list of contours:
+        for c in range(len(ListOfContours)):
+            Contours = ListOfContours[c]
+            
+            Contour2SliceInds = ListOfContourToSliceInds[c]
+            
+            PlotTitle = ListOfPlotTitles[c]
+            
+            
+            if SliceNum in Contour2SliceInds:
+                ContourNum = Contour2SliceInds.index(SliceNum)
+                
+                Contour = Contours[ContourNum]
+                
+                ax = plt.subplot(Nrows, Ncols, n)
+                
+                # Unpack the contour points:
+                X, Y, Z = Unpack(Contour)
+                
+                # Plot the contour points:
+                ax = plt.plot(X, Y, linewidth=0.5, c=colours[i]);
+                    
+                ax.set_xlabel('mm'); ax.set_ylabel('mm')
+                if AddTxt:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum}, Contour {ContourNum} \n'\
+                                + AddTxt
+                else:
+                    plotTitle = PlotTitle\
+                                + f' Slice {SliceNum}, Contour {ContourNum}'
+                ax.set_title(plotTitle)
+                
+            n += 1 # increment sub-plot number
+        
+    
+    if ExportPlot:
+        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        CurrentDateTime = CurrentDate + '_' + CurrentTime
+    
+        if AddTxt:
+            AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
+            AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
+            AddTxt = AddTxt.replace('\n', '')
+        else:
+            AddTxt = ''
+            
+        ExportFname = CurrentDateTime + '_Contours_' + AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         

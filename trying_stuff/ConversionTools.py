@@ -57,192 +57,6 @@ to an index with a single line of code using SimpleITK:
 """
 
 
-def GetPtsInContour(RtsFpath, DicomDir, RoiNum, SliceNum):
-    """
-    Get the physical points (i.e. in the Patient Coordinate System) in a 
-    contour in a ROI.
-    
-    Inputs:
-    ------
-    
-    RtsFpath : string
-        Full path of the DICOM-RTSTRUCT file.
-        
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-        
-    RoiNum : integer
-        The ROI number (counting from 0) that contains the contour of interest.
-        
-    SliceNum : integer
-        The slice number (counting from 0) that corresponds to the contour of
-        interest.
-                       
-                            
-    Outputs:
-    -------
-    
-    Points : list of a list of floats
-        List (for each point) of a list (for each dimension) of points. 
-    """
-    
-    from pydicom import dcmread
-    from DicomTools import GetDicomSOPuids
-    from RtsTools import GetCStoSliceInds
-    
-    # Import the RTSTRUCT ROI:
-    Rts = dcmread(RtsFpath)
-    
-    # Get the DICOM SOP UIDs:
-    SopUids = GetDicomSOPuids(DicomDir)
-    
-    # Get the ContourSequence-to-slice indices:
-    CStoSliceInds = GetCStoSliceInds(Rts, SopUids)
-    
-    # The contour number of interest:
-    ContourNum = CStoSliceInds.index(SliceNum)
-    
-    # The ROI Contour Sequence:
-    RoiContourSequence = Rts.ROIContourSequence
-    
-    # The number of ROIs:
-    NumOfRois = len(RoiContourSequence)
-    
-    if RoiNum > NumOfRois - 1:
-        raise Exception(f"There are only {NumOfRois} ROIs in the RTS.\n",
-                        f"RoiNum = {RoiNum} > {NumOfRois}.")
-    
-    
-    # The Contour Sequences in the ROI of interest:
-    ContourSequence = Rts.ROIContourSequence[RoiNum].ContourSequence
-    
-    # The number of contours in this ROI:
-    NumOfContours = len(ContourSequence)
-    
-    if ContourNum > NumOfContours - 1:
-        raise Exception(f"There are only {NumOfContours} contours in the RTS.",
-                        f"\nContourNum = {ContourNum} > {NumOfContours}.")
-        
-    ContourData = ContourSequence[ContourNum].ContourData
-    
-    ContourData = [float(item) for item in ContourData]
-    
-    Points = []
-            
-    # Iterate for all points in threes:
-    for p in range(0, len(ContourData), 3):
-        point = [ContourData[p], ContourData[p+1], ContourData[p+2]]
-        
-        Points.append(point)
-        
-    return Points
-
-
-        
-
-
-
-
-    
-
-def GetPtsByRoi(RtsFpath, DicomDir):
-    """
-    Get the physical points (i.e. in the Patient Coordinate System) in all 
-    contours for all ROIs.
-    
-    Inputs:
-    ------
-    
-    RtsFpath : string
-        Full path of the DICOM-RTSTRUCT file.
-        
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-                       
-                            
-    Outputs:
-    -------
-    
-    PtsByRoi : list of list of a list of floats
-        List (for each ROI) of a list (for all contours) of a list (for each 
-        dimension) of points.
-    """
-    
-    from pydicom import dcmread
-    from DicomTools import GetDicomSOPuids
-    from RtsTools import GetCStoSliceInds
-    
-    # Import the RTSTRUCT ROI:
-    Roi = dcmread(RtsFpath)
-    
-    # Get the DICOM SOP UIDs:
-    SopUids = GetDicomSOPuids(DicomDir)
-    
-    # Get the ContourImageSequence-to-slice indices:
-    #CIStoSliceInds = GetCIStoSliceInds(Roi, SopUids)
-    
-    # Get the ContourSequence-to-slice indices:
-    CStoSliceInds = GetCStoSliceInds(Roi, SopUids)
-    
-    Nrois = len(CStoSliceInds)
-    
-    PtsByRoi = []
-    
-    for r in range(Nrois):
-        # Number of contours in this ROI:
-        Ncontours = len(CStoSliceInds[r])
-        
-        # Get a list of the Contour Sequences in this ROI:
-        ContourSequences = Roi.ROIContourSequence[r].ContourSequence
-        
-        # Get a list of all Referenced SOP Instance UIDs from the ContourSequences:
-        #RefSopUids = [sequence.ContourImageSequence[0]\
-        #              .ReferencedSOPInstanceUID for sequence in ContourSequences]
-        
-        
-        PtsByContour = []
-        
-        
-        # Loop through each CStoSliceInds:
-        for c in range(Ncontours):
-            
-            # Get the indeces of all matching RefSopUids:
-            #ind = RefSopUids.index(SopUid) # this will only find the first 
-            # match, and there may be more than one!
-            #inds = [i for i, e in enumerate(RefSopUids) if e==SopUid]
-            
-            # Iterate for each index in inds:
-            #for ind in inds:
-            
-            ContourSequence = ContourSequences[c]
-            
-            ContourData = [float(item) for item in ContourSequence.ContourData]
-    
-            # Initialise the array of points for this contour:
-            points = []
-            
-            # Iterate for all points in threes:
-            for p in range(0, len(ContourData), 3):
-                point = [ContourData[p], ContourData[p+1], ContourData[p+2]]
-                
-                points.append(point)
-        
-        
-            PtsByContour.append(points)
-            
-            
-        PtsByRoi.append(PtsByContour)
-
-    return PtsByRoi
-
-
-
-
-
-
-
-
-
 def Point2Index(Point, Origin, Directions, Spacings):
     """
     Convert a physical point (in Patient Coordinate System (PCS)) to an index
@@ -513,96 +327,6 @@ def ConvertContourDataToIndices(ContourData, DicomDir):
 
 
 
-def GetIndsByRoi(RtsFpath, DicomDir):
-    """
-    Get the indices of the points (i.e. in the Image Coordinate System) in all 
-    contours for all ROIs.
-    
-    
-    Inputs:
-        RtsFpath   - (String) Full path of the DICOM-RTSTRUCT file 
-        
-        DicomDir   - (String) Directory containing the corresponding DICOMs 
-                       
-                            
-    Returns:
-        IndsInRois - (List of list of a list of floats) List (for each ROI) of
-                     a list (for all contours) of a list (for each dimension)
-                     of indices 
-    
-    """
-    
-    from ImageTools import GetImageAttributes
-    
-    PtsByRoi = GetPtsByRoi(RtsFpath, DicomDir)
-    
-    Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(DicomDir)
-    
-    
-    Nrois = len(PtsByRoi)
-    
-    IndsByRoi = []
-    
-    for r in range(Nrois):
-        IndsByContour = []
-        
-        # The list of points in the contours for this ROI:
-        PtsByContour = PtsByRoi[r]
-        
-        for contour in PtsByContour:
-            Indices = ContourToIndices(contour, IPPs[0], Dirs, Spacings)
-                
-            IndsByContour.append(Indices)
-            
-        IndsByRoi.append(IndsByContour)
-        
-    
-    return IndsByRoi
-
-
-
-
-
-
-
-
-def ChangeZinds(Indices, NewZind):
-    """
-    Re-assign the z-components of a list of indeces.
-    
-    Inputs:
-    ------
-    
-    Indices : list of a list of integers
-        List (for each point) of a list (for each dimension) of indices, 
-        e.g. [[i0, j0, k0], [i1, j1, k1], ...].
-        
-    NewZind : integer
-        The value to re-assign to the z-components (i.e. k) of Indeces.
-    
-    
-        
-    Ouputs:
-    ------
-    
-    Indices : list of a list of integers
-        List (for each point) of a list (for each dimension) of the indices 
-        with modified z-components, e.g. [[i0, j0, k0], [i1, j1, k1], ...].
-    """
-    
-    if not isinstance(NewZind, int):
-        raise Exception(f"NewZind = {NewZind} must be an integer.")
-    
-    for i in range(len(Indices)):
-        Indices[i][2] = NewZind
-        
-    return Indices
-
-
-
-
-
-
 
 
 def Ind2Pt(Index, Origin, Directions, Spacings):
@@ -855,8 +579,8 @@ def GetLabmapImsByRoi(RtsFpath, DicomDir, CStoSliceIndsByRoi, RefIm):
         Directory containing the corresponding DICOMs.
     
     CStoSliceIndsByRoi : list of a list of integers
-        List of slice numbers that correspond to each Referenced SOP instance 
-        UID in the Contour Sequence - one list per ROI.
+        List (for each ROI) of a list (for each contour) of slice numbers that 
+        correspond to each Referenced SOP instance UID in the Contour Sequence.
     
     RefIm : SimpleITK image
         The 3D image that PixArr relates to.
@@ -868,6 +592,8 @@ def GetLabmapImsByRoi(RtsFpath, DicomDir, CStoSliceIndsByRoi, RefIm):
     LabmapIms : List of SimpleITK images
         A list of 3D zero-padded labelmap (SimpleITK) images - one per ROI.
     """
+    
+    from RtsTools import GetIndsByRoi
     
     LabmapIms = []
     
@@ -1128,369 +854,56 @@ def Image2PixArr(LabmapIm, Non0FrameInds=None):
 
 
 
-def GetFrameFromPixArr(PixArr, FrameNum):
+
+
+
+
+
+def PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5):
     """
-    Extract a single (2D) frame from a 3D pixel array.  
+    Convert a 3D pixel array to a list (for each frame) of a list of indices
+    that define the equivalent contour for the mask in each frame.
     
+    Adapted from https://programtalk.com/vs2/python/7636/sima/sima/ROI.py/
+ 
     Inputs:
     ------
     
     PixArr : Numpy array
-        PixelData from a SEG file loaded as a Numpy array
+        A FxRxC (frames x rows x cols) Numpy array containing F RxC masks in 
+        PixArr.
+    
+    FrameToSliceInds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
         
-    FrameNum : integer
-        The number of slices in the DICOM series.
-        
-    
-    Outputs:
-    -------
-    
-    Frame : Numpy array
-        Frame from PixArr.
-
-    """
-    
-    import numpy as np
-    
-    F, R, C = PixArr.shape
-    
-    # Initialise Frame:
-    Frame = np.zeros((1, R, C), dtype='uint')
-    
-    Frame[0] = PixArr[FrameNum]
-            
-    return Frame
-
-
-
-
-
-
-
-def GetPhysicalShiftBetweenSlices(Image, SliceNum0, SliceNum1):
-    """
-    Get the physical shift between Slice0 and Slice1 in an image.
-    
-    Inputs:
-    ------
-    
-    Image : SimpleITK image
-    
-    SliceNum0 : integer
-    
-    SliceNum1 : integer
-    
-    
-    Outputs:
-    -------
-    
-    mmShift : Numpy array
-        Shift in mm between index [0,0,SliceNum1] and index [0,0,SliceNum0].
-    """
-    
-    import numpy as np
-    
-    mmShift = np.array(Image.TransformIndexToPhysicalPoint([0,0,SliceNum1])) \
-            - np.array(Image.TransformIndexToPhysicalPoint([0,0,SliceNum0]))
-            
-    return mmShift
-
-
-
-
-
-def GetPixelShiftBetweenSlices(Image, SliceNum0, SliceNum1, Fractional=False):
-    """
-    Get the shift between Slice0 and Slice1 in an image in pixels.
-    
-    Inputs:
-    ------
-    
-    Image : SimpleITK image
-    
-    SliceNum0 : integer
-    
-    SliceNum1 : integer
-    
-    Fractional : boolean (optional; False by default)
-        If True the pixel shift will be rounded to the nearest integer value.
-    
-    
-    Outputs:
-    -------
-    
-    PixShift : Numpy array
-        Shift in pixels between index [0, 0, SliceNum1] and index 
-        [0, 0, SliceNum0].
-    """
-    
-    import numpy as np
-    
-    mmShift = GetPhysicalShiftBetweenSlices(Image, SliceNum0, SliceNum1)
-    
-    PixSpacing = np.array(Image.GetSpacing())
-    
-    PixShift = mmShift/PixSpacing
-    
-    if not Fractional:
-        PixShift = np.round(PixShift).astype('int')
-            
-    return PixShift
-
-
-
-
-
-
-    
-def ShiftFrame(Frame, PixShift):
-    """
-    Shift the items in a 2D frame.
-    
-    Inputs:
-    ------
-    
-    Frame : Numpy array
-        A 2D frame from PixelData with shape (1, R, C), where R = number of 
-        rows, and C = number of columns.
-        
-    PixShift : Numpy array
-        Shift in pixels (e.g. [di, dj, dz].
-        
-    
-    Outputs:
-    -------
-    
-    ShiftedFrame : Numpy array
-        Shifted frame with shape (1, R, C). Only the x- and y-components are 
-        shifted.
-
-    """
-    
-    import numpy as np
-    
-    F, R, C = Frame.shape
-    
-    if F > 1:
-        msg = f"'Frame' must be a 2D frame with shape (1, R, C) but has shape"\
-              + f" ({F}, {R}, {C})."
-        
-        raise Exception(msg)
-    
-    # Initialise ShiftedFrame:
-    ShiftedFrame = np.zeros((1, R, C), dtype='uint')
-    #ShiftedFrame = np.empty_like(Frame, dtype='uint') # this creates 42,932
-    # unique values for some reason!
-    
-    #unique = UniqueItems(Nda=Frame, NonZero=False)
-    #print(f'\n---> There are {len(unique)} unique items in Frame')
-    #unique = UniqueItems(Nda=ShiftedFrame, NonZero=False)
-    #print(f'\n---> There are {len(unique)} unique items in the initialised',
-    #      f'ShiftedFrame: {unique[:11]}...')
-    
-    di, dj, dk = PixShift
-    
-    ##ShiftedFrame[0, dj:, di:] = Frame[0, :-(1+dj), :-(1+di)]
-    ##ShiftedFrame[0, :-(1+dj), :-(1+di)] = Frame[0, dj:, di:]
-    #ShiftedFrame[0, :R-dj, :C-di] = Frame[0, dj:, di:]
-    
-    if di > 0 and dj > 0:
-        ShiftedFrame[0, dj:, di:] = Frame[0, :-dj, :-di]
-        
-    elif di < 0 and dj < 0:
-        ShiftedFrame[0, :dj, :di] = Frame[0, -dj:, -di:]
-        
-    elif di > 0 and dj < 0:
-        ShiftedFrame[0, :dj, di:] = Frame[0, -dj:, :-di]
-        
-    elif di < 0 and dj > 0:
-        ShiftedFrame[0, dj:, :di] = Frame[0, :-dj, -di:]
-        
-    elif di == 0 and dj > 0:
-        ShiftedFrame[0, dj:, :] = Frame[0, :-dj, :]
-        
-    elif di == 0 and dj < 0:
-        ShiftedFrame[0, :dj, :] = Frame[0, -dj:, :]
-        
-    elif di > 0 and dj == 0:
-        ShiftedFrame[0, :, di:] = Frame[0, :, :-di]
-        
-    elif di < 0 and dj == 0:
-        ShiftedFrame[0, :, :di] = Frame[0, :, -di:]
-        
-    elif di == 0 and dj == 0:
-        ShiftedFrame[0] = Frame[0]
-        
-    #unique = UniqueItems(Nda=ShiftedFrame, NonZero=False)
-    #print(f'\n---> There are {len(unique)} unique items in the ShiftedFrame',
-    #      'after shifting.')
-            
-    return ShiftedFrame
-
-
-
-
-
-
-
-def Distance(item0, item1):
-    """
-    Compute the distance between points or indices.  
-    
-    Inputs:
-        item0    - (List of floats/integers) A 2D/3D point or point indices
-        
-        item1    - (List of floats/integers) A 2D/3D point or point indices
-        
-    Returns:
-        distance - (Scalar float/integer) Distance between item0 and item1 in
-                   Euclidean space or in pixels
-
-    """
-    
-    SumOfDims = len(item0) + len(item1)
-    
-    if SumOfDims == 4:
-        # 2D points/indices.
-        distance = ((item0[0] - item1[0])**2 \
-                    + (item0[1] - item1[1])**2)**0.5
-                    
-        return distance
-        
-    elif SumOfDims == 6:
-        # 3D points/indices.
-        distance = ((item0[0] - item1[0])**2 \
-                    + (item0[1] - item1[1])**2 \
-                    + (item0[2] - item1[2])**2)**0.5
-                    
-        return distance
-        
-        
-    else:
-        msg = "The inputs must both be 2D or 3D lists of points/indices."
-        
-        raise Exception(msg)
-
-
-
-
-
-
-
-def CentroidOfContour(Contour):
-    """
-    Compute the centroid of a list of points (or indices).  
-    
-    Inputs:
-        Contour  - (List of list of floats/integers) List of a list of points 
-                   or indices
-        
-    Returns:
-        Centroid - (List of floats/integers) Centroid of Contour
-
-    """
-    
-    import numpy as np
-    
-    Contour = np.array(Contour)
-    
-    return Contour.mean(axis=0)
-
-
-
-
-
-
-def LabelContoursByCentroid(Contours): # incomplete
-    """
-    
-    This function is incomplete 
-    
-    Given a list of points (or indices) assign an integer label to each contour 
-    using the contour centroids as a best guess of which ROI they belong to.  
-    
-    Inputs:
-        Contours - (List of list of a list of floats/integers) 
-                   List of a list of points/indices for each contour
-        
-    Returns:
-        RoiNums  - (List of integers) Integer label assigning each contour to
-                   a ROI
-
-    """
-    
-    Centroids = []
-    
-    for Contour in Contours:
-        Centroids.append(CentroidOfContour(Contour))
-        
-        
-    RoiNums = []
-    RoiCentroids = []
-    
-    # Assign the first contour the number 0, and the first RoiCentroid 
-    # Centroids[0]:
-    RoiNums.append(0)
-    RoiCentroids.append(Centroids[0])
-    
-    
-    # Loop through Centroids starting from the 2nd one:
-    for c in range(1, len(Centroids)):
-        distances = []
-        
-        for r in range(len(RoiCentroids)):
-            # Get the distance between the centroids but ignore the z-component:
-            distance = Distance(Centroids[c][:2], RoiCentroids[r][:2])
-            
-            distances.append(distance)
-            
-            
-        # Find index of minimum distance:
-        ind = distances.index(min(distances))
-        
-        #if ind in RoiNums:
-            
-            
-        
-        
-    return RoiNums
-        
-
-
-
-
-
-def Labelmap2Contours(Labelmap, threshold=0.5):
-    """
-    
-    Adapted from https://programtalk.com/vs2/python/7636/sima/sima/ROI.py/
-    
-    Takes a mask and returns a MultiPolygon
+    Thresh : float (optional; 0.5 by default)
+        Threshold value used to binarise the labels in PixArr.
  
-    Parameters
-    ----------
-    mask : array
-        Sparse or dense array to identify polygon contours within.
-    threshold : float, optional
-        Threshold value used to separate points in and out of resulting
-        polygons. 0.5 will partition a boolean mask, for an arbitrary value
-        binary mask choose the midpoint of the low and high values.
- 
-    Output
-    ------
-    MultiPolygon
-        Returns a MultiPolygon of all masked regions.
- 
+    
+    Outputs:
+    -------
+    
+    IndicesByFrame : list of floats
+        A list (for each contour/frame) of a flat list of [x, y, z] coordinates
+        of the polygons that define each frame in PixArr.
+        
+    PtsByCnt : list of a list of floats
+        A list (for each contour/frame) of a list (for each dimension) of the 
+        polygons that define each frame in PixArr.
+        
+    #CntToSliceInds : list of integers
+    #    List of slice numbers that correspond to each contour.
     """
     
     import numpy as np
     from scipy.sparse import issparse
     from skimage.measure import find_contours
     
-    ContourData = []
-    ContourToSliceNums = []
+    IndsByFrame = []
     
-    for z, Mask in enumerate(Labelmap):
+    for FrameNum, Mask in enumerate(PixArr):
         if issparse(Mask):
             Mask = np.array(Mask.astype('byte').todense())
  
@@ -1498,31 +911,72 @@ def Labelmap2Contours(Labelmap, threshold=0.5):
             # If Mask is empty, just skip it
             continue
  
-        # Add an empty row and column around the mask to make sure edge masks
-        # are correctly determined
+        # Add an empty row and column at both sides of the mask to ensure that
+        # any masks near the edge are found:
         ExpandedDims = (Mask.shape[0] + 2, Mask.shape[1] + 2)
         
         ExpandedMask = np.zeros(ExpandedDims, dtype=float)
         
         ExpandedMask[1:Mask.shape[0] + 1, 1:Mask.shape[1] + 1] = Mask
  
-        Contours = find_contours(ExpandedMask.T, threshold)
- 
-        # Subtract off 1 to shift coords back to their real space:
-        Contours = [np.subtract(x, 1).tolist() for x in Contours]
- 
-        v = []
+        # Get the indices that define contours in ExpandedMask:
+        """
+        I'm not sure how this will behave if there is more than one label (i.e.
+        more than one closed mask on any given frame).  Since the returned
+        item is a list of length 1, presummably a frame with multiple masks 
+        will result in a list of length > 1 for each mask.  This needs to be
+        tested and confirmed.
+        """
+        IndsByObj_2D = find_contours(ExpandedMask.T, Thresh)
         
-        for poly in Contours:
-            NewPoly = [point + [z] for point in poly]
-            
-            v.append(NewPoly)
-            
-        ContourData.extend(v)
-        
-        ContourToSliceNums.append(z)
+        #print(f'\n\n\nFrameNum = {FrameNum}')
+        #print(f'\nlen(IndsByObj_2D) = {len(IndsByObj_2D)}')
+        #print(f'\nIndsByObj_2D = {IndsByObj_2D}')
  
-    return ContourData, ContourToSliceNums
+        # Remove on row and column to shift the indices back to their original
+        # locations:
+        IndsByObj_2D = [np.subtract(x, 1).tolist() for x in IndsByObj_2D]
+        
+        if len(IndsByObj_2D) > 1:
+            print(f'\nWarning: {len(IndsByObj_2D)} objects were found in',
+                  f'frame {FrameNum} in PixArr.')
+            
+            print(f'\nIndsByObj_2D = {IndsByObj_2D}')
+            
+            """
+            Consider what else needs to be done. 
+            e.g.
+            
+            for IndsThisObj_2D in IndsByObj_2D:
+                ...
+            """
+            
+        else:
+            """
+            Only one object was found. Reduce the level of nested lists to one
+            list of 2D indices.
+            """
+            Inds_2D = IndsByObj_2D[0]
+        
+        #print(f'\n\n\nFrameNum = {FrameNum}')
+        #print(f'\nlen(Inds_2D) = {len(Inds_2D)}')
+        #print(f'\nInds_2D = {Inds_2D}')
+        
+        SliceNum = FrameToSliceInds[FrameNum]
+            
+        # Add the index for the 3rd dimension:
+        Inds_3D = [Ind_2D + [SliceNum] for Ind_2D in Inds_2D]
+        
+        #print(f'\nlen(Inds_3D) = {len(Inds_3D)}')
+        #print(f'\nInds_3D = {Inds_3D}')
+        
+        IndsByFrame.append(Inds_3D)
+        
+        
+    #print(f'\n\n\n\nlen(IndsByFrame) = {len(IndsByFrame)}')
+    #print(f'\nIndsByFrame = {IndsByFrame}')
+ 
+    return IndsByFrame
 
 
 
@@ -1531,114 +985,70 @@ def Labelmap2Contours(Labelmap, threshold=0.5):
 
 
 
-
-def Inds2SparseLabmap_OLD(Indices, RefImage): # not useful since Sparse2Labelmap doesn't work
+def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
     """
-    Note:
-        
-        The problem with this function is that by using the SimpleITK image 
-        format any slice that contains more than one contour (e.g. belonging to 
-        more than ROI) will exist on the same slice.  What I want is a Numpy 
-        array with a different mask for each contour.  
-        
-        The other reason for using the SimpleITK
-        image format was because I had intended to use sitk filters to convert 
-        the sparse mask into a filled one (e.g. using 
-        BinaryClosingByReconstructionImageFilter), but since that failed I have
-        no reason to use the sitk image format.
-        
-    
-    Convert a list of indices to a sparse 3D Numpy data array.  
-    
+    Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
+    each point) of a list (for each dimension) of physical coordinates.
+ 
     Inputs:
-        Indices  - (List of a list of integers) List of list of point indices
+    ------
+    
+    PixArr : Numpy array
+        A FxRxC (frames x rows x cols) Numpy array containing F RxC masks in 
+        PixArr.
+    
+    FrameToSliceInds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
+    
+    DicomDir : string
+        Directory containing the DICOMs that relate to PixArr.
         
-        RefImage - (SimpleITK image) Reference image whose size will be used to
-                   define the shape of the sparse data array
+    Thresh : float (optional; 0.5 by default)
+        Threshold value used to binarise the labels in PixArr.
+ 
+    
+    Outputs:
+    -------
+    
+    PtsByCnt : list of a list of floats
+        A list (for each contour/frame) of a list (for each dimension) of the 
+        physical coordinates that define the mask in each frame in PixArr.
         
-        
-    Returns:
-        #Matrix   - (Numpy array, dtype int) The point indices as a Numpy array
-        Sparse   - (SimpleITK image) The point indices as a SimpleITK image
+    CntDataByCnt : list of a list of strings
+        A list (for each contour/frame) of a flattened list of [x, y, z]
+        physical coordinates that define the mask in each frame in PixArr as
+        strings (format of ContourData tag in RTS).
     """
     
-    import numpy as np
-    import SimpleITK as sitk
+    from ImageTools import GetImageAttributes
     
-    ImSize = RefImage.GetSize()
+    # Convert the pixel array to a list of indices-by-frame:
+    IndsByFrame = PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5)
     
-    # Initialise the sparse matrix:
-    """
-    Note: .GetSize() provides the size as (Ncols, Nrows, Nslices) but for
-    Numpy arrays the order will be (Nslices, Nrows, Ncols).
-    """
-    Matrix = np.zeros((ImSize[2], ImSize[1], ImSize[0]), dtype=int)
+    Size, Spacings, ST,\
+    IPPs, Dirs = GetImageAttributes(DicomDir, Package='pydicom')
     
-    #print(f'Matrix.shape = {Matrix.shape}')
+    PtsByCnt = []
+    CntDataByCnt = []
     
-    # Loop through all contours:
-    for contour in Indices:
-        # Ignore any contours that have less than 3 (the minimum number to
-        # define a closed contour) indices (as may arise during manual 
-        # contouring):
-        if len(contour) > 2:
-            # Each i,j,k index along x,y,z:
-            for i,j,k in contour:
-                #print(f'i = {i}, j = {j}, k = {k}')
-                
-                Matrix[k,j,i] = 1
-                
-    
-    #return Matrix
-    return sitk.GetImageFromArray(Matrix)
-            
-    
-
-
-
-
-
-
-def Sparse2Labelmap_OLD(Sparse): # doesn't work
-    """
-    This doesn't work.
-    
-    
-    Convert a sparse labelmap to a filled labelmap, i.e. close the contour
-    indices to result in masks.  
-    
-    Inputs:
-        #Matrix   - (Numpy array, dtype int) The point indices as a Numpy array
-        Sparse   - (SimpleITK image) Sparse labelmap (containing only indices
-                   that define the contours)
+    for Inds in IndsByFrame:
+        Pts = Inds2Pts(Indices=Inds, Origin=IPPs[0], Directions=Dirs, 
+                       Spacings=Spacings)
         
+        PtsByCnt.append(Pts)
         
-    Returns:
-        Labmap   - (SimpleITK image) Labelmap from closing of contour indices
-    """
-    
-    import SimpleITK as sitk
-    
-    # First convert from "labelmap" to binary:
-    #Labmap2BinaryFilt = sitk.LabelMapToBinaryImageFilter()
-    
-    #Labmap = Labmap2BinaryFilt.Execute(Sparse)
-    
-    # Close labelmap:
-    ClosingFilt = sitk.BinaryClosingByReconstructionImageFilter()
-    ClosingFilt.FullyConnectedOn()
+        CntDataByCnt.append(Pts2ContourData(Points=Pts))
     
     
-    #ClosingFilt = sitk.BinaryMorphologicalClosingImageFilter()
-    
-    
-    
-    #Labmap = ClosingFilt.Execute(Matrix)
-    #Labmap = ClosingFilt.Execute(Labmap)
-    Labmap = ClosingFilt.Execute(Sparse)
-    
-    
-    return Labmap
+    #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
+    #print(f'\nlen(CntDataByCnt) = {len(CntDataByCnt)}')
+    #print(f'\nPtsByCnt = {PtsByCnt}')
+    #print(f'\nCntDataByCnt = {CntDataByCnt}')
+ 
+    return PtsByCnt, CntDataByCnt
+
 
 
 
@@ -1684,9 +1094,11 @@ def Inds2Mask(Inds, RefImage):
                         "3 are required to define a closed contour.")
         
     
-    ImSize = RefImage.GetSize()
+    C, R, S = RefImage.GetSize()
     
-    Mask = np.zeros((1, ImSize[1], ImSize[0]))
+    Mask = np.zeros((1, R, C))
+    
+    #print(f'\nMask.shape = {Mask.shape}')
     
     # Convert Inds to a Shapely Polygon:
     Poly = Polygon(Inds)
@@ -1705,8 +1117,10 @@ def Inds2Mask(Inds, RefImage):
         x = int(xx[0])
         y = int(yy[0])
         
-        if 0 <= y < ImSize[1] and 0 <= x < ImSize[0]:
-            Mask[1, y, x] = 1
+        if 0 <= y < R and 0 <= x < C:
+            #print(f'\n   Mask.shape = {Mask.shape}')
+            
+            Mask[0, y, x] = 1
     
         
     return Mask
