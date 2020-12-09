@@ -29,47 +29,8 @@ SEGMENT FUNCTIONS
 ******************************************************************************
 """      
 
-def GetSegNum_OLD(Seg, Label):
-    """
-    Get the segment number that matches the segment label provided.
-    
-    Inputs:
-    ------
-    
-    Seg : Pydicom object
-        SEG object.
-        
-    Label : string
-        All or part of the segment label containing the segmentation of
-        interest.
-                       
-                            
-    Outputs:
-    -------
-    
-    SegNum : integer
-        The index of the segment that matches SegLabel.
-    """
-    
-    from DicomTools import GetRoiLabels
-    
-    RoiLabels = GetRoiLabels(Seg)
-    
-    #SegNum = RoiLabels.index(RoiLabel)
-    SegNum = [i for i, label in enumerate(RoiLabels) if Label in label]
-    
-    if not SegNum:
-        raise Exception("There are no segments in the SEG that match {Label}.")
-        
-    return SegNum[0]
 
-
-
-
-
-
-
-def GetFrameNums(Seg, SegLabel, DicomDir):
+def GetFrameNums(Seg, SearchString, DicomDir):
     """
     Get the frame number(s) in a SEG's pixel array that matches the segment 
     label provided.
@@ -80,8 +41,8 @@ def GetFrameNums(Seg, SegLabel, DicomDir):
     Seg : Pydicom object
         SEG object.
         
-    SegLabel : string
-        All or part of the segment label containing the segmentation of
+    SearchString : string
+        All or part of the Segment Label containing the segmentation of
         interest.
     
     DicomDir : string
@@ -121,7 +82,7 @@ def GetFrameNums(Seg, SegLabel, DicomDir):
     PFFGStoSliceIndsBySeg = GroupListBySegment(ListToGroup=PFFGStoSliceInds, 
                                                DIVs=DIVs)
     
-    SegNum = GetRoiNum(Seg, SegLabel)
+    SegNum = GetRoiNum(Seg, SearchString)
     
     # The PFFGStoSliceInds for the segment of interest:
     PFFGStoSliceInds = PFFGStoSliceIndsBySeg[SegNum]
@@ -663,7 +624,7 @@ def ChangeNumOfSegSequences(Seg, Dicoms, NumOfFrames, LogToConsole=False):
 
 
 
-def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
+def GetFrameFromPixArr(Seg, DicomDir, SearchString, SliceNum, LogToConsole):
     """
     Extract a single (2D) frame from a 3D pixel array that matches a given
     segment label.  
@@ -677,9 +638,9 @@ def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
     DicomDir : string
         Directory containing the corresponding DICOMs.
     
-    SegLabel : string
-        All or part of the Source segment label containing the segmentation to 
-        be copied.
+    SearchString : string
+        All or part of the Segment label containing the segmentation to be
+        copied.
     
     SliceNum : integer
         Slice index of the Source DICOM stack corresponding to the segmentation
@@ -706,7 +667,7 @@ def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
     # Determine which segment contains the segmentation to be copied, and
     # the corresponding frame number in the pixel array:
     """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
-    SegNum = GetRoiNum(Seg, SegLabel)
+    SegNum = GetRoiNum(Seg, SearchString)
     
     SOPuids = GetDicomSOPuids(DicomDir)
     
@@ -715,8 +676,10 @@ def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
     PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[SegNum]
     
     if not SliceNum in PFFGStoSliceIndsInSeg:
-        raise Exception(f"There is no segmentation in segment {SegLabel} for "\
-                        + "slice {SliceNum} in the SEG.")
+        msg = f'There is no segmentation in the segment matching the term '\
+              + f'"{SearchString}" for slice {SliceNum} in the SEG.'
+              
+        raise Exception(msg)
     
     # Get the corresponding FrameNum:
     
@@ -738,16 +701,20 @@ def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
     
     
     if LogToConsole:
-        print(f'\nSliceNum = {SliceNum} relates to FrameNum = {FrameNum} in',
-              'PixelArray (***Note: Counting from 0.***)')
+        print('\n\nResults of GetFrameFromPixArr:')
+        print(f'   SliceNum = {SliceNum} relates to FrameNum = {FrameNum} in',
+              'PixelArray')
     
     PixArr = Seg.pixel_array
     
     if len(PixArr.shape) < 3:
-        """ This is a single-frame PixArr, i.e. shape (1, R, C). """
+        # This is a single-frame PixArr, i.e. shape (R, C). Reshape it to 
+        # shape (1, R, C):
         R, C = PixArr.shape
+        
+        PixArr = np.reshape(PixArr, (1, R, C))
     else:
-        """ This is a multi-frame PixArr, i.e. shape (AllF, R, C). """
+        # This is a multi-frame PixArr, i.e. shape (AllF, R, C).
         AllF, R, C = PixArr.shape
     
     # Initialise Frame:
@@ -764,7 +731,7 @@ def GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, LogToConsole):
 
 
 
-def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
+def GetFramesFromPixArr(Seg, DicomDir, SearchString, LogToConsole):
     """
     Extract all frames from a 3D pixel array that match a given segment label.  
     
@@ -777,9 +744,9 @@ def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
     DicomDir : string
         Directory containing the corresponding DICOMs.
     
-    SegLabel : string
-        All or part of the Source segment label containing the segmentation to 
-        be copied.
+    SearchString : string
+        All or part of the Segment Label of the segment containing the 
+        segmentation to be copied.
     
     SliceNum : integer
         Slice index of the Source DICOM stack corresponding to the segmentation
@@ -803,7 +770,7 @@ def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
     # Determine which segment contains the segmentation to be copied, and
     # the corresponding frame number in the pixel array:
     """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
-    SegNum = GetRoiNum(Seg, SegLabel)
+    SegNum = GetRoiNum(Seg, SearchString)
     
     SOPuids = GetDicomSOPuids(DicomDir)
     
@@ -814,6 +781,7 @@ def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
     # The number of frames in the segment of interest:
     F = len(PFFGStoSliceIndsInSeg)
     
+    # Get the number of rows and columns required for Frames:
     PixArr = Seg.pixel_array
     
     if len(PixArr.shape) < 3:
@@ -828,13 +796,26 @@ def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
     for f in range(F):
         SliceNum = PFFGStoSliceIndsInSeg[f]
         
-        Frame = GetFrameFromPixArr(Seg, DicomDir, SegLabel, SliceNum, 
+        Frame = GetFrameFromPixArr(Seg, DicomDir, SearchString, SliceNum, 
                                    LogToConsole)
         
         Frames[f] = Frame
     
     if LogToConsole:
-        print(f'\nFrames.shape = {Frames.shape}')
+        print('\n\n***Result from GetFramesFromPixArr:')
+        print(f'   There are {F} frames in the segment matching',
+              f'"{SearchString}".')
+        print(f'   PFFGStoSliceIndsInSeg = {PFFGStoSliceIndsInSeg}')
+        print(f'   PixArr.shape = {PixArr.shape}')
+        if len(PixArr.shape) > 2:
+            [print(f'   np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+        else:
+            print(f'   np.amax(PixArr) = {np.amax(PixArr)}')
+        print(f'   Frames.shape = {Frames.shape}')
+        if len(Frames.shape) > 2:
+            [print(f'   np.amax(Frames[{i}]) = {np.amax(Frames[i])}') for i in range(Frames.shape[0])]
+        else:
+            print(f'   np.amax(Frames) = {np.amax(Frames)}')
             
     return Frames
 
@@ -845,7 +826,7 @@ def GetFramesFromPixArr(Seg, DicomDir, SegLabel, LogToConsole):
 
 
 
-def GetPixArrInSeg(Seg, DicomDir, SegLabel):
+def GetPixArrInSeg(Seg, DicomDir, SearchString):
     """
     Get the frames in a SEG's pixel array that belong to a segment with
     specified label.
@@ -859,9 +840,8 @@ def GetPixArrInSeg(Seg, DicomDir, SegLabel):
     DicomDir : string 
         Directory containing the corresponding DICOMs.
         
-    SegLabel : string
-        All or part of the Source segment label containing the segment of 
-        interest.
+    SearchString : string
+        All or part of the Segment Label containing the segment of interest.
                        
                             
     Outputs:
@@ -885,7 +865,7 @@ def GetPixArrInSeg(Seg, DicomDir, SegLabel):
     # Get the frame numbers of the SEG's pixel array that correspond to the 
     # segment of interest, and the corresponding Per-frame Functional Groups
     # Sequence-to-slice indices:
-    FrameNumsInSeg, PFFGStoSliceIndsInSeg = GetFrameNums(Seg, SegLabel, 
+    FrameNumsInSeg, PFFGStoSliceIndsInSeg = GetFrameNums(Seg, SearchString, 
                                                          DicomDir)
     
     F = len(FrameNumsInSeg)
@@ -1000,7 +980,7 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
 
 
 
-def InitialiseSeg(SegTemplate, SegNum, PFFGStoSliceInds, DicomDir, 
+def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir, 
                   LogToConsole=False):
     """
     Initialise a SEG object based on an existing SEG object (SegTemplate).
@@ -1012,9 +992,8 @@ def InitialiseSeg(SegTemplate, SegNum, PFFGStoSliceInds, DicomDir,
     SegTemplate : Pydicom object
         SEG object that will be used as a template to create the new object.
 
-    SegNum : integer
-        The index of the segment that contains the segmentation to be copied 
-        (counting from 0). 
+    SearchString : string
+        All or part of the Segment Label of the segment of interest. 
         
     PFFGStoSliceInds : List of integers
         List (for each segmentation) of the slice numbers that correspond to 
@@ -1037,8 +1016,17 @@ def InitialiseSeg(SegTemplate, SegNum, PFFGStoSliceInds, DicomDir,
     from pydicom.uid import generate_uid
     import time
     from copy import deepcopy
+    from DicomTools import GetRoiNum
     from DicomTools import ImportDicoms
     from ImageTools import GetImageAttributes
+    
+    SegNum = GetRoiNum(SegTemplate, SearchString)
+    
+    # The Segment Label of the segment containing the segmentation to be 
+    # copied:
+    SegLabel = SegTemplate.SegmentSequence[SegNum].SegmentLabel
+    
+    print(f'\n\n***SegLabel = {SegLabel}')
     
     # Use SegTemplate as a template for Seg:
     Seg = deepcopy(SegTemplate)
@@ -1165,6 +1153,17 @@ def InitialiseSeg(SegTemplate, SegNum, PFFGStoSliceInds, DicomDir,
 
     
     
+    print(f'\n\n***Seg.SegmentSequence[0].SegmentLabel before change = {Seg.SegmentSequence[0].SegmentLabel}')
+    
+    """ 
+    Modify the Segment Label to SegLabel.
+    """
+    Seg.SegmentSequence[0].SegmentLabel = SegLabel # 09/12/2020
+    
+    print(f'\n\n***Seg.SegmentSequence[0].SegmentLabel after change = {Seg.SegmentSequence[0].SegmentLabel}')
+    
+    
+    
     """
     Output some results to the console.
     """
@@ -1232,8 +1231,16 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
     
     from DicomTools import ImportDicoms
     from pydicom.pixel_data_handlers.numpy_handler import pack_bits
+    import numpy as np
     
     F, R, C = PixArr.shape
+    
+    #if F == 0:
+    #    PixArr = np.reshape(PixArr, (1, R, C))
+    #    
+    #    F, R, C = PixArr.shape
+    
+    print(f'\n\n\n*****PixArr.shape = {PixArr.shape}')
     
     P = len(PFFGStoSliceInds)
     
@@ -1271,8 +1278,9 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
         s = PFFGStoSliceInds[i]
         
         if LogToConsole:
-            print(f'\nPFFGStoSliceInds[{i}] = {PFFGStoSliceInds[i]}')
-            print(f'DICOM slice number = {s}')
+            print('\n\nResults of ModifySeg:')
+            print(f'   PFFGStoSliceInds[{i}] = {PFFGStoSliceInds[i]}')
+            print(f'   DICOM slice number = {s}')
         
         Seg.PerFrameFunctionalGroupsSequence[i]\
            .DerivationImageSequence[0]\
@@ -1300,8 +1308,19 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
         Seg.PerFrameFunctionalGroupsSequence[i]\
            .SegmentIdentificationSequence[0]\
            .ReferencedSegmentNumber = 1
+           
+        if LogToConsole:
+              print(f'   DimensionIndexValues = {[1, ind + 1]}')
+              print(f'   ReferencedSegmentNumber = {1}')
     
     
+    if LogToConsole:
+        print('\n   Prior to ravelling and packing bits:')
+        print(f'   PixArr.shape = {PixArr.shape}')
+        [print(f'   np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+    
+    
+
     # Ravel (to 1D array) PixArr and pack bits (see
     # https://github.com/pydicom/pydicom/issues/1230):
     packed = pack_bits(PixArr.ravel())
@@ -1309,6 +1328,77 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
     # Convert PixArr to bytes:
     #Seg.PixelData = PixArr.tobytes() <-- doesn't work
     Seg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
+    
+    
+    if False:
+        F, R, C = PixArr.shape
+        
+        # If there are more than one frames in PixArr:
+        if F > 1:
+            # Ravel (to 1D array) PixArr and pack bits (see
+            # https://github.com/pydicom/pydicom/issues/1230):
+            packed = pack_bits(PixArr.ravel())
+            
+            # Convert PixArr to bytes:
+            Seg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
+            
+            if LogToConsole:
+                print(f'\n   len(packed) = {len(packed)}') 
+                """ 
+                = 39936 for UseCase 1a
+                = 6656 for UseCase 1b
+                """
+        else:
+            # Convert PixArr to bytes:
+            #Seg.PixelData = PixArr.tobytes()
+            
+            #if LogToConsole:
+                #print(f'\n   len(PixArr.tobytes()) = {len(PixArr.tobytes())}') 
+                #""" 
+                #=  for UseCase 1a
+                #= 212992 for UseCase 1b
+                #"""
+            
+            #PixArr = np.reshape(PixArr, (R, C))
+            
+            if LogToConsole:
+                print('\n   There is only one frame in PixArr, so it was reshaped',
+                      f'to shape {PixArr.shape}')
+                print(f'   np.amax(PixArr) = {np.amax(PixArr)}')
+            
+            # Ravel (to 1D array) PixArr and pack bits (see
+            # https://github.com/pydicom/pydicom/issues/1230):
+            packed = pack_bits(PixArr.ravel())
+            
+            # Convert PixArr to bytes:
+            Seg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
+            
+            if LogToConsole:
+                print(f'\n   len(packed) = {len(packed)}') 
+                """ 
+                = 39936 for UseCase 1a
+                = 6656 for UseCase 1b
+                """
+        
+        
+    
+    
+    
+    if LogToConsole:
+        print(f'\n   len(packed) = {len(packed)}') 
+        """ 
+        = 39936 for UseCase 1a
+        = 6656 for UseCase 1b
+        """
+                
+        PixArr2 = Seg.pixel_array
+        
+        print('\n   After packing bits:')
+        print(f'   PixArr2.shape = {PixArr2.shape}')
+        if len(PixArr2.shape) > 2:
+            [print(f'   np.amax(PixArr2[{i}]) = {np.amax(PixArr2[i])}') for i in range(PixArr2.shape[0])]
+        else:
+            print(f'   np.amax(PixArr2) = {np.amax(PixArr2)}')
     
                                           
     return Seg

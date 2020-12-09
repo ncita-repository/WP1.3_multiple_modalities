@@ -57,7 +57,7 @@ to an index with a single line of code using SimpleITK:
 """
 
 
-def Point2Index(Point, Origin, Directions, Spacings):
+def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
     """
     Convert a physical point (in Patient Coordinate System (PCS)) to an index
     (in Image Coordinate System (ICS).
@@ -84,6 +84,9 @@ def Point2Index(Point, Origin, Directions, Spacings):
         e.g. [di, dj, dk].  The x and y spacings come from PixelSpacing.  The 
         z spacing is not the SliceThickness but instead is determined from 
         ImagePositionPatient and ImageOrientationPatient.
+        
+    Rounding : boolean (optional; True by default)
+        If True, the integers in Index will be rounded to the nearest integers.
     
         
     Ouputs:
@@ -218,10 +221,11 @@ def Point2Index(Point, Origin, Directions, Spacings):
     k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
     #k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
     
-    # Convert fractional indices to integers:
-    i = int(round(i))
-    j = int(round(j))
-    k = int(round(k))
+    if Rounding: # 8/12/20
+        # Convert fractional indices to integers:
+        i = int(round(i))
+        j = int(round(j))
+        k = int(round(k))
     
     return [i, j, k]
 
@@ -230,7 +234,7 @@ def Point2Index(Point, Origin, Directions, Spacings):
 
 
 
-def ContourToIndices(Points, Origin, Directions, Spacings):
+def Contour2Indices(Points, Origin, Directions, Spacings, Rounding=True):
     """
     Convert a list of physical point (in Patient Coordinate System (PCS)) to a
     list of indeces (in Image Coordinate System (ICS).
@@ -259,6 +263,9 @@ def ContourToIndices(Points, Origin, Directions, Spacings):
         z spacing is not the SliceThickness but instead is determined from 
         ImagePositionPatient and ImageOrientationPatient.
     
+    Rounding : boolean (optional; True by default)
+        If True, the integers in Index will be rounded to the nearest integers.
+    
         
     Ouputs:
     ------
@@ -270,8 +277,9 @@ def ContourToIndices(Points, Origin, Directions, Spacings):
     
     Indices = []
     
-    for point in Points:
-        Indices.append(Point2Index(point, Origin, Directions, Spacings))
+    for Point in Points:
+        Indices.append(Point2Index(Point, Origin, Directions, Spacings, 
+                                   Rounding))
         
     return Indices
 
@@ -329,7 +337,7 @@ def ConvertContourDataToIndices(ContourData, DicomDir):
 
 
 
-def Ind2Pt(Index, Origin, Directions, Spacings):
+def Index2Point(Index, Origin, Directions, Spacings):
     """
     Convert an index (in Image Coordinate System (ICS)) to a physical point 
     (in Patient Coordinate System (PCS)).
@@ -388,17 +396,30 @@ def Ind2Pt(Index, Origin, Directions, Spacings):
           i, j, and k are the row (x), column (y) and slice (z) indices
     """
     
-    x = Origin[0] + Spacings[0]*Index[0]*Directions[0] \
-        + Spacings[0]*Index[0]*Directions[1] \
-        + Spacings[0]*Index[0]*Directions[2] \
-    
-    y = Origin[1] + Spacings[1]*Index[1]*Directions[3] \
-        + Spacings[1]*Index[1]*Directions[4] \
-        + Spacings[1]*Index[1]*Directions[5] \
+    if False: # 08/12/20
+        x = Origin[0] + Index[0]*Spacings[0]*Directions[0] \
+                      + Index[0]*Spacings[0]*Directions[1] \
+                      + Index[0]*Spacings[0]*Directions[2] \
         
-    z = Origin[2] + Spacings[2]*Index[2]*Directions[6] \
-        + Spacings[2]*Index[2]*Directions[7] \
-        + Spacings[2]*Index[2]*Directions[8] \
+        y = Origin[1] + Index[1]*Spacings[1]*Directions[3] \
+                      + Index[1]*Spacings[1]*Directions[4] \
+                      + Index[1]*Spacings[1]*Directions[5] \
+            
+        z = Origin[2] + Index[2]*Spacings[2]*Directions[6] \
+                      + Index[2]*Spacings[2]*Directions[7] \
+                      + Index[2]*Spacings[2]*Directions[8] \
+                  
+    x = Origin[0] + Index[0]*Spacings[0]*Directions[0] \
+                  + Index[1]*Spacings[1]*Directions[3] \
+                  + Index[2]*Spacings[2]*Directions[6] \
+    
+    y = Origin[1] + Index[0]*Spacings[0]*Directions[1] \
+                  + Index[1]*Spacings[1]*Directions[4] \
+                  + Index[2]*Spacings[2]*Directions[7] \
+        
+    z = Origin[2] + Index[0]*Spacings[0]*Directions[2] \
+                  + Index[1]*Spacings[1]*Directions[5] \
+                  + Index[2]*Spacings[2]*Directions[8] \
         
     return [x, y, z]
 
@@ -408,7 +429,7 @@ def Ind2Pt(Index, Origin, Directions, Spacings):
 
 
 
-def Inds2Pts(Indices, Origin, Directions, Spacings):
+def Indices2Points(Indices, Origin, Directions, Spacings):
     """
     Convert a list of indices (in Image Coordinate System (ICS)) to a list of
     physical points (in Patient Coordinate System (PCS)).
@@ -449,7 +470,7 @@ def Inds2Pts(Indices, Origin, Directions, Spacings):
     Points = []
     
     for index in Indices:
-        Points.append(Ind2Pt(index, Origin, Directions, Spacings))
+        Points.append(Index2Point(index, Origin, Directions, Spacings))
         
     return Points
 
@@ -459,16 +480,57 @@ def Inds2Pts(Indices, Origin, Directions, Spacings):
 
 
 
-def Pts2ContourData(Points):
+
+
+def ContourData2Points(ContourData):
     """
-    Format a list of points to a flat list as required for ContourData.
+    Re-format a flat list of coordinates to a list of a list of [x, y, z]
+    coordinates.
+    
+    Inputs:
+    ------
+    
+    ContourData : list of strings
+        Flat list of [x, y, z] coordinates as strings.
+    
+        
+    Outputs:
+    -------
+    
+    Points : list of a list of floats
+        List (for each point) of a list (for each dimension) of points,
+        e.g. [[x0, y0, z0], [x1, y1, z1], ...].
+    """
+    
+    ContourData = [float(item) for item in ContourData]
+    
+    Points = []
+            
+    # Iterate for all points in threes:
+    for p in range(0, len(ContourData), 3):
+        point = [ContourData[p], ContourData[p+1], ContourData[p+2]]
+        
+        Points.append(point)
+        
+    return Points
+
+
+
+
+
+
+
+
+def Points2ContourData(Points):
+    """
+    Re-format a list of points to a flat list as required for ContourData.
     
     Inputs:
     ------
     
     Points : list of a list of floats
-        List (for each point) of a list (for each dimension) of points in the
-        PCS, e.g. [[x0, y0, z0], [x1, y1, z1], ...].
+        List (for each point) of a list (for each dimension) of points,
+        e.g. [[x0, y0, z0], [x1, y1, z1], ...].
         
         
     Outputs:
@@ -565,15 +627,15 @@ def IndsByContour2PixArr(IndsByContour, RefImage):
 
 
 
-def GetLabmapImsByRoi(RtsFpath, DicomDir, CStoSliceIndsByRoi, RefIm):
+def GetLabmapImsByRoi(Rts, DicomDir, CStoSliceIndsByRoi, RefIm):
     """
     Get a list of 3D labelmap (SimpleITK) images - one per ROI.  
     
     Inputs:
     ------
     
-    RtsFpath : string
-        Full path of the DICOM-RTSTRUCT file.
+    Rts : Pydicom object
+        RTS object.
     
     DicomDir : string
         Directory containing the corresponding DICOMs.
@@ -597,7 +659,7 @@ def GetLabmapImsByRoi(RtsFpath, DicomDir, CStoSliceIndsByRoi, RefIm):
     
     LabmapIms = []
     
-    IndsByRoi = GetIndsByRoi(RtsFpath, DicomDir)
+    IndsByRoi = GetIndsByRoi(Rts, DicomDir)
     
     for RoiNum in range(len(IndsByRoi)):
         PixArr = IndsByContour2PixArr(IndsByContour=IndsByRoi[RoiNum], 
@@ -1034,12 +1096,12 @@ def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
     CntDataByCnt = []
     
     for Inds in IndsByFrame:
-        Pts = Inds2Pts(Indices=Inds, Origin=IPPs[0], Directions=Dirs, 
-                       Spacings=Spacings)
+        Pts = Indices2Points(Indices=Inds, Origin=IPPs[0], Directions=Dirs, 
+                             Spacings=Spacings)
         
         PtsByCnt.append(Pts)
         
-        CntDataByCnt.append(Pts2ContourData(Points=Pts))
+        CntDataByCnt.append(Points2ContourData(Points=Pts))
     
     
     #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
@@ -1059,7 +1121,7 @@ def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
 
 
 
-def Inds2Mask(Inds, RefImage):
+def Indices2Mask(Inds, RefImage):
     """
     Convert a list of indices to a (filled) mask (pixel array).
        

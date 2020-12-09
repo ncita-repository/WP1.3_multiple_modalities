@@ -61,6 +61,19 @@ def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
     TrgStudyuid, TrgSeriesuid, TrgFORuid,\
     TrgSOPuids = GetDicomUids(DicomDir=TrgDcmDir)
     
+    if LogToConsole:
+        print(f'\nToSliceNum = {ToSliceNum}')
+        print(f'len(TrgSOPuids) = {len(TrgSOPuids)}')
+        
+    if ToSliceNum:
+        if ToSliceNum > len(TrgSOPuids) - 1:
+            msg = f'The input argument "ToSliceNum" = {ToSliceNum} (zero-'\
+                  + 'indexed) exceeds the number of Target DICOMs '\
+                  + f'({len(TrgSOPuids)}).'
+            
+            raise Exception(msg)
+    
+    
     # Get the Image Attributes for Source and Target using SimpleITK:
     SrcSize, SrcSpacing, SrcST, SrcIPPs,\
     SrcDirs = GetImageAttributes(DicomDir=SrcDcmDir, Package='sitk')
@@ -205,7 +218,7 @@ COPY A CONTOUR
 ******************************************************************************
 """
 
-def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
+def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgRts=None, ToSliceNum=None, LogToConsole=False):
     """
     Make a Direct or Relationship-preserving copy of a single contour in a
@@ -218,44 +231,43 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     
     There are five possible Main Use Cases (indicated by the numbers 1 to 5)
     and two Sub-cases (indicated by the letters a or b) that apply for a subset
-    of the Main Use Cases that are accommodated:
+    of the Main Use Cases that are accommodated.  In all cases a single contour
+    will be copied from the Source RTS from the ROI with ROI Name matching
+    FromSearchString:
     
-    1a. Direct copy of the Source contour in FromRoiLabel on slice  
-        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+    1a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
+        for slice ToSliceNum in Target. 
         The Source and Target images are the same. 
     
-    1b. Relationship-preserving copy of the Source segmentation in FromRoiLabel 
-        on slice FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+    1b. Relationship-preserving copy of the Source contour on slice 
+        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
         The Source and Target images are the same. 
         
-    2a. Direct copy of the Source contour in FromRoiLabel on slice 
-        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+    2a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
+        for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR, IOP, IPP, and VS.
     
-    2b. Relationship-preserving copy of the Source contour in FromRoiLabel 
-        on slice FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+    2b. Relationship-preserving copy of the Source contour on slice 
+        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR, IOP, IPP, and VS. 
     
-    3a. Direct copy of the Source contour in FromRoiLabel on slice 
-        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
+    3a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
+        for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR and IOP but have 
         different VS (they will likely also have different IPP).
         
-    3b. Relationship-preserving copy of the Source contour in FromRoiLabel 
-        on slice FromSliceNum to a new ROI for any number of slices in 
-        Target.
+    3b. Relationship-preserving copy of the Source contour on slice 
+        FromSliceNum to a new ROI for any number of slices in Target.
         The Source and Target images have the same FOR and IOP but have 
         different VS (they will likely also have different IPP).
     
-    4.  Relationship-preserving copy of the Source contour in FromRoiLabel 
-        on slice FromSliceNum to a new ROI for any number of slices in 
-        Target.
+    4.  Relationship-preserving copy of the Source contour on slice 
+        FromSliceNum to a new ROI for any number of slices in Target.
         The Source and Target images have the same FOR but have different IOP 
         and IPP, and possibly different VS.
        
-    5.  Relationship-preserving copy of the Source contour in FromRoiLabel 
-        on slice FromSliceNum to a new ROI for any number of slices in 
-        Target.
+    5.  Relationship-preserving copy of the Source contour on slice 
+        FromSliceNum to a new ROI for any number of slices in Target.
         The Source and Target images have different FOR, IPP and IOP, and 
         possibly different VS.
         
@@ -270,9 +282,9 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     SrcRts : Pydicom object
         Source RTS object.
                              
-    FromRoiLabel : string
-        All or part of the Source ROI label containing the contour to be
-        copied.
+    FromSearchString : string
+        All or part of the Source ROI Name of the ROI containing the contour to
+        be copied.
     
     SrcDcmDir : string
         Directory containing the Source DICOMs.
@@ -336,9 +348,9 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     # UseCase 5):
     Thresh = 0.1
     
-    # Verify that FromRoiLabel exists:
+    # Verify that FromSearchString exists:
     #SrcRoiLabels = GetRoiLabels(SrcRts)
-    FromRoiNum = GetRoiNum(Roi=SrcRts, Label=FromRoiLabel)
+    FromRoiNum = GetRoiNum(Roi=SrcRts, SearchString=FromSearchString)
     
         
     # Compare the modalities of the ROIs:
@@ -348,16 +360,23 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
                   + "({TrgRts.Modality} modalities are different."
             
             raise Exception(msg)
+            
+            
+    
     
     # The contour to be copied:
-    PtsToCopy, CStoSliceIndsToCopy = GetPtsInContour(Rts=SrcRts, 
-                                                     DicomDir=SrcDcmDir, 
-                                                     RoiLabel=FromRoiLabel, 
-                                                     SliceNum=FromSliceNum)
+    #PtsToCopy, CStoSliceIndsToCopy = GetPtsInContour(Rts=SrcRts, 
+    #                                                 DicomDir=SrcDcmDir, 
+    #                                                 SearchString=FromSearchString, 
+    #                                                 SliceNum=FromSliceNum)
     
-    print(f'\nThe contour to be copied from slice {FromSliceNum} has',
-          f'{len(PtsToCopy)} points and CStoSliceIndsToCopy =',
-          f'{CStoSliceIndsToCopy}.')
+    PtsToCopy = GetPtsInContour(Rts=SrcRts, DicomDir=SrcDcmDir, 
+                                SearchString=FromSearchString, 
+                                SliceNum=FromSliceNum)
+    
+    print(f'\n\nThe contour to be copied from slice {FromSliceNum} has',
+          f'{len(PtsToCopy)} points.')# and CStoSliceIndsToCopy =',
+          #f'{CStoSliceIndsToCopy}.')
     
     
     # Determine which Use Case applies:
@@ -376,9 +395,9 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         from RtsTools import GetPtsInRoi
         from RtsTools import AddCopiedPtsByCnt
         from ImageTools import GetImageAttributes
-        from ConversionTools import ContourToIndices
+        from ConversionTools import Contour2Indices
         from GeneralTools import ChangeZinds
-        from ConversionTools import Inds2Pts
+        from ConversionTools import Indices2Points
         
         
     if UseCase in ['1a', '2a']:
@@ -393,20 +412,32 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         SrcIPPs, SrcDirs = GetImageAttributes(DicomDir=SrcDcmDir)
         
         # Convert PtsToCopy to indices:
-        IndsToCopy = ContourToIndices(Points=PtsToCopy, Origin=SrcIPPs[0], 
-                                      Directions=SrcDirs, 
-                                      Spacings=SrcSpacings)
+        IndsToCopy = Contour2Indices(Points=PtsToCopy, Origin=SrcIPPs[0], 
+                                     Directions=SrcDirs, 
+                                     Spacings=SrcSpacings, 
+                                     Rounding=False)
+        
+        if LogToConsole:
+            print(f'\n\nIndsToCopy prior to changing z-index = {IndsToCopy[:6]}...')
         
         # Modify the z-component (k) of the indices to ToSliceNum:
         IndsToCopy = ChangeZinds(Indices=IndsToCopy, NewZind=ToSliceNum)
         
+        if LogToConsole:
+            print(f'\n\nIndsToCopy after changing z-index = {IndsToCopy[:6]}...')
+        
+            print(f'\n\nPtsToCopy prior to changing z-index = {PtsToCopy[:6]}...')
+        
         # Convert back to physical points:
-        PtsToCopy = Inds2Pts(Indices=IndsToCopy, Origin=SrcIPPs[0], 
-                             Directions=SrcDirs, Spacings=SrcSpacings)
+        PtsToCopy = Indices2Points(Indices=IndsToCopy, Origin=SrcIPPs[0], 
+                                   Directions=SrcDirs, Spacings=SrcSpacings)
+        
+        if LogToConsole:
+            print(f'\n\nPtsToCopy after changing z-index = {PtsToCopy[:6]}...')
         
         """
         Since this is a Direct copy, any existing contours in Target with ROI
-        label matching FromRoiLabel are to be preserved.
+        label matching FromSearchString are to be preserved.
         """
         
         # Get all points (by contour) in the Target ROI containing the contour
@@ -414,7 +445,7 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         TrgPtsInRoiByCnt,\
         TrgCStoSliceIndsInRoi = GetPtsInRoi(Rts=TrgRts, 
                                             DicomDir=TrgDcmDir,
-                                            RoiLabel=FromRoiLabel)
+                                            SearchString=FromSearchString)
         
         print('\nThe Target ROI containing the contour to be copied has',
               f'{len(TrgPtsInRoiByCnt)} contours. \nTrgCStoSliceIndsInRoi =',
@@ -423,7 +454,8 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         
         """
         PtsToCopy need to be added to previously Direct-copied contour points
-        in TrgPtsInRoiByCnt.
+        in TrgPtsInRoiByCnt.  The contour-sequence-to-slice-index will be
+        [ToSliceNum] rather than [FromSliceNum].
         
         Note:
             Since PtsToCopy is a list of points it needs to be enclosed in []
@@ -431,25 +463,44 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             is in the form expected of PtsToAddByCnt.
         """
         
+        if LogToConsole:
+            print('\n\nInputs to AddCopiedPtsByCnt:')
+            print(f'   len(TrgPtsInRoiByCnt) = {len(TrgPtsInRoiByCnt)}')
+            [print(f'   len(TrgPtsInRoiByCnt[{i}]) = {len(TrgPtsInRoiByCnt[i])}') for i in range(len(TrgPtsInRoiByCnt))]
+            print(f'   TrgCStoSliceIndsInRoi = {TrgCStoSliceIndsInRoi}')
+            print(f'   len(PtsToCopy) = {len(PtsToCopy)}')
+            print(f'   ToSliceNum = {ToSliceNum}')
+        
+        
+        
         TrgCntDataByCnt,\
         TrgPtsByCnt,\
         TrgCStoSliceInds = AddCopiedPtsByCnt(OrigPtsByCnt=TrgPtsInRoiByCnt, 
                                              OrigCStoSliceInds=TrgCStoSliceIndsInRoi, 
                                              PtsToAddByCnt=[PtsToCopy], 
-                                             CStoSliceIndsToAddByCnt=CStoSliceIndsToCopy)
+                                             CStoSliceIndsToAddByCnt=[ToSliceNum],
+                                             LogToConsole=LogToConsole)
         
     
     if UseCase in ['1b', '2b']:
         """
         TrgPtsByCnt is simply [PtsToCopy], so that it is a list (of length 1, 
-        for the single contour).  Likewise for TrgCntDataByCnt.
+        for the single contour).  Likewise for TrgCntDataByCnt.  The Target
+        contour-sequence-to-slice-index will be [FromSliceNum].
         """
         
-        from ConversionTools import Pts2ContourData
+        from ConversionTools import Points2ContourData
         
         TrgPtsByCnt = [deepcopy(PtsToCopy)]
         
-        TrgCntDataByCnt = [Pts2ContourData(PtsToCopy)]
+        TrgCntDataByCnt = [Points2ContourData(PtsToCopy)]
+        
+        #TrgCStoSliceInds = deepcopy(CStoSliceIndsToCopy)
+        TrgCStoSliceInds = deepcopy([FromSliceNum])
+        
+        #print(f'\n\nlen(PtsToCopy) = {len(PtsToCopy)}')
+        #print(f'len(TrgPtsByCnt[0]) = {len(TrgPtsByCnt[0])}')
+        #print(f'len(TrgCntDataByCnt[0]) = {len(TrgCntDataByCnt[0])}')
         
         
     
@@ -473,8 +524,8 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         """    
         # Convert the contour data to be copied to a 2D mask:
         PixArrToCopy = GetMaskFromRts(Rts=SrcRts, 
-                                      FromRoiLabel=FromRoiLabel, 
-                                      FromSliceNum=FromSliceNum, 
+                                      SearchString=FromSearchString, 
+                                      SliceNum=FromSliceNum, 
                                       DicomDir=SrcDcmDir, 
                                       RefImage=SrcIm)
         
@@ -585,7 +636,7 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         if TrgRts:
             """
             Since this is a Direct copy, any existing contours in Target with 
-            ROI label matching FromRoiLabel are to be preserved.
+            ROI label matching FromSearchString are to be preserved.
             """
             
             # Get all points (by contour) in the Target ROI containing the 
@@ -593,7 +644,7 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgPtsInRoiByCnt,\
             TrgCStoSliceIndsInRoi = GetPtsInRoi(Rts=TrgRts, 
                                                 DicomDir=TrgDcmDir,
-                                                RoiLabel=FromRoiLabel)
+                                                SearchString=FromSearchString)
             
             print('\nThe Target ROI containing the contour to be copied has',
                   f'{len(TrgPtsInRoiByCnt)} contours. \nTrgCStoSliceIndsInRoi',
@@ -611,7 +662,8 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgCStoSliceInds = AddCopiedPtsByCnt(OrigPtsByCnt=TrgPtsInRoiByCnt, 
                                                  OrigCStoSliceInds=TrgCStoSliceIndsInRoi, 
                                                  PtsToAddByCnt=TrgPtsByCnt, 
-                                                 CStoSliceIndsToAddByCnt=TrgCStoSliceInds)
+                                                 CStoSliceIndsToAddByCnt=TrgCStoSliceInds,
+                                                 LogToConsole=LogToConsole)
         else:
             """
             A Target RTS was not provided.
@@ -741,6 +793,12 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     #                           CStoSliceInds=TrgCStoSliceInds, 
     #                           DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
     
+    if LogToConsole:
+        print('\n\nInputs to InitialiseRts:')
+        print(f'   FromRoiNum = {FromRoiNum}')
+        print(f'   TrgCStoSliceInds = {TrgCStoSliceInds}')
+    
+    
     if TrgRts:
         """ Use TrgRts to initialise the Target RTS. """
         TrgRts = InitialiseRts(RtsTemplate=TrgRts, RoiNum=FromRoiNum,
@@ -751,6 +809,14 @@ def CopyRts(SrcRts, FromRoiLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         TrgRts = InitialiseRts(RtsTemplate=SrcRts, RoiNum=FromRoiNum,
                                CStoSliceInds=TrgCStoSliceInds, 
                                DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+    
+    if LogToConsole:
+        print('\n\nInputs to ModifyRts:')
+        print(f'   len(TrgCntDataByCnt) = {len(TrgCntDataByCnt)}')
+        [print(f'   len(TrgCntDataByCnt[{i}]) = {len(TrgCntDataByCnt[i])}') for i in range(len(TrgCntDataByCnt))]
+        print(f'   len(TrgPtsByCnt) = {len(TrgPtsByCnt)}')
+        [print(f'   len(TrgPtsByCnt[{i}]) = {len(TrgPtsByCnt[i])}') for i in range(len(TrgPtsByCnt))]
+        print(f'   TrgCStoSliceInds = {TrgCStoSliceInds}')
     
     # Modify the tags in TrgRts:
     TrgRts = ModifyRts(Rts=TrgRts, CntDataByCnt=TrgCntDataByCnt, 
@@ -781,7 +847,7 @@ COPY A SEGMENTATION
 
 
 
-def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
+def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgSeg=None, ToSliceNum=None, LogToConsole=False):
                                 
     """
@@ -795,44 +861,43 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     
     There are five possible Main Use Cases (indicated by the numbers 1 to 5)
     and two Sub-cases (indicated by the letters a or b) that apply for a subset
-    of the Main Use Cases that are accommodated:
+    of the Main Use Cases that are accommodated.  In all cases a single 
+    segmentation will be copied from the Source SEG from the segment with 
+    Segment Label matching FromSearchString:
     
-    1a. Direct copy of the Source segmentation in FromSegLabel on slice  
-        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+    1a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
+        segment for slice ToSliceNum in Target. 
         The Source and Target images are the same. 
     
-    1b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
-        on slice FromSliceNum to a new segment for slice ToSliceNum in Target. 
+    1b. Relationship-preserving copy of the Source segmentation on slice 
+        FromSliceNum to a new segment for slice ToSliceNum in Target. 
         The Source and Target images are the same. 
         
-    2a. Direct copy of the Source segmentation in FromSegLabel on slice 
-        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+    2a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
+        segment for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR, IOP, IPP, and VS.
     
-    2b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
-        on slice FromSliceNum to a new segment for slice ToSliceNum in Target. 
+    2b. Relationship-preserving copy of the Source segmentation on slice 
+        FromSliceNum to a new segment for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR, IOP, IPP, and VS. 
     
-    3a. Direct copy of the Source segmentation in FromSegLabel on slice 
-        FromSliceNum to a new segment for slice ToSliceNum in Target. 
+    3a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
+        segment for slice ToSliceNum in Target. 
         The Source and Target images have the same FOR and IOP but have 
         different VS (they will likely also have different IPP).
         
-    3b. Relationship-preserving copy of the Source segmentation in FromSegLabel 
-        on slice FromSliceNum to a new segment for any number of slices in 
-        Target.
+    3b. Relationship-preserving copy of the Source segmentation on slice 
+        FromSliceNum to a new segment for any number of slices in Target.
         The Source and Target images have the same FOR and IOP but have 
         different VS (they will likely also have different IPP).
     
-    4.  Relationship-preserving copy of the Source segmentation in FromSegLabel 
-        on slice FromSliceNum to a new segment for any number of slices in 
-        Target.
+    4.  Relationship-preserving copy of the Source segmentation on slice 
+        FromSliceNum to a new segment for any number of slices in Target.
         The Source and Target images have the same FOR but have different IOP 
         and IPP, and possibly different VS.
        
-    5.  Relationship-preserving copy of the Source segmentation in FromSegLabel 
-        on slice FromSliceNum to a new segment for any number of slices in 
-        Target.
+    5.  Relationship-preserving copy of the Source segmentation on slice 
+        FromSliceNum to a new segment for any number of slices in Target.
         The Source and Target images have different FOR, IPP and IOP, and 
         possibly different VS.
         
@@ -847,9 +912,9 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     SrcSeg : Pydicom object
         Source DICOM SEG object.
                              
-    FromSegLabel : string
-        All or part of the Source segment label containing the segmentation to 
-        be copied.
+    FromSearchString : string
+        All or part of the Source Segment Label of the segment containing the 
+        segmentation to be copied.
                      
     SrcDcmDir : string
         Directory containing the Source DICOMs.
@@ -885,11 +950,15 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     """
     
     import importlib
+    
     import SegTools
     importlib.reload(SegTools)
+    import DicomTools
+    importlib.reload(DicomTools)
     
     import time
     from copy import deepcopy
+    import numpy as np
     from DicomTools import IsSameModalities
     from DicomTools import GetRoiNum
     from SegTools import GetFrameFromPixArr
@@ -907,9 +976,11 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     # UseCase 5):
     Thresh = 0.1
     
-    # Verify that FromSegLabel exists:
-    #SrcSegLabels = GetRoiLabels(SrcSeg)
-    FromSegNum = GetRoiNum(Roi=SrcSeg, Label=FromSegLabel)
+    # Verify that FromSearchString exists:
+    #SrcSearchStrings = GetRoiLabels(SrcSeg)
+    FromSegNum = GetRoiNum(Roi=SrcSeg, SearchString=FromSearchString)
+    
+    print(f'\n\n\n***FromSegNum = {FromSegNum}')
     
         
     # Compare the modalities of the segments:
@@ -920,11 +991,28 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             
             raise Exception(msg)
             
-        ToSegNum = GetRoiNum(Roi=TrgSeg, Label=FromSegLabel) # 04/12
+        #ToSegNum = GetRoiNum(Roi=TrgSeg, SearchString=FromSearchString) # 04/12
+        
+        
+    # Print the list of PFFGStoSliceInds:
+    """This isn't required but useful."""
+    from DicomTools import GetDicomSOPuids
+    from SegTools import GetPFFGStoSliceIndsBySeg
+    
+    SegSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
+    
+    SegPFFGStoSliceIndsBySeg = GetPFFGStoSliceIndsBySeg(Seg=SrcSeg, 
+                                                        SOPuids=SegSOPuids)
+    
+    SegPFFGStoSliceIndsInSeg = SegPFFGStoSliceIndsBySeg[FromSegNum]
+    
+    print(f'\nThe Source SEG matching "{FromSearchString}" has segmentations',
+          f'on slices {SegPFFGStoSliceIndsInSeg}.')
+    """End of not-required code."""
     
     # The pixel array that only contains the frame to be copied:
     PixArrToCopy = GetFrameFromPixArr(Seg=SrcSeg, DicomDir=SrcDcmDir, 
-                                      SegLabel=FromSegLabel, 
+                                      SearchString=FromSearchString, 
                                       SliceNum=FromSliceNum,
                                       LogToConsole=LogToConsole)
     
@@ -989,7 +1077,7 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         if TrgSeg:
             """
             Since this is a Direct copy, any existing segmentations in Target 
-            with segment label matching FromRoiLabel are to be preserved.
+            with segment label matching FromSearchString are to be preserved.
             """
             
             # Get all frames in the Target segment containing the segmentation 
@@ -997,7 +1085,7 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgPixArrInSeg,\
             TrgPFFGStoSliceIndsInSeg = GetPixArrInSeg(Seg=TrgSeg, 
                                                       DicomDir=TrgDcmDir,
-                                                      SegLabel=FromSegLabel)
+                                                      SearchString=FromSearchString)
             
             """
             PixArrToCopy needs to be added to previously Direct-copied 
@@ -1043,14 +1131,22 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     if '3' in UseCase:
         from ImageTools import ResampleImage
         
+        #print(f'\n\n\n***** LabmapImToCopy.GetSize() = {LabmapImToCopy.GetSize()}')
+        
         # Resample LabmapImToCopy to the Target image's grid:
         ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
                                           RefImage=TrgIm, 
                                           Interpolation='NearestNeighbor')
         
+        #print(f'***** ResLabmapImToCopy.GetSize() = {ResLabmapImToCopy.GetSize()}')
+        
         # Convert ResLabmapImToCopy back to a pixel array:
         ResPixArrToCopy,\
         PFFGStoSliceIndsToCopy = Image2PixArr(LabmapIm=ResLabmapImToCopy)
+        
+        #print(f'***** PFFGStoSliceIndsToCopy = {PFFGStoSliceIndsToCopy}')
+        #print(f'***** ResPixArrToCopy.shape = {ResPixArrToCopy.shape}')
+    
         
         
     if UseCase == '3a':
@@ -1094,7 +1190,7 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
         if TrgSeg:
             """
             Since this is a Direct copy, any existing segmentations in Target
-            with segment label matching FromRoiLabel are to be preserved.
+            with segment label matching FromSearchString are to be preserved.
             """
             
             # Get all frames in the Target segment containing the segmentation 
@@ -1102,7 +1198,7 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
             TrgPixArrInSeg,\
             TrgPFFGStoSliceIndsInSeg = GetPixArrInSeg(Seg=TrgSeg, 
                                                       DicomDir=TrgDcmDir,
-                                                      SegLabel=FromSegLabel)
+                                                      SearchString=FromSearchString)
             
             """
             ResPixArrToCopy needs to be added to previously Direct-copied 
@@ -1191,17 +1287,46 @@ def CopySeg(SrcSeg, FromSegLabel, SrcDcmDir, FromSliceNum, TrgDcmDir,
     #                           PFFGStoSliceInds=TrgPFFGStoSliceInds, 
     #                           DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
     
+    if LogToConsole:
+        print('\n\nInputs to InitialiseSeg:')
+        print(f'   SegNum = {FromSegNum}')
+        print(f'   TrgPFFGStoSliceInds = {TrgPFFGStoSliceInds}')
+        
+    """ 
+    09/12: When downsampling some resulting images have no segmentations,
+    hence TrgPFFGStoSliceInds = [].  This results in 
+    Seg.NumberOfFrames = f"{len(PFFGStoSliceInds)}"
+    in InitialiseSeg.
+    Until the cause of the above is determined, raise an exception if 
+    TrgPFFGStoSliceInds = [].
+    """
+    if TrgPFFGStoSliceInds == []:
+        msg = 'TrgPFFGStoSliceInds = []. There must be at least one slice '\
+              + 'number in TrgPFFGStoSliceInds.'
+        
+        raise Exception(msg)
+    
+        
     if TrgSeg:
         """ Use TrgSeg to initialise the Target SEG. """
-        TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SegNum=ToSegNum,
+        #TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SegNum=ToSegNum,
+        TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SearchString=FromSearchString,
                                PFFGStoSliceInds=TrgPFFGStoSliceInds, 
                                DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
     else:
         """ Use SrcSeg to initialise the Target SEG. """
-        TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SegNum=FromSegNum,
+        TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SearchString=FromSearchString,
                                PFFGStoSliceInds=TrgPFFGStoSliceInds, 
                                DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+        
+    print(f'\n\n\n***FromSegNum = {FromSegNum}')
     
+    if LogToConsole:
+        print('\n\nInputs to ModifySeg:')
+        print(f'   TrgPixArr.shape = {TrgPixArr.shape}')
+        [print(f'   np.amax(TrgPixArr[{i}]) = {np.amax(TrgPixArr[i])}') for i in range(TrgPixArr.shape[0])]
+        print(f'   TrgPFFGStoSliceInds = {TrgPFFGStoSliceInds}')
+        
     # Modify the tags in TrgSeg:
     TrgSeg = ModifySeg(Seg=TrgSeg, PixArr=TrgPixArr,
                        PFFGStoSliceInds=TrgPFFGStoSliceInds, 

@@ -368,9 +368,9 @@ def GetRoiLabels(Roi):
 
 
 
-def GetRoiNum(Roi, Label):
+def GetRoiNum(Roi, SearchString):
     """
-    Get the ROI/segment number that matches the ROI label provided.
+    Get the ROI/segment number that matches SearchString.
     
     Inputs:
     ------
@@ -378,28 +378,31 @@ def GetRoiNum(Roi, Label):
     Roi : Pydicom object
         RTS or SEG object.
         
-    Label : string
-        All or part of the ROI label containing the ROI/segment of interest.
+    SearchString : string
+        All or part of the ROIName/SegmentLabel of the ROI/segment of interest.
                        
                             
     Outputs:
     -------
     
     RoiNum : integer
-        The index of the ROI that matches RoiLabel.
+        The index of the ROI that matches SearchString.
     """
     
     RoiLabels = GetRoiLabels(Roi)
     
     #print('\nRoiLabels =', RoiLabels)
     
-    #print('\nRoiLabel to find =', Label)
+    #print('\nRoiLabel to find =', SearchString)
     
-    #RoiNum = RoiLabels.index(RoiLabel)
-    RoiNum = [i for i, label in enumerate(RoiLabels) if Label in label]
+    #RoiNum = RoiLabels.index(SearchString)
+    RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel]
     
     if not RoiNum:
-        raise Exception(f"There are no ROIs in the RTS/SEG that match {Label}.")
+        msg = 'There are no ROIs in the RTS/SEG that match "SearchString" = '\
+              + f'"{SearchString}".'
+        
+        raise Exception(msg)
         
     return RoiNum[0]
 

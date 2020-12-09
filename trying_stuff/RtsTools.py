@@ -18,7 +18,7 @@ Created on Wed Nov 11 11:55:17 2020
 #from DicomTools import GetDicomSOPuids
 #from ImageTools import GetImageAttributes
 #from ConversionTools import Point2Index
-#from ConversionTools import Inds2Mask
+#from ConversionTools import Indices2Mask
 
 
 """
@@ -28,51 +28,6 @@ DICOM RTSTRUCT FUNCTIONS
 ******************************************************************************
 ******************************************************************************
 """
-
-def GetRoiNum_OLD(Rts, Label):
-    """
-    Get the ROI number that matches the ROI label provided.
-    
-    Inputs:
-    ------
-    
-    Rts : Pydicom object
-        RTS object.
-        
-    Label : string
-        All or part of the ROI label containing the contour of interest.
-                       
-                            
-    Outputs:
-    -------
-    
-    RoiNum : integer
-        The index of the ROI that matches RoiLabel.
-    """
-    
-    from DicomTools import GetRoiLabels
-    
-    RoiLabels = GetRoiLabels(Rts)
-    
-    #print('\nRoiLabels =', RoiLabels)
-    
-    #print('\nRoiLabel to find =', Label)
-    
-    #RoiNum = RoiLabels.index(RoiLabel)
-    RoiNum = [i for i, label in enumerate(RoiLabels) if Label in label]
-    
-    if not RoiNum:
-        raise Exception(f"There are no ROIs in the RTS that match {Label}.")
-        
-    return RoiNum[0]
-
-
-
-
-
-
-
-
 
 
 def GetContourNumByRoi(Rts):
@@ -469,7 +424,7 @@ def AddToCS(Rts):
 
 
 
-def GetPtsByRoi(RtsFpath, DicomDir):
+def GetPtsByRoi(Rts, DicomDir):
     """
     Get the physical points (i.e. in the Patient Coordinate System) in all 
     contours for all ROIs.
@@ -477,8 +432,8 @@ def GetPtsByRoi(RtsFpath, DicomDir):
     Inputs:
     ------
     
-    RtsFpath : string
-        Full path of the DICOM-RTSTRUCT file.
+    Rts : Pydicom object
+        ROI object from an RTSTRUCT file.
         
     DicomDir : string 
         Directory containing the corresponding DICOMs.
@@ -496,42 +451,59 @@ def GetPtsByRoi(RtsFpath, DicomDir):
         correspond to each list in PtsByRoi. 
     """
     
-    from pydicom import dcmread
+    from copy import deepcopy
     from DicomTools import GetDicomSOPuids
-    
-    # Import the RTSTRUCT ROI:
-    Roi = dcmread(RtsFpath)
+    from ConversionTools import ContourData2Points
     
     # Get the DICOM SOP UIDs:
     SopUids = GetDicomSOPuids(DicomDir)
     
     # Get the ContourImageSequence-to-slice indices:
-    #CIStoSliceInds = GetCIStoSliceInds(Roi, SopUids)
+    #CIStoSliceInds = GetCIStoSliceInds(Rts, SopUids)
     
     # Get the ContourSequence-to-slice indices by ROI:
-    CStoSliceIndsByRoi = GetCStoSliceIndsByRoi(Roi, SopUids)
+    CStoSliceIndsByRoi = GetCStoSliceIndsByRoi(Rts, SopUids)
     
     Nrois = len(CStoSliceIndsByRoi)
+    
+    if False:
+        print(f'\nCStoSliceIndsByRoi = {CStoSliceIndsByRoi}')
+        print(f'Nrois = {Nrois}')
     
     PtsByRoi = []
     
     for r in range(Nrois):
         # Number of contours in this ROI:
-        Ncontours = len(CStoSliceIndsByRoi[r])
+        NumCS2Sinds = len(CStoSliceIndsByRoi[r])
         
         # Get a list of the Contour Sequences in this ROI:
-        ContourSequences = Roi.ROIContourSequence[r].ContourSequence
+        ContourSequences = deepcopy(Rts.ROIContourSequence[r].ContourSequence)
+        
+        NumCS = len(ContourSequences)
+        
+        if NumCS2Sinds != NumCS:
+            msg = f'The number of contour-sequence-to-slice-indices '\
+                  + f'({NumCS2Sinds}) must be equal to the number of '\
+                  + f'sequences in ROIContourSequence[{r}].ContourSequence '\
+                  + f'({NumCS}).'
+            
+            raise Exception(msg)
         
         # Get a list of all Referenced SOP Instance UIDs from the ContourSequences:
         #RefSopUids = [sequence.ContourImageSequence[0]\
         #              .ReferencedSOPInstanceUID for sequence in ContourSequences]
+        
+        if False:
+            print(f'   r = {r}')
+            print(f'   NumCS2Sinds = {NumCS2Sinds}')
+            print(f'   NumCS = NumCS')
         
         
         PtsByContour = []
         
         
         # Loop through each contour sequence:
-        for c in range(Ncontours):
+        for c in range(NumCS):
             
             # Get the indeces of all matching RefSopUids:
             #ind = RefSopUids.index(SopUid) # this will only find the first 
@@ -541,21 +513,21 @@ def GetPtsByRoi(RtsFpath, DicomDir):
             # Iterate for each index in inds:
             #for ind in inds:
             
-            ContourSequence = ContourSequences[c]
+            #ContourSequence = deepcopy(ContourSequences[c])
             
-            ContourData = [float(item) for item in ContourSequence.ContourData]
-    
-            # Initialise the array of points for this contour:
-            points = []
+            #ContourData = [float(item) for item in ContourSequence.ContourData]
             
-            # Iterate for all points in threes:
-            for p in range(0, len(ContourData), 3):
-                point = [ContourData[p], ContourData[p+1], ContourData[p+2]]
-                
-                points.append(point)
-        
-        
-            PtsByContour.append(points)
+            ContourData = Rts.ROIContourSequence[r]\
+                             .ContourSequence[c]\
+                             .ContourData
+            
+            Pts = ContourData2Points(ContourData)
+            
+            PtsByContour.append(Pts)
+            
+            if False:
+                print(f'      c = {c}')
+                print(f'      len(Pts) = {len(Pts)}')
             
             
         PtsByRoi.append(PtsByContour)
@@ -570,7 +542,8 @@ def GetPtsByRoi(RtsFpath, DicomDir):
 
 
 
-def GetPtsInRoi(Rts, DicomDir, RoiLabel):
+
+def GetPtsInRoi_OLD(Rts, DicomDir, SearchString):
     """
     Get the physical points (i.e. in the Patient Coordinate System) in a RTS
     that belong to a ROI with specified label.
@@ -584,7 +557,7 @@ def GetPtsInRoi(Rts, DicomDir, RoiLabel):
     DicomDir : string 
         Directory containing the corresponding DICOMs.
         
-    RoiLabel : string
+    SearchString : string
         All or part of the Source ROI label containing the ROI of interest.
                        
                             
@@ -609,7 +582,7 @@ def GetPtsInRoi(Rts, DicomDir, RoiLabel):
     # The number of ROIs:
     NumOfRois = len(RoiContourSequence)
     
-    RoiNum = GetRoiNum(Rts, RoiLabel)
+    RoiNum = GetRoiNum(Rts, SearchString)
     
     if RoiNum > NumOfRois - 1:
         raise Exception(f"There are only {NumOfRois} ROIs in the RTS.\n",
@@ -657,7 +630,74 @@ def GetPtsInRoi(Rts, DicomDir, RoiLabel):
 
 
 
-def GetPtsInContour(Rts, RoiLabel, SliceNum, DicomDir):
+
+
+
+
+
+
+
+def GetPtsInRoi(Rts, DicomDir, SearchString):
+    """
+    Get the physical points (i.e. in the Patient Coordinate System) in a RTS
+    that belong to a ROI with specified label.
+    
+    Inputs:
+    ------
+    
+    Rts : Pydicom object
+        RTS object.
+        
+    DicomDir : string 
+        Directory containing the corresponding DICOMs.
+        
+    SearchString : string
+        All or part of the ROI name of the ROI of interest.
+                       
+                            
+    Outputs:
+    -------
+    
+    PointsByContour : list of a list of a list of floats
+        List (for each contour) of a list (for each point) of a list (for each 
+        dimension) of coordinates. 
+        
+    CStoSliceInds : list of integers
+        List (for each contour) of slice numbers that correspond to each 
+        list of points in PointsByContour.
+    """
+    
+    from DicomTools import GetRoiNum
+    
+    PtsByRoi, CStoSliceIndsByRoi = GetPtsByRoi(Rts, DicomDir)
+    
+    RoiNum = GetRoiNum(Rts, SearchString)
+    
+    PointsByContour = PtsByRoi[RoiNum]
+    
+    CStoSliceInds = CStoSliceIndsByRoi[RoiNum]
+    
+    #print('\n\nResults of GetPtsInRoi:')
+    #print(f'   len(PtsByRoi) = {len(PtsByRoi)}')
+    #print(f'   len(CStoSliceIndsByRoi) = {len(CStoSliceIndsByRoi)}')
+    #print(f'   len(PointsByContour) = {len(PointsByContour)}')
+    #print(f'   len(CStoSliceInds) = {len(CStoSliceInds)}')
+    #print('end of GetPtsByRoi.\n')
+        
+    return PointsByContour, CStoSliceInds
+
+
+
+
+
+
+
+
+
+
+
+
+def GetPtsInContour(Rts, SearchString, SliceNum, DicomDir):
     """
     Get the physical points (i.e. in the Patient Coordinate System) in a 
     contour in a ROI.
@@ -668,8 +708,8 @@ def GetPtsInContour(Rts, RoiLabel, SliceNum, DicomDir):
     Rts : Pydicom object
         RTS object.
         
-    RoiLabel : string
-        All or part of the Source ROI label containing the contour to be
+    SearchString : string
+        All or part of the ROI name of the ROI containing the contour to be
         copied.
         
     SliceNum : integer
@@ -686,21 +726,23 @@ def GetPtsInContour(Rts, RoiLabel, SliceNum, DicomDir):
     Points : list of a list of floats
         List (for each point) of a list (for each dimension) of coordinates. 
         
-    CStoSliceInds : list of integers
-        List (of length one - the one contour defined by Points) of slice 
-        numbers that correspond to Points. 
+    CStoSliceInd : list of a single integer
+        List (of length one - the one contour defined by Points) of the slice 
+        number that corresponds to Points. 
     """
     
+    from copy import deepcopy
     from DicomTools import GetDicomSOPuids
     from DicomTools import GetRoiNum
+    from ConversionTools import ContourData2Points
     
     # The ROI Contour Sequence:
-    RoiContourSequence = Rts.ROIContourSequence
+    RoiContourSequence = deepcopy(Rts.ROIContourSequence)
     
     # The number of ROIs:
     NumOfRois = len(RoiContourSequence)
     
-    RoiNum = GetRoiNum(Rts, RoiLabel)
+    RoiNum = GetRoiNum(Rts, SearchString)
     
     if RoiNum > NumOfRois - 1:
         raise Exception(f"There are only {NumOfRois} ROIs in the RTS.\n",
@@ -721,7 +763,8 @@ def GetPtsInContour(Rts, RoiLabel, SliceNum, DicomDir):
     ContourNum = CStoSliceInds.index(SliceNum)
     
     # The Contour Sequences in the ROI of interest:
-    ContourSequence = Rts.ROIContourSequence[RoiNum].ContourSequence
+    #ContourSequence = deepcopy(Rts.ROIContourSequence[RoiNum].ContourSequence)
+    ContourSequence = deepcopy(RoiContourSequence[RoiNum].ContourSequence)
     
     # The number of contours in this ROI:
     NumOfContours = len(ContourSequence)
@@ -730,22 +773,36 @@ def GetPtsInContour(Rts, RoiLabel, SliceNum, DicomDir):
         raise Exception(f"There are only {NumOfContours} contours in the RTS.",
                         f"\nContourNum = {ContourNum} > {NumOfContours}.")
         
-    ContourData = ContourSequence[ContourNum].ContourData
+    ContourData = deepcopy(ContourSequence[ContourNum].ContourData)
     
-    ContourData = [float(item) for item in ContourData]
+    Points = ContourData2Points(ContourData)
     
-    Points = []
-            
-    # Iterate for all points in threes:
-    for p in range(0, len(ContourData), 3):
-        point = [ContourData[p], ContourData[p+1], ContourData[p+2]]
+    #CStoSliceInd = [SliceNum]
+    
+    if False:
+        print(f'\n\nResults of GetPtsInContour:')
+        print(f'   NumOfRois = {NumOfRois}')
+        print(f'   RoiNum = {RoiNum}')
+        print(f'   CStoSliceIndsByRoi = {CStoSliceIndsByRoi}')
+        print(f'   CStoSliceInds = CStoSliceIndsByRoi[RoiNum={RoiNum}] =',
+              f'{CStoSliceInds}')
+        print(f'   ContourNum = {ContourNum}')
+        print(f'   len(Points) = {len(Points)}')
+        print(f'   CStoSliceInds = {CStoSliceInds}')
         
-        Points.append(point)
+        numofpts = []
+        for c in range(NumOfContours):
+            contourdata = deepcopy(ContourSequence[c].ContourData)
+        
+            pts = ContourData2Points(contourdata)
+            
+            numofpts.append(len(pts))
+            
+            
+        print(f'   Number of pts in each CS = {numofpts}')
+        print('end of results.')
     
-    
-    CStoSliceInds = [SliceNum]
-    
-    return Points, CStoSliceInds
+    return Points#, CStoSliceInds
 
 
 
@@ -792,7 +849,7 @@ def AddCopiedPts(OrigPtsByCnt, PtsToAdd, CStoSliceInds, SliceNum):
         PtsToAdd.
     """
     
-    from ConversionTools import Pts2ContourData
+    from ConversionTools import Points2ContourData
     
     if SliceNum in CStoSliceInds:
         """
@@ -836,7 +893,7 @@ def AddCopiedPts(OrigPtsByCnt, PtsToAdd, CStoSliceInds, SliceNum):
     NewCntDataByCnt = []
     
     for Points in NewPtsByCnt:
-        NewCntDataByCnt.append(Pts2ContourData(Points))
+        NewCntDataByCnt.append(Points2ContourData(Points))
     
     
     return NewCntDataByCnt, NewPtsByCnt
@@ -849,7 +906,8 @@ def AddCopiedPts(OrigPtsByCnt, PtsToAdd, CStoSliceInds, SliceNum):
     
     
 def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds, 
-                      PtsToAddByCnt, CStoSliceIndsToAddByCnt):
+                      PtsToAddByCnt, CStoSliceIndsToAddByCnt,
+                      LogToConsole=False):
     """
     Add points in a contour to an existing list of points-by-contour.
        
@@ -873,6 +931,9 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
         List (for each contour) of slice numbers that correspond to each 
         contour in PtsToAddByCnt.
         
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
         
     Outputs:
     -------
@@ -893,10 +954,12 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
     """
     
     from GeneralTools import UniqueItems
-    from ConversionTools import Pts2ContourData
+    from ConversionTools import Points2ContourData
     
-    print(f'\nOrigCStoSliceInds = {OrigCStoSliceInds}')
-    print(f'\nCStoSliceIndsToAddByCnt = {CStoSliceIndsToAddByCnt}')
+    if LogToConsole:
+        print('\n\nRunning AddCopiedPtsByCnt:')
+        print(f'   OrigCStoSliceInds = {OrigCStoSliceInds}')
+        print(f'   CStoSliceIndsToAddByCnt = {CStoSliceIndsToAddByCnt}')
     
     # Combine OrigCStoSliceInds and CStoSliceIndsToAddByCnt:
     NewCStoSliceInds = OrigCStoSliceInds + CStoSliceIndsToAddByCnt
@@ -906,20 +969,23 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
     # Remove any duplicate slice numbers:
     NewCStoSliceInds = UniqueItems(NewCStoSliceInds)
     
-    print(f'\nNewCStoSliceInds after removing duplicates = {NewCStoSliceInds}')
+    if LogToConsole:
+        print(f'   NewCStoSliceInds after removing duplicates = {NewCStoSliceInds}')
     
     #C = len(NewCStoSliceInds)
     
     #print(f'\nOrigPtsByCnt:\n\n', OrigPtsByCnt)
     
-    print(f'\nlen(PtsToAddByCnt) = {len(PtsToAddByCnt)}')
-    #print(f'\nPtsToAddByCnt:\n\n', PtsToAddByCnt)
+    if LogToConsole:
+        print(f'   len(PtsToAddByCnt) = {len(PtsToAddByCnt)}')
+        #print(f'\nPtsToAddByCnt:\n\n', PtsToAddByCnt)
     
     NewCntDataByCnt = []
     NewPtsByCnt = []
     
     for SliceNum in NewCStoSliceInds:
-        #print(f'\nSliceNum = {SliceNum}')
+        if LogToConsole:
+            print(f'   SliceNum = {SliceNum}')
         
         if SliceNum in CStoSliceIndsToAddByCnt:
             """
@@ -929,13 +995,16 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
             
             ind = CStoSliceIndsToAddByCnt.index(SliceNum)
             
-            print(f'\n   ind = {ind}')
-            
-            print(f'\n   len(PtsToAddByCnt[{ind}]) = {len(PtsToAddByCnt[ind])}')
+            if LogToConsole:
+                print(f'      This contour is to be over-written with contour',
+                      f'{ind} in PtsToAddByCnt')
+                
+                print(f'      len(PtsToAddByCnt[{ind}]) =',
+                      f'{len(PtsToAddByCnt[ind])}')
             
             NewPtsByCnt.append(PtsToAddByCnt[ind])
             
-            NewCntDataByCnt.append(Pts2ContourData(PtsToAddByCnt[ind]))
+            NewCntDataByCnt.append(Points2ContourData(PtsToAddByCnt[ind]))
             
         else:
             """
@@ -944,14 +1013,22 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
             
             ind = OrigCStoSliceInds.index(SliceNum)
             
-            print(f'\n   ind = {ind}')
-            
-            print(f'\n   len(OrigPtsByCnt[{ind}]) = {len(OrigPtsByCnt[ind])}')
+            if LogToConsole:
+                print('      This contour is to be preserved (contour {ind}',
+                      'from OrigPtsByCnt)')
+                
+                print(f'      len(OrigPtsByCnt[{ind}]) =',
+                      f'{len(OrigPtsByCnt[ind])}')
             
             NewPtsByCnt.append(OrigPtsByCnt[ind])
             
-            NewCntDataByCnt.append(Pts2ContourData(OrigPtsByCnt[ind]))
+            NewCntDataByCnt.append(Points2ContourData(OrigPtsByCnt[ind]))
+        
+        if LogToConsole:
+            print(f'      len(NewPtsByCnt[-1]) = {len(NewPtsByCnt[-1])}')
     
+    if LogToConsole:
+        print('end of AddCopiedPtsByCnt.')
     
     return NewCntDataByCnt, NewPtsByCnt, NewCStoSliceInds
 
@@ -964,29 +1041,34 @@ def AddCopiedPtsByCnt(OrigPtsByCnt, OrigCStoSliceInds,
 
 
 
-def GetIndsByRoi(RtsFpath, DicomDir):
+def GetIndsByRoi(Rts, DicomDir):
     """
     Get the indices of the points (i.e. in the Image Coordinate System) in all 
     contours for all ROIs.
     
     
     Inputs:
-        RtsFpath   - (String) Full path of the DICOM-RTSTRUCT file 
+    ------
+    
+    Rts : Pydicom object
+        RTS object.
         
-        DicomDir   - (String) Directory containing the corresponding DICOMs 
+    DicomDir : sString
+        Directory containing the corresponding DICOMs.
                        
                             
-    Returns:
-        IndsInRois - (List of list of a list of floats) List (for each ROI) of
-                     a list (for all contours) of a list (for each dimension)
-                     of indices 
+    Outputs:
+    -------
     
+    IndsInRois - List of list of a list of floats
+        List (for each ROI) of a list (for all contours) of a list (for each 
+        dimension) of indices.
     """
     
     from ImageTools import GetImageAttributes
     from ConversionTools import ContourToIndices
     
-    PtsByRoi = GetPtsByRoi(RtsFpath, DicomDir)
+    PtsByRoi = GetPtsByRoi(Rts, DicomDir)
     
     Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(DicomDir)
     
@@ -1019,7 +1101,7 @@ def GetIndsByRoi(RtsFpath, DicomDir):
 
 
 
-def GetMaskFromRts(Rts, FromRoiLabel, FromSliceNum, DicomDir, RefImage):
+def GetMaskFromRts(Rts, SearchString, SliceNum, DicomDir, RefImage):
     """
     Get a 2D mask (pixel array) from a RTS.
        
@@ -1030,13 +1112,13 @@ def GetMaskFromRts(Rts, FromRoiLabel, FromSliceNum, DicomDir, RefImage):
     Rts : Pydicom object
         DICOM-RTSTRUCT object.
         
-    FromRoiLabel : string
-        All or part of the Source ROI label containing the contour to be
+    SearchString : string
+        All or part of the ROI name of the ROI containing the contour to be
         copied.
         
-    FromSliceNum : integer
-        Slice index of the Source DICOM stack corresponding to the contour to
-        be copied (counting from 0).
+    SliceNum : integer
+        Slice index of the DICOM stack corresponding to the contour to be
+        copied (counting from 0).
         
     DicomDir : string
         Directory containing the corresponding DICOMs.
@@ -1059,13 +1141,14 @@ def GetMaskFromRts(Rts, FromRoiLabel, FromSliceNum, DicomDir, RefImage):
     
     from ImageTools import GetImageAttributes
     from ConversionTools import Point2Index
-    from ConversionTools import Inds2Mask
+    from ConversionTools import Indices2Mask
     
     Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(DicomDir)
     
     # Get the contour points (in the Patient Coordinate System):
-    Points, CStoSliceInds = GetPtsInContour(Rts, FromRoiLabel, FromSliceNum, 
-                                            DicomDir)
+    #Points, CStoSliceInds = GetPtsInContour(Rts, SearchString, SliceNum, 
+    #                                        DicomDir)
+    Points = GetPtsInContour(Rts, SearchString, SliceNum, DicomDir)
     
     #print(f'\nlen(Points) = {len(Points)}')
     #print(f'\nPoints = {Points}')
@@ -1085,7 +1168,7 @@ def GetMaskFromRts(Rts, FromRoiLabel, FromSliceNum, DicomDir, RefImage):
         Inds.append(inds)
     
     
-    Mask = Inds2Mask(Inds, RefImage)
+    Mask = Indices2Mask(Inds, RefImage)
     
     return Mask
 
@@ -1136,6 +1219,10 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     import time
     from copy import deepcopy
     from DicomTools import ImportDicoms
+    
+    # The ROI Name of the ROI containing the contour to be copied:
+    RoiName = RtsTemplate.StructureSetROISequence[RoiNum].ROIName
+    
     
     # Use RtsTemplate as a template for NewRts:
     Rts = deepcopy(RtsTemplate)
@@ -1287,9 +1374,7 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     Rts.StructureSetDate = NewDate
     Rts.StructureSetTime = NewTime
     
-    # The ROI Name of the ROI containing the contour to be copied:
-    RoiName = Rts.StructureSetROISequence[RoiNum].ROIName
-    
+    # Modify the ROI Name to RoiName:
     Rts.StructureSetROISequence[0].ROIName = RoiName
     
     
@@ -1297,7 +1382,7 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     """
     Output some results to the console.
     """
-    if True:#LogToConsole:
+    if LogToConsole:
         NewCIS = len(Rts.ReferencedFrameOfReferenceSequence[0]\
                         .RTReferencedStudySequence[0]\
                         .RTReferencedSeriesSequence[0]\
@@ -1392,42 +1477,28 @@ def ModifyRts(Rts, CntDataByCnt, PtsByCnt, CStoSliceInds, DicomDir,
         print(f'\nlen(CIS) = {len(CIS)}')
         
         print(f'\nlen(CStoSliceInds) = {len(CStoSliceInds)}')
-        
-    print(f'\nCStoSliceInds = {CStoSliceInds}')
+      
+    if LogToConsole:
+        print('\n\nRunning ModifyRts:')
+        print(f'   CStoSliceInds = {CStoSliceInds}')
+        print(f'   len(Dicoms) = {len(Dicoms)}')
     
-    print(f'\nlen(Dicoms) = {len(Dicoms)}')
-    
-    # Modify the ContourImageSequence:
     for i in range(len(CStoSliceInds)):
         # The DICOM slice index for this sequence:
         s = CStoSliceInds[i]
         
-        if True:#LogToConsole:
-            print(f'\nCStoSliceInds[{i}] = {CStoSliceInds[i]}')
-            print(f'DICOM slice number = {s}')
+        if LogToConsole:
+            print(f'\n   i = {i}, CStoSliceInds[{i}] = {CStoSliceInds[i]}')
+            #print(f'      DICOM slice number = {s}')
         
-        # Modify the Referenced SOP Instance UID:
+        # Modify the Referenced SOP Instance UID in ContourImageSequence:
         Rts.ReferencedFrameOfReferenceSequence[0]\
            .RTReferencedStudySequence[0]\
            .RTReferencedSeriesSequence[0]\
            .ContourImageSequence[i]\
            .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
-    
-    
-    # Modify the StructureSetROISequence:
-    Rts.StructureSetROISequence[0].RoiNumber = f"1"
         
-    Rts.StructureSetROISequence[0]\
-       .ReferencedFrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
-        
-    
-    
-    # Modify ROIContourSequence:
-    for i in range(len(CStoSliceInds)):
-        # The DICOM slice index for this sequence:
-        s = CStoSliceInds[i]
-        
-        # Modify the Referenced SOP Instance UID:
+        # Modify the Referenced SOP Instance UID in ROIContourSequence:
         Rts.ROIContourSequence[0]\
            .ContourSequence[i]\
            .ContourImageSequence[0]\
@@ -1443,25 +1514,39 @@ def ModifyRts(Rts, CntDataByCnt, PtsByCnt, CStoSliceInds, DicomDir,
            .NumberOfContourPoints = f"{len(Points)}"
         
         # The contour points as a flat list of coordinates as strings:
-        #ContourData = Pts2ContourData(Points)
-        ContourData = CntDataByCnt[i]
+        #ContourData = Points2ContourData(Points)
+        #ContourData = CntDataByCnt[i]
         
         #print(f'\nCntDataByCnt[{i}] = {CntDataByCnt[i]}')
         
         # Modify ContourData:
+        #Rts.ROIContourSequence[0]\
+        #   .ContourSequence[i]\
+        #   .ContourImageSequence[0]\  <--- found on 8/12/20
+        #   .ContourData = CntDataByCnt[i]
+           
         Rts.ROIContourSequence[0]\
            .ContourSequence[i]\
-           .ContourImageSequence[0]\
-           .ContourData = ContourData
+           .ContourData = CntDataByCnt[i]
+        
+        if LogToConsole:
+            print(f'      len(Points) = {len(Points)}')
     
     
-    
+    # Modify the StructureSetROISequence:
+    Rts.StructureSetROISequence[0].RoiNumber = f"1"
+        
+    Rts.StructureSetROISequence[0]\
+       .ReferencedFrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
+       
     # Modify ROIContourSequence:
     Rts.ObservationNumber = f"{1}"
         
     Rts.ReferencedROINumber = f"{1}"
     
-                                          
+    if LogToConsole:
+        print('end of ModifyRts.')
+    
     return Rts
 
 
