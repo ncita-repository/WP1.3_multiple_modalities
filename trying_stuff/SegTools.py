@@ -981,7 +981,7 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
 
 
 def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir, 
-                  LogToConsole=False):
+                  NamePrefix='', LogToConsole=False):
     """
     Initialise a SEG object based on an existing SEG object (SegTemplate).
          
@@ -1002,6 +1002,10 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     DicomDir : string
         Directory containing the corresponding DICOMs.
     
+    NamePrefix : string (optional; '' by default)
+        Prefix to be added to the assigned filename (after the DateTime stamp), 
+        e.g. 'Case3b-i'.
+        
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
         
@@ -1017,8 +1021,16 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     import time
     from copy import deepcopy
     from DicomTools import GetRoiNum
-    from DicomTools import ImportDicoms
+    from DicomTools import GetDicomFpaths
+    from DicomTools import ImportDicom
     from ImageTools import GetImageAttributes
+    
+    Dicom = ImportDicom(DicomDir)
+    
+    NumOfDicoms = len(GetDicomFpaths(DicomDir))
+    
+    Size, Spacings, ST,\
+    IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
     
     SegNum = GetRoiNum(SegTemplate, SearchString)
     
@@ -1026,7 +1038,7 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     # copied:
     SegLabel = SegTemplate.SegmentSequence[SegNum].SegmentLabel
     
-    print(f'\n\n***SegLabel = {SegLabel}')
+    #print(f'\n\n***SegLabel = {SegLabel}')
     
     # Use SegTemplate as a template for Seg:
     Seg = deepcopy(SegTemplate)
@@ -1038,8 +1050,13 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     Seg.SeriesInstanceUID = generate_uid()
     
     # Modify the Series Description:
-    Seg.SeriesDescription = 'Segmentation(s)_copied_from_' \
-                            + Seg.SeriesDescription
+    if 'SEG' in NamePrefix:
+        SD = NamePrefix + '_from_' + Seg.SeriesDescription
+    else:
+        SD = NamePrefix + '_SEG_from_' + Seg.SeriesDescription
+        
+    #Seg.SeriesDescription = SD
+    Seg.SeriesDescription = NamePrefix
     
     # Modify the Content Date and Time to the present:
     NewDate = time.strftime("%Y%m%d", time.gmtime())
@@ -1049,33 +1066,29 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     Seg.ContentTime = NewTime
     
     
-    Dicoms = ImportDicoms(DicomDir)
-    
-    Size, Spacings, ST,\
-    IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
     
     # Modify various tags to match the values in Dicoms:
-    Seg.StudyDate = Dicoms[0].StudyDate
-    Seg.SeriesDate = Dicoms[0].SeriesDate
-    #Seg.ContentDate = Dicoms[0].ContentDate
-    Seg.StudyTime = Dicoms[0].StudyTime
-    Seg.SeriesTime = Dicoms[0].SeriesTime
-    #Seg.ContentTime = Dicoms[0].ContentTime
-    Seg.PatientName = Dicoms[0].PatientName
-    Seg.PatientID = Dicoms[0].PatientID
-    Seg.PatientBirthDate = Dicoms[0].PatientBirthDate
-    Seg.PatientSex = Dicoms[0].PatientSex
-    Seg.PatientAge = Dicoms[0].PatientAge
-    Seg.StudyInstanceUID = Dicoms[0].StudyInstanceUID
-    Seg.StudyID = Dicoms[0].StudyID
-    Seg.FrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
+    Seg.StudyDate = Dicom.StudyDate
+    Seg.SeriesDate = Dicom.SeriesDate
+    #Seg.ContentDate = Dicom.ContentDate
+    Seg.StudyTime = Dicom.StudyTime
+    Seg.SeriesTime = Dicom.SeriesTime
+    #Seg.ContentTime = Dicom.ContentTime
+    Seg.PatientName = Dicom.PatientName
+    Seg.PatientID = Dicom.PatientID
+    Seg.PatientBirthDate = Dicom.PatientBirthDate
+    Seg.PatientSex = Dicom.PatientSex
+    Seg.PatientAge = Dicom.PatientAge
+    Seg.StudyInstanceUID = Dicom.StudyInstanceUID
+    Seg.StudyID = Dicom.StudyID
+    Seg.FrameOfReferenceUID = Dicom.FrameOfReferenceUID
     Seg.NumberOfFrames = f"{len(PFFGStoSliceInds)}"
-    Seg.Rows = Dicoms[0].Rows
-    Seg.Columns = Dicoms[0].Columns
+    Seg.Rows = Dicom.Rows
+    Seg.Columns = Dicom.Columns
     
     Seg.SharedFunctionalGroupsSequence[0]\
        .PlaneOrientationSequence[0]\
-       .ImageOrientationPatient = Dicoms[0].ImageOrientationPatient
+       .ImageOrientationPatient = Dicom.ImageOrientationPatient
        
     """ The SliceThickness appears to be the z-Spacing rather than the
     SliceThickness from the DICOM metadata. """
@@ -1089,7 +1102,7 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
 
     Seg.SharedFunctionalGroupsSequence[0]\
        .PixelMeasuresSequence[0]\
-       .PixelSpacing = Dicoms[0].PixelSpacing
+       .PixelSpacing = Dicom.PixelSpacing
        
        
     """ 
@@ -1100,7 +1113,7 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     # ReferencedInstanceSequence:
     OrigRIS = len(Seg.ReferencedSeriesSequence[0].ReferencedInstanceSequence)
 
-    ReqRIS = len(Dicoms)
+    ReqRIS = NumOfDicoms
     
     # Add/remove sequences by appending/popping the last sequence N times, 
     # where N is the difference between ReqRIS and OrigRIS:
@@ -1402,61 +1415,3 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
     
                                           
     return Seg
-
-
-
-
-
-
-
-def ExportSegRoi(NewTrgSeg, SrcSegFpath, TrgSegFpath, NamePrefix, FromSliceNum,
-                 ExportDir):
-    """
-    Export contour ROI Object to disc.
-    
-    
-    Inputs:
-        NewTrgSeg      - New Target SEG ROI object to be exported
-        
-        SrcSegFpath    - (String) Full path of the Source DICOM SEG file
-        
-        TrgSegFpath    - (String) Full path of the Target DICOM SEG file
-        
-        NamePrefix     - (String) Prefix to be added to the assigned filename
-                         after the DateTime stamp (e.g. 'Case3d_RPCopy') 
-                            
-        ExportDir      - (String) Directory where the SEG is to be exported
-                           
-    
-                            
-    Returns:
-        NewTrgSegFpath - (String) Full path of the exported Target DICOM SEG 
-                         file
-    
-    """
-    
-    import os
-    import time
-
-    # Modify the Series Description to a much shorter one (the one assigned in
-    # ModifySegTagVals is very long):    
-    NewTrgSeg.SeriesDescription = NamePrefix
-    
-    # The current DateTime:
-    CDT = time.strftime("%Y%m%d_%H%M%S_", time.gmtime())
-    
-    # The filename of the Source and Target SEGs:
-    SrcSegFname = os.path.split(SrcSegFpath)[1]
-    TrgSegFname = os.path.split(TrgSegFpath)[1]
-    
-    NewTrgSegFname = CDT + NamePrefix + '_s' + str(FromSliceNum) + '_from_' \
-                     + os.path.splitext(SrcSegFname)[0] + '_to_' + TrgSegFname
-    
-    NewTrgSegFpath = os.path.join(ExportDir, NewTrgSegFname)
-    
-    
-    NewTrgSeg.save_as(NewTrgSegFpath)
-        
-    print('\nNew Target SEG ROI exported to:\n\n', NewTrgSegFpath)
-    
-    return NewTrgSegFpath

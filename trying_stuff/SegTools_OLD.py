@@ -1359,3 +1359,56 @@ def ModifySegTagVals_OLD(TrgSeg, TrgDicoms, NewTrgPixArr, NewTrgSegNums,
 
 
 
+def ExportSeg(TrgSeg, SrcSegFpath, NamePrefix, ExportDir):
+    """
+    Export SEG to disc.
+    
+    Inputs:
+    ------
+    
+    TrgSeg : Pydicom object
+        New Target SEG ROI object to be exported.
+        
+    SrcSegFpath : string
+        Full path of the Source DICOM SEG file (used to generate the 
+        filename of the new RTS file).
+        
+    NamePrefix : string
+        Prefix to be added to the assigned filename (after the DateTime stamp), 
+        e.g. 'Case3b-i'.
+                            
+    ExportDir : string
+        Directory where the SEG is to be exported.
+                           
+                            
+    Outputs:
+    -------
+    
+    TrgSegFpath : string
+        Full path of the exported Target DICOM SEG file.
+    
+    """
+    
+    import os
+    import time
+    
+    # The filename of the Source SEG:
+    SrcSegFname = os.path.split(SrcSegFpath)[1]
+    
+    CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    FnamePrefix = CurrentDateTime + '_' + NamePrefix + '_from_' 
+
+    # Modify the Series Description to a much shorter one (the one assigned in
+    # ModifySegTagVals is very long):    
+    #NewTrgSeg.SeriesDescription = NamePrefix
+    
+    TrgSegFname = FnamePrefix + SrcSegFname
+    
+    TrgSegFpath = os.path.join(ExportDir, TrgSegFname)
+    
+    TrgSeg.save_as(TrgSegFpath)
+        
+    print('\nSEG ROI exported to:\n\n', TrgSegFpath)
+    
+    return TrgSegFpath

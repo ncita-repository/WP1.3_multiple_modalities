@@ -759,3 +759,71 @@ def ModifyRtsTagVals_OLD(TrgRts, TrgDicoms, NewTrgPtsByRoi, NewTrgRoiNums,
 
 
 
+def ExportRts(TrgRts, SrcRtsFpath, NamePrefix, ExportDir):
+    """
+    Export RTS to disk.  
+    
+    Inputs:
+    ------
+    
+    TrgRts : Pydicom object
+        Target RT-STRUCT ROI object to be exported.
+        
+    SrcRtsFpath : string
+        Full path of the Source DICOM-RTSTRUCT file (used to generate the 
+        filename of the new RTS file).
+        
+    NamePrefix : string
+        Prefix to be added to the assigned filename (after the DateTime stamp), 
+        e.g. 'Case3b-i'.
+                            
+    ExportDir : string
+        Directory where the RTSTRUCT is to be exported.
+                           
+    
+    Outputs:
+    -------
+    
+    TrgRtsFpath : string
+        Full path of the exported Target DICOM-RTSTRUCT file.
+    """
+    
+    """
+    The following was moved into the main function CopyContourWithinSeries:
+    # Generate a new SOP Instance UID:
+    Rts.SOPInstanceUID = pydicom.uid.generate_uid()
+    
+    # Generate a new Series Instance UID:
+    Rts.SeriesInstanceUID = pydicom.uid.generate_uid()
+    """
+    
+    import os
+    import time
+    
+    # Get the filename of the original RT-Struct file:
+    SrcRtsFname = os.path.split(SrcRtsFpath)[1]
+    
+    CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    FnamePrefix = CurrentDateTime + '_' + NamePrefix + '_from_' 
+    #RoiNamePrefix = NamePrefix + '_from_'
+    
+    # Modify the Structure Set Label (this appears under Name in XNAT):
+    ##TrgRts.StructureSetLabel = 'Copy_of_' + TrgRts.StructureSetLabel
+    #TrgRts.StructureSetLabel = RoiNamePrefix + TrgRts.StructureSetLabel
+    
+    # Modify the ROI Name for the Structure Set ROI Sequence:             
+    #TrgRts.StructureSetROISequence[0].ROIName = RoiNamePrefix \
+    #                                            + TrgRts.StructureSetLabel
+    
+    # Create a new filename (this will appear under Label in XNAT):
+    #TrgRoiFname = 'New_' + SrcRtsFname + '_' + NewDate + '_' + NewTime
+    TrgRtsFname = FnamePrefix + SrcRtsFname
+    
+    TrgRtsFpath = os.path.join(ExportDir, TrgRtsFname)
+    
+    TrgRts.save_as(TrgRtsFpath)
+        
+    print('\nRTS ROI exported to:\n\n', TrgRtsFpath)
+    
+    return TrgRtsFpath

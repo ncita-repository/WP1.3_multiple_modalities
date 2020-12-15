@@ -214,6 +214,29 @@ def Unpack(Items):
 
 
 
+
+
+def AreItemsEqualToWithinEpsilon(Item0, Item1, epsilon=1e-06):
+    """
+    Are two items equal to within epsilon?
+    
+    Default value of epsilon is 1e-06.
+    """
+    
+    AbsDiff = abs(Item0 - Item1)
+    
+    if AbsDiff < epsilon:
+        IsEqual = True
+    else:
+        IsEqual = False
+        
+    return IsEqual
+
+
+
+
+
+
 def AreListsEqualToWithinEpsilon(List0, List1, epsilon=1e-06):
     """
     Are two lists equal to within epsilon?

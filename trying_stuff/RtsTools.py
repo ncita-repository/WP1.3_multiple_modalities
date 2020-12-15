@@ -1182,7 +1182,7 @@ def GetMaskFromRts(Rts, SearchString, SliceNum, DicomDir, RefImage):
 
 #def InitialiseRts(DicomDir, RtsTemplate, LogToConsole=False):
 def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir, 
-                  LogToConsole=False):
+                  NamePrefix='', LogToConsole=False):
     """
     Initialise a RTS object based on an existing RTS object (RtsTemplate).
          
@@ -1203,7 +1203,11 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
         
     DicomDir : string
         Directory containing the corresponding DICOMs.
-                           
+    
+    NamePrefix : string (optional; '' by default)
+        Prefix to be added to the assigned filename (after the DateTime stamp), 
+        e.g. 'Case3b-i'.
+    
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
         
@@ -1218,7 +1222,7 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     from pydicom.uid import generate_uid
     import time
     from copy import deepcopy
-    from DicomTools import ImportDicoms
+    from DicomTools import ImportDicom
     
     # The ROI Name of the ROI containing the contour to be copied:
     RoiName = RtsTemplate.StructureSetROISequence[RoiNum].ROIName
@@ -1227,21 +1231,40 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     # Use RtsTemplate as a template for NewRts:
     Rts = deepcopy(RtsTemplate)
     
-    Dicoms = ImportDicoms(DicomDir)
+    Dicom = ImportDicom(DicomDir)
     
-    # Modify various tags to match the values in Dicoms:
-    Rts.StudyDate = Dicoms[0].StudyDate
-    Rts.StudyTime = Dicoms[0].StudyTime
-    Rts.SeriesDate = Dicoms[0].SeriesDate
-    Rts.PatientName = Dicoms[0].PatientName
-    Rts.PatientID = Dicoms[0].PatientID
-    Rts.PatientBirthDate = Dicoms[0].PatientBirthDate
-    Rts.PatientSex = Dicoms[0].PatientSex
-    Rts.StudyInstanceUID = Dicoms[0].StudyInstanceUID
-    Rts.StudyID = Dicoms[0].StudyID
-    Rts.FrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
+    # Generate a new SOP Instance UID:
+    Rts.SOPInstanceUID = generate_uid()
     
+    Rts.StudyDate = Dicom.StudyDate
+    Rts.StudyTime = Dicom.StudyTime
+    Rts.SeriesDate = Dicom.SeriesDate
+    Rts.PatientName = Dicom.PatientName
+    Rts.PatientID = Dicom.PatientID
+    Rts.PatientBirthDate = Dicom.PatientBirthDate
+    Rts.PatientSex = Dicom.PatientSex
+    Rts.StudyInstanceUID = Dicom.StudyInstanceUID
     
+    # Generate a new Series Instance UID:
+    Rts.SeriesInstanceUID = generate_uid()
+    
+    Rts.StudyID = Dicom.StudyID
+    Rts.FrameOfReferenceUID = Dicom.FrameOfReferenceUID
+    
+    Rts.ReferencedFrameOfReferenceSequence[0]\
+       .FrameOfReferenceUID = Dicom.FrameOfReferenceUID # 14/12
+       
+    Rts.ReferencedFrameOfReferenceSequence[0]\
+       .RTReferencedStudySequence[0]\
+       .ReferencedSOPInstanceUID = Dicom.StudyInstanceUID # 14/12
+    
+    Rts.ReferencedFrameOfReferenceSequence[0]\
+       .RTReferencedStudySequence[0]\
+       .RTReferencedSeriesSequence[0]\
+       .SeriesInstanceUID = Dicom.SeriesInstanceUID # 14/12
+       
+       
+       
     """ 
     Modify the number of sequences in ContourImageSequence (CIS). 
     The number of sequences CIS is equal to the length of CStoSliceInds.
@@ -1359,13 +1382,13 @@ def InitialiseRts(RtsTemplate, RoiNum, CStoSliceInds, DicomDir,
     """ 
     Modify other tags.
     """
-    # Generate a new SOP Instance UID:
-    Rts.SOPInstanceUID = generate_uid()
-    
-    # Generate a new Series Instance UID:
-    Rts.SeriesInstanceUID = generate_uid()
-    
-    Rts.StructureSetLabel = 'Contour(s)_copied_from_' + Rts.StructureSetLabel
+    if 'RTS' in NamePrefix:
+        SSL = NamePrefix + '_from_' + Rts.StructureSetLabel
+    else:
+        SSL = 'RTS_' + NamePrefix + '_from_' + Rts.StructureSetLabel
+        
+    #Rts.StructureSetLabel = SSL
+    Rts.StructureSetLabel = NamePrefix
     
     # Modify the Structure Set Date and Time to the present:
     NewDate = time.strftime("%Y%m%d", time.gmtime())
@@ -1508,9 +1531,14 @@ def ModifyRts(Rts, CntDataByCnt, PtsByCnt, CStoSliceInds, DicomDir,
         Points = PtsByCnt[i]
         
         # Modify NumberOfContourPoints:
+        """
         Rts.ROIContourSequence[0]\
            .ContourSequence[i]\
-           .ContourImageSequence[0]\
+           .ContourImageSequence[0]\    <--- error found 14/12/2020
+           .NumberOfContourPoints = f"{len(Points)}"
+        """
+        Rts.ROIContourSequence[0]\
+           .ContourSequence[i]\
            .NumberOfContourPoints = f"{len(Points)}"
         
         # The contour points as a flat list of coordinates as strings:
@@ -1552,81 +1580,6 @@ def ModifyRts(Rts, CntDataByCnt, PtsByCnt, CStoSliceInds, DicomDir,
 
 
 
-
-
-
-
-
-
-def ExportRts(TrgRts, SrcRtsFpath, NamePrefix, ExportDir):
-    """
-    Export contour ROI Object to disk.  The following tags will also be 
-    modified: 
-        StructureSetDate
-        StructureSetTime
-        StructureSetLabel
-        StructureSetROISequence[0].ROIName
-    
-    
-    Inputs:
-        TrgRts   - Target RT-STRUCT ROI object to be exported
-        
-        SrcRtsFpath - (String) Full path of the Source DICOM-RTSTRUCT file
-                      (used to generate the filename of the new RTS file)
-        
-        NamePrefix  - (String) Prefix to be added to the assigned filename and
-                      ROI Name (e.g. 'MR4_S9_s23_to_MR4_S9_s22') 
-                            
-        ExportDir   - (String) Directory where the RTSTRUCT is to be exported
-                           
-    
-                            
-    Returns:
-        TrgRtsFpath - (String) Full path of the exported Target DICOM-RTSTRUCT 
-                      file
-    
-    """
-    
-    """
-    The following was moved into the main function CopyContourWithinSeries:
-    # Generate a new SOP Instance UID:
-    Rts.SOPInstanceUID = pydicom.uid.generate_uid()
-    
-    # Generate a new Series Instance UID:
-    Rts.SeriesInstanceUID = pydicom.uid.generate_uid()
-    """
-    
-    import os
-    import time
-    
-    # Get the filename of the original RT-Struct file:
-    SrcRtsFname = os.path.split(SrcRtsFpath)[1]
-    
-    # Modify the Structure Set Date and Time to the present:
-    NewDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-    
-    FnamePrefix = NewDateTime + '_' + NamePrefix + '_from_' 
-    #RoiNamePrefix = NamePrefix + '_from_'
-    
-    # Modify the Structure Set Label (this appears under Name in XNAT):
-    ##TrgRts.StructureSetLabel = 'Copy_of_' + TrgRts.StructureSetLabel
-    #TrgRts.StructureSetLabel = RoiNamePrefix + TrgRts.StructureSetLabel
-    
-    # Modify the ROI Name for the Structure Set ROI Sequence:             
-    #TrgRts.StructureSetROISequence[0].ROIName = RoiNamePrefix \
-    #                                            + TrgRts.StructureSetLabel
-    
-    # Create a new filename (this will appear under Label in XNAT):
-    #TrgRoiFname = 'New_' + SrcRtsFname + '_' + NewDate + '_' + NewTime
-    TrgRtsFname = FnamePrefix + SrcRtsFname
-    
-    TrgRtsFpath = os.path.join(ExportDir, TrgRtsFname)
-    
-    TrgRts.save_as(TrgRtsFpath)
-        
-    print('\nRTS ROI exported to:\n\n', TrgRtsFpath)
-    
-    return TrgRtsFpath
 
 
 

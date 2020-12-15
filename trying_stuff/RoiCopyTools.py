@@ -8,6 +8,68 @@ Created on Thu Oct 15 14:12:23 2020
 
 """
 ROI copying tools
+
+
+
+Make a Direct or Relationship-preserving copy of a single contour/segmentation 
+in a given ROI/segment in a Source RTS/SEG for a given slice to one or more
+contours/segmentations in a new (if making a relationship-preserving copy) or 
+existing (if making a direct copy) ROI/segment in a new Target RTS/SEG either 
+using the original Target RTS/SEG (if one has been provided) or using the 
+Source RTS/SEG (if a Target RTS/SEG was not provided) as a template.  
+
+For Direct copies the in-plane coordinates (currently the (x,y) coords) will be
+preserved only, whilst for a Relationship-preserving copy, all coordinates are 
+spatially preserved.
+
+There are five possible Main Use Cases (indicated by the numbers 1 to 5)
+and two Sub-cases (indicated by the letters a or b) that apply for a subset
+of the Main Use Cases that are accommodated.  The characters i and ii will 
+further split Main Use Case #3 into two: i for a sub-case that considers a
+copy from a high to low voxel sampling image, and ii for the sub-case that
+considers a copy from a low to a high voxel sampling image.  In all cases a 
+single contour/segmentation will be copied from the Source RTS/SEG within the 
+ROI/segment collection containing the ROIName/SegmentLabel that matches the
+characters in a search string (FromSearchString):
+
+1a. Direct copy of the Source contour/segmentation on slice FromSliceNum to a 
+    new/existing ROI/segment for slice ToSliceNum in Target. 
+    The Source and Target images are the same. 
+
+1b. Relationship-preserving copy of the Source contour/segmentation on slice 
+    FromSliceNum to a new ROI/segment for slice ToSliceNum in Target. 
+    The Source and Target images are the same. 
+    
+2a. Direct copy of the Source contour/segmentation on slice FromSliceNum to a 
+    new/existing ROI for slice ToSliceNum in Target. 
+    The Source and Target images have the same FOR, IOP, IPP, and VS.
+
+2b. Relationship-preserving copy of the Source contour/segmentation on slice 
+    FromSliceNum to a new ROI/segment for slice ToSliceNum in Target. 
+    The Source and Target images have the same FOR, IOP, IPP, and VS. 
+
+3a. Direct copy of the Source contour/segmentation on slice FromSliceNum to a 
+    new/existing ROI/segment for slice ToSliceNum in Target. 
+    The Source and Target images have the same FOR and IOP but have 
+    different VS (they will likely also have different IPP).
+    
+3b. Relationship-preserving copy of the Source contour/segmentation on slice 
+    FromSliceNum to a new ROI/segment for any number of slices in Target.
+    The Source and Target images have the same FOR and IOP but have 
+    different VS (they will likely also have different IPP).
+
+4.  Relationship-preserving copy of the Source contour/segmentation on slice 
+    FromSliceNum to a new ROI/segment for any number of slices in Target.
+    The Source and Target images have the same FOR but have different IOP 
+    and IPP, and possibly different VS.
+   
+5.  Relationship-preserving copy of the Source contour/contour on slice 
+    FromSliceNum to a new ROI/segment for any number of slices in Target.
+    The Source and Target images have different FOR, likely different IPP and 
+    IOP, and possibly different VS.
+    
+FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
+IOP = ImageOrientationPatient, VS = Voxel spacings
 """
 
 
@@ -24,7 +86,6 @@ WHICH USE CASE APPLIES?
 def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
     """
     Determine which of 5 Use Cases applies.
-    
     
     Inputs:
     ------
@@ -43,7 +104,7 @@ def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
         Denotes whether some results will be logged to the console.
 
               
-    Output:
+    Outputs:
     ------
         
     UseCase : string
@@ -108,6 +169,7 @@ def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
     SameSpacings = AreListsEqualToWithinEpsilon(SrcSpacing, TrgSpacing)
     SameDirs = AreListsEqualToWithinEpsilon(SrcDirs, TrgDirs)
     SameOrigins = AreListsEqualToWithinEpsilon(SrcIPPs[0], TrgIPPs[0])
+    SameST = AreListsEqualToWithinEpsilon([SrcST], [TrgST])
     
     if SrcSize == TrgSize:
         SameSize = True
@@ -171,35 +233,49 @@ def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
             print('\n   different DICOMs')
         
         if SameSize:
-            print('\n   same image size')
+            print('\n   same image size\n',
+                  f'      Source/Target: {SrcSize}')
         else:
             print('\n   different image sizes:\n',
-                  f'       Source: {SrcSize} \n',
-                  f'       Target: {TrgSize}')
+                  f'      Source: {SrcSize} \n',
+                  f'      Target: {TrgSize}')
         
         if SameSpacings:
-            print('\n   same voxel sizes')
+            print('\n   same voxel sizes\n',
+                  f'      Source/Target: {SrcSpacing}')
         else:
             print('\n   different voxel sizes:\n',
-                  f'       Source: {SrcSpacing} \n',
-                  f'       Target: {TrgSpacing}')
+                  f'      Source: {SrcSpacing} \n',
+                  f'      Target: {TrgSpacing}')
+        
+        if SameST:
+            print('\n   same slice thickness\n',
+                  f'      Source/Target: {SrcST}')
+        else:
+            print('\n   different slice thickness:\n',
+                  f'      Source: {SrcST} \n',
+                  f'      Target: {TrgST}')
         
         if SameOrigins:
-            print('\n   same origin')
+            print('\n   same origin\n',
+                  f'      Source/Target: {SrcIPPs[0]}')
         else:
             print('\n   different origins:\n',
-                  f'       Source: {SrcIPPs[0]} \n',
-                  f'       Target: {TrgIPPs[0]}')
+                  f'      Source: {SrcIPPs[0]} \n',
+                  f'      Target: {TrgIPPs[0]}')
             
         if SameDirs:
-            print('\n   same patient orientation')
+            print('\n   same patient orientation\n',
+                  f'      Source/Target: [{SrcDirs[0]}, {SrcDirs[1]}, {SrcDirs[2]},\n',
+                  f'                      {SrcDirs[3]}, {SrcDirs[4]}, {SrcDirs[5]},\n',
+                  f'                      {SrcDirs[6]}, {SrcDirs[7]}, {SrcDirs[8]}]')
         else:
             print('\n   different patient orientations:\n',
-                  f'      Source: [{SrcDirs[0]}, {SrcDirs[1]}, {SrcDirs[2]},',
-                  f'               {SrcDirs[3]}, {SrcDirs[4]}, {SrcDirs[5]},',
+                  f'      Source: [{SrcDirs[0]}, {SrcDirs[1]}, {SrcDirs[2]},\n',
+                  f'               {SrcDirs[3]}, {SrcDirs[4]}, {SrcDirs[5]},\n',
                   f'               {SrcDirs[6]}, {SrcDirs[7]}, {SrcDirs[8]}]\n',
-                  f'      Target: [{TrgDirs[0]}, {TrgDirs[1]}, {TrgDirs[2]},',
-                  f'               {TrgDirs[3]}, {TrgDirs[4]}, {TrgDirs[5]},',
+                  f'      Target: [{TrgDirs[0]}, {TrgDirs[1]}, {TrgDirs[2]},\n',
+                  f'               {TrgDirs[3]}, {TrgDirs[4]}, {TrgDirs[5]},\n',
                   f'               {TrgDirs[6]}, {TrgDirs[7]}, {TrgDirs[8]}]')
         
         
@@ -219,62 +295,8 @@ COPY A CONTOUR
 """
 
 def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
-            TrgRts=None, ToSliceNum=None, LogToConsole=False):
+            TrgRts=None, ToSliceNum=None, AddText='', LogToConsole=False):
     """
-    Make a Direct or Relationship-preserving copy of a single contour in a
-    given ROI on a given slice to a new ROI in an existing RTS, or 
-    in a newly created RTS (if an existing RTS is not provided). 
-    
-    For Direct copies the in-plane coordinates (currently the (x,y) coords) 
-    will be preserved only, whilst for a Relationship-preserving copy, all
-    coordinates are spatially preserved.
-    
-    There are five possible Main Use Cases (indicated by the numbers 1 to 5)
-    and two Sub-cases (indicated by the letters a or b) that apply for a subset
-    of the Main Use Cases that are accommodated.  In all cases a single contour
-    will be copied from the Source RTS from the ROI with ROI Name matching
-    FromSearchString:
-    
-    1a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
-        for slice ToSliceNum in Target. 
-        The Source and Target images are the same. 
-    
-    1b. Relationship-preserving copy of the Source contour on slice 
-        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
-        The Source and Target images are the same. 
-        
-    2a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
-        for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR, IOP, IPP, and VS.
-    
-    2b. Relationship-preserving copy of the Source contour on slice 
-        FromSliceNum to a new ROI for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR, IOP, IPP, and VS. 
-    
-    3a. Direct copy of the Source contour on slice FromSliceNum to a new ROI 
-        for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR and IOP but have 
-        different VS (they will likely also have different IPP).
-        
-    3b. Relationship-preserving copy of the Source contour on slice 
-        FromSliceNum to a new ROI for any number of slices in Target.
-        The Source and Target images have the same FOR and IOP but have 
-        different VS (they will likely also have different IPP).
-    
-    4.  Relationship-preserving copy of the Source contour on slice 
-        FromSliceNum to a new ROI for any number of slices in Target.
-        The Source and Target images have the same FOR but have different IOP 
-        and IPP, and possibly different VS.
-       
-    5.  Relationship-preserving copy of the Source contour on slice 
-        FromSliceNum to a new ROI for any number of slices in Target.
-        The Source and Target images have different FOR, IPP and IOP, and 
-        possibly different VS.
-        
-    FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
-    IOP = ImageOrientationPatient, VS = Voxel spacings
-    
-    
     
     Inputs:
     ------
@@ -305,7 +327,11 @@ def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         Slice index within the Target DICOM stack where the contour is to
         be copied to (counting from 0).  This only applies for Direct copies,
         hence the default value None.
-                        
+    
+    AddText : string (optional, '' by default)
+        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
+        a filename for the new Target RTS/SEG.
+                           
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
           
@@ -327,22 +353,16 @@ def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     import GeneralTools
     importlib.reload(GeneralTools)
     
-    import time
     from copy import deepcopy
     from GeneralTools import PrintTitle
     from GeneralTools import UniqueItems
     from DicomTools import GetRoiNum
     from RtsTools import GetPtsInContour
-    from DicomTools import IsSameModalities
     from GeneralTools import GetPixelShiftBetweenSlices
     from GeneralTools import ShiftFrame
     from GeneralTools import MeanPixArr
     from RtsTools import InitialiseRts
     from RtsTools import ModifyRts
-    
-    # Start timing:
-    times = []
-    times.append(time.time())
     
     # Set the threshold level for binarising of the transformed labelmap (for
     # UseCase 5):
@@ -352,23 +372,6 @@ def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     #SrcRoiLabels = GetRoiLabels(SrcRts)
     FromRoiNum = GetRoiNum(Roi=SrcRts, SearchString=FromSearchString)
     
-        
-    # Compare the modalities of the ROIs:
-    if TrgRts:
-        if not IsSameModalities(SrcRts, TrgRts):
-            msg = f"The Source ({SrcRts.Modality}) and Target " \
-                  + "({TrgRts.Modality} modalities are different."
-            
-            raise Exception(msg)
-            
-            
-    
-    
-    # The contour to be copied:
-    #PtsToCopy, CStoSliceIndsToCopy = GetPtsInContour(Rts=SrcRts, 
-    #                                                 DicomDir=SrcDcmDir, 
-    #                                                 SearchString=FromSearchString, 
-    #                                                 SliceNum=FromSliceNum)
     
     PtsToCopy = GetPtsInContour(Rts=SrcRts, DicomDir=SrcDcmDir, 
                                 SearchString=FromSearchString, 
@@ -803,12 +806,14 @@ def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         """ Use TrgRts to initialise the Target RTS. """
         TrgRts = InitialiseRts(RtsTemplate=TrgRts, RoiNum=FromRoiNum,
                                CStoSliceInds=TrgCStoSliceInds, 
-                               DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+                               DicomDir=TrgDcmDir, NamePrefix=AddText,
+                               LogToConsole=LogToConsole)
     else:
         """ Use SrcRts to initialise the Target RTS. """
         TrgRts = InitialiseRts(RtsTemplate=SrcRts, RoiNum=FromRoiNum,
                                CStoSliceInds=TrgCStoSliceInds, 
-                               DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+                               DicomDir=TrgDcmDir, NamePrefix=AddText,
+                               LogToConsole=LogToConsole)
     
     if LogToConsole:
         print('\n\nInputs to ModifyRts:')
@@ -822,12 +827,6 @@ def CopyRts(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     TrgRts = ModifyRts(Rts=TrgRts, CntDataByCnt=TrgCntDataByCnt, 
                        PtsByCnt=TrgPtsByCnt, CStoSliceInds=TrgCStoSliceInds,
                        DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
-    
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    if True:#LogToConsole:
-        print(f'\n\nDone.  Took {Dtime} s to run.')
     
     
     return TrgRts
@@ -848,64 +847,9 @@ COPY A SEGMENTATION
 
 
 def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
-            TrgSeg=None, ToSliceNum=None, LogToConsole=False):
+            TrgSeg=None, ToSliceNum=None, AddText='', LogToConsole=False):
                                 
     """
-    Make a direct or relationship-preserving copy of a single segmentation in a
-    given segment on a given slice to a new segment in an existing SEG, or 
-    in a newly created SEG (if an existing SEG is not provided). 
-    
-    For direct copies the in-plane coordinates (currently the (x,y) coords) 
-    will be preserved only, whilst for a relationship-preserving copy, all
-    coordinates are spatially preserved.
-    
-    There are five possible Main Use Cases (indicated by the numbers 1 to 5)
-    and two Sub-cases (indicated by the letters a or b) that apply for a subset
-    of the Main Use Cases that are accommodated.  In all cases a single 
-    segmentation will be copied from the Source SEG from the segment with 
-    Segment Label matching FromSearchString:
-    
-    1a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
-        segment for slice ToSliceNum in Target. 
-        The Source and Target images are the same. 
-    
-    1b. Relationship-preserving copy of the Source segmentation on slice 
-        FromSliceNum to a new segment for slice ToSliceNum in Target. 
-        The Source and Target images are the same. 
-        
-    2a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
-        segment for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR, IOP, IPP, and VS.
-    
-    2b. Relationship-preserving copy of the Source segmentation on slice 
-        FromSliceNum to a new segment for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR, IOP, IPP, and VS. 
-    
-    3a. Direct copy of the Source segmentation on slice FromSliceNum to a new 
-        segment for slice ToSliceNum in Target. 
-        The Source and Target images have the same FOR and IOP but have 
-        different VS (they will likely also have different IPP).
-        
-    3b. Relationship-preserving copy of the Source segmentation on slice 
-        FromSliceNum to a new segment for any number of slices in Target.
-        The Source and Target images have the same FOR and IOP but have 
-        different VS (they will likely also have different IPP).
-    
-    4.  Relationship-preserving copy of the Source segmentation on slice 
-        FromSliceNum to a new segment for any number of slices in Target.
-        The Source and Target images have the same FOR but have different IOP 
-        and IPP, and possibly different VS.
-       
-    5.  Relationship-preserving copy of the Source segmentation on slice 
-        FromSliceNum to a new segment for any number of slices in Target.
-        The Source and Target images have different FOR, IPP and IOP, and 
-        possibly different VS.
-        
-    FOR = FrameOfReferenceUID, IPP = ImagePositionPatient, 
-    IOP = ImageOrientationPatient, VS = Voxel spacings
-    
-    
-    
     Inputs:
     ------
     
@@ -935,7 +879,11 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         Slice index within the Target DICOM stack where the segmentation is to
         be copied to (counting from 0).  This only applies for Direct copies,
         hence the default value None.
-                        
+    
+    AddText : string (optional, '' by default)
+        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
+        a filename for the new Target RTS/SEG.
+        
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
           
@@ -956,10 +904,8 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     import DicomTools
     importlib.reload(DicomTools)
     
-    import time
     from copy import deepcopy
     import numpy as np
-    from DicomTools import IsSameModalities
     from DicomTools import GetRoiNum
     from SegTools import GetFrameFromPixArr
     from GeneralTools import PrintTitle
@@ -967,10 +913,6 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     from ImageTools import ImportImage
     from SegTools import InitialiseSeg
     from SegTools import ModifySeg
-    
-    # Start timing:
-    times = []
-    times.append(time.time())
     
     # Set the threshold level for binarising of the transformed labelmap (for
     # UseCase 5):
@@ -982,16 +924,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     
     print(f'\n\n\n***FromSegNum = {FromSegNum}')
     
-        
-    # Compare the modalities of the segments:
-    if TrgSeg:
-        if not IsSameModalities(SrcSeg, TrgSeg):
-            msg = f"The Source ({SrcSeg.Modality}) and Target " \
-                  + "({TrgSeg.Modality} modalities are different."
-            
-            raise Exception(msg)
-            
-        #ToSegNum = GetRoiNum(Roi=TrgSeg, SearchString=FromSearchString) # 04/12
+    #ToSegNum = GetRoiNum(Roi=TrgSeg, SearchString=FromSearchString) # 04/12
         
         
     # Print the list of PFFGStoSliceInds:
@@ -1312,12 +1245,14 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         #TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SegNum=ToSegNum,
         TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SearchString=FromSearchString,
                                PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-                               DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+                               DicomDir=TrgDcmDir, NamePrefix=AddText,
+                               LogToConsole=LogToConsole)
     else:
         """ Use SrcSeg to initialise the Target SEG. """
         TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SearchString=FromSearchString,
                                PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-                               DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+                               DicomDir=TrgDcmDir, NamePrefix=AddText,
+                               LogToConsole=LogToConsole)
         
     print(f'\n\n\n***FromSegNum = {FromSegNum}')
     
@@ -1332,13 +1267,1132 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
                        PFFGStoSliceInds=TrgPFFGStoSliceInds, 
                        DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
     
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    if True:#LogToConsole:
-        print(f'\n\nDone.  Took {Dtime} s to run.')
-    
     """ Had 1040 lines of code. Now 207. """
     
     return TrgSeg
 
+
+
+
+
+
+"""
+******************************************************************************
+******************************************************************************
+COPY A CONTOUR / SEGMENTATION
+******************************************************************************
+******************************************************************************
+"""
     
+
+def CopyRoi(SrcRoi, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
+            TrgRoi=None, ToSliceNum=None, AddText='', LogToConsole=False):
+    """
+    
+    Inputs:
+    ------
+    
+    SrcRoi : Pydicom object
+        Source RTS/SEG object.
+                             
+    FromSearchString : string
+        All or part of the Source ROIName/SegmentLabel of the ROI/segment 
+        containing the contour/segmentation to be copied.
+    
+    SrcDcmDir : string
+        Directory containing the Source DICOMs.
+                            
+    FromSliceNum : integer
+        Slice index of the Source DICOM stack corresponding to the contour/
+        segmentation to be copied (counting from 0).
+    
+    TrgDcmDir : string
+        Directory containing the Target DICOMs.
+        
+    TrgRts : Pydicom object (optional; None by default)
+        Target RTS object that the contour(s)/segmentation(s) is to be copied 
+        to. TrgRts is only non-None if a Direct copy of the contour/
+        segmentation is to be made and added to existing Direct-copied 
+        contour(s)/segmentation(s).     
+        
+    ToSliceNum : integer (optional; None by default)
+        Slice index within the Target DICOM stack where the contour/
+        segmentation is to be copied to (counting from 0).  This only applies 
+        for Direct copies, hence the default value None.
+    
+    AddText : string (optional, '' by default)
+        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
+        a filename for the new Target RTS/SEG.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+          
+                  
+    Outputs:
+    -------
+        
+    TrgRts : Pydicom object
+        The new (if making a Relationship-preserving copy) or the modified (if
+        making a Direct copy of a contour/segmentation to an existing Direct-
+        copied contour(s)/segmentation(s)) Target RTS/SEG object.
+    """
+
+    import time
+    from DicomTools import IsSameModalities
+    
+    # Start timing:
+    times = []
+    times.append(time.time())
+    
+    # Compare the modalities of the RTSs/SEGs:
+    SrcModality = SrcRoi.Modality
+    
+    if TrgRoi:
+        TrgModality = TrgRoi.Modality
+        
+        if not IsSameModalities(SrcRoi, TrgRoi):
+            msg = f"The Source ({SrcModality}) and Target ({TrgModality}) " \
+                  + "modalities are different."
+            
+            raise Exception(msg)
+            
+    
+    if SrcModality == 'RTSTRUCT':
+        NewTrgRoi = CopyRts(SrcRoi, FromSearchString, SrcDcmDir, FromSliceNum, 
+                            TrgDcmDir, TrgRoi, ToSliceNum, AddText,
+                            LogToConsole)
+    
+    elif SrcModality == 'SEG':
+        NewTrgRoi = CopySeg(SrcRoi, FromSearchString, SrcDcmDir, FromSliceNum, 
+                            TrgDcmDir, TrgRoi, ToSliceNum, AddText,
+                            LogToConsole)
+        
+    else:
+        msg = f'The Source modality ({SrcModality}) must be either "RTS" or '\
+              + '"SEG".'
+        
+        raise Exception(msg)
+
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if True:#LogToConsole:
+        print(f'\n\nDone.  Took {Dtime} s to run.')
+        
+    return NewTrgRoi
+
+
+
+
+
+
+
+"""
+******************************************************************************
+******************************************************************************
+CHECK FOR ERRORS IN NEW TARGET RTS / SEG
+******************************************************************************
+******************************************************************************
+"""
+
+def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
+    """
+    Check a SEG for errors in dependencies based on provided directory of
+    the DICOMs that relate to the SEG.  
+    
+    Inputs:
+    ------
+    
+    Seg : Pydicom object
+        SEG object to be error checked.
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to Seg.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+                           
+    
+    Outputs:
+    -------
+    
+    ErrorList : list of strings
+        A list of strings that describe any errors that are found.  If no 
+        errors are found an empty list ([]) will be returned.
+    """
+    
+    import importlib
+    import GeneralTools
+    importlib.reload(GeneralTools)
+    
+    from copy import deepcopy
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import ImportDicom
+    from ImageTools import GetImageAttributes
+    from GeneralTools import AreItemsEqualToWithinEpsilon
+    from GeneralTools import AreListsEqualToWithinEpsilon
+    
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    Dicom = ImportDicom(DicomDir)
+    
+    #Size, Spacings, ST,\
+    #IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
+    Size, Spacings, ST,\
+    IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='pydicom')
+    
+    # The number of frames, rows and columns in the SEG's pixel array:
+    if len(Seg.pixel_array.shape) > 2:
+        PixArrF, PixArrR, PixArrC = Seg.pixel_array.shape
+    else:
+        PixArrR, PixArrC = Seg.pixel_array.shape
+        PixArrF = 1
+    
+    #NumOfDicoms = len(SOPuids)
+    
+    ErrorList = []
+    
+    """Determine whether the number of sequences in 
+    ReferencedInstanceSequence matches the number of DICOMs."""
+    
+    RIS = deepcopy(Seg.ReferencedSeriesSequence[0]\
+                      .ReferencedInstanceSequence)
+    
+    if len(SOPuids) != len(RIS):
+        msg = f'The number of "SOPInstanceUID"s ({len(SOPuids)}) does not'\
+              + ' match the number of sequences in '\
+              + f'"ReferencedInstanceSequence" ({len(RIS)}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """Determine whether any of the ReferencedSOPInstanceUIDs do not
+    match the SOPInstanceUIDs."""        
+    RefSOPuidsInRIS = [RIS[i].ReferencedSOPInstanceUID for i in range(len(RIS))]
+    
+    # Determine whether the Ref SOP UIDs match the SOP UIDs:
+    IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInRIS]
+    
+    NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching Ref SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if NumOfMatches == 0:
+        NonMatchingUids = [RefSOPuidsInRIS[i] for i in Inds]
+        
+        for i in range(len(NonMatchingUids)):
+            uid = NonMatchingUids[i]
+            
+            msg = f'"ReferencedSOPInstanceUID" {uid} in "ReferencedInstan'\
+                  + 'ceSequence" {i+1} does not match any "SOPInstanceUID".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+                
+                
+    
+    """Determine whether any of the SOPInstanceUIDs do not match the
+    ReferencedSOPInstanceUIDs."""        
+    
+    # Determine whether the SOP UIDs match the Referenced SOP UIDs:
+    IsMatch = [SOPuid in RefSOPuidsInRIS for SOPuid in SOPuids]
+    
+    NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if NumOfMatches == 0:
+        NonMatchingUids = [SOPuids[i] for i in Inds]
+        
+        for i in range(len(NonMatchingUids)):
+            uid = NonMatchingUids[i]
+            
+            msg = f'"SOPInstanceUID" {uid} is not referenced in any '\
+                  + '"ReferencedSOPInstanceUID" in "ReferencedInstance'\
+                  + 'Sequence".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    
+    if Seg.PatientName != Dicom.PatientName:
+        msg = f'The SEG "PatientName" ({Seg.PatientName}) does not '\
+              + f'match the DICOM "PatientName" ({Dicom.PatientName}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+        
+    if Seg.PatientID != Dicom.PatientID:
+        msg = f'The SEG "PatientID" ({Seg.PatientID}) does not match the'\
+              + f' DICOM "PatientID" ({Dicom.PatientID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+    if Seg.StudyInstanceUID != Dicom.StudyInstanceUID:
+        msg = f'The SEG "StudyInstanceUID" ({Seg.StudyInstanceUID}) does'\
+              + ' not match the DICOM tag "StudyInstanceUID" '\
+              + f'({Dicom.StudyInstanceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    #if Seg.StudyID != Dicom.StudyID:
+    #    msg = f'The SEG "StudyID" ({Seg.StudyID}) does not match the '\
+    #          + f'DICOM "StudyID" ({Dicom.StudyID}).'
+    #    
+    #    ErrorList.append(msg)
+    #    
+    #    if LogToConsole:
+    #        print('\n' + msg)
+            
+    if Seg.FrameOfReferenceUID != Dicom.FrameOfReferenceUID:
+        msg = 'The SEG "FrameOfReferenceUID" ({Seg.FrameOfReferenceUID})'\
+              + ' does not match the DICOM "FrameOfReferenceUID" '\
+              + f'({Dicom.FrameOfReferenceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    if int(Seg.NumberOfFrames) != PixArrF:
+        msg = f'"NumberOfFrames" ({Seg.NumberOfFrames}) does not match '\
+              + f'the number of frames in "PixelData" ({PixArrF}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    if Seg.Rows != Dicom.Rows:
+        msg = f'The SEG "Rows" ({Seg.Rows}) does not match the DICOM '\
+              + f'"Rows" ({Dicom.Rows}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    if Seg.Columns != Dicom.Columns:
+        msg = f'The SEG "Columns" ({Seg.Columns}) does not match the '\
+              + f'DICOM "Columns" ({Dicom.Columns}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """There should only be one sequence in SegmentSequence."""
+    N = len(Seg.SegmentSequence)
+    
+    if N > 1:
+        msg = 'There are {N} sequences in "SegmentSequence".  There should '\
+              + f'be only 1.'
+              
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    
+    """Verify that the SegmentNumber in SegmentSequence is 1."""
+    N = deepcopy(Seg.SegmentSequence[0].SegmentNumber)
+    
+    if N != 1:
+        msg = '"SegmentNumber" in "SegmentSequence" is {N}.  It should be 1.'
+              
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+            
+    """Check various tags in SharedFunctionalGroupsSequence."""
+    SegIOP = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
+                         .PlaneOrientationSequence[0]\
+                         .ImageOrientationPatient)
+    
+    SegIOP = [float(item) for item in SegIOP]
+    
+    DcmIOP = [float(item) for item in Dicom.ImageOrientationPatient]
+    
+    #if SegIOP != Dicom.ImageOrientationPatient:
+    if AreListsEqualToWithinEpsilon(SegIOP, DcmIOP):
+        msg = 'The SEG "ImageOrientationPatient" in "SharedFunctionalGroupsSe'\
+              + f'quence" ({SegIOP}) does not match the DICOM "ImageOrientati'\
+              + f'onPatient" ({DcmIOP}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+       
+    
+    SegST = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
+                        .PixelMeasuresSequence[0]\
+                        .SliceThickness)
+    
+    """ The SliceThickness appears to be the z-Spacing rather than the
+    SliceThickness from the DICOM metadata. """
+    
+    #if float(SegST) != Spacings[2]:
+    if AreItemsEqualToWithinEpsilon(float(SegST), Spacings[2]):
+        msg = 'The SEG "SliceThickness" in "SharedFunctionalGroupsSequenc'\
+              + f'e" ({SegST}) does not match the slice thickness calcula'\
+              + 'ted from the DICOM "ImagePositionPatient" and "Image'\
+              + f'OrientationPatient" ({Spacings[2]}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    SegSBS = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
+                         .PixelMeasuresSequence[0]\
+                         .SpacingBetweenSlices)
+    
+    #if float(SegSBS) != Spacings[2]:
+    if AreItemsEqualToWithinEpsilon(float(SegSBS), Spacings[2]):
+        msg = f'The SEG "SpacingBetweenSlices" in "SharedFunctionalGroups'\
+              + f'Sequence" ({SegSBS}) does not match the slice thickness'\
+              + ' calculated from the DICOM "ImagePositionPatient" and '\
+              + f' and "ImageOrientationPatient" ({Spacings[2]}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+    
+    SegPS = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
+                        .PixelMeasuresSequence[0]\
+                        .PixelSpacing)
+    
+    SegPS = [float(item) for item in SegPS]
+    
+    DcmPS = [float(item) for item in Dicom.PixelSpacing]
+    
+    #if SegPS != Dicom.PixelSpacing:
+    if AreListsEqualToWithinEpsilon(SegPS, DcmPS):
+        msg = 'The SEG "PixelSpacing" in "SharedFunctionalGroupsSequence '\
+              + f'({SegPS}) does not match the DICOM "PixelSpacing" ({DcmPS}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    
+    
+    """Verify that the number of sequences in PerFrameFunctionalGroupsSequence
+    is equal to NumberOfFrames."""
+    PFFGS = deepcopy(Seg.PerFrameFunctionalGroupsSequence)
+    
+    if len(PFFGS) != int(Seg.NumberOfFrames):
+        msg = f'The number of sequences in "PerFrameFunctionGroupsSequenc'\
+              + f'e" ({len(PFFGS)}) does not match the "NumberOfFrames" '\
+              + f'({Seg.NumberOfFrames}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """Determine whether any of the ReferencedSOPInstanceUIDs in the
+    PerFrameFunctionGroupsSequence do not match the SOPInstanceUIDs."""        
+    RefSOPuidsInPFFGS = [PFFGS[i].DerivationImageSequence[0]\
+                                 .SourceImageSequence[0]\
+                                 .ReferencedSOPInstanceUID for i in range(len(PFFGS))]
+    
+    # Determine whether the Ref SOP UIDs match the SOP UIDs:
+    IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInPFFGS]
+    
+    NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching Ref SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if NumOfMatches == 0:
+        NonMatchingUids = [RefSOPuidsInPFFGS[i] for i in Inds]
+        
+        for i in range(len(NonMatchingUids)):
+            uid = NonMatchingUids[i]
+            
+            msg = f'"ReferencedSOPInstanceUID" {uid} in "PerFrameFunction'\
+                  + 'alGroupsSequence" {i+1} does not match any DICOM '\
+                  + '"SOPInstanceUID".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+                
+    
+    
+    """Determine whether the DimensionIndexValues are sensible integers,
+    and if the indexed ReferencedSOPInstanceUID agrees with the 
+    ReferencedSOPInstance UID within the SourceImageSequence."""
+    DIVs = [PFFGS[i].FrameContentSequence[0]\
+                    .DimensionIndexValues for i in range(len(PFFGS))]
+    
+    # Determine whether any of the first elements in the DIVs are not 1  
+    # (there should only be one segment, so the first element should always
+    # be 1):
+    FirstElements = [int(DIVs[i][0]) for i in range(len(DIVs))]
+    
+    #NumOfMatches = FirstElements.count('1')
+    
+    # Find the indices of any non-matching elements:
+    Inds = [i for i, x in enumerate(FirstElements) if x != 1]
+    
+    if Inds:
+        divs = [DIVs[i] for i in Inds]
+        
+        for i in range(len(Inds)):
+            msg = f'The first element in "DimensionalIndexValue" {i+1} '\
+                  + f'({divs[i]}) is not "1".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+                
+    # Determine if any of the second elements in the DIVs exceed the number
+    # of sequences in ReferencedInstanceSequence:
+    SecondElements = [int(DIVs[i][1]) for i in range(len(DIVs))]
+    
+    # Find the indices of any elements that exceed len(RIS):
+    Inds = [i for i, x in enumerate(SecondElements) if x > len(RIS)]
+
+    if Inds:
+        #divs = [DIVs[i] for i in Inds]
+        
+        for i in range(len(Inds)):
+            msg = f'The second element in "DimensionalIndexValue" {i+1} '\
+                  + f'({DIVs[i]}) exceeds the number of sequences in '\
+                  + f'"ReferencedInstanceSequence" (N = {len(RIS)}).'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+                
+    """Determine if the ReferencedSOPInstanceUID in the 
+    ReferencedInstanceSequence indexed by the second elements in the DIVs 
+    match the ReferencedSOPInstanceUID in the SourceImageSequence."""
+    for i in range(len(SecondElements)):
+        RefSOPinPFFGS = RefSOPuidsInPFFGS[i]
+        
+        # Need to -1 since i is zero-indexed:
+        ind = SecondElements[i] - 1
+        
+        RefSOPinRIS = RefSOPuidsInRIS[ind]
+        
+        if RefSOPinPFFGS != RefSOPinRIS:
+            msg = 'The "ReferencedSOPInstanceUID" referenced in "Source'\
+                  + f'ImageSequence" {i+1} does not match the "Referenced'\
+                  + 'SOPInstanceUID" referenced in "ReferencedInstance'\
+                  + 'Sequence" as indexed by the second element in '\
+                  + f'"DimensionalIndexValue" {i+1} ({DIVs[i]}).'
+                  
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    """Determine if the ImagePositionPatient in the PerFrameFunctionalGroups
+    matches the ImagePositionPatient of the DICOM as indexed by the DIVs."""
+    IPPsInPFFGS = [PFFGS[i].PlanePositionSequence[0]\
+                           .ImagePositionPatient for i in range(len(PFFGS))]
+    
+    print(f'\nIPPsInPFFGS = {IPPsInPFFGS}')
+    
+    # Convert from strings to floats:
+    IPPsInPFFGS = [[float(item) for item in IPP] for IPP in IPPsInPFFGS]
+    
+    print(f'\nIPPsInPFFGS = {IPPsInPFFGS}')
+    
+    for i in range(len(IPPsInPFFGS)):
+        ind = SOPuids.index(RefSOPuidsInPFFGS[i])
+        
+        IPP = IPPs[ind]
+        
+        print(f'\nind = {ind}')
+        print(f'SOPuids[{ind}] = {SOPuids[ind]}')
+        print(f'IPPs[{ind}] = {IPPs[ind]}')
+        
+        #if IPPsInPFFGS[i] != IPP:
+        if AreListsEqualToWithinEpsilon(IPPsInPFFGS[i], IPP):
+            msg = 'The "ImagePositionPatient" referenced in "Plane'\
+                  + f'PositionSequence" {i+1} does not match the DICOM '\
+                  + '"ImagePositionPatient" as indexed by the second '\
+                  + f'element in "DimensionalIndexValue" {i+1} ({DIVs[i]}).'
+                  
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    """Determine whether any of the ReferencedSegmentNumber are not 1 (there
+    should only be one segment)."""
+    RSNs = [PFFGS[i].SegmentIdentificationSequence[0]\
+                    .ReferencedSegmentNumber for i in range(len(PFFGS))]
+    
+    # Find the indices of any non-matching elements:
+    Inds = [i for i, x in enumerate(RSNs) if x != 1]
+    
+    if Inds:        
+        for i in range(len(Inds)):
+            msg = f'The "ReferencedSegmentNumber" {i+1} is not 1.'\
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    """Determine if the dimensions of the pixel array in PixelData do not
+    match the expected dimensions (the number of frames (PixArrF) has 
+    already been compared to NumberOfFrames)."""
+    if PixArrR != Seg.Rows:
+        msg = f'The number of rows in "PixelData" ({PixArrR}) does not '\
+              + f'match the number of SEG "Rows" ({Seg.Rows}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    if PixArrC != Seg.Columns:
+        msg = f'The number of columns in "PixelData" ({PixArrC}) does not'\
+              + f' match the number of SEG "Columns" ({Seg.Columns}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    print(f'\nThere were {len(ErrorList)} errors found in the SEG.')
+            
+    return ErrorList
+
+
+
+
+
+
+
+def ErrorCheckRts(Rts, DicomDir, LogToConsole=False):
+    """
+    Check a RTS for errors in dependencies based on provided directory of
+    the DICOMs that relate to the RTS.  
+    
+    Inputs:
+    ------
+    
+    Rts : Pydicom object
+        RTS object to be error checked.
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to Rts.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+                           
+    
+    Outputs:
+    -------
+    
+    ErrorList : list of strings
+        A list of strings that describe any errors that are found.  If no 
+        errors are found an empty list ([]) will be returned.
+    """        
+    
+    from copy import deepcopy
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import ImportDicom
+    from ImageTools import GetImageAttributes
+    
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    Dicom = ImportDicom(DicomDir)
+    
+    Size, Spacings, ST,\
+    IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
+    
+    
+    ErrorList = []
+    
+    if Rts.PatientName != Dicom.PatientName:
+        msg = f'The RTS "PatientName" ({Rts.PatientName}) does not '\
+              + f'match the DICOM "PatientName" ({Dicom.PatientName}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+        
+    if Rts.PatientID != Dicom.PatientID:
+        msg = f'The RTS "PatientID" ({Rts.PatientID}) does not match the'\
+              + f' DICOM "PatientID" ({Dicom.PatientID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+    if Rts.StudyInstanceUID != Dicom.StudyInstanceUID:
+        msg = f'The RTS "StudyInstanceUID" ({Rts.StudyInstanceUID}) does'\
+              + ' not match the DICOM tag "StudyInstanceUID" '\
+              + f'({Dicom.StudyInstanceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    #if Rts.StudyID != Dicom.StudyID:
+    #    msg = f'The RTS "StudyID" ({Rts.StudyID}) does not match the '\
+    #          + f'DICOM "StudyID" ({Dicom.StudyID}).'
+    #    
+    #    ErrorList.append(msg)
+    #    
+    #    if LogToConsole:
+    #        print('\n' + msg)
+            
+    if Rts.FrameOfReferenceUID != Dicom.FrameOfReferenceUID:
+        msg = 'The RTS "FrameOfReferenceUID" ({Rts.FrameOfReferenceUID})'\
+              + ' does not match the DICOM "FrameOfReferenceUID" '\
+              + f'({Dicom.FrameOfReferenceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+      
+    
+    RFORS = deepcopy(Rts.ReferencedFrameOfReferenceSequence[0])
+    
+    FORuidInRFORS = deepcopy(RFORS.FrameOfReferenceUID)
+    
+    if FORuidInRFORS != Dicom.FrameOfReferenceUID:
+        msg = 'The "FrameOfReferenceUID" in "ReferencedFrameOfReferenceSequen'\
+              + f'ce" ({FORuidInRFORS}) does not match the DICOM "FrameOfRefe'\
+              + f'renceUID" ({Dicom.FrameOfReferenceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """Verify that the ReferencedSOPInstanceUID in 
+    ReferencedFrameOfReferenceSequence matches the RTS StudyInstanceUID."""
+    RefSOPuid = RFORS.RTReferencedStudySequence[0].ReferencedSOPInstanceUID
+    
+    if RefSOPuid != Rts.StudyInstanceUID:
+        msg = 'The "ReferencedSOPInstanceUID" in "ReferencedFrameOfReferenceS'\
+              + f'equence" ({RefSOPuid}) does not match the RTS "StudyInstanc'\
+              + f'eUID" ({Rts.StudyInstanceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """Verify that the SeriesInstanceUID in ReferencedFrameOfReferenceSequence
+    matches the DICOM SeriesInstanceUID."""
+    RtsSeriesuid = deepcopy(RFORS.RTReferencedStudySequence[0]\
+                                 .RTReferencedSeriesSequence[0]\
+                                 .SeriesInstanceUID)
+    
+    if RtsSeriesuid != Dicom.SeriesInstanceUID:
+        msg = 'The "SeriesInstanceUID" in "ReferencedFrameOfReferenceSequence'\
+              + f'" ({RtsSeriesuid}) does not match the DICOM "SeriesInstance'\
+              + f'UID" ({Dicom.SeriesInstanceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    
+    """Verify that the ReferencedSOPInstanceUIDs in 
+    ReferencedFrameOfReferenceSequence match the DICOM SOPInstanceUIDs."""
+    CIS = deepcopy(RFORS.RTReferencedStudySequence[0]\
+                        .RTReferencedSeriesSequence[0]\
+                        .ContourImageSequence)
+    
+    RefSOPuidsInRFORS = [CIS[i].ReferencedSOPInstanceUID for i in range(len(CIS))]
+    
+    # Determine whether the Ref SOP UIDs match the SOP UIDs:
+    IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInRFORS]
+    
+    NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching Ref SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if NumOfMatches == 0:
+        NonMatchingUids = [RefSOPuidsInRFORS[i] for i in Inds]
+        
+        for i in range(len(NonMatchingUids)):
+            uid = NonMatchingUids[i]
+            
+            msg = f'"ReferencedSOPInstanceUID" {uid} in "ContourImageSequence'\
+                  + '" {i+1} does not match any DICOM "SOPInstanceUID".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+            
+            
+            
+    """Verify that the StructureSetROISequence has only 1 sequence."""
+    N = len(Rts.StructureSetROISequence)
+    
+    if N > 1:
+        msg = f'There are {N} sequences in "StructureSetROISequence". There '\
+              + 'should be 1.'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+    
+    """Verify that the ROINumber in StructureSetROISequence is 1."""
+    N = int(deepcopy(Rts.StructureSetROISequence[0].ROINumber))
+    
+    if N != 1:
+        msg = f'"ROINumber" in "StructureSetROISequence" is {N}.  It should '\
+              + 'be "1".'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    """Verify that the ReferencedFrameOfReferenceUID in StructureSetROISequence
+    matches the DICOM FrameOfReferenceUID."""
+    RefFORuidInSSRS = deepcopy(Rts.StructureSetROISequence[0]\
+                                  .ReferencedFrameOfReferenceUID)
+    
+    if RefFORuidInSSRS != Dicom.FrameOfReferenceUID:
+        msg = '"ReferencedFrameOfReferenceUID" in "StructureSetROISequence" '\
+              + f'({RefFORuidInSSRS}) does not match the DICOM "FrameOfRefere'\
+              + f'nceUID" ({Dicom.FrameOfReferenceUID}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+            
+    
+    """Verify that the ROIContourSequence has only 1 sequence."""
+    N = len(Rts.ROIContourSequence)
+    
+    if N > 1:
+        msg = f'There are {N} sequences in "ROIContourSequence". There should'\
+              + ' be 1.'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+
+    """Verify that the number of sequences in ContourSequence matches the
+    number of sequences in ContourImageSequence."""
+    CS = deepcopy(Rts.ROIContourSequence[0].ContourSequence)
+    
+    if len(CS) != len(CIS):
+        msg = f'The number of sequences in "ContourSequence" ({len(CS)}) does'\
+              + ' not match the number of sequences in "ContourImageSequence"'\
+              + f' ({len(CIS)}).'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+    
+    """Verify that the ReferencedSOPInstanceUIDs in ContourSequence
+    match the ReferencedSOPInstanceUIDs in ContourImageSequence."""
+    RefSOPuidsInRCS = [CS[i].ContourImageSequence[0].ReferencedSOPInstanceUID for i in range(len(CS))]
+    
+    # Determine whether the Ref SOP UIDs match the SOP UIDs:
+    IsMatch = [uid in RefSOPuidsInRFORS for uid in RefSOPuidsInRCS]
+    
+    NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching Ref SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if NumOfMatches == 0:
+        NonMatchingUids = [RefSOPuidsInRCS[i] for i in Inds]
+        
+        for i in range(len(NonMatchingUids)):
+            uid = NonMatchingUids[i]
+            
+            msg = f'"ReferencedSOPInstanceUID" {uid} in "ContourSequence" '\
+                  + '{i+1} does not match any "ReferencedSOPInstanceUID" in '\
+                  + '"ContourImageSequence".'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+                
+    
+    
+    """Verify that the ContourNumbers in each ContourSequence range from 1 to
+    len(CS)."""
+    ExpectedNums = list(range(1, len(CS)+1))
+    
+    ContourNums = [int(CS[i].ContourNumber) for i in range(len(CS))]
+    
+    # Determine whether the contour numbers match the expected contour numbers:
+    IsMatch = [ContourNums[i] == ExpectedNums[i] for i in range(len(CS))]
+    #IsMatch = [ContourNums[i] == i+1 for i in range(len(CS))]
+    
+    # Find the indices of any non-matching contour numbers:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if Inds == 0:        
+        for i in range(len(Inds)):
+            cn = ContourNums[Inds[i]]
+            en = ExpectedNums[Inds[i]]
+            
+            msg = f'"ContourNumber" {i+1} is {cn} but is expected to be {en}.'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    
+    """Verify that the number of elements in ContourData is 3x 
+    NumberOfContourPoints for each ContourSequence."""
+    NCP = [int(CS[i].NumberOfContourPoints) for i in range(len(CS))]
+    
+    NCD = [len(CS[i].ContourData) for i in range(len(CS))]
+    
+    IsMatch = [NCD[i] == 3*NCP[i] for i in range(len(CS))]
+    
+    # Find the indices of any non-zero modulos:
+    Inds = [i for i, x in enumerate(IsMatch) if False]
+    
+    if Inds == 0:        
+        for i in range(len(Inds)):
+            ncp = NCP[Inds[i]]
+            
+            ncd = NCD[Inds[i]]
+            
+            msg = f'The number of elements in "ContourData" ({ncd}) is not '\
+                  + f'3x "NumberOfContourPoints" ({ncp}) for '\
+                  + f'"ContourSequence" {i+1}.'
+        
+            ErrorList.append(msg)
+            
+            if LogToConsole:
+                print('\n' + msg)
+    
+    
+    """Verify that the ReferencedROINumber in ROIContourSequence is 1."""
+    N = int(deepcopy(Rts.ROIContourSequence[0].ReferencedROINumber))
+    
+    if N != 1:
+        msg = f'"ReferencedROINumber" in "ROIContourSequence" is {N}.  It '\
+              + 'should be "1".'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    
+    
+    """Verify that the ROIObservationsSequence has only 1 sequence."""
+    N = len(Rts.RTROIObservationsSequence)
+    
+    if N > 1:
+        msg = f'There are {N} sequences in "RTROIObservationsSequence". There'\
+              + ' should be 1.'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+
+
+    
+    """Verify that the ObservationNumber is 1."""
+    N = int(deepcopy(Rts.RTROIObservationsSequence[0].ObservationNumber))
+    
+    if N != 1:
+        msg = f'"ObservationNumber" in "RTROIObservationsSequence" is {N}. '\
+              + 'It should be "1".'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+            
+            
+            
+    """Verify that the ReferencedROINumber is 1."""
+    N = int(deepcopy(Rts.RTROIObservationsSequence[0].ReferencedROINumber))
+    
+    if N != 1:
+        msg = f'"ReferencedROINumber" in "RTROIObservationsSequence" is {N}. '\
+              + 'It should be "1".'
+        
+        ErrorList.append(msg)
+        
+        if LogToConsole:
+            print('\n' + msg)
+    
+    
+    print(f'\nThere were {len(ErrorList)} errors found in the RTS.')
+    
+    return ErrorList
+
+
+
+
+
+
+
+
+def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
+    """
+    Check a RTS/SEG for errors in dependencies based on provided directory of
+    the DICOMs that relate to the RTS/SEG.  
+    
+    Inputs:
+    ------
+    
+    Roi : Pydicom object
+        RTS/SEG ROI object to be error checked.
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to Roi.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+                           
+    
+    Outputs:
+    -------
+    
+    ErrorList : list of strings
+        A list of strings that describe any errors that are found.  If no 
+        errors are found an empty list ([]) will be returned.
+    """
+    
+    if Roi.Modality == 'RTSTRUCT':
+        ErrorList = ErrorCheckRts(Roi, DicomDir, LogToConsole)
+        
+    elif Roi.Modality == 'SEG':
+        ErrorList = ErrorCheckSeg(Roi, DicomDir, LogToConsole)
+    
+    return ErrorList
+
+
+
+
+
+
+"""
+******************************************************************************
+******************************************************************************
+EXPORT NEW TARGET RTS / SEG TO DISK
+******************************************************************************
+******************************************************************************
+"""
+
+def ExportTrgRoi(TrgRoi, SrcRoiFpath, ExportDir, NamePrefix=''):
+    """
+    Export RTS/SEG to disk.  
+    
+    Inputs:
+    ------
+    
+    TrgRoi : Pydicom object
+        Target RTS/SEG ROI object to be exported.
+        
+    SrcRoiFpath : string
+        Full path of the Source RTS/SEG file (used to generate the filename of
+        the new RTS/SEG file).
+                              
+    ExportDir : string
+        Directory where the new RTS/SEG is to be exported.
+    
+    NamePrefix : string (optional; '' by default)
+        Prefix to be added to the assigned filename (after the DateTime stamp), 
+        e.g. 'Case3b-i'.
+                           
+    
+    Outputs:
+    -------
+    
+    TrgRoiFpath : string
+        Full path of the exported Target RTS/SEG file.
+    """
+    
+    import os
+    import time
+    
+    # Get the filename of the original RTS/SEG file:
+    #SrcRoiFname = os.path.split(SrcRoiFpath)[1]
+    
+    CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    #FnamePrefix = CurrentDateTime + '_' + NamePrefix + '_from_' 
+    FnamePrefix = CurrentDateTime + '_' + NamePrefix
+    
+    # Create a new filename (this will appear under Label in XNAT):
+    #TrgRoiFname = FnamePrefix + SrcRoiFname
+    TrgRoiFname = FnamePrefix
+    
+    TrgRoiFpath = os.path.join(ExportDir, TrgRoiFname)
+    
+    TrgRoi.save_as(TrgRoiFpath)
+        
+    print('\nNew Target RTS/SEG exported to:\n\n', TrgRoiFpath)
+    
+    return TrgRoiFpath

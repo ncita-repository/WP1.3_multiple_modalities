@@ -34,24 +34,30 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
     """
     Get a sorted list of full filepaths for all DICOM files in a directory
     
-    Input:
-        DicomDir   - (String) Path to directory containing DICOMs
+    Inputs:
+    ------
+    
+    DicomDir : string
+        Path to directory containing DICOMs.
         
-        SortMethod - (String) Method to use for sorting of files;
-                    Acceptable values are:
-                    -- 'none' (or 'None' or any other strings) = no sorting
-                    -- 'natural' (or 'Natural') = using natsort
-                    -- 'slices' (or 'Slices') = sorted along the slice 
-                    direction in ascending order
-        
-    Returns:
-        FilePaths - full filepaths of all Dicom files in DicomDir either:
-                    -- without sorting
-                    -- sorted in a natural way, 
-                    e.g. 3-1, 3-2, ..., 3-9, 3-10, 3-11, ...
-                    rather than 3-1, 3-10, 3-11, ... , 3-2, 3-20, ...
-                    -- sorted along the scan direction in ascending order
-                    
+    SortMethod : string (optional, 'slices' by default) 
+        Denotes the method used for sorting of files fetched using 
+        GetDicomFpaths() with acceptable values:
+            -- 'none' (or 'None' or any other strings) = no sorting
+            -- 'natural' (or 'Natural') = using natsort to sort the filenames
+            -- 'slices' (or 'Slices') = sorted along the slice direction 
+    
+    
+    Outputs:
+    -------
+    
+    FilePaths : list of strings 
+        List of the full filepaths of all DICOM files in DicomDir either:
+            -- without sorting
+            -- sorted in a natural way, 
+            e.g. 3-1, 3-2, ..., 3-9, 3-10, 3-11, ...
+            rather than 3-1, 3-10, 3-11, ... , 3-2, 3-20, ...
+            -- sorted along the scan direction in ascending order
     """
     
     import os
@@ -165,77 +171,94 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     """
     Import DICOM objects from a directory containing DICOM files.
     
-    Input:
-        DicomDir   - (String) Path to directory containing DICOM files
+    Inputs:
+    -------
+    
+    DicomDir : string
+        Path to directory containing DICOM files.
         
-        SortMethod - (String) Method to use for sorting of files using 
-                    GetDicomFpaths() with acceptable values:
-                    -- 'none' (or 'None' or any other strings) = no sorting
-                    -- 'natural' (or 'Natural') = using natsort to sort the 
-                    filenames
-                    -- 'slices' (or 'Slices') = sorted along the slice direction 
+    SortMethod : string (optional, 'slices' by default) 
+        Denotes the method used for sorting of files fetched using 
+        GetDicomFpaths() with acceptable values:
+            -- 'none' (or 'None' or any other strings) = no sorting
+            -- 'natural' (or 'Natural') = using natsort to sort the filenames
+            -- 'slices' (or 'Slices') = sorted along the slice direction 
         
-    Returns:
-        Dicoms    - List of DICOM objects
+    Outputs:
+    -------
+    
+    Dicoms : list of Pydicom objects
+        List of DICOM objects.
     """
     
     from pydicom import read_file
     
     #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
     
-    # Get the filepaths of the DICOM files:
     fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
     
-    # Initialise a dictionary to store everything:
-    #dicomDict = {}
-    
-    # Initialise a list to store the DICOM objects:
     Dicoms = []
     
-    # Loop though each DICOM filepath:
     for f in range(len(fpaths)):
         fpath = fpaths[f]
         
-        #print('\nfpath =', fpath)
-        
-        # Read in the DICOM:
         dicom = read_file(fpath)
         
-        # Append this DICOM object:
         Dicoms.append(dicom)
         
-        # Get the SOP Instance UID:
-        #uid = dicom.SOPInstanceUID
-        
-        # Get the Image Position (Patient):
-        #position = [float(item) for item in dicom.ImagePositionPatient]
-        
-        # Get the Image Orientation Patient:
-        #orientation = [float(item) for item in dicom.ImageOrientationPatient]
-        
-        # Get the Slice Location:
-        #sliceLocation = float(dicom.SliceLocation)
-        
-        # Get the Pixel Spacing:
-        #pixSpacing = [float(item) for item in dicom.PixelSpacing]
-        
-        # Get the Pixel Array:
-        #pixelArray = dicom.pixel_array
-    
-        # Store the values in the dictionary using the SOP Instance UID as keys:
-        #dicomDict[uid] = {'Dicom slice no':f+1, \
-        #                  'Dicom fpath':fpath, \
-        #                  'Image pos':position, \
-        #                  'Image orient':orientation, \
-        #                  'Slice loc':sliceLocation, \
-        #                  'Pix spacing':pixSpacing, \
-        #                  'Pix array':pixelArray, \
-        #                  'Dicom':dicom
-        #                 }
-    
-    #return dicomDict
-    #return fpaths, dicoms
     return Dicoms
+
+
+
+
+
+def ImportDicom(DicomDir, SortMethod='slices', InStackNum=0, 
+                LogToConsole=False):
+    """
+    Import a single DICOM object from a directory containing DICOM file(s).
+    
+    Inputs:
+    -------
+    
+    DicomDir : string
+        Path to directory containing DICOM files.
+        
+    SortMethod : string (optional, 'slices' by default) 
+        Denotes the method used for sorting of files fetched using 
+        GetDicomFpaths() with acceptable values:
+            -- 'none' (or 'None' or any other strings) = no sorting
+            -- 'natural' (or 'Natural') = using natsort to sort the filenames
+            -- 'slices' (or 'Slices') = sorted along the slice direction
+            
+    InStackNum : integer (optional; 0 by default)
+        The in-stack index of the file within the sorted list of DICOM 
+        filepaths to import.  The first file is imported by default.
+    
+        
+    Outputs:
+    -------
+    
+    Dicoms : list of Pydicom objects
+        List of DICOM objects.
+    """
+    
+    from pydicom import read_file
+    
+    fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
+    
+    if InStackNum < len(fpaths):
+        Dicom = read_file(fpaths[InStackNum])
+        
+        return Dicom
+    
+    else:
+        msg = 'It is not possible to import a DICOM at InStackNum = '\
+              + f'{InStackNum} since there are only {len(fpaths)} DICOMs in '\
+              + 'the specified directory.'
+              
+        raise Exception(msg)
+        
+        return None
 
 
 
@@ -325,14 +348,20 @@ def GetDicomUids(DicomDir):
 
 def GetRoiLabels(Roi):
     """
-    Get the list of contour/segment labels in a RTS/SEG ROI.
+    Get the list of contour/segment labels in a RTS/SEG.
     
     Inputs:
-        Roi    - ROI Object from a RTS/SEG file
+    ------
+    
+    Roi : Pydicom object
+        Object from a RTS/SEG file.
     
         
-    Returns:
-        Labels - (List of strings) Contour/Segment labels
+    Outputs:
+    -------
+    
+    Labels : list of strings
+        List (for each ROI/segment) of ROIName/SegmentLabel tag values.
     """
     
     Labels = [] 
@@ -424,6 +453,7 @@ def IsSameModalities(Roi0, Roi1):
     
     else:
         return False
+
 
 
 
