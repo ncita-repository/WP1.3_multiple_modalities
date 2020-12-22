@@ -9,6 +9,7 @@ NCITA_coding_task/
 *.[0-9].txt
 *.ipynb
 *.docx
+*.pptx
 *.nii
 *.csv
 2020-05-28_Outputs/
