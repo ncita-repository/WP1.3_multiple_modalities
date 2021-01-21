@@ -1632,105 +1632,6 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
 
 
 
-def GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, SearchString, 
-                              LogToConsole=False):
-    """ 
-    Note:
-    
-    ListOfRtss is a list (which could be of length 1) of RTS (Pydicom) objects.
-    
-    ListOfDicomDirs is a list (which could be of length 1) of strings 
-    containing the directory containing DICOMs that correspond to each RTS.
-    """
-    
-    import importlib
-    import RtsTools
-    importlib.reload(RtsTools)
-    import DicomTools
-    importlib.reload(DicomTools)
-    
-    from DicomTools import GetRoiNum
-    from DicomTools import GetDicomFpaths
-    from RtsTools import GetPtsInRoi
-    from ImageTools import GetImageAttributes
-    
-    ListOfContours = []
-    ListOfC2Sinds = []
-    ListOfRoiNums = []
-    ListOfDcmFpaths = []
-    ListOfOrigins = []
-    ListOfDirections = []
-    ListOfSpacings = []
-    
-    for i in range(len(ListOfRtss)):
-        if LogToConsole:
-            print(f'\nListOfRtss[{i}]:')
-        
-        """
-        11/12/20:  
-            There should only be one ROI so perhaps this should be checked
-            and raise exception if the number of ROIs is greater than one.
-            And if not, RoiNum will always be = 0 (no need to GetRoiNum).
-        """
-        
-        if ListOfRtss[i]:
-            RoiNum = GetRoiNum(ListOfRtss[i], SearchString)
-            
-            Contours, C2Sinds = GetPtsInRoi(ListOfRtss[i], 
-                                            ListOfDicomDirs[i], 
-                                            SearchString)
-            
-            if LogToConsole:      
-                print(f'len(Contours) in "{SearchString}" = {len(Contours)}')
-                print(f'C2Sinds = {C2Sinds}')
-                [print(f'len(Contours{i}) = {len(Contours[i])}') for i in range(len(Contours))]
-            
-        else:
-            RoiNum = None
-            Contours = None
-            C2Sinds = None
-            
-            if LogToConsole:      
-                print(f'No contours for this dataset')
-        
-        
-        ListOfRoiNums.append(RoiNum)
-        
-        DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
-        
-        Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(ListOfDicomDirs[i])
-        
-        ListOfContours.append(Contours)
-        ListOfC2Sinds.append(C2Sinds)
-        ListOfDcmFpaths.append(DcmFpaths)
-        ListOfOrigins.append(IPPs[0])
-        ListOfDirections.append(Dirs)
-        ListOfSpacings.append(Spacings)
-        
-        if LogToConsole:      
-            #print(f'len(Contours) in "{SearchString}" = {len(Contours)}')
-            print(f'len(ListOfContours) = {len(ListOfContours)}')
-            #print(f'C2Sinds = {C2Sinds}')
-            #[print(f'len(Contours{i}) = {len(Contours[i])}') for i in range(len(Contours))]
-        
-        
-        #SOPuids = GetDicomSOPuids(ListOfDicomDirs[i])
-        
-        #CStoSliceIndsByRoi = GetCStoSliceIndsByRoi(ListOfRtss[i], SOPuids)
-        
-        #ListOfC2Sinds.append(CStoSliceIndsByRoi[RoiNum])
-        
-        #if LogToConsole:
-        #    print(f'ListOfC2Sinds[{i}] = {ListOfC2Sinds[i]}')
-    
-            
-    return ListOfContours, ListOfC2Sinds, ListOfRoiNums, ListOfDcmFpaths,\
-           ListOfOrigins, ListOfDirections, ListOfSpacings
-
-
-
-
-
 
     
 def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
@@ -1763,10 +1664,12 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     import time
     from copy import deepcopy
     from pydicom import dcmread
+    from RtsTools import GetContoursFromListOfRtss
     from GeneralTools import Unpack
     from ConversionTools import Contour2Indices
+    from ImageTools import ImportImage
     
-    ListOfContours, ListOfC2Sinds, ListOfRoiNums,\
+    ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
     ListOfDcmFpaths, ListOfOrigins, ListOfDirections,\
     ListOfSpacings = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
                                                SearchString, LogToConsole)
@@ -1795,7 +1698,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
             # Reduce to unique slice numbers:
             AllSliceNums = list(set(AllSliceNums))    
         else:
-            AllSliceNums = deepcopy(ListOfC2Sinds[0])
+            AllSliceNums = list(set(deepcopy(ListOfC2Sinds[0])))
     
     if LogToConsole:
             print(f'\nAllSliceNums = {AllSliceNums}')
@@ -1809,7 +1712,8 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     
     #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7.5*Nrows), dpi=dpi)
     fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
-        
+    
+    Colours = ['r', 'b', 'm', 'c', 'k', 'y']
     
     n = 1 # initialised sub-plot number
     
@@ -1819,22 +1723,26 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
             print(f'\nSliceNum = {SliceNum}')
         
         # Loop through each list of contours:
-        for i in range(len(ListOfContours)):
-            Contours = ListOfContours[i]
-            C2SInds = ListOfC2Sinds[i]
+        for i in range(len(ListOfPtsByCnt)):
+            #Contours = ListOfContours[i]
+            PtsByCnt = ListOfPtsByCnt[i]
+            #PtsByCntBySlice = ListOfPtsByCntBySlice[i]
+            C2Sinds = ListOfC2Sinds[i]
             
             DicomFpaths = ListOfDcmFpaths[i]
             Origin = ListOfOrigins[i]
             Directions = ListOfDirections[i]
             Spacings = ListOfSpacings[i]
-            
             PlotTitle = ListOfPlotTitles[i]
+            DicomDir = ListOfDicomDirs[i]
+            
+            RefIm = ImportImage(DicomDir)
             
             if LogToConsole:
                     print(f'\n   i = {i}')
                     print(f'   PlotTitle = {PlotTitle}')
-                    print(f'   len(Contours) = {len(Contours)}')
-                    print(f'   C2SInds = {C2SInds}')
+                    #print(f'   len(PtsByCntBySlice) = {len(PtsByCntBySlice)}')
+                    print(f'   C2Sinds = {C2Sinds}')
                     
             ax = plt.subplot(Nrows, Ncols, n)
             
@@ -1844,37 +1752,58 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                 ax.imshow(DicomPixArr, cmap=plt.cm.Greys_r)
             
             
-                if SliceNum in C2SInds:
-                    ContourNum = C2SInds.index(SliceNum)
+                if SliceNum in C2Sinds:
+                    #ContourNum = C2Sinds.index(SliceNum) # there may be more 
+                    # than one contour for SliceNum!!
+                    ContourNums = [i for i, e in enumerate(C2Sinds) if e==SliceNum]
                     
-                    Contour = Contours[ContourNum]
-                    
-                    Indices = Contour2Indices(Points=Contour, Origin=Origin, 
-                                              Directions=Directions, 
-                                              Spacings=Spacings)
-                    
-                    if LogToConsole:
-                        print(f'      SliceNum = {SliceNum} is in C2SInds')
-                        print(f'      ContourNum = {ContourNum}')
-                        print(f'      len(Contour) = {len(Contour)}')
-                        #print(f'      Contour = {Contour}')
-                    
-                    #ax = plt.subplot(Nrows, Ncols, n)
-                    
-                    # Unpack the contour points' indices:
-                    X, Y, Z = Unpack(Indices)
-                    
-                    # Plot the contour points:
-                    #ax = plt.plot(X, Y, linewidth=0.5, c='r');
-                    ax.plot(X, Y, linewidth=0.5, c='r');
-                    
-                    ContourTxt = f'Contour {ContourNum + 1}'
+                    for c in range(len(ContourNums)):
+                        ContourNum = ContourNums[c]
+                        
+                        Pts = PtsByCnt[ContourNum]
+                        
+                        #print(f'\n\n\nPts = {Pts}')
+                        
+                        #Indices = Contour2Indices(Points=Contour, Origin=Origin, 
+                        #                          Directions=Directions, 
+                        #                          Spacings=Spacings)
+                        Inds = Contour2Indices(Points=Pts, RefIm=RefIm)
+                        
+                        if LogToConsole:
+                            print(f'      SliceNum = {SliceNum} is in C2Sinds')
+                            print(f'      ContourNum = {ContourNum}')
+                            #print(f'      Contour = {Contour}')
+                            print(f'      len(Pts) = {len(Pts)}')
+                        
+                        #ax = plt.subplot(Nrows, Ncols, n)
+                        
+                        # Unpack the contour points' indices:
+                        X, Y, Z = Unpack(Inds)
+                        
+                        """Since there are only len(Colours) defined above,
+                        wrap the index c if there are more contours than the 
+                        number of defined colours."""
+                        if c < len(Colours):
+                            colour = Colours[c]
+                        else:
+                            m = c//len(Colours)
+                            
+                            colour = Colours[c - m*len(Colours)]
+                            
+                        # Plot the contour points:
+                        #ax = plt.plot(X, Y, linewidth=0.5, c='r')
+                        ax.plot(X, Y, linewidth=0.5, c='r')
+                        #ax.plot(X, Y, linewidth=0.5, c=colour)
+                        
+                        #ContourTxt = f'Contour {ContourNum + 1}'
+                        #ContourTxt = f'Contour {ContourNum}'
+                        ContourTxt = f'Contour(s) {ContourNums}'
                     
                 else:
                     ContourTxt = 'No contour'
                     
                     if LogToConsole:
-                        print(f'      SliceNum = {SliceNum} is NOT in C2SInds')
+                        print(f'      SliceNum = {SliceNum} is NOT in C2Sinds')
                 
                 SliceTxt = f'Slice {SliceNum}'
                 
@@ -1956,9 +1885,11 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     from copy import deepcopy
     from pydicom import dcmread
     from GeneralTools import Unpack
+    from RtsTools import GetContoursFromListOfRtss
     from ConversionTools import Contour2Indices
+    from ImageTools import ImportImage
     
-    ListOfContours, ListOfC2Sinds, ListOfRoiNums,\
+    ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
     ListOfDcmFpaths, ListOfOrigins, ListOfDirections,\
     ListOfSpacings = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
                                                SearchString, LogToConsole)
@@ -1987,7 +1918,7 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
             # Reduce to unique slice numbers:
             AllSliceNums = list(set(AllSliceNums))    
         else:
-            AllSliceNums = deepcopy(ListOfC2Sinds[0])
+            AllSliceNums = list(set(deepcopy(ListOfC2Sinds[0])))
     
     if True:#LogToConsole:
             print(f'\nAllSliceNums = {AllSliceNums}')
@@ -2002,27 +1933,31 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7.5*Nrows), dpi=dpi)
     fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
         
+    Colours = ['r', 'b', 'm', 'c', 'k', 'y']
     
     n = 1 # initialised sub-plot number
         
     # Loop through each dataset:
-    for i in range(len(ListOfContours)):
-        Contours = ListOfContours[i]
+    for i in range(len(ListOfPtsByCnt)):
+        #Contours = ListOfContours[i]
+        PtsByCnt = ListOfPtsByCnt[i]
         C2Sinds = ListOfC2Sinds[i]
         
         DicomFpaths = ListOfDcmFpaths[i]
         Origin = ListOfOrigins[i]
         Directions = ListOfDirections[i]
         Spacings = ListOfSpacings[i]
-        
         PlotTitle = ListOfPlotTitles[i]
+        DicomDir = ListOfDicomDirs[i]
+        
+        RefIm = ImportImage(DicomDir)
         
         if LogToConsole:
                 print(f'\ni = {i}')
                 print(f'   PlotTitle = {PlotTitle}')
                 print(f'   C2Sinds = {C2Sinds}')
                 if C2Sinds:
-                    print(f'   len(Contours) = {len(Contours)}')
+                    print(f'   len(PtsByCnt) = {len(PtsByCnt)}')
         
         # Loop through each AllSliceNums: 
         for SliceNum in AllSliceNums:
@@ -2038,30 +1973,51 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
             
                 if C2Sinds:
                     if SliceNum in C2Sinds:
-                        ContourNum = C2Sinds.index(SliceNum)
+                        #ContourNum = C2Sinds.index(SliceNum) # there may be more 
+                        # than one contour for SliceNum!!
+                        ContourNums = [i for i, e in enumerate(C2Sinds) if e==SliceNum]
                         
-                        Contour = Contours[ContourNum]
+                        for c in range(len(ContourNums)):
+                            ContourNum = ContourNums[c]
+                            
+                            #Contour = Contours[ContourNum]
+                            Pts = PtsByCnt[ContourNum]
+                            
+                            #Indices = Contour2Indices(Points=Contour, Origin=Origin, 
+                            #                          Directions=Directions, 
+                            #                          Spacings=Spacings)
+                            Inds = Contour2Indices(Points=Pts, RefIm=RefIm)
+                            
+                            if LogToConsole:
+                                print(f'   SliceNum = {SliceNum} is in C2Sinds')
+                                print(f'   ContourNum = {ContourNum}')
+                                #print(f'   len(Contour) = {len(Contour)}')
+                                #print(f'      Contour = {Contour}')
+                                print(f'      len(Pts) = {len(Pts)}')
+                            
+                            #ax = plt.subplot(Nrows, Ncols, n)
+                            
+                            # Unpack the contour points' indices:
+                            X, Y, Z = Unpack(Inds)
+                            
+                            """Since there are only len(Colours) defined above,
+                            wrap the index c if there are more contours than the 
+                            number of defined colours."""
+                            if c < len(Colours):
+                                colour = Colours[c]
+                            else:
+                                m = c//len(Colours)
+                                
+                                colour = Colours[c - m*len(Colours)]
+                                
+                            # Plot the contour points:
+                            #ax = plt.plot(X, Y, linewidth=0.5, c='r');
+                            ax.plot(X, Y, linewidth=0.5, c='r');
+                            #ax.plot(X, Y, linewidth=0.5, c=colour)
                         
-                        Indices = Contour2Indices(Points=Contour, Origin=Origin, 
-                                                  Directions=Directions, 
-                                                  Spacings=Spacings)
-                        
-                        if LogToConsole:
-                            print(f'   SliceNum = {SliceNum} is in C2Sinds')
-                            print(f'   ContourNum = {ContourNum}')
-                            print(f'   len(Contour) = {len(Contour)}')
-                            #print(f'      Contour = {Contour}')
-                        
-                        #ax = plt.subplot(Nrows, Ncols, n)
-                        
-                        # Unpack the contour points' indices:
-                        X, Y, Z = Unpack(Indices)
-                        
-                        # Plot the contour points:
-                        #ax = plt.plot(X, Y, linewidth=0.5, c='r');
-                        ax.plot(X, Y, linewidth=0.5, c='r');
-                    
-                        ContourTxt = f'Contour {ContourNum + 1}'
+                            #ContourTxt = f'Contour {ContourNum + 1}'
+                            #ContourTxt = f'Contour {ContourNum}'
+                            ContourTxt = f'Contour(s) {ContourNums}'
                     else:
                         ContourTxt = 'No contour'
                         

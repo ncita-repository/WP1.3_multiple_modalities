@@ -383,13 +383,19 @@ def InitialiseImage(RefImage):
     direction as another image.  
     
     Inputs:
-        RefImage - (SimpleITK image) Reference image whose attributes will be 
-                   used for NewIm)
+    ******
+    
+    RefImage : SimpleITK image
+        The reference image whose attributes will be used for the initialised
+        image.
         
-    Returns:
-        NewImage - (SimpleITK image) Empty image with same PixelID, Size, 
-                   Spacing, Origin and Direction as RefIm
-
+        
+    Outputs:
+    *******
+    
+    NewImage : SimpleITK image
+        An empty image with the same PixelID, Size, Spacing, Origin and 
+        Direction as RefImage.
     """
     
     import SimpleITK as sitk
@@ -858,7 +864,7 @@ def BinaryThresholdImage(Im, Thresh=0.5):
 
 
 
-def GaussianBlurImage(Im):
+def GaussianBlurImage(Im, Variance=(1.0, 1.0, 1.0)):
     """
     Gaussian blur a 3D SimpleITK image.
     
@@ -868,44 +874,121 @@ def GaussianBlurImage(Im):
     Im : SimpleITK image 
         The 3D image to be blurred.
         
-    Thresh : float (optional; 0.5 by default)
-        Lower limit threshold.
+    Variance : tuple of floats (optional; (1.0, 1.0, 1.0) by default)
+        The variance along all dimensions.
         
         
     Returns:
     -------
     
-    BinaryIm : SimpleITK image
-        The 3D binary threshold image.
+    BlurredIm : SimpleITK image
+        The 3D blurred image.
         
         
     Note:
     ----
     
     DiscreteGaussianImageFilter:
-        Blurs an image by separable convolution with discrete gaussian kernels. This filter performs Gaussian blurring by separable convolution of an image and a discrete Gaussian operator (kernel).
+        Blurs an image by separable convolution with discrete gaussian kernels. 
+        This filter performs Gaussian blurring by separable convolution of an 
+        image and a discrete Gaussian operator (kernel).
         
     SmoothingRecursiveGaussianImageFilter:
-        Computes the smoothing of an image by convolution with the Gaussian kernels implemented as IIR filters
+        Computes the smoothing of an image by convolution with the Gaussian 
+        kernels implemented as IIR filters
     """
     
     import SimpleITK as sitk
     
-    GaussianBlurImFilt = sitk.DiscreteGaussianImageFilter()
+    ImFilt = sitk.DiscreteGaussianImageFilter()
     
-    BlurredIm = GaussianBlurImFilt.Execute(Im)
+    #ImFilt.SetMaximumKernelWidth(Sigma)
+    #print(f'   ImFilt.GetMaximumKernelWidth() = {ImFilt.GetMaximumKernelWidth()}')
     
-    print(f'\nIm.GetPixelID() = {Im.GetPixelID()}')
-    print(f'Im.GetPixelIDValue() = {Im.GetPixelIDValue()}')
-    print(f'Im.GetPixelIDTypeAsString() = {Im.GetPixelIDTypeAsString()}')
-    print(f'BlurredIm.GetPixelID() = {BlurredIm.GetPixelID()}')
-    print(f'BlurredIm.GetPixelIDValue() = {BlurredIm.GetPixelIDValue()}')
-    print(f'BlurredIm.GetPixelIDTypeAsString() = {BlurredIm.GetPixelIDTypeAsString()}')
+    ImFilt.SetVariance(Variance)
+        
+    BlurredIm = ImFilt.Execute(Im)
+        
+    print('\nApplying Gaussian blur...')
+    print(f'   ImFilt.GetMaximumError() = {ImFilt.GetMaximumError()}')
+    print(f'   ImFilt.GetMaximumKernelWidth() = {ImFilt.GetMaximumKernelWidth()}')
+    print(f'   ImFilt.GetUseImageSpacing() = {ImFilt.GetUseImageSpacing()}')
+    print(f'   ImFilt.GetVariance() = {ImFilt.GetVariance()}')
+    print(f'\n   Im.GetPixelID() = {Im.GetPixelID()}')
+    print(f'   Im.GetPixelIDValue() = {Im.GetPixelIDValue()}')
+    print(f'   Im.GetPixelIDTypeAsString() = {Im.GetPixelIDTypeAsString()}')
+    print(f'   BlurredIm.GetPixelID() = {BlurredIm.GetPixelID()}')
+    print(f'   BlurredIm.GetPixelIDValue() = {BlurredIm.GetPixelIDValue()}')
+    print(f'   BlurredIm.GetPixelIDTypeAsString() = {BlurredIm.GetPixelIDTypeAsString()}')
     
     return BlurredIm
     
     
     
+
+
+
+def RecursiveGaussianBlurImage(Im, Sigma, Direction):
+    """
+    Apply a recursive Gaussian blur to a 3D SimpleITK image.
+    
+    Inputs:
+    ------
+    
+    Im : SimpleITK image 
+        The 3D image to be blurred.
+        
+    Sigma : integer
+        The kernel width.
+        
+    Direction : integer
+        The direction to apply blurring to. Direction can be 0, 1, or 2 for the
+        x, y or z direction.
+        
+        
+    Returns:
+    -------
+    
+    BlurredIm : SimpleITK image
+        The 3D blurred image.
+        
+        
+    Note:
+    ----
+    
+    http://itk-users.7.n7.nabble.com/ITK-users-sitk-DiscreteGaussianImageFilter-with-different-variances-per-direction-td38185.html
+    """
+    
+    import SimpleITK as sitk
+    
+    # TypeError: __init__() got an unexpected keyword argument 'sigma':
+    #BlurredIm = sitk.RecursiveGaussianImageFilter(Im, sigma=Sigma, 
+    #                                              direction=Direction)
+    
+    ImFilt = sitk.RecursiveGaussianImageFilter()
+    ImFilt.SetSigma(Sigma)
+    ImFilt.SetDirection(Direction)
+    
+    print('\nApplying Gaussian blur...')
+    print(f'   ImFilt.GetDirection() = {ImFilt.GetDirection()}')
+    print(f'   ImFilt.GetNormalizeAcrossScale() = {ImFilt.GetNormalizeAcrossScale()}')
+    print(f'   ImFilt.GetOrder() = {ImFilt.GetOrder()}')
+    print(f'   ImFilt.GetSigma() = {ImFilt.GetSigma()}')
+    
+    BlurredIm = ImFilt.Execute(Im)
+    
+    print(f'\n   Im.GetPixelID() = {Im.GetPixelID()}')
+    print(f'   Im.GetPixelIDValue() = {Im.GetPixelIDValue()}')
+    print(f'   Im.GetPixelIDTypeAsString() = {Im.GetPixelIDTypeAsString()}')
+    print(f'   BlurredIm.GetPixelID() = {BlurredIm.GetPixelID()}')
+    print(f'   BlurredIm.GetPixelIDValue() = {BlurredIm.GetPixelIDValue()}')
+    print(f'   BlurredIm.GetPixelIDTypeAsString() = {BlurredIm.GetPixelIDTypeAsString()}')
+    
+    return BlurredIm
+
+
+
+
 
 def GetImageInfo(Image, LogToConsole):
     from ConversionTools import Image2PixArr

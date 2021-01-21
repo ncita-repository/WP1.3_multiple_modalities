@@ -57,8 +57,21 @@ to an index with a single line of code using SimpleITK:
 """
 
 
-def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
+def Point2Index_OLD(Point, Origin, Directions, Spacings, Rounding=True):
     """
+    WARNING:  Due to simplifications (see Equations below), this function is 
+    only valid for the case where the cosine directions are:
+        X = [1, 0, 0]
+        Y = [0, 1, 0]
+        Z = [0, 0, 1]
+        
+    COMMENT:
+        This function was unnecessary since there's a built in function in 
+        SimpleITK that does this:
+        Index = RefIm.TransformPhysicalPointToIndex(Point)
+        
+    
+                      
     Convert a physical point (in Patient Coordinate System (PCS)) to an index
     (in Image Coordinate System (ICS).
     
@@ -89,8 +102,8 @@ def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
         If True, the integers in Index will be rounded to the nearest integers.
     
         
-    Ouputs:
-    ------
+    Outputs:
+    -------
     
     Index : list of integers
         List (for each dimension) of the index (i.e. in ICS) of Point, 
@@ -167,6 +180,12 @@ def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
         k = Vz/dk
     """
     
+    #print(f'\nPoint = {Point}')
+    #print(f'Origin = {Origin}')
+    #print(f'Directions = {Directions}')
+    #print(f'Spacings = {Spacings}')
+    #print(f'Rounding = {Rounding}')
+    
     # Define S, X, Y and Z:
     S = Origin # the origin
     
@@ -221,6 +240,8 @@ def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
     k = (1/dk)*(1/Zz)*(Vz - Xz*di*i - Yz*dj*j)
     #k = (1/dk)*(1/Zz)*( Vz - (c/b)*Yz - (Xz + (a/b)*Yz)*di*i )
     
+    #print(f'i = {i}, j = {j}, k = {k}')
+    
     if Rounding: # 8/12/20
         # Convert fractional indices to integers:
         i = int(round(i))
@@ -234,7 +255,18 @@ def Point2Index(Point, Origin, Directions, Spacings, Rounding=True):
 
 
 
-def Contour2Indices(Points, Origin, Directions, Spacings, Rounding=True):
+
+def Point2Index(Point, RefIm):
+    # unnecessary
+    return RefIm.TransformPhysicalPointToIndex(Point)
+
+
+
+
+
+
+
+def Contour2Indices(Points, RefIm):
     """
     Convert a list of physical point (in Patient Coordinate System (PCS)) to a
     list of indeces (in Image Coordinate System (ICS).
@@ -277,56 +309,16 @@ def Contour2Indices(Points, Origin, Directions, Spacings, Rounding=True):
     
     Indices = []
     
+    #print(f'\n\n\nPoints = {Points}\n\n')
+    
     for Point in Points:
-        Indices.append(Point2Index(Point, Origin, Directions, Spacings, 
-                                   Rounding))
+        #print(f'Point = {Point}')
         
-    return Indices
-
-
-
-
-    
-    
-    
-    
-def ConvertContourDataToIndices(ContourData, DicomDir):
-    """
-    Not useful?..
-    
-    Convert contour data from a flat list of points in the Patient Coordinate
-    System (PCS) to a list of [i, j, k] indices in the Image Coordinate System. 
-    
-    Inputs:
-        ContourData - (List of floats) Flat list of points in the PCS,
-                      e.g. [x0, y0, z0, x1, y1, z1, ...]
+        Index = RefIm.TransformPhysicalPointToIndex(Point)
         
-        DicomDir    - (String) Directory containing DICOMs
+        #print(f'Index = {Index}')
         
-        
-    Returns:
-        Indices   - (List of floats) List of a list of [i, j, k] coordinates
-                      of each point in ContourData converted to the ICS,
-                      e.g. [[i0, j0, k0], [i1, j1, k1], ...]
-    """
-    
-    from ImageTools import GetImageAttributes
-    
-    # Get the image attributes:
-    Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(DicomDir)
-    
-    # Initialise the array of contour points:
-    Indices = []
-    
-    # Iterate for all contour points in threes:
-    for p in range(0, len(ContourData), 3):
-        # The point in Patient Coordinate System:
-        pt = [ContourData[p], ContourData[p+1], ContourData[p+2]]
-        
-        # Convert pt to Image Coordinate System:
-        ind = Point2Index(pt, IPPs[0], Dirs, Spacings)
-        
-        Indices.append(ind)
+        Indices.append(Index)
         
     return Indices
 
@@ -335,150 +327,29 @@ def ConvertContourDataToIndices(ContourData, DicomDir):
 
 
 
-
-
-def Index2Point(Index, Origin, Directions, Spacings):
-    """
-    Convert an index (in Image Coordinate System (ICS)) to a physical point 
-    (in Patient Coordinate System (PCS)).
-    
-    Inputs:
-    ------
-    
-    Index : list of integers
-        List (for each dimension) of the indices (in ICS) of a point, 
-        e.g. [i, j, k].
-        
-    Origin : list of floats
-        A list (for each dimension) of the 3D image origin 
-        (= ImagePositionPatient of the first slice in the DICOM series), 
-        e.g. [x0, y0, z0].
-        
-    Directions : list of floats 
-        List of the direction cosines along x (rows), y (columns) and z 
-        (slices) (= the cross product of the x and y direction cosines from 
-        ImageOrientationPatient appended to ImageOrientationPatient),
-        e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz].
-        
-    Spacings : list of floats 
-        List (for each dimension) of the pixel spacings along x, y and z, 
-        e.g. [di, dj, dk].  The x and y spacings come from PixelSpacing.  The 
-        z spacing is not the SliceThickness but instead is determined from 
-        ImagePositionPatient and ImageOrientationPatient.
-    
-        
-    Ouputs:
-    ------
-    
-    Point : list of floats
-        List (for each dimension) of the coordinates of a point, 
-        e.g. [x, y, z].
-        
-        
-    Equations:
-    ---------
-    
-    P = S + (di*i).X + (dj*j).Y + (dk*k).Z
-    
-    where P = (Px, Py, Pz) is the point in the Patient Coordinate System
-    
-          S = (Sx, Sy, Sz) is the origin in the Patient Coordinate System (i.e.
-          the ImagePositionPatient)
-          
-          X = (Xx, Xy, Xz) is the direction cosine vector along rows (x) 
-          
-          Y = (Yx, Yy, Yz) is the direction cosine vector along columns (y)
-          
-          Z = (Zx, Zy, Zz) is the direction cosine vector along slices (z)
-          
-          di, dj and dk are the pixel spacings along x, y and z
-          
-          i, j, and k are the row (x), column (y) and slice (z) indices
-    """
-    
-    if False: # 08/12/20
-        x = Origin[0] + Index[0]*Spacings[0]*Directions[0] \
-                      + Index[0]*Spacings[0]*Directions[1] \
-                      + Index[0]*Spacings[0]*Directions[2] \
-        
-        y = Origin[1] + Index[1]*Spacings[1]*Directions[3] \
-                      + Index[1]*Spacings[1]*Directions[4] \
-                      + Index[1]*Spacings[1]*Directions[5] \
-            
-        z = Origin[2] + Index[2]*Spacings[2]*Directions[6] \
-                      + Index[2]*Spacings[2]*Directions[7] \
-                      + Index[2]*Spacings[2]*Directions[8] \
-                  
-    x = Origin[0] + Index[0]*Spacings[0]*Directions[0] \
-                  + Index[1]*Spacings[1]*Directions[3] \
-                  + Index[2]*Spacings[2]*Directions[6] \
-    
-    y = Origin[1] + Index[0]*Spacings[0]*Directions[1] \
-                  + Index[1]*Spacings[1]*Directions[4] \
-                  + Index[2]*Spacings[2]*Directions[7] \
-        
-    z = Origin[2] + Index[0]*Spacings[0]*Directions[2] \
-                  + Index[1]*Spacings[1]*Directions[5] \
-                  + Index[2]*Spacings[2]*Directions[8] \
-        
-    return [x, y, z]
+def Index2Point(Index, RefIm):
+    # unnecessary
+    return RefIm.TransformIndexToPhysicalPoint(Index)
 
 
 
 
 
 
-
-def Indices2Points(Indices, Origin, Directions, Spacings):
-    """
-    Convert a list of indices (in Image Coordinate System (ICS)) to a list of
-    physical points (in Patient Coordinate System (PCS)).
-    
-    Inputs:
-    ------
-    
-    Indices : list of a list of integers
-        List (for each point) of a list (for each dimension) of the indices 
-        (in ICS) of Points, e.g. [[i0, j0, k0], [i1, j1, k1], ...].
-        
-    Origin : list of floats
-        A list (for each dimension) of the 3D image origin 
-        (= ImagePositionPatient of the first slice in the DICOM series), 
-        e.g. [x0, y0, z0].
-        
-    Directions : list of floats 
-        List of the direction cosines along x (rows), y (columns) and z 
-        (slices) (= the cross product of the x and y direction cosines from 
-        ImageOrientationPatient appended to ImageOrientationPatient),
-        e.g. [Xx, Xy, Xz, Yx, Yy, Yz, Zx, Zy, Zz].
-        
-    Spacings : list of floats 
-        List (for each dimension) of the pixel spacings along x, y and z, 
-        e.g. [di, dj, dk].  The x and y spacings come from PixelSpacing.  The 
-        z spacing is not the SliceThickness but instead is determined from 
-        ImagePositionPatient and ImageOrientationPatient.
-    
-        
-    Ouputs:
-    ------
-    
-    Points : list of a list of floats
-        List (for each point) of a list (for each dimension) of points in the
-        PCS, e.g. [[x0, y0, z0], [x1, y1, z1], ...].
-    """
-    
+def Indices2Points(Indices, RefIm):
     Points = []
     
-    for index in Indices:
-        Points.append(Index2Point(index, Origin, Directions, Spacings))
+    for Index in Indices:
+        #print(f'\n\nIndex = {Index}')
+        
+        Index = [int(item) for item in Index]
+        
+        Point = RefIm.TransformIndexToPhysicalPoint(Index)
+        
+        Points.append(Point)
         
     return Points
-
-
-
-
-
-
+    
 
 
 
@@ -919,8 +790,6 @@ def Image2PixArr(LabmapIm, Non0FrameInds=None):
 
 
 
-
-
 def PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5):
     """
     Convert a 3D pixel array to a list (for each frame) of a list of indices
@@ -947,23 +816,17 @@ def PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5):
     Outputs:
     -------
     
-    IndicesByFrame : list of floats
-        A list (for each contour/frame) of a flat list of [x, y, z] coordinates
-        of the polygons that define each frame in PixArr.
-        
-    PtsByCnt : list of a list of floats
-        A list (for each contour/frame) of a list (for each dimension) of the 
-        polygons that define each frame in PixArr.
-        
-    #CntToSliceInds : list of integers
-    #    List of slice numbers that correspond to each contour.
+    IndsByObjByFrame : list of a list of a list of floats
+        A list (for each frame) of a list (for each contour) of a list of 
+        [x, y, z] coordinates of the polygons converted from each frame in
+        PixArr.
     """
     
     import numpy as np
     from scipy.sparse import issparse
     from skimage.measure import find_contours
     
-    IndsByFrame = []
+    IndsByObjByFrame = []
     
     for FrameNum, Mask in enumerate(PixArr):
         if issparse(Mask):
@@ -974,7 +837,7 @@ def PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5):
             continue
  
         # Add an empty row and column at both sides of the mask to ensure that
-        # any masks near the edge are found:
+        # any masks near an edge are found:
         ExpandedDims = (Mask.shape[0] + 2, Mask.shape[1] + 2)
         
         ExpandedMask = np.zeros(ExpandedDims, dtype=float)
@@ -982,63 +845,41 @@ def PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5):
         ExpandedMask[1:Mask.shape[0] + 1, 1:Mask.shape[1] + 1] = Mask
  
         # Get the indices that define contours in ExpandedMask:
-        """
-        I'm not sure how this will behave if there is more than one label (i.e.
-        more than one closed mask on any given frame).  Since the returned
-        item is a list of length 1, presummably a frame with multiple masks 
-        will result in a list of length > 1 for each mask.  This needs to be
-        tested and confirmed.
-        """
         IndsByObj_2D = find_contours(ExpandedMask.T, Thresh)
         
         #print(f'\n\n\nFrameNum = {FrameNum}')
         #print(f'\nlen(IndsByObj_2D) = {len(IndsByObj_2D)}')
         #print(f'\nIndsByObj_2D = {IndsByObj_2D}')
  
-        # Remove on row and column to shift the indices back to their original
+        # Remove one row and column to shift the indices back to their original
         # locations:
         IndsByObj_2D = [np.subtract(x, 1).tolist() for x in IndsByObj_2D]
         
-        if len(IndsByObj_2D) > 1:
-            print(f'\nWarning: {len(IndsByObj_2D)} objects were found in',
-                  f'frame {FrameNum} in PixArr.')
-            
-            print(f'\nIndsByObj_2D = {IndsByObj_2D}')
-            
-            """
-            Consider what else needs to be done. 
-            e.g.
-            
-            for IndsThisObj_2D in IndsByObj_2D:
-                ...
-            """
-            
-        else:
-            """
-            Only one object was found. Reduce the level of nested lists to one
-            list of 2D indices.
-            """
-            Inds_2D = IndsByObj_2D[0]
-        
         #print(f'\n\n\nFrameNum = {FrameNum}')
-        #print(f'\nlen(Inds_2D) = {len(Inds_2D)}')
-        #print(f'\nInds_2D = {Inds_2D}')
+        #print(f'\nlen(IndsByObj_2D) = {len(IndsByObj_2D)}')
+        #print(f'\nIndsByObj_2D = {IndsByObj_2D}')
         
-        SliceNum = FrameToSliceInds[FrameNum]
+        SliceNum = float(FrameToSliceInds[FrameNum])
             
         # Add the index for the 3rd dimension:
-        Inds_3D = [Ind_2D + [SliceNum] for Ind_2D in Inds_2D]
+        IndsByObj_3D = []
         
-        #print(f'\nlen(Inds_3D) = {len(Inds_3D)}')
-        #print(f'\nInds_3D = {Inds_3D}')
+        for IndsThisObj_2D in IndsByObj_2D:
+            IndsThisObj_3D = [Ind_2D + [SliceNum] for Ind_2D in IndsThisObj_2D]
+            
+            IndsByObj_3D.append(IndsThisObj_3D)
         
-        IndsByFrame.append(Inds_3D)
+        #print(f'\nlen(IndsByObj_3D) = {len(IndsByObj_3D)}')
+        #print(f'\nIndsByObj_3D = {IndsByObj_3D}')
+        
+        IndsByObjByFrame.append(IndsByObj_3D)
         
         
-    #print(f'\n\n\n\nlen(IndsByFrame) = {len(IndsByFrame)}')
-    #print(f'\nIndsByFrame = {IndsByFrame}')
+    #print(f'\nlen(IndsByObjByFrame) = {len(IndsByObjByFrame)}')
+    #print(f'\nIndsByObjByFrame = {IndsByObjByFrame}')
  
-    return IndsByFrame
+    return IndsByObjByFrame
+
 
 
 
@@ -1074,34 +915,45 @@ def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
     Outputs:
     -------
     
-    PtsByCnt : list of a list of floats
-        A list (for each contour/frame) of a list (for each dimension) of the 
-        physical coordinates that define the mask in each frame in PixArr.
+    PtsByObjByFrame : list of a list of a list of floats
+        A list (for each frame) of a list (for each object, i.e. contour) of a 
+        list (for each dimension) of the physical coordinates that define the 
+        mask in each frame in PixArr.
         
-    CntDataByCnt : list of a list of strings
-        A list (for each contour/frame) of a flattened list of [x, y, z]
-        physical coordinates that define the mask in each frame in PixArr as
-        strings (format of ContourData tag in RTS).
+    CntDataByObjByFrame : list of a list of a list of strings
+        A list (for each frame) of a list (for each object, i.e. contour) of a 
+        flattened list of [x, y, z] physical coordinates that define the mask 
+        in each frame in PixArr as strings (format of ContourData tag in RTS).
     """
     
-    from ImageTools import GetImageAttributes
+    #from ImageTools import GetImageAttributes
+    from ImageTools import ImportImage
     
-    # Convert the pixel array to a list of indices-by-frame:
-    IndsByFrame = PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5)
+    RefIm = ImportImage(DicomDir)
     
-    Size, Spacings, ST,\
-    IPPs, Dirs = GetImageAttributes(DicomDir, Package='pydicom')
+    # Convert the pixel array to a list of indices-by-object-by-frame:
+    IndsByObjByFrame = PixArr2IndsByFrame(PixArr, FrameToSliceInds, Thresh=0.5)
     
-    PtsByCnt = []
-    CntDataByCnt = []
+    #Size, Spacings, ST,\
+    #IPPs, Dirs = GetImageAttributes(DicomDir, Package='pydicom')
     
-    for Inds in IndsByFrame:
-        Pts = Indices2Points(Indices=Inds, Origin=IPPs[0], Directions=Dirs, 
-                             Spacings=Spacings)
+    PtsByObjByFrame = []
+    CntDataByObjByFrame = []
+    
+    for f in range(len(IndsByObjByFrame)):
+        PtsByObj = []
+        CntDataByObj = []
+    
+        for o in range(len(IndsByObjByFrame[f])):
+            Pts = Indices2Points(Indices=IndsByObjByFrame[f][o], 
+                                 RefIm=RefIm)
+            
+            PtsByObj.append(Pts)
+            
+            CntDataByObj.append(Points2ContourData(Points=Pts))
         
-        PtsByCnt.append(Pts)
-        
-        CntDataByCnt.append(Points2ContourData(Points=Pts))
+        PtsByObjByFrame.append(PtsByObj)
+        CntDataByObjByFrame.append(CntDataByObj)
     
     
     #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
@@ -1109,7 +961,7 @@ def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
     #print(f'\nPtsByCnt = {PtsByCnt}')
     #print(f'\nCntDataByCnt = {CntDataByCnt}')
  
-    return PtsByCnt, CntDataByCnt
+    return PtsByObjByFrame, CntDataByObjByFrame
 
 
 
@@ -1119,7 +971,55 @@ def PixArr2PtsByContour(PixArr, FrameToSliceInds, DicomDir, Thresh=0.5):
 
 
 
+def NumOfListsAtDepthTwo(NestedList):
+    """
+    Return the number of lists in a nested list at depth two.
+    
+    Example uses:  Determining the number of objects/contours in 
+    PtsByObjByFrame or CntDataByObjByFrame.  
+    
+    N.B.:
+        
+    PtsByObjByFrame is a list (for each frame) of a list (for each object,
+    i.e. contour) of a list (for each dimension) of the physical coordinates 
+    that define the mask in each frame in a pixel array.
+    
+    CntDataByObjByFrame is a list (for each frame) of a list (for each object, 
+    i.e. contour) of a flattened list of [x, y, z] physical coordinates that 
+    define the mask in each frame in PixArr as strings.
+        
+    So the number of contours is the total sum of all objects in the nested 
+    list in the first two levels.
+    
+    
+    Inputs:
+    ------
+    
+    NestedList : list of a list of a list of items
+        Example: A list (for each frame) of a list (for each object, i.e. 
+        contour) of a list (for each dimension) of the physical coordinates 
+        that define the mask in each frame in a pixel array.
+ 
+    
+    Outputs:
+    -------
+    
+    N : integer
+        The total number of lists in a nested list up to two levels down.
+    """
+    
+    N = 0
+    
+    for i in range(len(NestedList)):
+        N = N + len(NestedList[i])
+        
+    return N
 
+
+
+
+            
+    
 
 def Indices2Mask(Inds, RefImage):
     """

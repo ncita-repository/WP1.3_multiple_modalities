@@ -16,3 +16,7 @@ NCITA_coding_task/
 *.mat
 *.npy
 *.json
+Python_code/ROI_copy_and_interpolation
+Python_code/trying_stuff
+Python_code/Various_functions
+logs/

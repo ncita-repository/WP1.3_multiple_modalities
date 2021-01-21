@@ -277,7 +277,23 @@ def PrintTitle(Title):
 
 
 def GetExtremePoints(Image):
-
+    """
+    Get the vertices that define the 3D extent of a 3D image.
+    
+    Inputs:
+    ------
+    
+    Image : SimpleITK image
+        A 3D image whose physical extent is to be determined.
+    
+        
+    Outputs:
+    -------
+    
+    pts : list of floats
+        A list of length 8 of floats for all vertices that define the 3D extent
+        of Image.
+    """
     pts = [Image.TransformIndexToPhysicalPoint((0, 0, 0)), 
            Image.TransformIndexToPhysicalPoint((Image.GetWidth(), 0, 0)),
            Image.TransformIndexToPhysicalPoint((Image.GetWidth(), Image.GetHeight(), 0)),
@@ -288,6 +304,169 @@ def GetExtremePoints(Image):
            Image.TransformIndexToPhysicalPoint((0, Image.GetHeight(), Image.GetDepth()))]
     
     return pts
+
+
+
+
+
+def IsPointInPolygon(point, vertices):
+    """
+    Determine if a 3D point is in a 3D polygon.
+    
+    Inputs:
+    ------
+    
+    Point : list of floats
+        A list of length 3 of floats representing a 3D point.
+                     
+    Vertices : list of floats
+        A list of length 8 of floats for all vertices that define a 3D volume.
+        
+        
+    Outputs:
+    -------
+    
+    PtInPoly : boolean
+        True/False if Point is/isn't in Polygon.
+    """
+    
+    from shapely.geometry import Polygon, Point
+    
+    poly = Polygon(vertices)
+    
+    pt = Point(point)
+    
+    return poly.contains(pt)
+
+
+
+
+
+
+
+def ProportionOfPixArrInExtent_OLD(PixArr, FrameToSliceInds, DicomDir):
+    """
+    Determine what proportion of voxels that make up a 3D pixel array reside
+    within the 3D volume of a 3D image.
+    
+    Inputs:
+    ------
+    
+    PixArr : Numpy array with dimensions Z x Y x X where Z may be 1
+        The pixel array that may represent a mask or labelmap.
+    
+    FrameToSliceInds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to PixArr.
+        
+        
+    Outputs:
+    -------
+    
+    p : float
+        The fractional proportion (normalised to 1) of voxels in PixArr that 
+        intersect the extent of RefImage.
+    """
+    
+    from ConversionTools import PixArr2PtsByContour
+    from ImageTools import ImportImage
+    
+    # Convert the pixel array to a list (for each frame in PixArr) of a list 
+    # (for each point) of a list (for each dimension) of physical coordinates:
+    PtsByFrame, CntDataByFrame = PixArr2PtsByContour(PixArr, 
+                                                     FrameToSliceInds, 
+                                                     DicomDir)
+    
+    Image = ImportImage(DicomDir)
+    
+    Vertices = GetExtremePoints(Image)
+    
+    IsInside = []
+    
+    for PtsInFrame in PtsByFrame:
+        for pt in PtsInFrame:
+            IsInside.append(IsPointInPolygon(pt, Vertices))
+            
+    return sum(IsInside)/len(IsInside)
+
+
+
+
+
+
+def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, DicomDir):
+    """
+    COMMENT 19/01/2021:
+        I was previously mostly getting 100% proportions and the odd 0%.  Now
+        most or all of the results are 0%.  This needs to be checked.
+        
+    
+    Determine what proportion of voxels that make up a 3D pixel array reside
+    within the 3D volume of a 3D image.
+    
+    Inputs:
+    ------
+    
+    PixArr : Numpy array with dimensions Z x Y x X where Z may be 1
+        The pixel array that may represent a mask or labelmap.
+    
+    FrameToSliceInds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to PixArr.
+        
+        
+    Outputs:
+    -------
+    
+    p : float
+        The fractional proportion (normalised to 1) of voxels in PixArr that 
+        intersect the extent of RefImage.
+    """
+    
+    from ConversionTools import PixArr2PtsByContour
+    from ImageTools import ImportImage
+    
+    # Convert the pixel array to a list (for each frame in PixArr) of a list 
+    # (for each point) of a list (for each dimension) of physical coordinates:
+    PtsByObjByFrame,\
+    CntDataByObjByFrame = PixArr2PtsByContour(PixArr, 
+                                              FrameToSliceInds, 
+                                              DicomDir)
+    
+    print('\n\n\nFunction ProportionOfPixArrInExtent():')
+    print(f'   FrameToSliceInds = {FrameToSliceInds}')
+    print(f'   len(PtsByObjByFrame) = {len(PtsByObjByFrame)}')
+    print(f'   len(CntDataByObjByFrame) = {len(CntDataByObjByFrame)}')
+    for f in range(len(PtsByObjByFrame)):
+        print(f'   Frame {f} has {len(PtsByObjByFrame[f])} objects')
+        for o in range(len(PtsByObjByFrame[f])):
+            print(f'      Object {o} has {len(PtsByObjByFrame[f][o])} points')
+            #print(f'   len(CntDataByFrame[{i}]) = {len(CntDataByFrame[i])}')
+    #print(f'   \nPtsByFrame = {PtsByFrame}')
+    #print(f'   \nCntDataByFrame = {CntDataByFrame}')
+    
+    
+    Image = ImportImage(DicomDir)
+    
+    Vertices = GetExtremePoints(Image)
+    
+    IsInside = []
+    
+    for f in range(len(PtsByObjByFrame)):
+        for o in range(len(PtsByObjByFrame[f])):
+            for pt in PtsByObjByFrame[f][o]:
+                IsInside.append(IsPointInPolygon(pt, Vertices))
+            
+    return sum(IsInside)/len(IsInside)
+
 
 
 
@@ -727,3 +906,106 @@ def Distance(item0, item1):
         msg = "The inputs must both be 2D or 3D lists of points/indices."
         
         raise Exception(msg)
+        
+        
+        
+        
+def SplitString(String, SearchString, Separator='_'):
+    """
+    Split a string to the string of characters on either side of a search
+    string bounded by a separator.  
+    
+    Inputs:
+    *******
+    
+    String : string
+        The input string to be separated.
+        
+    SearchString : string
+        The string that defines the split point.
+        
+    Separator : string (optional; '_' by default)
+        The string that separates words within a string.
+        
+        e.g. The string "Series-4-Slice-9" has separator '-'; The string
+        "Series_4_Slice_9" has separator '_'.
+        
+        
+    Outputs:
+    *******
+        
+    StringList : list of strings
+        A list of length two of strings (e.g. ['string0', 'string1']).
+    """
+    
+    StringSplit = String.split(Separator)
+    
+    ind = StringSplit.index(SearchString)
+    
+    StringList = []
+    
+    if ind - 1 < 0:
+        StringList.append('')
+    else:
+        StringList.append(StringSplit[ind-1])
+        
+    if ind + 1 >= len(StringSplit):
+        StringList.append('')
+    else:
+        StringList.append(StringSplit[ind+1])
+        
+    return StringList
+
+
+
+
+
+def SliceNoFromFpath(Fpath, SearchString, Separator='_'):
+    """
+    Parse a filepath for a slice number based on a search string and (optional)
+    separator.  This will only work for specific filepath formats.
+    
+    Inputs:
+    *******
+    
+    Fpath : string
+        The filepath to be parsed.
+        
+    SearchString : string
+        The string that identifies the slice number.
+        
+        e.g. The string "S4_slice9" would require the search string "slice";
+        The string "S4_s9" would require "s".
+        
+    Separator : string (optional; '_' by default)
+        The string that separates words within a string.
+        
+        e.g. The string "S4-s9" has separator '-'; The string "S4_s9" has 
+        separator '_'.
+        
+        
+    Outputs:
+    *******
+        
+    SliceNo : int
+        The slice number parsed from Fpath.
+    """
+    
+    from os.path import split, splitext
+    
+    Fname = split(splitext(Fpath)[0])[1]
+    
+    IntString = Fname.split(SearchString)[1]
+    
+    try:
+        SliceNo = int(IntString)
+        
+        return SliceNo
+        
+    except ValueError:
+        msg = f'Cannot convert {IntString} into int. \nFpath = {Fpath}, \n' \
+              + f'Fname = {Fname}, \nIntString = {IntString}.'
+        
+        print(msg)
+        
+        return None

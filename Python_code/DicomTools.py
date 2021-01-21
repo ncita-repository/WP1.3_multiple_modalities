@@ -409,6 +409,7 @@ def GetRoiNum(Roi, SearchString):
         
     SearchString : string
         All or part of the ROIName/SegmentLabel of the ROI/segment of interest.
+        If SearchString is an empty string return the first ROI/segment number. 
                        
                             
     Outputs:
@@ -424,16 +425,33 @@ def GetRoiNum(Roi, SearchString):
     
     #print('\nRoiLabel to find =', SearchString)
     
-    #RoiNum = RoiLabels.index(SearchString)
-    RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel]
-    
-    if not RoiNum:
-        msg = 'There are no ROIs in the RTS/SEG that match "SearchString" = '\
-              + f'"{SearchString}".'
-        
+    if not RoiLabels:
+        msg = 'There are no ROIs in the RTS/SEG.'
+            
         raise Exception(msg)
+    
+    
+    if SearchString == "":
+        RoiNum = 0
         
-    return RoiNum[0]
+    else:
+        #RoiNum = RoiLabels.index(SearchString)
+        #RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel][0] # 13/01/2021
+        RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel] # 13/01/2021
+        
+        #print(f'\nRoiNum = {RoiNum}')
+        
+        if RoiNum:
+            RoiNum = RoiNum[0] # 13/01/2021
+            
+        else:
+            msg = "There is no ROI/segment in the RTS/SEG containing "\
+                  + f"names/labels {RoiLabels} \nthat matches 'SearchString' "\
+                  + f"= '{SearchString}'."
+            
+            raise Exception(msg)
+            
+    return RoiNum
 
 
 

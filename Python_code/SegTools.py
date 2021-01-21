@@ -1033,6 +1033,8 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     
     SegNum = GetRoiNum(SegTemplate, SearchString)
     
+    #print(f'\n\n***SegNum = {SegNum}')
+    
     # The Segment Label of the segment containing the segmentation to be 
     # copied:
     SegLabel = SegTemplate.SegmentSequence[SegNum].SegmentLabel
@@ -1073,9 +1075,13 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     #    SD = NamePrefix + '_from_' + Seg.SeriesDescription
     #else:
     #    SD = NamePrefix + '_SEG_from_' + Seg.SeriesDescription
+    
+    #print(f'\n\n***NamePrefix = {NamePrefix}')
         
     #Seg.SeriesDescription = SD
     Seg.SeriesDescription = NamePrefix
+    
+    #print(f'\n\n***Seg.SeriesDescription = {Seg.SeriesDescription}')
     
     # Modify the Content Date and Time to the present:
     NewDate = time.strftime("%Y%m%d", time.gmtime())
