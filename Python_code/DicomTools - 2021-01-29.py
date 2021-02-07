@@ -397,9 +397,9 @@ def GetRoiLabels(Roi):
 
 
 
-def GetRoiNums(Roi, SearchString):
+def GetRoiNum(Roi, SearchString):
     """
-    Get the ROI/segment number(s) that matches SearchString.
+    Get the ROI/segment number that matches SearchString.
     
     Inputs:
     ******
@@ -415,8 +415,8 @@ def GetRoiNums(Roi, SearchString):
     Outputs:
     *******
     
-    RoiNums : list of integers
-        A list of indices corresponding to the ROI(s) that matche SearchString.
+    RoiNum : integer
+        The index of the ROI that matches SearchString.
     """
     
     RoiLabels = GetRoiLabels(Roi)
@@ -437,28 +437,21 @@ def GetRoiNums(Roi, SearchString):
     else:
         #RoiNum = RoiLabels.index(SearchString)
         #RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel][0] # 13/01/2021
-        RoiNums = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel] # 13/01/2021
+        RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel] # 13/01/2021
         
         #print(f'\nRoiNum = {RoiNum}')
         
-        #if RoiNum:
-        #    RoiNum = RoiNum[0] # 13/01/2021
-        #    
-        #else:
-        #    msg = "There is no ROI/segment in the RTS/SEG containing "\
-        #          + f"names/labels {RoiLabels} \nthat matches 'SearchString' "\
-        #          + f"= '{SearchString}'."
-        #    
-        #    raise Exception(msg)
+        if RoiNum:
+            RoiNum = RoiNum[0] # 13/01/2021
             
-        if not RoiNums:
+        else:
             msg = "There is no ROI/segment in the RTS/SEG containing "\
                   + f"names/labels {RoiLabels} \nthat matches 'SearchString' "\
                   + f"= '{SearchString}'."
             
             raise Exception(msg)
             
-    return RoiNums
+    return RoiNum
 
 
 

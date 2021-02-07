@@ -56,84 +56,45 @@ def ItemsUniqueToWithin(List, epsilon=1e-5):
 
 
 
-def FlattenList(ListOfLists):
-    if len(ListOfLists) == 0:
-        return ListOfLists
-    if isinstance(ListOfLists[0], list):
-        return FlattenList(ListOfLists[0]) + FlattenList(ListOfLists[1:])
-    return ListOfLists[:1] + FlattenList(ListOfLists[1:])
-
-
-
-
-
-
-
-def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
+def UniqueItems(Items, IgnoreZero=False):
     """
     Get list of unique items in a list or Numpy data array.
     
     Inputs:
     ******
     
-    Items : list of integers/floats or a Numpy data array
+    Items : list or Numpy data array
     
     IgnoreZero : boolean (optional; False by default)
         If IgnoreZero=True only unique non-zero items will be returned.
-        
-    MaintainOrder : boolean (optional; False by default)
-        If MaintainOrder=True the unique items will be returned in their
-        original order.
         
     
     Outputs:
     *******
     
-    UniqueItems : list or Numpy data array or None
-        List or Numpy array of unique items, or None if Items is empty.
+    UniqueItems : list or Numpy data array
+        List or Numpy array of unique items.
     """
     
     import numpy as np
     from copy import deepcopy
     
-    
-    if not isinstance(Items, list) and not isinstance(Items, np.ndarray):
-        msg = f'The input "Items" is data type {type(Items)}.  Acceptable '\
-              + 'data types are "list" and "numpy.ndarray".'
-        
-        raise Exception(msg)
-    
-    
     OrigItems = deepcopy(Items)
     
+    # If Items is a list convert to a Numpy array:
     if isinstance(Items, list):
-        #Items = np.array(Items)
-    
-        ##Items = list(np.concatenate(Items).flat)
-        #Items = np.concatenate(Items)
-        
-        Items = np.array(FlattenList(Items))
-            
-
-    if Items.size == 0:
-        return None
-    
+        #Items = np.ndarray.flatten(Items)
+        Items = np.array(Items)
     
     if IgnoreZero:
         inds = np.nonzero(Items)
         
-        Items = [Items[ind] for ind in inds[0]]
+        Items = Items[inds]
+        
+    #print(f'\nItems.shape = {Items.shape}')
     
-    if MaintainOrder:
-        UniqueItems = []
-        
-        for item in Items:
-            if not item in UniqueItems:
-                UniqueItems.append(item)
-        
-    else:
-        #UniqueItems = list(set(Items.tolist()))
-        UniqueItems = np.unique(Items)
+    #UniqueItems = list(set(Items.tolist()))
+    UniqueItems = np.unique(Items)
     
     # If Items was a list convert back to a list:
     if isinstance(OrigItems, list):
@@ -143,27 +104,14 @@ def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
 
     
     return UniqueItems
+        
+    
+        
+    
+    
+    
     
 
-
-
-
-
-
-def ReplaceIndInC2SindsByRoi(C2SindsByRoi, IndToReplace, ReplacementInd):
-    
-    for r in range(len(C2SindsByRoi)):
-        for c in range(len(C2SindsByRoi[r])):
-            if C2SindsByRoi[r][c] == IndToReplace:
-                C2SindsByRoi[r][c] = ReplacementInd
-    
-    return C2SindsByRoi
-
-
-
-
-
-    
 def AppendItemToListAndSort(OrigList, ItemToAppend):
     """
     Append an item to a list and return the sorted list. 
@@ -319,74 +267,6 @@ def AreListsEqualToWithinEpsilon(List0, List1, epsilon=1e-06):
 
 
 
-def NumOfListsAtDepthTwo(NestedList):
-    """
-    Return the number of lists in a nested list at depth two.
-    
-    Inputs:
-    ******
-    
-    NestedList : list of a list of a list of items
-        A nested list of items.
- 
-    
-    Outputs:
-    *******
-    
-    N : integer
-        The total number of lists in a nested list up to two levels down.
-    """
-    
-    N = 0
-    
-    for i in range(len(NestedList)):
-        N = N + len(NestedList[i])
-        
-    return N
-
-
-
-
-
-
-def NumOfItemsInAListByDepth(List):
-    """
-    Return the number of items in a list at each depth.
-    
-    Inputs:
-    ******
-    
-    List : a list 
-        A list of items or nested list of any number of lists.
- 
-    
-    Outputs:
-    *******
-    
-    NumOfItemsByDepth : list of integers
-        The number of items in List at each depth.
-    """
-    
-    NumOfItemsByDepth = []
-    
-    while isinstance(List, list):
-        NumOfItemsByDepth.append(len(List))
-        
-        NumOfItemsNextDepth = []
-        
-        for i in range(len(List)): 
-            NumOfItemsNextDepth.append(len(List[i]))
-        
-        """ need to continue... """
-        
-    return NumOfItemsByDepth
-
-
-
-
-
-
-
 
 def PrintTitle(Title):
     
@@ -400,35 +280,40 @@ def PrintTitle(Title):
 
 
 
-def PrintIndsByRoi(IndsByRoi):
+def GetExtremePoints(Image):
+    """
+    Get the vertices that define the 3D extent of a 3D image.
     
-    R = len(IndsByRoi)
+    Inputs:
+    ******
     
-    for r in range(R):
-        if r == 0:
-            msg = f'   [{IndsByRoi[r]}'
-        else:
-            msg = f'    {IndsByRoi[r]}'
+    Image : SimpleITK image
+        A 3D image whose physical extent is to be determined.
+    
         
-        if r < R - 1:
-            msg += ','
-        
-        if r == R - 1:
-            msg += ']'
-                
-        print(msg)
-
-    C = [len(IndsByRoi[r]) for r in range(R)]
+    Outputs:
+    *******
     
-    print(f'   Number of contours in each ROI = {C}')
+    pts : list of floats
+        A list of length 8 of floats for all vertices that define the 3D extent
+        of Image.
+    """
+    pts = [Image.TransformIndexToPhysicalPoint((0, 0, 0)), 
+           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), 0, 0)),
+           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), Image.GetHeight(), 0)),
+           Image.TransformIndexToPhysicalPoint((0, Image.GetHeight(), 0)),
+           Image.TransformIndexToPhysicalPoint((0, Image.GetHeight(), Image.GetDepth())),
+           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), Image.GetHeight(), Image.GetDepth())),
+           Image.TransformIndexToPhysicalPoint((Image.GetWidth(), 0, Image.GetDepth())),
+           Image.TransformIndexToPhysicalPoint((0, 0, Image.GetDepth()))
+           ]
     
-    return
+    return pts
 
 
 
 
-            
-            
+
 def IsPointInPolygon(point, vertices):
     """
     Determine if a point lies within a polygon.
@@ -473,6 +358,214 @@ def IsPointInPolygon(point, vertices):
     return PtInPoly
 
 
+
+
+
+
+
+def ProportionOfContourInExtent(Points, TrgDicomDir, LogToConsole=False):
+    """
+    COMMENT 26/01/2021:
+        I was previously mostly getting 100% proportions and the odd 0%.  Then
+        most or all results were 0%.  After recent revisions I get 100% for
+        a case where the contour points/segmentation pixels are clearly not 
+        within the Target image domain.
+        
+    
+    Determine what proportion of voxels that make up a 3D pixel array reside
+    within the 3D volume of a 3D image.
+    
+    Inputs:
+    ******
+    
+    Points : list of a list of floats
+        A list (for each point) of a list (for each dimension) of coordinates, 
+        e.g. [[x0, y0, z0], [x1, y1, z1], ...].
+        
+    TrgDicomDir : string
+        Directory containing the DICOMs that relate to the image grid/extent
+        within which the test is for.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    FracProp : float
+        The fractional proportion (normalised to 1) of the points in Contour 
+        that intersect the extent of RefImage.
+    """
+    
+    from ImageTools import ImportImage
+    
+    Image = ImportImage(TrgDicomDir)
+    
+    Vertices = GetExtremePoints(Image)
+    
+    IsInside = []
+    
+    for pt in Points:
+        IsInside.append(IsPointInPolygon(pt, Vertices))
+    
+    FracProp = sum(IsInside)/len(IsInside)
+    
+    
+    if LogToConsole:
+        print('\n\n\nFunction ProportionOfContourInExtent():')
+        print(f'   Contour has {len(Points)} points')
+        
+        print(f'\n   The vertices of the image grid:')
+        for i in range(len(Vertices)):
+            print(f'   {Vertices[i]}')
+        N = len(IsInside)
+        limit = 10
+        if N > limit:
+            print(f'\n   The first {limit} points:')
+            for i in range(limit):
+                print(f'   {Points[i]}')
+        else:
+            print(f'\n   The first {N} points:')
+            for i in range(N):
+                print(f'   {Points[i]}')
+                
+            
+        if FracProp < 1:
+            print(f'\n   The vertices of the image grid:')
+            for i in range(len(Vertices)):
+                print(f'   {Vertices[i]}')
+            N = len(IsInside)
+            limit = 3
+            if N > limit:
+                print(f'\n   The first {limit} points that lie outside of extent:')
+                for i in range(limit):
+                    print(f'   {Points[i]}')
+            else:
+                print(f'\n   The first {N} points that lie outside of extent:')
+                for i in range(N):
+                    print(f'   {Points[i]}')
+                    
+    return FracProp
+
+
+
+
+
+
+
+def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir, 
+                               TrgDicomDir, LogToConsole=False):
+    """
+    COMMENT 29/01/2021:
+        I was using the same image (i.e. same DICOM directory) to generate the
+        pixel array (i.e. PixArr2PtsByContour()) and to generate the vertices
+        (i.e. GetExtremePoints()).  The former had to be the source DICOMs and
+        the latter the target DICOMs.
+        
+    
+    Determine what proportion of voxels that make up a 3D pixel array reside
+    within the 3D volume of a 3D image.
+    
+    Inputs:
+    ******
+    
+    PixArr : Numpy array with dimensions Z x Y x X where Z may be 1
+        The pixel array that may represent a mask or labelmap.
+    
+    FrameToSliceInds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
+        
+    SrcDicomDir : string
+        Directory containing the DICOMs that relate to PixArr.
+    
+    TrgDicomDir : string
+        Directory containing the DICOMs that relate to the image grid/extent
+        within which the test is for.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    FracProp : float
+        The fractional proportion (normalised to 1) of voxels in PixArr that 
+        intersect the extent of RefImage.
+    """
+    
+    from ConversionTools import PixArr2PtsByContour
+    from ImageTools import ImportImage
+    
+    F, R, C = PixArr.shape
+    
+    # Convert the pixel array to a list (for each frame in PixArr) of a list 
+    # (for each point) of a list (for each dimension) of physical coordinates:
+    PtsByObjByFrame,\
+    CntDataByObjByFrame = PixArr2PtsByContour(PixArr, 
+                                              FrameToSliceInds, 
+                                              SrcDicomDir)
+    
+    Image = ImportImage(TrgDicomDir)
+    
+    Vertices = GetExtremePoints(Image)
+    
+    IsInside = []
+    
+    for f in range(len(PtsByObjByFrame)):
+        for o in range(len(PtsByObjByFrame[f])):
+            for pt in PtsByObjByFrame[f][o]:
+                IsInside.append(IsPointInPolygon(pt, Vertices))
+    
+    FracProp = sum(IsInside)/len(IsInside)
+    
+    if LogToConsole:
+        print('\n\n\nFunction ProportionOfPixArrInExtent():')
+        print(f'   PixArr has {F}x{R}x{C} (FxRxC)')
+        print(f'   FrameToSliceInds = {FrameToSliceInds}')
+        print(f'   len(PtsByObjByFrame) = {len(PtsByObjByFrame)}')
+        print(f'   len(CntDataByObjByFrame) = {len(CntDataByObjByFrame)}')
+        for f in range(len(PtsByObjByFrame)):
+            print(f'   Frame {f} has {len(PtsByObjByFrame[f])} objects')
+            for o in range(len(PtsByObjByFrame[f])):
+                print(f'      Object {o} has {len(PtsByObjByFrame[f][o])} points')
+                ##print(f'   len(CntDataByFrame[{i}]) = {len(CntDataByFrame[i])}')
+        #print(f'   \nPtsByFrame = {PtsByFrame}')
+        #print(f'   \nCntDataByFrame = {CntDataByFrame}')
+        
+        if False:
+            print(f'\n   The vertices of the image grid:')
+            for i in range(len(Vertices)):
+                print(f'   {Vertices[i]}')
+            
+            print(f'\n   The points from the input indices:')
+            for i in range(len(PtsByObjByFrame[f][o])):
+                print(f'   {PtsByObjByFrame[f][o][i]}')
+                
+            print(f'\n   len(IsInside) = {len(IsInside)}')
+            print(f'   sum(IsInside) = {sum(IsInside)}')
+            
+        if FracProp < 1:
+            print(f'\n   The vertices of the image grid:')
+            for i in range(len(Vertices)):
+                print(f'   {Vertices[i]}')
+            N = len(IsInside)
+            limit = 10
+            if N > limit:
+                print(f'\n   The first {limit} points that lie outside of extent:')
+                #print([f'\n   {PtsByObjByFrame[0][0][i]}' for i in range(5)])
+                for i in range(limit):
+                    print(f'   {PtsByObjByFrame[0][0][i]}')
+            else:
+                print(f'\n   The first {N} points that lie outside of extent:')
+                #print([f'\n   {PtsByObjByFrame[0][0][i]}' for i in range(N)])
+                for i in range(N):
+                    print(f'   {PtsByObjByFrame[0][0][i]}')
+    
+    return FracProp
 
 
 
@@ -712,7 +805,7 @@ def ShiftFrame(Frame, PixShift):
         rows, and C = number of columns.
         
     PixShift : Numpy array
-        Shift in pixels, e.g. [di, dj, dz].
+        Shift in pixels (e.g. [di, dj, dz].
         
     
     Outputs:
@@ -721,6 +814,7 @@ def ShiftFrame(Frame, PixShift):
     ShiftedFrame : Numpy array
         Shifted frame with shape (1, R, C). Only the x- and y-components are 
         shifted.
+
     """
     
     import numpy as np
@@ -789,93 +883,10 @@ def ShiftFrame(Frame, PixShift):
 
 
 
-def ShiftFramesInPixArrByRoi(PixArrByRoi, F2SindsByRoi, SrcImage, SrcSliceNum,
-                             TrgImage, TrgSliceNum, RefImage, Fractional=False,
-                             LogToConsole=False):
-    """
-    Shift the items in each frame of each pixel array in a list of 
-    pixel-arrays-by-ROI.  This is intended for use with single-framed pixel
-    arrays, as in the case of a direct copy to a specified slice.
-    
-    Inputs:
-    ******
-    
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays.
-    
-    F2SindsByRoi : list of a list of integers
-        List (for each ROI) of a list (for each frame) of slice numbers that 
-        correspond to each frame in the pixel arrays in PixArrByRoi.
-        
-    SrcImage : SimpleITK image
-        The Source 3D image.
-    
-    SrcSliceNum : integer
-        The slice number within the Source image stack that the ROI relates to.
-    
-    TrgImage : SimpleITK image
-        The Target 3D image.
-    
-    TrgSliceNum : integer
-        The slice number within the Target image stack that the ROI is to be 
-        copied to following the shift in z-components.
-        
-    RefImage : SimpleITK image
-        The reference image whose voxel spacings will be used to convert the
-        physical shift to pixels (e.g. TrgImage).
-    
-    Fractional : boolean (optional; False by default)
-        If True the pixel shift will be rounded to the nearest integer value.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether some results will be logged to the console.
-    
-    
-    Outputs:
-    *******
-    
-    PixArrByRoi : list of Numpy arrays
-        As above but with shifted frame with shape (1, R, C). Only the x- and 
-        y-components are shifted.
-    """
-    
-    # Get pixel shift between FromSliceNum in SrcIm and ToSliceNum in 
-    # TrgIm in the Target image domain:
-    PixShift = GetPixelShiftBetweenSlices(Image0=SrcImage, SliceNum0=SrcSliceNum, 
-                                          Image1=TrgImage, SliceNum1=TrgSliceNum,
-                                          RefImage=TrgImage)
-    
-    if LogToConsole:
-        print(f'\nPixShift = {PixShift}')
-            
-    
-    for r in range(len(PixArrByRoi)):
-        #if PixArrByRoi[r]:
-        if PixArrByRoi[r].shape[0]: 
-            # Replace PixArrByRoi[r] with the result of shifting the in-plane 
-            # elements, and replace F2SindsByRoi[r] with [TrgSliceNum]:
-            PixArrByRoi[r] = ShiftFrame(Frame=PixArrByRoi[r], PixShift=PixShift)
-            F2SindsByRoi[r] = [TrgSliceNum]
-            
-            if LogToConsole:
-                unique = UniqueItems(Items=PixArrByRoi[r], IgnoreZero=False)
-                
-                print(f'\nThere are {len(unique)} unique items in',
-                      f'PixArrByRoi[{r}] after shifting the frame.')
-    
-        
-    return PixArrByRoi
-    
-    
-
-
-
-
 
 def ChangeZinds(Indices, NewZind):
     """
-    Re-assign the z-components of a list of indeces (as required when
-    making a direct copy of contour points).
+    Re-assign the z-components of a list of indeces.
     
     Inputs:
     ******
@@ -885,8 +896,7 @@ def ChangeZinds(Indices, NewZind):
         e.g. [[i0, j0, k0], [i1, j1, k1], ...].
         
     NewZind : integer
-        The value to re-assign to the z-components (i.e. k) of Indeces (e.g.
-        ToSliceNum).
+        The value to re-assign to the z-components (i.e. k) of Indeces.
     
     
         
@@ -912,76 +922,6 @@ def ChangeZinds(Indices, NewZind):
 
 
 
-def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
-    """
-    Shift the z-component of the points in PtsByCntByRoi (as required when
-    making a direct copy of contour points).
-    
-    Inputs:
-    ******
-    
-    PtsByCntByRoi : list of list of a list of a list of floats
-        List (for each ROI) of a list (for all contours) of a list (for each
-        point) of a list (for each dimension) of coordinates.
-        
-    NewZind : integer
-        The value to re-assign to the z-components (i.e. k) of Indeces (e.g.
-        ToSliceNum).
-    
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-    
-        
-    Ouputs:
-    ******
-    
-    NewPtsByCntByRoi : list of list of a list of a list of floats
-        As PtsByCntByRoi but with modified z-components.
-    """
-    
-    from ImageTools import ImportImage
-    from ConversionTools import Points2Indices, Indices2Points
-    
-    # Import the image:
-    Im = ImportImage(DicomDir)
-    
-    """ Convert PtsByCntByRoi to indices, modify the z-component of the
-    indices, then convert back to physical points. """
-    
-    IndsByCntByRoi = []
-    NewPtsByCntByRoi = []
-    
-    # Iterate through ROIs:
-    for r in range(len(PtsByCntByRoi)): 
-        IndsByCnt = []
-        NewPtsByCnt = []
-        
-        if PtsByCntByRoi[r]:
-            # Iterate through contours:
-            for c in range(len(PtsByCntByRoi[r])):
-                pts = PtsByCntByRoi[r][c]
-                
-                inds = Points2Indices(Points=pts, RefIm=Im, Rounding=False)
-                
-                # Modify the z-component (k) of the indices to NewZind:
-                inds = ChangeZinds(inds, NewZind)
-                
-                IndsByCnt.append(inds)
-                
-                # Convert back to physical points:
-                pts = Indices2Points(inds, RefIm=Im)
-                
-                NewPtsByCnt.append(pts)
-        
-        IndsByCntByRoi.append(IndsByCnt)
-        NewPtsByCntByRoi.append(NewPtsByCnt)
-        
-    return NewPtsByCntByRoi
-
-
-
-    
-    
 
 def MeanPixArr(PixArr, binary=True):
     """
@@ -1013,6 +953,7 @@ def MeanPixArr(PixArr, binary=True):
     # Initialise MeanPixArr:
     MeanPixArr = np.zeros((1, R, C), dtype='uint')
     
+    
     result = np.mean(PixArr, axis=0)
             
     if binary:
@@ -1027,63 +968,6 @@ def MeanPixArr(PixArr, binary=True):
 
 
 
-def MeanPixArrByRoi(PixArrByRoi, binary, LogToConsole=False):
-    """
-    Perform pixel-by-pixel mean of all frames in all pixel arrays in a list
-    of pixel-arrays-by-ROI which have more than 1 frame. No changes will be
-    made to empty or single-framed pixel arrays.
-    
-    Inputs:
-    ******
-    
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays.
-        
-    binary : boolean (optional; True by default)
-        If binary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by 0.5.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether some results will be logged to the console.
-    
-        
-    Outputs:
-    *******
-    
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays averaged to a single-framed
-        pixel array.
-    """
-    
-    # Determine the number of frames in each pixel array: 
-    NumOfFramesByRoi = [PixArr.shape[0] for PixArr in PixArrByRoi]
-    
-    for r in range(len(PixArrByRoi)):
-        if NumOfFramesByRoi[r] > 1: 
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames',
-                      'so the pixel arrays will be averaged.')
-            
-            # Replace PixArrByRoi[r] with the pixel-by-pixel mean across all 
-            # frames in the pixel array:
-            PixArrByRoi[r] = MeanPixArr(PixArrByRoi[r])
-            
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] had {NumOfFramesByRoi[r]} frames,',
-                      f'but now has {PixArrByRoi[r].shape[0]}.')
-        else:
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames,',
-                      'so no frame averaging was required.')
-        
-    return PixArrByRoi
-
-
-
-
-
-    
-    
 
 def Distance(item0, item1):
     """

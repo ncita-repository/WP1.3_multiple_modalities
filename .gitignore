@@ -10,6 +10,7 @@ NCITA_coding_task/
 *.ipynb
 *.docx
 *.pptx
+*.pdf
 *.nii
 *.csv
 2020-05-28_Outputs/
