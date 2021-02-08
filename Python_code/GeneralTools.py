@@ -983,7 +983,7 @@ def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
     
     
 
-def MeanPixArr(PixArr, binary=True):
+def MeanPixArr(PixArr, MakeBinary=True, BinaryThresh=0.5):
     """
     Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
     binary pixel array if binary=True (or undefined).
@@ -994,9 +994,13 @@ def MeanPixArr(PixArr, binary=True):
     PixArr : Numpy array
         PixelData from a SEG file loaded as a Numpy array
         
-    binary : boolean (optional; True by default)
-        If binary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by 0.5.
+    MakeBinary : boolean (optional; True by default)
+        If MakeBinary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by BinaryThreshold.
+    
+    BinaryThreshold : float (optional; 0.5 by default)
+        The threshold that will be used when converting to a binary pixel array
+        if MakeBinary = True.
         
         
     Outputs:
@@ -1015,8 +1019,8 @@ def MeanPixArr(PixArr, binary=True):
     
     result = np.mean(PixArr, axis=0)
             
-    if binary:
-        MeanPixArr[0] = (result >= 0.5) * result
+    if MakeBinary:
+        MeanPixArr[0] = (result >= BinaryThresh) * result
     else:
         MeanPixArr[0] = result
         
@@ -1027,7 +1031,8 @@ def MeanPixArr(PixArr, binary=True):
 
 
 
-def MeanPixArrByRoi(PixArrByRoi, binary, LogToConsole=False):
+def MeanPixArrByRoi(PixArrByRoi, MakeBinary=True, BinaryThresh=0.5,
+                    LogToConsole=False):
     """
     Perform pixel-by-pixel mean of all frames in all pixel arrays in a list
     of pixel-arrays-by-ROI which have more than 1 frame. No changes will be
@@ -1039,9 +1044,13 @@ def MeanPixArrByRoi(PixArrByRoi, binary, LogToConsole=False):
     PixArrByRoi : list of Numpy arrays
         A list (for each ROI) of pixel arrays.
         
-    binary : boolean (optional; True by default)
-        If binary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by 0.5.
+    MakeBinary : boolean (optional; True by default)
+        If MakeBinary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by BinaryThreshold.
+    
+    BinaryThreshold : float (optional; 0.5 by default)
+        The threshold that will be used when converting to a binary pixel array
+        if MakeBinary = True.
     
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -1066,7 +1075,8 @@ def MeanPixArrByRoi(PixArrByRoi, binary, LogToConsole=False):
             
             # Replace PixArrByRoi[r] with the pixel-by-pixel mean across all 
             # frames in the pixel array:
-            PixArrByRoi[r] = MeanPixArr(PixArrByRoi[r])
+            PixArrByRoi[r] = MeanPixArr(PixArrByRoi[r], MakeBinary,
+                                        BinaryThresh)
             
             if LogToConsole:
                 print(f'\nPixArrByRoi[{r}] had {NumOfFramesByRoi[r]} frames,',
@@ -1082,8 +1092,68 @@ def MeanPixArrByRoi(PixArrByRoi, binary, LogToConsole=False):
 
 
 
+
+
+def OrPixArrByRoi(PixArrByRoi, LogToConsole=False):
+    """
+    Perform pixel-by-pixel logical OR of all frames in all pixel arrays in a 
+    list of pixel-arrays-by-ROI which have more than 1 frame. No changes will 
+    be made to empty or single-framed pixel arrays.
     
+    Inputs:
+    ******
     
+    PixArrByRoi : list of Numpy arrays
+        A list (for each ROI) of pixel arrays.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+    
+        
+    Outputs:
+    *******
+    
+    PixArrByRoi : list of Numpy arrays
+        A list (for each ROI) of pixel arrays averaged to a single-framed
+        pixel array.
+    """
+    
+    import numpy as np
+    
+    # Determine the number of frames in each pixel array: 
+    NumOfFramesByRoi = [PixArr.shape[0] for PixArr in PixArrByRoi]
+    
+    # Get the shape of any pixel array:
+    F, R, C = PixArrByRoi[0].shape
+    
+    for r in range(len(PixArrByRoi)):
+        if NumOfFramesByRoi[r] > 1: 
+            if LogToConsole:
+                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames',
+                      'so the pixel arrays will be logically ORed.')
+            
+            # Replace PixArrByRoi[r] with the pixel-by-pixel logical OR across 
+            # all frames in the pixel array:
+            OrPixArr = PixArrByRoi[r].any(axis=0)
+            
+            # Reshape to a (1, R, C) pixel array:
+            PixArrByRoi[r] = np.reshape(OrPixArr, (1, R, C))
+            
+            if LogToConsole:
+                print(f'\nPixArrByRoi[{r}] had {NumOfFramesByRoi[r]} frames,',
+                      f'but now has {PixArrByRoi[r].shape[0]}.')
+        else:
+            if LogToConsole:
+                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames,',
+                      'so no logical ORing was required.')
+        
+    return PixArrByRoi
+
+
+
+
+
+
 
 def Distance(item0, item1):
     """

@@ -2281,17 +2281,37 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         For a Direct copy, one contour/segment is always copied to a single
         contour/segmentation (irrespective of how many frames are in the 
         resampled/registered labelmap image).  So if after resampling there are 
-        more than one frame, the frames will be averaged.
+        more than one frame, the frames will be averaged or a logical OR 
+        operation will be performed.
         """
         
-        #from GeneralTools import MeanPixArr
-        from GeneralTools import MeanPixArrByRoi, ShiftFramesInPixArrByRoi
+        from GeneralTools import ShiftFramesInPixArrByRoi
         
-        ResSrcPixArrByRoi = MeanPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi,
-                                            binary=True, 
-                                            LogToConsole=LogToConsole)
         
-        # Shift the in-plane elements in ResSrcPixArrByRoi:
+        """ Perform averaging or OR operation? """
+        #ReduceUsing = 'mean'
+        ReduceUsing = 'OR'
+        
+        if ReduceUsing == 'mean':
+            from GeneralTools import MeanPixArrByRoi
+            
+            """ The threshold used when converting the averaged (non-binary)  
+            pixel array to a binary pixel array. """
+            BinaryThresh = 0.5
+
+            ResSrcPixArrByRoi = MeanPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi,
+                                                MakeBinary=True, 
+                                                BinaryThresh=BinaryThresh,
+                                                LogToConsole=LogToConsole)
+        
+        else:
+            from GeneralTools import OrPixArrByRoi
+            
+            ResSrcPixArrByRoi = OrPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi,
+                                              LogToConsole=LogToConsole)
+        
+        
+        """ Shift the in-plane elements in ResSrcPixArrByRoi. """
         ResSrcPixArrByRoi = ShiftFramesInPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi, 
                                                      F2SindsByRoi=ResSrcF2SindsByRoi, 
                                                      SrcImage=SrcIm, 
