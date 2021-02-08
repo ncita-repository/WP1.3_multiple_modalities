@@ -1908,6 +1908,10 @@ def TransformLabmapImByRoi(LabmapImByRoi, FixImage, MovImage,
     from ConversionTools import Image2PixArr
     from GeneralTools import UniqueItems
     
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of TransformLabmapImByRoi():')
+    
     # Register the images using an affine transformation:
     RegIm, RegImFilt = RegisterImages(FixIm=FixImage, MovIm=MovImage, 
                                       Tx='affine', LogToConsole=LogToConsole)
@@ -1944,7 +1948,10 @@ def TransformLabmapImByRoi(LabmapImByRoi, FixImage, MovImage,
             
             F = TxPixArr.shape[0]
             
-            print('\nThe segmentation has been registered to {F} frames/',
+            print(f'\nThe segmentation has been registered to {F} frames/',
                   f'contours: {TxC2Sinds}.')
+            
+    if LogToConsole:
+        print('-'*120)
         
     return TxLabmapImByRoi, TxPixArrByRoi, TxF2SindsByRoi

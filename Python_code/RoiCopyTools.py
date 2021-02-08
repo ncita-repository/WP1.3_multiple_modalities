@@ -630,7 +630,8 @@ def GetInputsToCopyRoi(TestNum):
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
         FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 65 # Source slice 5 maps to Target slices 55-64
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
@@ -646,7 +647,8 @@ def GetInputsToCopyRoi(TestNum):
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
         FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 8 # Source slice 5 maps to Target slice 7
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_3'
@@ -662,7 +664,8 @@ def GetInputsToCopyRoi(TestNum):
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
         FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 78 # Source slice 5 maps to Target slices 67-77
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_5'
@@ -851,13 +854,19 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
                 else:
                     UseCase = '3b' # Relationship-preserving copy
         else:
-            """ May need to break UseCase 4 into a and b for Direct and
-            Relationship-preserving copies. """
             UseCase = '4'
+            
+            if isinstance(ToSliceNum, int):
+                UseCase = '4a' # Direct copy
+            else:
+                UseCase = '4b' # Relationship-preserving copy
     else:
-        """ May need to break UseCase 5 into a and b for Direct and
-        Relationship-preserving copies. """
         UseCase = '5'
+        
+        if isinstance(ToSliceNum, int):
+            UseCase = '5a' # Direct copy
+        else:
+            UseCase = '5b' # Relationship-preserving copy
     
         
     """ Print comparisons to the console. """
@@ -2068,7 +2077,8 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     **************************************************************************
     """
     
-    if UseCase in ['1', '2a', '3a']:
+    #if UseCase in ['1', '2a', '3a']: # 08/02
+    if UseCase in ['1', '2a']: # 08/02
         """ Direct copy of a contour. """
         
         from GeneralTools import ReplaceIndInC2SindsByRoi
@@ -2152,7 +2162,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         TrgCntDataByCntByRoi = PtsByCntByRoi2CntDataByCntByRoi(TrgPtsByCntByRoi)
     
     
-    if UseCase in ['3a', '3b', '4', '5']:
+    if UseCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
         """ Direct or relationship-preserving copy with resampling. """
         
         #import numpy as np
@@ -2223,7 +2233,8 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             
             SrcF2SindsByRoi.append(F2Sinds)
     
-    if UseCase in ['3a', '3b', '4']:
+    
+    if UseCase in ['3a', '3b', '4a', '4b']:
         """ Direct or relationship-preserving copy with resampling. """
         
         
@@ -2241,20 +2252,37 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                    ThreshLevel=ThreshLevel,
                                                    LogToConsole=LogToConsole)
         
+    if UseCase in ['5a', '5b']:
+        """ Direct or relationship-preserving copying with registration. """
         
-    if UseCase == '3a':
-        """ Direct copy with resampling and averaging of multi-framed pixel
-        arrays.
+        from ImageTools import TransformLabmapImByRoi
+    
+        """ Transform SrcLabmapImByRoi using the transformation that registers
+        SrcIm to TrgIm. 
+        
+        Note:
+            Even thought the data is being transformed the prefix 'Res' will be
+            used since further operations below will need to be applied to
+            either resampled or transformed data. """
+        
+        ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
+        ResSrcF2SindsByRoi = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
+                                                    FixImage=TrgIm, MovImage=SrcIm, 
+                                                    #Tx='affine', 
+                                                    LogToConsole=LogToConsole)
+        
+    
+    if UseCase in ['3a', '4a', '5a']:
+        """ Direct copy with resampling/registration and averaging of multi-
+        framed pixel arrays.
         
         Note:
         
         For a Direct copy, one contour/segment is always copied to a single
         contour/segmentation (irrespective of how many frames are in the 
-        resampled labelmap image).  So if after resampling there are more than 
-        one frame, the frames will be averaged.
+        resampled/registered labelmap image).  So if after resampling there are 
+        more than one frame, the frames will be averaged.
         """
-        
-        """ 03/02 Not finished revising this section onwards... """
         
         #from GeneralTools import MeanPixArr
         from GeneralTools import MeanPixArrByRoi, ShiftFramesInPixArrByRoi
@@ -2275,8 +2303,9 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                      LogToConsole=LogToConsole)
         
     
-    if UseCase in ['3a', '3b', '4']:
-        """ Direct or relationship-preserving copying with resampling. """
+    if UseCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copying with resampling or
+        registration-transformation. """
         
         """ Convert ResSrcPixArrByRoi to a list (for each ROI) of a list (for
         each contour) of ContourData, and a list (for each ROI) of a list (for
@@ -2296,8 +2325,8 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             PrintIndsByRoi(ResSrcC2SindsByRoi)
         
     
-        if UseCase == '3a':
-            """ Direct copying with resampling. """
+        if UseCase in ['3a', '4a', '5a']:
+            """ Direct copying with resampling/transformation. """
             
             if TrgRts:
                 """ An existing Target RTS is to be modified. 
@@ -2320,41 +2349,14 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             TrgCntDataByCntByRoi = PtsByCntByRoi2CntDataByCntByRoi(TrgPtsByCntByRoi)
         
         else:
-            """ UseCase is '3b' or '4'. """
+            """ UseCase is '3b', '4b' or '5b'. """
             
             TrgPtsByCntByRoi = deepcopy(ResSrcPtsByCntByRoi)
             
             TrgCntDataByCntByRoi = deepcopy(ResSrcCntDataByCntByRoi)
             
             TrgC2SindsByRoi = deepcopy(ResSrcC2SindsByRoi)
-         
     
-    
-    if UseCase == '5':
-        """ Relationship-preserving copying with registration. """
-        
-        from ImageTools import TransformLabmapImByRoi
-    
-        """ Transform SrcLabmapImByRoi using the transformation that registers
-        SrcIm to TrgIm. """
-        
-        TxSrcLabmapImByRoi, TxSrcPixArrByRoi,\
-        TxSrcF2SindsByRoi = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
-                                                   FixImage=TrgIm, MovImage=SrcIm, 
-                                                   #Tx='affine', 
-                                                   LogToConsole=LogToConsole)
-        
-        
-        """ Convert TxSrcPixArrByRoi to a list (for each ROI) of a list (for
-        each contour) of ContourData, and a list (for each ROI) of a list (for
-        each contour) of a list (for each point) of coordinates. """
-        
-        TrgPtsByCntByRoi,\
-        TrgCntDataByCntByRoi,\
-        TrgC2SindsByRoi = PixArrByRoi2PtsByCntByRoi(PixArrByRoi=TxSrcPixArrByRoi,
-                                                    F2SindsByRoi=TxSrcF2SindsByRoi,
-                                                    DicomDir=TrgDcmDir,
-                                                    Thresh=0.5)
     
     
     """ Create the Target RTS. """
