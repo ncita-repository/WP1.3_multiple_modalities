@@ -430,7 +430,68 @@ def IndsByContour2PixArr(IndsByCnt, RefImage):
 
 
 
-def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
+def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
+    """
+    Convert a list of points by contour to a pixel array.
+    
+    Inputs:
+    ******
+    
+    PtsByCnt : list of a list of a list of floats
+        List (for all contours) of a list (for each point) of a list (for each 
+        dimension) of coordinates.
+    
+    RefIm : SimpleITK image
+        The 3D image that PtsByCnt relate to.
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+                       
+                            
+    Outputs:
+    *******
+    
+    PixArr : Numpy data arrays
+        A pixel array containing as many frames as the number of contours in
+        PtsByCnt.
+    """
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Results from PtsByCnt2PixArr():')
+        
+    IndsByCnt = []
+    
+    if PtsByCnt == []:
+        import numpy as np
+        
+        C, R, F = RefIm.GetSize()
+        
+        #PixArr = np.zeros((F, R, C), dtype='uint')
+        PixArr = np.zeros((F, R, C), dtype=np.uint8)
+        
+    else:
+        for Pts in PtsByCnt:
+            Inds = Points2Indices(Pts, RefIm)
+                
+            IndsByCnt.append(Inds)
+    
+        """ Convert IndsByCnt to a pixel array. """
+        PixArr = IndsByContour2PixArr(IndsByCnt, RefIm)
+    
+    
+    if LogToConsole:
+        print(f'   PixArr.shape = {PixArr.shape}')
+        print('-'*120)
+    
+    return PixArr
+
+
+
+
+
+
+def PtsByCntByRoi2PixArrByRoi_OLD(PtsByCntByRoi, RefIm, LogToConsole=False):
     """
     Convert RTS data (e.g. from GetRtsDataOfInterest()) to a list of pixel
     arrays grouped by ROI.
@@ -494,7 +555,64 @@ def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
 
 
 
+
+
+def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
+    """
+    Convert a list of points in all contours in all ROIs to a list of pixel
+    arrays grouped by ROI.
     
+    Inputs:
+    ******
+    
+    PtsByCntByRoi : list of list of a list of a list of floats
+        List (for each ROI) of a list (for all contours) of a list (for each
+        point) of a list (for each dimension) of coordinates.
+    
+    RefIm : SimpleITK image
+        The 3D image that relates to PtsByCntByRoi.
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+                       
+                            
+    Outputs:
+    *******
+    
+    PixArrByRoi : list of Numpy data arrays
+        A list (for each ROI) of 3D pixel arrays. Each pixel array contains as
+        many frames as the number of contours in the list of points-by-contour
+        for that given ROI.
+    """
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Results from PtsByCntByRoi2PixArrByRoi():')
+        
+    PixArrByRoi = []
+    
+    R = len(PtsByCntByRoi)
+    
+    for r in range(R):        
+        """ Convert to a pixel array. """
+        PixArr = PtsByCnt2PixArr(PtsByCntByRoi[r], RefIm, LogToConsole)
+        
+        PixArrByRoi.append(PixArr)
+        
+    if LogToConsole:
+        shapes = [PixArrByRoi[r].shape for r in range(R)]
+        print(f'   Shape of each PixArrByRoi = {shapes}')
+        print('-'*120)
+    
+    return PixArrByRoi
+
+
+
+
+
+
+
+
 def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
     """
     Get a list of 3D labelmap (SimpleITK) images - one per ROI.  
@@ -554,6 +672,12 @@ def PixArr2Labmap(PixArr, NumOfSlices, F2Sinds):
     contain the 2D pixel arrays at the same frame position as the slice
     position of the corresponding DICOM series (with 2D zero masks in-between).
     
+    Note:
+        'Labmap' refers to a 3D pixel array that contains the non-empty frames
+        in PixArr, padded with empty frames so that the size of the labelmap
+        matches the size of the 3D DICOM image. This is not to be confused with 
+        'LabmapIm', which is the SimpleITK image representation of 'Labmap'.
+    
     Inputs:
     ******
     
@@ -578,11 +702,13 @@ def PixArr2Labmap(PixArr, NumOfSlices, F2Sinds):
     
     import numpy as np
     
-    NumOfFrames, NumOfRows, NumOfCols = PixArr.shape
+    """ NumOfFrames is the number of non-zero frames that make up PixArr. """
+    NumOfFrames, R, C = PixArr.shape
     
-    # Initialise Labmap:
-    #Labmap = np.zeros((NumOfSlices, NumOfRows, NumOfCols), dtype='bool')
-    Labmap = np.zeros((NumOfSlices, NumOfRows, NumOfCols), dtype='uint')
+    """ Initialise Labmap. """
+    #Labmap = np.zeros((NumOfSlices, R, C), dtype='bool')
+    #Labmap = np.zeros((NumOfSlices, R, C), dtype='uint')
+    Labmap = np.zeros((NumOfSlices, R, C), dtype=PixArr.dtype)
     
     #print(f'\nPixArr.shape = {PixArr.shape}')
     ##print(f'\n\nThe maximum value in PixArr is {PixArr.max()}')
@@ -590,14 +716,18 @@ def PixArr2Labmap(PixArr, NumOfSlices, F2Sinds):
     #print(f'Labmap.shape = {Labmap.shape}')
     
     if NumOfFrames:
-        # Over-write all frames in Labmap with non-zero 2D masks from PixArr:
+        """ Over-write all frames in Labmap with non-zero 2D masks from PixArr.
+        """
         for i in range(len(F2Sinds)):
-            # The slice number for the i^th frame:
+            """ The slice number for the i^th frame """
             s = F2Sinds[i]
             
-            #print(f'\nThe slice number for the {i}^th frame is {s}')
+            #print(f'Frame {i} corresponds to slice {s}')
             
-            Labmap[s] = PixArr[i]
+            #Labmap[s] = PixArr[i] # 13/02 This was over-writting frames for 
+            # pixel arrays containing more than one frame for the same slice!!!
+            
+            Labmap[s] += PixArr[i]
         
     
     #print(f'\n\nThe maximum value in Labmap is {Labmap.max()}')
@@ -789,7 +919,7 @@ def Image2PixArr(LabmapIm, Non0FrameInds=None):
 
 
 
-def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5):
+def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
     """
     Convert a 3D pixel array to a list (for each frame) of a list of indices
     that define the equivalent contour for the mask in each frame.
@@ -810,7 +940,10 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5):
         
     Thresh : float (optional; 0.5 by default)
         Threshold value used to binarise the labels in PixArr.
- 
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+    
     
     Outputs:
     *******
@@ -825,42 +958,48 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5):
     from scipy.sparse import issparse
     from skimage.measure import find_contours
     
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Results of PixArr2IndsByFrame()')
+        
     IndsByObjByFrame = []
     
-    for FrameNum, Mask in enumerate(PixArr):
-        if issparse(Mask):
-            Mask = np.array(Mask.astype('byte').todense())
+    for FrameNum, Frame in enumerate(PixArr):
+        if issparse(Frame):
+            Frame = np.array(Frame.astype('byte').todense())
  
-        if (Mask != 0).sum() == 0:
-            # If Mask is empty, just skip it
+        if (Frame != 0).sum() == 0:
+            """ If Mask is empty, just skip it """
             continue
  
-        # Add an empty row and column at both sides of the mask to ensure that
-        # any masks near an edge are found:
-        ExpandedDims = (Mask.shape[0] + 2, Mask.shape[1] + 2)
+        """ Add an empty row and column at both sides of the frame to ensure 
+        that any segmentation pixels near an edge are found. """
+        ExpandedDims = (Frame.shape[0] + 2, Frame.shape[1] + 2)
         
-        ExpandedMask = np.zeros(ExpandedDims, dtype=float)
+        ExpandedFrame = np.zeros(ExpandedDims, dtype=float)
         
-        ExpandedMask[1:Mask.shape[0] + 1, 1:Mask.shape[1] + 1] = Mask
+        ExpandedFrame[1:Frame.shape[0] + 1, 1:Frame.shape[1] + 1] = Frame
  
-        # Get the indices that define contours in ExpandedMask:
-        IndsByObj_2D = find_contours(ExpandedMask.T, Thresh)
+        """ Get the indices that define contours in ExpandedFrame. """
+        IndsByObj_2D = find_contours(ExpandedFrame.T, Thresh)
         
-        #print(f'\n\n\nFrameNum = {FrameNum}')
-        #print(f'\nlen(IndsByObj_2D) = {len(IndsByObj_2D)}')
-        #print(f'\nIndsByObj_2D = {IndsByObj_2D}')
+        if LogToConsole:
+            print(f'FrameNum = {FrameNum}')
+            print(f'len(IndsByObj_2D) = {len(IndsByObj_2D)}')
+            #print(f'IndsByObj_2D = {IndsByObj_2D}')
  
-        # Remove one row and column to shift the indices back to their original
-        # locations:
+        """ Remove one row and column to shift the indices back to their 
+        original locations. """
         IndsByObj_2D = [np.subtract(x, 1).tolist() for x in IndsByObj_2D]
         
-        #print(f'\n\n\nFrameNum = {FrameNum}')
-        #print(f'\nlen(IndsByObj_2D) = {len(IndsByObj_2D)}')
-        #print(f'\nIndsByObj_2D = {IndsByObj_2D}')
+        if LogToConsole:
+            #print(f'\n\n\nFrameNum = {FrameNum}')
+            print(f'len(IndsByObj_2D) = {len(IndsByObj_2D)}')
+            #print(f'IndsByObj_2D = {IndsByObj_2D}')
         
         SliceNum = float(F2Sinds[FrameNum])
             
-        # Add the index for the 3rd dimension:
+        """ Add the index for the 3rd dimension. """
         IndsByObj_3D = []
         
         for IndsThisObj_2D in IndsByObj_2D:
@@ -868,14 +1007,16 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5):
             
             IndsByObj_3D.append(IndsThisObj_3D)
         
-        #print(f'\nlen(IndsByObj_3D) = {len(IndsByObj_3D)}')
-        #print(f'\nIndsByObj_3D = {IndsByObj_3D}')
+        if LogToConsole:
+            print(f'len(IndsByObj_3D) = {len(IndsByObj_3D)}')
+            #print(f'\nIndsByObj_3D = {IndsByObj_3D}')
         
         IndsByObjByFrame.append(IndsByObj_3D)
         
-        
-    #print(f'\nlen(IndsByObjByFrame) = {len(IndsByObjByFrame)}')
-    #print(f'\nIndsByObjByFrame = {IndsByObjByFrame}')
+    
+    if LogToConsole:
+        print(f'\nlen(IndsByObjByFrame) = {len(IndsByObjByFrame)}')
+        #print(f'\nIndsByObjByFrame = {IndsByObjByFrame}')
  
     return IndsByObjByFrame
 
@@ -939,8 +1080,8 @@ def PixArr2PtsByContour_OLD(PixArr, F2Sinds, DicomDir, Thresh=0.5):
     # Convert the pixel array to a list of indices-by-object-by-frame:
     IndsByObjByFrame = PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5)
     
-    #Size, Spacings, ST,\
-    #IPPs, Dirs = GetImageAttributes(DicomDir, Package='pydicom')
+    #Size, Spacings, ST, IPPs, Dirs,\
+    #ListOfWarnings = GetImageAttributes(DicomDir, Package='pydicom')
     
     PtsByObjByFrame = []
     CntDataByObjByFrame = []
@@ -968,88 +1109,6 @@ def PixArr2PtsByContour_OLD(PixArr, F2Sinds, DicomDir, Thresh=0.5):
  
     return PtsByObjByFrame, CntDataByObjByFrame
 
-
-
-
-
-
-
-def PixArr2PtsByCnt(PixArr, F2Sinds, DicomDir, Thresh=0.5):
-    """
-    Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
-    each point) of a list (for each dimension) of physical coordinates.
- 
-    Inputs:
-    ******
-    
-    PixArr : Numpy array
-        A FxRxC (frames x rows x cols) Numpy array containing F RxC masks in 
-        PixArr.
-    
-    F2Sinds : List of list of integers
-        A list (for each frame) of the slice numbers that correspond to each 
-        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
-        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
-    
-    DicomDir : string
-        Directory containing the DICOMs that relate to PixArr.
-        
-    Thresh : float (optional; 0.5 by default)
-        Threshold value used to binarise the labels in PixArr.
- 
-    
-    Outputs:
-    *******
-    
-    PtsByCnt : list of a list of floats
-        A list (for each contour) of a list (for each dimension) of the 
-        physical coordinates that define each distinct object in each frame of
-        PixArr.
-        
-    CntDataByCnt : list of a list of strings
-        A list (for each contour) of a flattened list of [x, y, z] physical 
-        coordinates in PtsByCnt.
-        
-    C2Sinds : list of integers
-        List (for each contour) of slice numbers that correspond to each 
-        contour in PtsByCnt.
-    """
-    
-    #from ImageTools import GetImageAttributes
-    from ImageTools import ImportImage
-    
-    RefIm = ImportImage(DicomDir)
-    
-    # Convert the pixel array to a list of indices-by-object-by-frame:
-    """ A list of objects originating from the same frame will be treated as 
-    distinct contours. """ 
-    IndsByObjByFrame = PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5)
-    
-    
-    PtsByCnt = []
-    CntDataByCnt = []
-    C2Sinds = []
-    
-    for f in range(len(IndsByObjByFrame)):
-        for o in range(len(IndsByObjByFrame[f])):
-            Pts = Indices2Points(Indices=IndsByObjByFrame[f][o], 
-                                 RefIm=RefIm)
-            
-            PtsByCnt.append(Pts)
-            
-            CntDataByCnt.append(Points2ContourData(Points=Pts))
-            
-            C2Sinds.append(F2Sinds[f])
-    
-    
-    #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
-    #print(f'\nlen(CntDataByCnt) = {len(CntDataByCnt)}')
-    #print(f'\nlen(C2Sinds) = {len(C2Sinds)}')
-    #print(f'\nPtsByCnt = {PtsByCnt}')
-    #print(f'\nCntDataByCnt = {CntDataByCnt}')
-    #print(f'\nC2Sinds = {C2Sinds}')
- 
-    return PtsByCnt, CntDataByCnt, C2Sinds
 
 
 
@@ -1092,14 +1151,16 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
         arrays in PixArrByRoi.
     """
     
+    from ImageTools import GetImageInfo
+    #from GeneralTools import UniqueItems, AreListsEqualToWithinEpsilon
+    
     if LogToConsole:
-        from ImageTools import GetImageInfo
-        
         print('\n\n', '-'*120)
         print(f'Results of PixArrByRoi2LabmapImByRoi():')
         #print(f'   len(PixArrByRoi) = {len(PixArrByRoi)}')
         
     LabmapImByRoi = []
+    NewF2SindsByRoi = []
 
     for r in range(len(PixArrByRoi)):
         LabmapIm = PixArr2Image(PixArr=PixArrByRoi[r],
@@ -1111,8 +1172,28 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
         if LogToConsole:
             print(f'\n   Image info for LabmapImByRoi[{r}]:')
             
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(LabmapIm, LogToConsole)
+        PixID, PixIDTypeAsStr, UniqueVals,\
+        F2Sinds = GetImageInfo(LabmapIm, LogToConsole)
+        
+        NewF2SindsByRoi.append(F2Sinds)
+    
+    
+    #""" Check that the number of unique F2Sinds in NewF2SindsByRoi matches the
+    #number of unique F2Sinds in F2SindsByRoi (i.e. that no frames were lost). """
+    #NumIn = []
+    #NumOut = []
+    #
+    #for r in range(len(F2SindsByRoi)):
+    #    NumIn.append(len(UniqueItems(F2SindsByRoi[r])))
+    #    
+    #    NumOut.append(len(UniqueItems(NewF2SindsByRoi[r])))
+    #    
+    #print('\n', NumIn, NumOut)
+    #
+    #if not AreListsEqualToWithinEpsilon(NumIn, NumOut, epsilon=0.9):
+    #    print('\nWARNING:  The number of unique F2SindsByRoi used to generate',
+    #          f'the labelmaps, {NumIn}, doesn\'t match that in the labelmap',
+    #          f'images, {NumOut}.')
     
     if LogToConsole:
         print('-'*120)
@@ -1125,7 +1206,116 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
 
 
 
-def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5):
+def PixArr2PtsByCnt(PixArr, F2Sinds, DicomDir, Thresh=0.5, LogToConsole=False):
+    """
+    Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
+    each point) of a list (for each dimension) of physical coordinates.
+ 
+    Inputs:
+    ******
+    
+    PixArr : Numpy array
+        A FxRxC (frames x rows x cols) Numpy array containing F RxC masks in 
+        PixArr.
+    
+    F2Sinds : List of list of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
+        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
+    
+    DicomDir : string
+        Directory containing the DICOMs that relate to PixArr.
+        
+    Thresh : float (optional; 0.5 by default)
+        Threshold value used to binarise the labels in PixArr.
+ 
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    PtsByCnt : list of a list of floats
+        A list (for each contour) of a list (for each dimension) of the 
+        physical coordinates that define each distinct object in each frame of
+        PixArr.
+        
+    CntDataByCnt : list of a list of strings
+        A list (for each contour) of a flattened list of [x, y, z] physical 
+        coordinates in PtsByCnt.
+        
+    C2Sinds : list of integers
+        List (for each contour) of slice numbers that correspond to each 
+        contour in PtsByCnt.
+    """
+    
+    #from ImageTools import GetImageAttributes
+    from ImageTools import ImportImage
+    
+    if LogToConsole:
+        from GeneralTools import PrintPixArrBySeg, PrintPtsByCnt
+        print('\n\n', '-'*120)
+        print(f'Results of PixArr2PtsByCnt():')
+        print(f'Prior to conversion: \nF2Sinds = {F2Sinds}')
+        PrintPixArrBySeg(PixArr)
+        
+    RefIm = ImportImage(DicomDir)
+    
+    # Convert the pixel array to a list of indices-by-object-by-frame:
+    """ A list of objects originating from the same frame will be treated as 
+    distinct contours. """ 
+    IndsByObjByFrame = PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5)
+    
+    if LogToConsole:
+        F = len(IndsByObjByFrame)
+        print(f'\nlen(IndsByObjByFrame) = {F} frames')
+        for f in range(F):
+            O = len(IndsByObjByFrame[f])
+            print(f'   len(IndsByObjByFrame[{f}]) = {O} objects')
+            for o in range(O):
+                N = len(IndsByObjByFrame[f][o])
+                print(f'      len(IndsByObjByFrame[{f}][{o}]) = {N} indices')
+    
+    
+    PtsByCnt = []
+    CntDataByCnt = []
+    C2Sinds = []
+    
+    for f in range(len(IndsByObjByFrame)):
+        for o in range(len(IndsByObjByFrame[f])):
+            Pts = Indices2Points(Indices=IndsByObjByFrame[f][o], 
+                                 RefIm=RefIm)
+            
+            PtsByCnt.append(Pts)
+            
+            CntDataByCnt.append(Points2ContourData(Points=Pts))
+            
+            C2Sinds.append(F2Sinds[f])
+    
+    
+    #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
+    #print(f'\nlen(CntDataByCnt) = {len(CntDataByCnt)}')
+    #print(f'\nlen(C2Sinds) = {len(C2Sinds)}')
+    #print(f'\nPtsByCnt = {PtsByCnt}')
+    #print(f'\nCntDataByCnt = {CntDataByCnt}')
+    #print(f'\nC2Sinds = {C2Sinds}')
+    
+    if LogToConsole:
+        print(f'\nAfter conversion: \nC2Sinds = {C2Sinds}')
+        PrintPtsByCnt(PtsByCnt)
+        print('-'*120)
+ 
+    return PtsByCnt, CntDataByCnt, C2Sinds
+
+
+
+
+
+
+
+def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5, 
+                              LogToConsole=False):
     """
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each
@@ -1149,6 +1339,9 @@ def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5):
         
     Thresh : float (optional; 0.5 by default)
         Threshold value used to binarise the labels in PixArr.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
  
     
     Outputs:
@@ -1169,16 +1362,26 @@ def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5):
         correspond to each contour in PtsByCntByRoi.
     """
     
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of PixArrByRoi2PtsByCntByRoi():')
+        
     PtsByCntByRoi = []
     CntDataByCntByRoi = []
     C2SindsByRoi = []
+    
+    #print(f'\n\n\nPixArrByRoi = {PixArrByRoi}')
+    #print(f'len(PixArrByRoi) = {len(PixArrByRoi)}')
+    #for r in range(len(PixArrByRoi)):
+    #    print(f'type(PixArrByRoi[{r}]) = {type(PixArrByRoi[r])}')
+    #    print(f'PixArrByRoi[{r}].shape = {PixArrByRoi[r].shape}')
     
     for r in range(len(PixArrByRoi)):
         #if PixArrByRoi[r]:
         if PixArrByRoi[r].shape[0]:
             PtsByCnt, CntDataByCnt,\
             C2Sinds = PixArr2PtsByCnt(PixArrByRoi[r], F2SindsByRoi[r], 
-                                      DicomDir, Thresh=0.5)
+                                      DicomDir, Thresh, LogToConsole)
             
             PtsByCntByRoi.append(PtsByCnt)
             CntDataByCntByRoi.append(CntDataByCnt)
@@ -1191,6 +1394,9 @@ def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5):
     #print(f'\nPtsByCntByRoi = {PtsByCntByRoi}')
     #print(f'\nCntDataByCntByRoi = {CntDataByCntByRoi}')
     #print(f'\nC2SindsByRoi = {C2SindsByRoi}')
+    
+    if LogToConsole:
+        print('-'*120)
  
     return PtsByCntByRoi, CntDataByCntByRoi, C2SindsByRoi
 

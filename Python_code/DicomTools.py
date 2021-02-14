@@ -30,7 +30,8 @@ GENERAL DICOM FUNCTIONS
 """
 
 
-def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
+def GetDicomFpaths(DicomDir, SortMethod='slices', WalkThroughSubDirs=False,
+                   LogToConsole=False):
     """
     Get a sorted list of full filepaths for all DICOM files in a directory
     
@@ -46,6 +47,14 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
             -- 'none' (or 'None' or any other strings) = no sorting
             -- 'natural' (or 'Natural') = using natsort to sort the filenames
             -- 'slices' (or 'Slices') = sorted along the slice direction 
+    
+    WalkThroughSubDirs : boolean (optional; False by default)
+        If True DICOMs will be searched by walking through sub-directories
+        within DicomDir.  If False, the search will only happen at the depth
+        of DicomDir.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
     
     
     Outputs:
@@ -69,17 +78,24 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', LogToConsole=None):
     
     # Create an empty list of all Dicom file paths:
     FilePaths = []
-
-    # Use os to get list of file paths of Dicom-only files:
-    for DirName, SubDirList, FileList in os.walk(DicomDir):
+    
+    if WalkThroughSubDirs:
+        """ Use os.walk to get list of file paths of .dcm files at any depth. """
+        for DirName, SubDirList, FileList in os.walk(DicomDir):
+            for FileName in FileList:
+                if '.dcm' in FileName.lower():  # check for Dicom files only
+                    FilePaths.append(os.path.join(DirName, FileName))
+    else:
+        FileList = os.listdir(DicomDir)
+        
         for FileName in FileList:
             if '.dcm' in FileName.lower():  # check for Dicom files only
-                FilePaths.append(os.path.join(DirName,FileName))
-                
+                FilePaths.append(os.path.join(DicomDir, FileName)) 
+        
     #print('FilePaths =', FilePaths)
     
     if FilePaths==[]:
-        print('No DICOMs found.')
+        print(f'\nNo DICOMs were found in {DicomDir}.')
     else:
         if SortMethod in ['natural', 'Natural']:
             # Sort files in natural way:
@@ -560,7 +576,7 @@ def InspectDicomStudyDir(StudyDir):
     
         # Get the Image Attributes:
         Studyuid, Seriesuid, FORuid, size, spacings, ST,\
-        IPPs, dirs = GetImageAttributes(ScanDir)
+        IPPs, dirs, ListOfWarnings = GetImageAttributes(ScanDir)
         
         # Get the DICOMs:
         DicomFpaths, Dicoms = ImportDicoms(DirPath=ScanDir, 
@@ -627,3 +643,15 @@ def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
     
 
     return
+
+
+
+
+
+#def DoesDirContainDicoms(Directory):
+#    """ Check if a directory contains any DICOMs. Return True if there is one
+#    or more .dcm files, False otherwise. Also return the number of files. """
+#    
+#    import os
+#    
+#    FileList = os.listdir(Directory)  

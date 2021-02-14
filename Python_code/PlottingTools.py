@@ -1164,114 +1164,9 @@ def PlotPixelArrays(ListOfPixArrs, ListOfFrameToSliceInds, ListOfPlotTitles,
 
 
 
-def GetPixArrsFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString, 
-                             LogToConsole=False):
-    """ 
-    Note:
-    
-    ListOfSegs is a list (which could be of length 1) of SEG (Pydicom) objects.
-    
-    ListOfDicomDirs is a list (which could be of length 1) of strings 
-    containing the directory containing DICOMs that correspond to each SEG.
-    
-    ListOfPlotTitles is a list (which could be of length 1) of text for each
-    plot title.
-    """
-    
-    import importlib
-    import SegTools
-    importlib.reload(SegTools)
-    import DicomTools
-    importlib.reload(DicomTools)
-    
-    import numpy as np
-    from SegTools import GetPFFGStoSliceIndsBySeg
-    from DicomTools import GetDicomFpaths
-    from DicomTools import GetDicomSOPuids
-    from DicomTools import GetRoiNum
-    from SegTools import GetFramesFromPixArr
-    
-    ListOfPixArrs = []
-    ListOfF2Sinds = []
-    ListOfSegNums = []
-    ListOfDcmFpaths = []
-    
-    for i in range(len(ListOfSegs)):
-        if LogToConsole:
-            print(f'\n\nListOfSegs[{i}]:')
-        
-        DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
-        
-        ListOfDcmFpaths.append(DcmFpaths)
-        
-        """
-        11/12/20:  
-            There should only be one segment so perhaps this should be checked
-            and raise exception if the number of segments is greater than one.
-            And if not, SegNum will always be = 0 (no need to GetRoiNum).
-        """
-        
-        if ListOfSegs[i]:
-            SegNum = GetRoiNum(ListOfSegs[i], SearchString)
-            
-            SOPuids = GetDicomSOPuids(ListOfDicomDirs[i])
-        
-            PFFGS2SindsBySeg = GetPFFGStoSliceIndsBySeg(ListOfSegs[i], 
-                                                        SOPuids)
-            
-            ListOfF2Sinds.append(PFFGS2SindsBySeg[SegNum])
-            
-            if LogToConsole:
-                print(f'\nListOfF2Sinds[{i}] = {ListOfF2Sinds[i]}')
-            
-            
-            
-            #PixArr = ListOfSegs[i].pixel_array # this contains all segments!
-            PixArr = GetFramesFromPixArr(ListOfSegs[i], ListOfDicomDirs[i], 
-                                         SearchString, LogToConsole)
-            
-            if LogToConsole:      
-                print(f'\nPixArr.shape = {PixArr.shape}')
-                [print(f'np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
-                
-            """
-            If PixArr has a single frame it will have shape (NumOfRows, NumOfCols).
-            For compatibility with multi-framed pixel arrays, convert single-framed
-            pixel arrays to shape (1, NumOfRows, NumOfCols).
-            """
-            if len(PixArr.shape) < 3:
-                R, C = PixArr.shape
-                
-                PixArr = np.reshape(PixArr, (1, R, C))
-                
-                if LogToConsole:      
-                    print(f'\nPixArr was a single frame so reshaped to {PixArr.shape}')
-                    
-        else:
-            SegNum = None
-            ListOfF2Sinds.append(None)
-            PixArr = None
-        
-        ListOfSegNums.append(SegNum)
-        
-        ListOfPixArrs.append(PixArr)
-        
-        #if LogToConsole: 
-        #    print('')
-        #    print(f'\nListOfPixArrs[{i}].shape = {ListOfPixArrs[i].shape}')
-        
-    
-    return ListOfPixArrs, ListOfF2Sinds, ListOfSegNums, ListOfDcmFpaths
-
-
-
-
-
-
-
 
 def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
-                                 SearchString, PlotAllSlices=False, AddTxt=None, 
+                                 PlotAllSlices=False, AddTxt=None, 
                                  ExportPlot=False, ExportDir=None, dpi=80, 
                                  LogToConsole=False):
     """ 
@@ -1298,13 +1193,15 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
     import matplotlib.pyplot as plt
     import os
     import time
-    from copy import deepcopy
+    #from copy import deepcopy
     from pydicom import dcmread
-    from DicomTools import GetDicomFpaths
+    #from DicomTools import GetDicomFpaths
+    from SegTools import GetSegDataFromListOfSegs
+    from GeneralTools import UniqueItems#, Unpack, PrintTitle
     
-    ListOfPixArrs, ListOfF2Sinds, ListOfSegNums,\
-    ListOfDcmFpaths = GetPixArrsFromListOfSegs(ListOfSegs, ListOfDicomDirs, 
-                                               SearchString, LogToConsole)
+    ListOfPixArrBySeg, ListOfF2SindsBySeg, ListOfDcmFpaths,\
+    ListOfIPPs, ListOfDirections, ListOfSpacings\
+    = GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, LogToConsole)
     
     # Get the list of slice numbers to be plotted:
     if PlotAllSlices:
@@ -1314,106 +1211,119 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
             NumOfSlices.append(len(ListOfDcmFpaths[i]))
             
         AllSliceNums = list(range(max(NumOfSlices)))
-            
-        
     else:
-        if len(ListOfF2Sinds) > 1:
-            # Get the slice numbers that cover all FrameToSliceInds in 
-            # ListOfFrameToSliceInds:
-            AllSliceNums = []
-            
-            for F2Sinds in ListOfF2Sinds:
-                if F2Sinds:
-                    for SliceInd in F2Sinds:
-                        AllSliceNums.append(SliceInd)
-            
-            # Reduce to unique slice numbers:
-            AllSliceNums = list(set(AllSliceNums))    
-        else:
-            AllSliceNums = deepcopy(ListOfF2Sinds[0])
-    
-        
-    # Get the maxima for all frames for all pixel arrays along x (axis=2) and
-    # y (axis=1):
-    #ListOfMaximaByFrame = []
-    #
-    #for PixArr in ListOfPixArrs:
-    #
-    #    ListOfMaximaByFrame.append(np.amax(PixArr, axis=(1,2)))
-    #
-    #
-    #if LogToConsole:
-    #    print(f'\nListOfMaximaByFrame = {ListOfMaximaByFrame}')
-    
+        AllSliceNums = UniqueItems(Items=ListOfF2SindsBySeg)
     
     
     # Prepare the figure.
     
-    # Set the transparency of labelmaps to be overlaid over DICOMs:
-    #alpha = 0.2
-    alpha = 0.5
-    
     # Set the number of subplot rows and columns:
-    Ncols = len(ListOfPixArrs)
+    Ncols = len(ListOfSegs)
     Nrows = len(AllSliceNums)
     
-    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
-        
+    Cmaps = ['Reds', 'Blues', 'Greens', 'Oranges', 'Purples']
+    
+    # Set the transparency of labelmaps to be overlaid over DICOMs:
+    DcmAlpha = 0.2
+    DcmAlpha = 0.5
+    #DcmAlpha = 1
+    
+    SegAlpha = 0.5
+    #SegAlpha = 0.2
     
     n = 1 # initialised sub-plot number
     
+    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7*Nrows), dpi=dpi)
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+    
     # Loop through each AllSliceNums: 
     for SliceNum in AllSliceNums:
-        #print(f's = {SliceNum}')
+        if LogToConsole:
+            print(f'\nSliceNum = {SliceNum}')
         
         # Loop through each data set:
-        for i in range(len(ListOfPixArrs)):
-            PixArr = ListOfPixArrs[i]
+        for i in range(len(ListOfPixArrBySeg)):
+            PixArrBySeg = ListOfPixArrBySeg[i]
+            F2SindsBySeg = ListOfF2SindsBySeg[i]
             
-            F2Sinds = ListOfF2Sinds[i]
-            
-            DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
-            
+            DicomFpaths = ListOfDcmFpaths[i]
+            #Origin = ListOfOrigins[i]
+            #Directions = ListOfDirections[i]
+            #Spacings = ListOfSpacings[i]
             PlotTitle = ListOfPlotTitles[i]
+            #DicomDir = ListOfDicomDirs[i]
             
-            #MaximaByFrame = ListOfMaximaByFrame[i]
-            
+            if LogToConsole:
+                    print(f'\n   i = {i}')
+                    print(f'   PlotTitle = {PlotTitle}')
+                    print(f'   F2SindsBySeg = {F2SindsBySeg}')
+                    
             ax = plt.subplot(Nrows, Ncols, n)
             
-            
-            if SliceNum < len(DcmFpaths):
-                DcmPixArr = dcmread(DcmFpaths[SliceNum]).pixel_array
+            if SliceNum < len(DicomFpaths):
+                DicomPixArr = dcmread(DicomFpaths[SliceNum]).pixel_array
             
                 #im = ax.imshow(DicomPixArr, cmap=plt.cm.Greys_r)
-                ax.imshow(DcmPixArr, cmap=plt.cm.Greys_r, alpha=alpha)
+                ax.imshow(DicomPixArr, cmap=plt.cm.Greys_r, alpha=DcmAlpha)
                 
+                
+            # Loop through each segment:
+            for s in range(len(F2SindsBySeg)):
+                F2Sinds = F2SindsBySeg[s]
+                PixArr = PixArrBySeg[s]
+                
+                """ There are only len(Cmaps) colormaps defined above. Wrap the 
+                segment index s if there are more segments than the number of 
+                defined colormaps. """
+                if s < len(Cmaps):
+                    Cmap = Cmaps[s]
+                else:
+                    m = s//len(Cmaps)
+                    
+                    Cmap = Cmaps[s - m*len(Cmaps)]
+                    
                 if SliceNum in F2Sinds:
-                    FrameNum = F2Sinds.index(SliceNum)
+                    FrameNums = [i for i, e in enumerate(F2Sinds) if e==SliceNum]
                     
-                    Frame = PixArr[FrameNum]
+                    # Loop through all frame numbers:
+                    for f in range(len(FrameNums)):
+                        FrameNum = FrameNums[f]
                     
-                    #ax = plt.subplot(Nrows, Ncols, n)
+                        Frame = PixArr[FrameNum]
+                        
+                        if LogToConsole:
+                            print(f'      SliceNum = {SliceNum} is in F2Sinds')
+                            print(f'      FrameNum = {FrameNum}')
+                            #print(f'      Contour = {Contour}')
+                            print(f'      Frame.shape = {Frame.shape}')
                     
-                    #im = ax.imshow(Frame, cmap=plt.cm.nipy_spectral, 
-                    #               alpha=alpha)
-                    ax.imshow(Frame, cmap=plt.cm.nipy_spectral, alpha=alpha)
+                        #ax = plt.subplot(Nrows, Ncols, n)
+                        #im = ax.imshow(Frame, cmap=plt.cm.nipy_spectral, 
+                        #               alpha=alpha)
+                        ax.imshow(Frame, cmap=Cmap, alpha=SegAlpha)
+                        
+                        FrameTxt = f'Frame {FrameNum}'
+                        
+                else:
+                    FrameTxt = 'No frame'
                     
-                    #m = 1 if MaximaByFrame[FrameNum] < 1 else MaximaByFrame[FrameNum]
-                    #cbar = fig.colorbar(im, ax=ax)
-                    #cbar.mappable.set_clim(0, m)
+                    if LogToConsole:
+                        print(f'      SliceNum = {SliceNum} is NOT in F2Sinds')
                     
-                    #fig.colorbar(im, ax=ax)
-                    #fig.colorbar(ax=ax)
-                    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                    if AddTxt:
-                        plotTitle = PlotTitle\
-                                    + f' Slice {SliceNum}, Frame {FrameNum}\n'\
-                                    + AddTxt
-                    else:
-                        plotTitle = PlotTitle\
-                                    + f' Slice {SliceNum}, Frame {FrameNum}'
-                    ax.set_title(plotTitle)
+                SliceTxt = f'Slice {SliceNum}'
+                
+                if AddTxt:
+                    plotTitle = PlotTitle \
+                                + f'\n' + SliceTxt + '\n'\
+                                + f'\n' + FrameTxt + '\n'\
+                                + AddTxt
+                else:
+                    plotTitle = PlotTitle \
+                                + f'\n' + SliceTxt + '\n'\
+                                + f'\n' + FrameTxt
+                
+                ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                ax.set_title(plotTitle)
                 
             n += 1 # increment sub-plot number
         
@@ -1430,7 +1340,7 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         else:
             AddTxt = ''
             
-        ExportFname = CurrentDateTime + '_PixArrs_' + AddTxt + '.jpg'
+        ExportFname = CurrentDateTime + '_Segs_' + AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
@@ -1477,7 +1387,7 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
     from DicomTools import GetDicomFpaths
     
     ListOfPixArrs, ListOfF2Sinds, ListOfSegNums,\
-    ListOfDcmFpaths = GetPixArrsFromListOfSegs(ListOfSegs, ListOfDicomDirs, 
+    ListOfDcmFpaths = GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, 
                                                SearchString, LogToConsole)
     
     # Get the list of slice numbers to be plotted:
@@ -1664,15 +1574,15 @@ def PlotContoursFromListOfRtss_v1_OLD(ListOfRtss, ListOfDicomDirs, ListOfPlotTit
     import time
     from copy import deepcopy
     from pydicom import dcmread
-    from RtsTools import GetContoursFromListOfRtss
+    from RtsTools import GetRtsDataFromListOfRtss
     from GeneralTools import Unpack
     from ConversionTools import Points2Indices
     from ImageTools import ImportImage
     
     ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
     ListOfDcmFpaths, ListOfOrigins, ListOfDirections,\
-    ListOfSpacings = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
-                                               SearchString, LogToConsole)
+    ListOfSpacings = GetRtsDataFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
+                                              SearchString, LogToConsole)
     
     # Get the list of slice numbers that will be plotted:
     if PlotAllSlices:
@@ -1884,14 +1794,14 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     import time
     #from copy import deepcopy
     from pydicom import dcmread
-    from RtsTools import GetContoursFromListOfRtss
+    from RtsTools import GetRtsDataFromListOfRtss
     from GeneralTools import UniqueItems, Unpack, PrintTitle
     from ConversionTools import Points2Indices
     from ImageTools import ImportImage
     
     ListOfPtsByCntByRoi, ListOfC2SindsByRoi, ListOfDcmFpaths,\
     ListOfIPPs, ListOfDirections, ListOfSpacings\
-    = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, LogToConsole)
+    = GetRtsDataFromListOfRtss(ListOfRtss, ListOfDicomDirs, LogToConsole)
     
     # Get the list of slice numbers that will be plotted:
     if PlotAllSlices:
@@ -1916,19 +1826,19 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     Ncols = len(ListOfRtss)
     Nrows = len(AllSliceNums)
     
-    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7.5*Nrows), dpi=dpi)
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
-    
     LineWidth = 0.5
     LineWidth = 2
     Colours = ['r', 'b', 'm', 'c', 'k', 'y']
     
     # Set the transparency of the DICOM images:
-    alpha = 0.2
-    alpha = 0.5
+    #alpha = 0.2
+    #alpha = 0.5
     alpha = 1
     
     n = 1 # initialised sub-plot number
+    
+    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7.5*Nrows), dpi=dpi)
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
     
     # Loop through each AllSliceNums: 
     for SliceNum in AllSliceNums:
@@ -1941,6 +1851,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
             C2SindsByRoi = ListOfC2SindsByRoi[i]
             
             DicomFpaths = ListOfDcmFpaths[i]
+            IPPs = ListOfIPPs[i]
             #Origin = ListOfOrigins[i]
             #Directions = ListOfDirections[i]
             #Spacings = ListOfSpacings[i]
@@ -1960,15 +1871,18 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                 DicomPixArr = dcmread(DicomFpaths[SliceNum]).pixel_array
             
                 ax.imshow(DicomPixArr, cmap=plt.cm.Greys_r, alpha=alpha)
-            
+                
+                IPP = IPPs[SliceNum]
+                
             
             # Loop through each ROI:
             for r in range(len(C2SindsByRoi)):
                 C2Sinds = C2SindsByRoi[r]
                 PtsByCnt = PtsByCntByRoi[r]
                 
-                # There are only len(Colours) defined above. Wrap the index c
-                # if there are more contours than the number of defined colours
+                """ There are only len(Colours) colours defined above. Wrap the 
+                ROI index r if there are more ROIs than the number of defined 
+                colours. """
                 if r < len(Colours):
                     colour = Colours[r]
                 else:
@@ -1981,6 +1895,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                     # than one contour for SliceNum!!
                     ContourNums = [i for i, e in enumerate(C2Sinds) if e==SliceNum]
                     
+                    # Loop through all contour numbers:
                     for c in range(len(ContourNums)):
                         ContourNum = ContourNums[c]
                         
@@ -2021,7 +1936,8 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                         
                         #ContourTxt = f'Contour {ContourNum + 1}'
                         #ContourTxt = f'Contour {ContourNum}'
-                        ContourTxt = f'Contour(s) {ContourNums}'
+                        #ContourTxt = f'Contour(s) {ContourNums}'
+                        ContourTxt = f'Contour {ContourNum}'
                     
                 else:
                     ContourTxt = 'No contour'
@@ -2030,16 +1946,25 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                         print(f'      SliceNum = {SliceNum} is NOT in C2Sinds')
                 
                 SliceTxt = f'Slice {SliceNum}'
+                zPosTxt = f'z = {round(IPP[2], 2)} mm'
+                
+                #if AddTxt:
+                #    plotTitle = PlotTitle \
+                #                + f'\n' + SliceTxt + '\n'\
+                #                + f'\n' + ContourTxt + '\n'\
+                #                + AddTxt
+                #else:
+                #    plotTitle = PlotTitle \
+                #                + f'\n' + SliceTxt + '\n'\
+                #                + f'\n' + ContourTxt
+                
+                plotTitle = PlotTitle \
+                            + f'\n' + SliceTxt \
+                            + f'\n' + ContourTxt \
+                            + f'\n' + zPosTxt + '\n'
                 
                 if AddTxt:
-                    plotTitle = PlotTitle \
-                                + f'\n' + SliceTxt + '\n'\
-                                + f'\n' + ContourTxt + '\n'\
-                                + AddTxt
-                else:
-                    plotTitle = PlotTitle \
-                                + f'\n' + SliceTxt + '\n'\
-                                + f'\n' + ContourTxt
+                    plotTitle += AddTxt
                 
                 ax.set_xlabel('pixels'); ax.set_ylabel('pixels')
                 ax.set_title(plotTitle)
@@ -2109,13 +2034,13 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     from copy import deepcopy
     from pydicom import dcmread
     from GeneralTools import Unpack
-    from RtsTools import GetContoursFromListOfRtss
+    from RtsTools import GetRtsDataFromListOfRtss
     from ConversionTools import Points2Indices
     from ImageTools import ImportImage
     
     ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
     ListOfDcmFpaths, ListOfOrigins, ListOfDirections,\
-    ListOfSpacings = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
+    ListOfSpacings = GetRtsDataFromListOfRtss(ListOfRtss, ListOfDicomDirs, 
                                                SearchString, LogToConsole)
     
     # Get the list of slice numbers that will be plotted:
@@ -2327,14 +2252,14 @@ def PlotContoursFromListOfRtss_v3(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     import time
     #from copy import deepcopy
     from pydicom import dcmread
-    from RtsTools import GetContoursFromListOfRtss
+    from RtsTools import GetRtsDataFromListOfRtss
     from GeneralTools import UniqueItems, Unpack, PrintTitle
     from ConversionTools import Points2Indices
     from ImageTools import ImportImage
     
     ListOfPtsByCntByRoi, ListOfC2SindsByRoi, ListOfDcmFpaths,\
     ListOfIPPs, ListOfDirections, ListOfSpacings\
-    = GetContoursFromListOfRtss(ListOfRtss, ListOfDicomDirs, LogToConsole)
+    = GetRtsDataFromListOfRtss(ListOfRtss, ListOfDicomDirs, LogToConsole)
     
     ListOfOrigins = [IPPs[0] for IPPs in ListOfIPPs]
     
@@ -3039,6 +2964,97 @@ def PlotSitkLabelmap(Labelmap, Colormap='grayscale', dpi=80, LogToConsole=False)
 
 
 
+def CompareSitkFrames(Image0, Ind0, Image1, Ind1, PlotTxt0='', PlotTxt1='',
+                      Colormap='grayscale', dpi=80, ExportPlot=False, 
+                      ExportDir=None, TxtToAddToFname='', LogToConsole=False):
+    """ 
+    Compare two frames from two sitk images at specified slice indices.
+    """
+    
+    import os
+    import time
+    import matplotlib.pyplot as plt
+    from ConversionTools import Image2PixArr
+    
+    if Image0.GetSize()[1] != Image1.GetSize()[1] or Image0.GetSize()[2] != Image1.GetSize()[2]:
+        from ImageTools import ResampleImage
+        
+        Image0 = ResampleImage(Image0, Image1, 'linear')
+        
+        """ Since Image0 has been resampled to Image1, use the same Ind0 as 
+        Ind1: """
+        Ind0 = Ind1
+        
+        PlotTxt0 = 'Resampled ' + PlotTxt0
+    
+    PixArr0, F2Sinds0 = Image2PixArr(Image0)
+    PixArr1, F2Sinds1 = Image2PixArr(Image1)
+    
+    Frame0 = PixArr0[Ind0]
+    Frame1 = PixArr1[Ind1]
+    
+    Diff = Frame1 - Frame0
+    
+    z0 = Image0.TransformIndexToPhysicalPoint((0,0,Ind0))[2]
+    z1 = Image1.TransformIndexToPhysicalPoint((0,0,Ind1))[2]
+    
+    dz = z1 - z0
+    
+    PlotTitle0 = PlotTxt0 + f'\nFrame {Ind0} \nz = {round(z0, 2)} mm'
+    PlotTitle1 = PlotTxt1 + f'\nFrame {Ind1} \nz = {round(z1, 2)} mm'
+    PlotTitle2 = f'Difference \ndz = {round(dz, 2)} mm' 
+    
+    if Colormap == 'color':
+        cmap = plt.cm.nipy_spectral
+    else:
+        cmap = plt.cm.Greys_r
+        
+    if ExportPlot:
+        dpi = 120
+    else:
+        dpi = 80
+    
+    # Set the number of subplot rows and columns:
+    Ncols = 3
+    Nrows = 1
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+        
+    ax = plt.subplot(Nrows, Ncols, 1)
+    ax.imshow(Frame0, cmap=cmap)
+    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+    ax.set_title(PlotTitle0)
+    
+    ax = plt.subplot(Nrows, Ncols, 2)
+    ax.imshow(Frame1, cmap=cmap)
+    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+    ax.set_title(PlotTitle1)
+    
+    ax = plt.subplot(Nrows, Ncols, 3)
+    ax.imshow(Diff, cmap=cmap)
+    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+    ax.set_title(PlotTitle2)
+    
+    if ExportPlot:
+        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        CurrentDateTime = CurrentDate + '_' + CurrentTime
+            
+        ExportFname = CurrentDateTime + '_' + TxtToAddToFname \
+                      + '_ComparisonOfFrames.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+        
+    return
+
+
+
+
+
 
 def PlotPoints(Points, dim=3):
     from GeneralTools import Unpack
@@ -3113,4 +3129,70 @@ def PlotTwoSetsOfPoints(Points0, Points1, dim=3):
         raise Exception(msg)
     
     return
+
+
+
+
+
+def PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle=''):
+    """ PixArrBySeg can either be a list of pixel arrays (as the variable name
+    suggests), or a pixel array, and F2SindsBySeg can either be a list (for 
+    each segment) of a list (for each frame) of frame-to-slice indices, or it
+    can be a list (for each frame) of frame-to-slice indices.
     
+    The pixel array(s) must have shape (F, R, C) where F is the number of
+    frames, which could be any integer number including 0. """
+    
+    import matplotlib.pyplot as plt
+    
+    # Prepare the figure.
+    
+    # Set the number of subplot rows and columns:
+    if isinstance(PixArrBySeg, list):
+        Ncols = len(PixArrBySeg)
+        
+        NFramesBySeg = []
+        
+        for i in range(Ncols):
+            PixArr = PixArrBySeg[i]
+            
+            NFramesBySeg.append(PixArr.shape[0])
+            
+        Nrows = max(NFramesBySeg)
+    else:
+        Nrows = PixArr.shape[0]
+                
+        """ Put the pixel array and F2Sinds into a list. """
+        PixArrBySeg = [PixArrBySeg]
+        F2SindsBySeg = [F2SindsBySeg]
+        
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows))
+    
+    n = 1 # initialised sub-plot number
+        
+    # Loop through each pixel array:
+    for i in range(Ncols):
+        PixArr = PixArrBySeg[i]
+        F2Sinds = F2SindsBySeg[i]
+        
+        print(f'\nPixArr {i} has shape {PixArr.shape}')
+        print(f'F2Sinds = {F2Sinds}')
+        F = PixArr.shape[0]
+        
+        if F != len(F2Sinds):
+            print(f'The number of frames in PixArr, {F}, does not match the',
+                  f'length of F2Sinds, {len(F2Sinds)}')
+        
+        
+        # Loop through each frame:
+        for f in range(F):
+            #if f < F:
+            ax = plt.subplot(Nrows, Ncols, n)
+            ax.imshow(PixArr[f], cmap=plt.cm.Greys_r)
+            ax.set_xlabel('pixels'); ax.set_ylabel('pixels')
+            ax.set_title(PlotTitle + f'\nFrame {F2Sinds[f]}')
+            
+            n += 1 # increment sub-plot number
+        
+    return

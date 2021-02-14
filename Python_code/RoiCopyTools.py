@@ -84,226 +84,632 @@ TO SOURCE AND TARGET DICOM DIRECTORIES, AND OTHER INPUTS REQUIRED.
 ******************************************************************************
 """
 
-def GetInputsToCopyRoi(TestNum):
+def CreateDictOfPaths():
     import os
-    from copy import deepcopy
+    
+    """ WARNING:
+        Don't forget to add new directories/filepaths to the dictionary Dict
+        below!
+    """
     
     """ Subject TCGA-BB-A5HY in XNAT_TEST """
     
-    Subject1_Dir = r"C:\Data\XNAT_TEST\TCGA-BB-A5HY"
+    Sub1_Dir = r"C:\Data\XNAT_TEST\TCGA-BB-A5HY"
     
-    """ Series 2 """
+    """ Session 1 """
+    
+    Ses1_Ser5_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session1\scans\5_AX T2 BRAIN  PROPELLER\DICOM")
+    
+    Ses1_Ser6_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session1\scans\6_AX GRE BRAIN\DICOM")
+    
+    Ses1_Ser7_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session1\scans\7_AX T1 BRAIN\DICOM")
+    
+    Ses1_Ser8_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session1\scans\8_Ax T2 FLAIR BRAIN POST\DICOM")
+    
+    Ses1_Ser9_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session1\scans\9_AX T1 POST BRAIN\DICOM")
+    
+    
+    """ Session 2 """
     # IPP =
     # [1.0, 2.1e-10, 0.0,
     # -2.1e-10, 1.0, 0.0,
     # 0.0, 0.0, 1.0]
 
 
-    Ses2_Ser2_DcmDir = os.path.join(Subject1_Dir,
+    Ses2_Ser2_DcmDir = os.path.join(Sub1_Dir,
                                     r"Session2\scans\2_Head Routine  5.0  H30s\DICOM")
     # 512, 512, 33
     # 0.4, 0.4, 5.0 
     # 5.0
-
-    Ses2_Ser4_DcmDir = os.path.join(Subject1_Dir,
+    
+    Ses2_Ser3_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session2\scans\3_Head Routine  5.0  J30s  3\DICOM")
+    
+    Ses2_Ser4_DcmDir = os.path.join(Sub1_Dir,
                                     r"Session2\scans\4_Head Routine  5.0  H60s\DICOM")
     # 512, 512, 33
     # 0.4, 0.4, 5.0 
     # 5.0
     
-    Ses2_Ser5_DcmDir = os.path.join(Subject1_Dir,
+    Ses2_Ser5_DcmDir = os.path.join(Sub1_Dir,
                                     r"Session2\scans\5_Head Routine  0.75  H20s\DICOM")
     # 512, 512, 330
     # 0.4, 0.4, 0.5
     # 0.75
 
-    Ses2_Ser2_LeftEyeCT_RtsFpath = os.path.join(Subject1_Dir,
+    Ses2_Ser2_LeftEyeCT_RtsFpath = os.path.join(Sub1_Dir,
                                                 r"Session2\assessors",
                                                 r"RoiCollection_hkhGnxQ_2kX4w5b39s0\RTSTRUCT",
-                                                r"AIM_20210201_000731.dcm") 
+                                                r"AIM_20210201_000731.dcm")
+    
+    Ses2_Ser2_LeftEyeCT_SegFpath = os.path.join(Sub1_Dir,
+                                                r"Session2\assessors",
+                                                r"RoiCollection_hlDxpyQ_7cJDZotLuP_icr_roiCollectionData\SEG",
+                                                r"SEG_20210213_140215.dcm") 
     # Left eye CT
     # 512, 512, 33
     # 0.4, 0.4, 5.0 
     # 5.0
     
-    Ses2_Ser2_RightEyeCT_RtsFpath = os.path.join(Subject1_Dir,
+    Ses2_Ser2_RightEyeCT_RtsFpath = os.path.join(Sub1_Dir,
                                                  r"Session2\assessors",
                                                  r"RoiCollection_hkhGnxQ_2NZvk8B9pwA\RTSTRUCT",
                                                  r"AIM_20210201_000842.dcm") 
+    
+    Ses2_Ser2_RightEyeCT_SegFpath = os.path.join(Sub1_Dir,
+                                                 r"Session2\assessors",
+                                                 r"RoiCollection_hlDxpyQ_AqEfVVmmysA_icr_roiCollectionData\SEG",
+                                                 r"SEG_20210213_135857.dcm") 
     # Right eye CT (single slice) <-- on slice 5 (0-indexed)
     # 512, 512, 33
     # 0.4, 0.4, 5.0 
     # 5.0
     
     
-    """ Series 4 """
+    """ Session 3 """
     
-    Ses4_Ser10_DcmDir = os.path.join(Subject1_Dir,
+    Ses3_Ser6_DcmDir = os.path.join(Sub1_Dir,
+                                     r"Session3\scans",
+                                     r"6_T2 FLAIR Ax\DICOM")
+    
+    Ses3_Ser7_DcmDir = os.path.join(Sub1_Dir,
+                                     r"Session3\scans",
+                                     r"7_Diff Ax\DICOM")
+    
+    Ses3_Ser13_DcmDir = os.path.join(Sub1_Dir,
+                                     r"Session3\scans",
+                                     r"13_T1 Ax Post fs IAC\DICOM")
+    
+    Ses3_Ser14_DcmDir = os.path.join(Sub1_Dir,
+                                     r"Session3\scans",
+                                     r"14_T1 Ax Post Brain\DICOM")
+    
+    
+    """ Session 4 """
+    
+    Ses4_Ser10_DcmDir = os.path.join(Sub1_Dir,
                                      r"Session4\scans",
                                      r"10_T1  AXIAL 2MM POST repeat_S7_DIS3D\DICOM")
     # 192, 192, 80
     # 1.2, 1.2, 2.0 
     # 2.0
     
-    Ses4_Ser11_DcmDir = os.path.join(Subject1_Dir,
+    Ses4_Ser11_DcmDir = os.path.join(Sub1_Dir,
                                      r"Session4\scans\11_T1 3D AX POST_S5_DIS3D\DICOM")
     # 512, 512, 192
     # 0.5, 0.5, 1.0 
     # 1.0
 
-    Ses4_Ser12_DcmDir = os.path.join(Subject1_Dir,
+    Ses4_Ser12_DcmDir = os.path.join(Sub1_Dir,
                                      r"Session4\scans\12_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
     # 204, 256, 57
     # 0.9, 0.9, 3.0 
     # 3.0
 
-    Ses4_Ser13_DcmDir = os.path.join(Subject1_Dir,
+    Ses4_Ser13_DcmDir = os.path.join(Sub1_Dir,
                                      r"Session4\scans\13_T1  AXIAL 2MM_S3_DIS3D\DICOM")
     # 192, 192, 80
     # 1.2, 1.2, 2.0 
     # 2.0
 
-    
-    Ses4_Ser14_DcmDir = os.path.join(Subject1_Dir,
+    Ses4_Ser14_DcmDir = os.path.join(Sub1_Dir,
                                      r"Session4\scans\14_T2_FLAIR 3MM_S2_DIS3D\DICOM")
     # 512, 512, 46
     # 0.45, 0.45, 3.9 
     # 3.0
 
-    Ses4_Ser11_Ventricles_RtsFpath = os.path.join(Subject1_Dir,
+    Ses4_Ser11_Ventricles_RtsFpath = os.path.join(Sub1_Dir,
                                                   r"Session4\assessors",
                                                   r"RoiCollection_hkhGnxQ_BNths5fNmA\RTSTRUCT",
                                                   r"AIM_20210131_230845.dcm") 
+    
+    Ses4_Ser11_Ventricles_SegFpath = os.path.join(Sub1_Dir,
+                                                  r"Session4\assessors",
+                                                  r"RoiCollection_hlDxpyQ_5Dz9OulRH6n_icr_roiCollectionData\SEG",
+                                                  r"SEG_20210213_144855.dcm") 
     # Ventricles
     # 512, 512, 192
     # 0.5, 0.5, 1.0 
     # 1.0
     
-    Ses4_Ser13_NasalCavity_RtsFpath = os.path.join(Subject1_Dir,
+    Ses4_Ser13_NasalCavity_RtsFpath = os.path.join(Sub1_Dir,
                                                    r"Session4\assessors",
                                                    r"RoiCollection_hkhGnxQ_6daB7S8Eckp\RTSTRUCT",
                                                    r"AIM_20210131_214821.dcm") 
+    
+    Ses4_Ser13_NasalCavity_SegFpath = os.path.join(Sub1_Dir,
+                                                   r"Session4\assessors",
+                                                   r"RoiCollection_hlDxpyQ_AJ47Vd6ikeE_icr_roiCollectionData\SEG",
+                                                   r"SEG_20210213_152014.dcm") 
     # Nasal cavity
     # 192, 192, 80
     # 1.2, 1.2, 2.0 
     # 2.0
     
-    """ Series 6"""
+    
+    """ Session 5"""
+
+    Ses5_Ser6_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session5\scans\6_T2 FLAIR Ax\DICOM")
+    
+    Ses5_Ser7_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session5\scans\7_CISS Ax\DICOM")
+    
+    Ses5_Ser12_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session5\scans\12_T2 Ax fs Post Brain\DICOM")
+    
+    Ses5_Ser14_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session5\scans\14_T1 Ax Post fs IAC\DICOM")
+    
+    Ses5_Ser16_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session5\scans\16_T1 Ax Post fs IAC repeat\DICOM")
+    
+    Ses5_Ser12_LeftEye_RtsFpath = os.path.join(Sub1_Dir,
+                                               r"Session5\assessors",
+                                               r"RoiCollection_hkhGnxQ_4rFYFKE1r6r\RTSTRUCT",
+                                               r"AIM_20210131_212509.dcm")
+    
+    Ses5_Ser12_LeftEye_SegFpath = os.path.join(Sub1_Dir,
+                                               r"Session5\assessors",
+                                               r"RoiCollection_hlDxpyQ_8CVLpZmvRD8_icr_roiCollectionData\SEG",
+                                               r"SEG_20210213_153745.dcm")
+    
+    Ses5_Ser16_Tumour_RtsFpath = os.path.join(Sub1_Dir,
+                                               r"Session5\assessors",
+                                               r"RoiCollection_hkhGnxQ_79YdSO5eYPo\RTSTRUCT",
+                                               r"AIM_20210131_211622.dcm")
+    
+    Ses5_Ser16_Tumour_SegFpath = os.path.join(Sub1_Dir,
+                                               r"Session5\assessors",
+                                               r"RoiCollection_hlDxpyQ_18XInHEwVjJ_icr_roiCollectionData\SEG",
+                                               r"SEG_20210213_155524.dcm")
+    
+    
+    """ Session 6"""
     # IPP =
     # [1.0, 2.1e-10, 0.0,
     # -2.1e-10, 1.0, 0.0,
     # 0.0, 0.0, 1.0]
 
 
-    Ses6_Ser3_DcmDir = os.path.join(Subject1_Dir,
+    Ses6_Ser3_DcmDir = os.path.join(Sub1_Dir,
                                     r"Session6\scans\3_Head Routine  5.0  H30f\DICOM")
     # 512, 512, 38
     # 0.43, 0.43, 5.0 
     # 5.0
-
-    Ses6_Ser5_DcmDir = os.path.join(Subject1_Dir,
+    
+    Ses6_Ser4_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session6\scans\4_Head Routine  5.0  J30f  3\DICOM")
+    
+    Ses6_Ser5_DcmDir = os.path.join(Sub1_Dir,
                                     r"Session6\scans\5_Head Routine  0.75  H20f\DICOM")
     # 512, 512, 375
     # 0.43, 0.43, 0.5 
     # 0.75
     
     
+    """ Session 7"""
+    
+    Ses7_Ser21_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session7\scans\21_T1  AXIAL 2MM POST_S6_DIS3D\DICOM")
+    
+    Ses7_Ser22_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session7\scans\22_T1 3D AX POST_S5_DIS3D\DICOM")
+    
+    Ses7_Ser23_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session7\scans\23_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
+    
+    Ses7_Ser24_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session7\scans\24_T1  AXIAL 2MM_S3_DIS3D\DICOM")
+    
+    Ses7_Ser25_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session7\scans\25_T2_FLAIR 3MM_S2_DIS3D\DICOM")
+    
+    
+    """ Session 8"""
+    
+    Ses8_Ser2_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session8\scans\2_Head Routine  5.0  H30f\DICOM")
+    
+    Ses8_Ser4_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session8\scans\4_Head Routine  5.0  J30f  3\DICOM")
+    
+    Ses8_Ser5_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session8\scans\5_Head Routine  0.75  H20f\DICOM")
+    
+    
+    
+    """ Session 9"""
+    
+    Ses9_Ser3_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session9\scans\3_T2 FLAIR Ax\DICOM")
+    
+    Ses9_Ser4_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session9\scans\4_Diff Ax\DICOM")
+    
+    Ses9_Ser5_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session9\scans\5_Diff Ax_ADC\DICOM")
+    
+    Ses9_Ser14_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session9\scans\14_T2spc Ax\DICOM")
+    
+    Ses9_Ser15_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session9\scans\15_T1 3D Ax Post\DICOM")
+    
+    
+    
+    """ Session 10"""
+    
+    Ses10_Ser3_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session10\3\DICOM")
+    
+    Ses10_Ser6_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session10\6\DICOM")
+    
+    Ses10_Ser19_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session10\19\DICOM")
+    
+    Ses10_Ser22_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session10\22\DICOM")
+    
+    Ses10_Ser3_RightEye_RtsFpath = os.path.join(Sub1_Dir,
+                                                r"Session10",
+                                                r"AIM_20210131_183753\RTSTRUCT",
+                                                r"AIM_20210131_183753.dcm")
+    
+    Ses10_Ser3_LowerBrain_RtsFpath = os.path.join(Sub1_Dir,
+                                                  r"Session10",
+                                                  r"AIM_20210131_232127\RTSTRUCT",
+                                                  r"AIM_20210131_232127.dcm")
+    
+    
+    
+    """ Session 11"""
+    
+    Ses11_Ser2_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session11\scans\2_Head Routine  0.75  H20s\DICOM")
+    
+    Ses11_Ser3_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session11\scans\3_Head Routine  5.0  H30s\DICOM")
+    
+    Ses11_Ser5_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session11\scans\5_Head Routine  5.0  J30s  3\DICOM")
+    
+    Ses11_Ser9_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session11\scans\9_TEMPORAL BONES RIGHT  5.0  H30s\DICOM")
+    
+    Ses11_Ser10_DcmDir = os.path.join(Sub1_Dir,
+                                    r"Session11\scans\10_TEMPORAL BONES RIGHT  0.6  H30s\DICOM")
+    
+    
     
     
     """ Subject ACRIN-FMISO-Brain-011 in ACRIN-FMISO-Brain """
     
-    Subject2_Dir = r"C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011"
+    Sub2_Dir = r"C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011"
     
-    MR4Dir = r"04-10-1960-MRI Brain wwo Contrast-69626"
+    Sub2_RoiDir = r"C:\Data\Data copied to Google Drive\ACRIN-FMISO-Brain-011"
+    Sub2_RtsDir = os.path.join(Sub2_RoiDir, "Fixed_RTS_Collections")
+    Sub2_SegDir = os.path.join(Sub2_RoiDir, "Fixed_SEG_Collections")
+
+    MR4_Dir = r"04-10-1960-MRI Brain wwo Contrast-69626"
     # IPP =
     # [1.00, 0.00, 0.07,
     # -0.02, 0.95, 0.30,
     # -0.07, -0.30, 0.95]
     
-    MR12Dir = r"06-11-1961-MRI Brain wwo Contrast-79433"
+    MR12_Dir = r"06-11-1961-MRI Brain wwo Contrast-79433"
     # IPP =
     # [0.99, 0.11, 0.07,
     # -0.10, 0.99, -0.03,
     # -0.07, 0.02, 1.00]
     
-    MR4_Ser3_DcmDir = os.path.join(Subject2_Dir, MR4Dir,
+    
+    """ DICOM directories for MR4 """
+    
+    MR4_Ser3_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
                                    r"3-T2 TSE AXIAL-07507") 
     # 378, 448, 21
     # 0.51, 0.51, 7.5 mm
     # 5.0 mm
     
-    MR4_Ser4_DcmDir = os.path.join(Subject2_Dir, MR4Dir,
+    MR4_Ser4_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
                                    r"4-T2 AXIAL FLAIR DARK FL-48830") 
     # 416, 512, 21 pix
     # 0.45, 0.45, 5.0 mm
     # 5.0 mm
     
-    MR4_Ser5_DcmDir = os.path.join(Subject2_Dir, MR4Dir,
+    MR4_Ser5_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
                                    r"5-T1 SE AXIAL 3MM-81246")        
     # 208, 256, 50 
     # 0.9, 0.9, 3.0 mm
     # 3.0 mm
     
-    MR4_Ser7_DcmDir = os.path.join(Subject2_Dir, MR4Dir, 
+    MR4_Ser7_DcmDir = os.path.join(Sub2_Dir, MR4_Dir, 
                                    r"7-ep2ddiff3scantracep2ADC-22197") 
     # 192, 192, 21 pix
     # 1.3, 1.3, 7.5 mm
     # 5.0 mm
     
-    MR4_Ser8_DcmDir = os.path.join(Subject2_Dir, MR4Dir, 
+    MR4_Ser8_DcmDir = os.path.join(Sub2_Dir, MR4_Dir, 
                                    r"8-T1 SE AXIAL POST FS FC-59362") 
     # 212, 256, 30 pix
     # 0.9, 0.9, 5.0 mm
     # 5.0 mm
     
-    MR4_Ser9_DcmDir = os.path.join(Subject2_Dir, MR4Dir,
+    MR4_Ser9_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
                                    r"9-T1 SE AXIAL POST 3MM 5 MIN DELAY-07268") 
     # 208, 256, 50 pix
     # 0.9, 0.9, 3.0 mm
     # 3.0 mm
     
     
-    MR12_Ser3_DcmDir = os.path.join(Subject2_Dir, MR12Dir,
+    """ RTS/SEG filepaths for MR4 """
+    
+    MR4_Ser8_RtsFpath = os.path.join(Sub2_RtsDir, 
+                                     "MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
+    # tumour
+    MR4_Ser8_SegFpath = os.path.join(Sub2_SegDir, 
+                                     "Seg_from_MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
+    # tumour
+    
+    MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
+                                     "MR4_S9_tumour_RTS_AIM_20201014_163721.dcm") 
+    # tumour drawn on S9 stack
+    #MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
+    #                                 "MR4_S9_brain_RTS_AIM_20201112_142559.dcm")
+    MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
+                                     "MR4_S9_tumour_and_brain_RTS_AIM_20201116_122858.dcm")
+    
+    #MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "Seg_from_MR4_S9_tumour_RTS_AIM_20201014_163721.dcm") 
+    # tumour drawn on S9 stack
+    #MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "MR4_S9_tumour_SEG_20201105_115408.dcm")
+    MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
+                                     "MR4_S9_tumour_and_brain_SEG_20201105_115939.dcm")
+    
+    MR4_Ser5_RtsFpath = os.path.join(Sub2_RtsDir, 
+                                     "MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
+    # tumour drawn on S5 stack
+    #MR4_Ser5_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "Seg_from_MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
+    # tumour drawn on S5 stack
+    MR4_Ser5_SegFpath = os.path.join(Sub2_SegDir, 
+                                     "MR4_S5_tumour_SEG_20201216_084441.dcm") 
+    # single frame on slice 24 or 26
+    
+    #MR4_Ser3_RtsFpath = os.path.join(Sub2_RtsDir, 
+    #                                 "MR4_S3_tumour_and_brain_RTS_AIM_20201112_162427.dcm") 
+    # <-- WARNING: tumour & brain are not separate ROIs!
+    MR4_Ser3_RtsFpath = os.path.join(Sub2_RtsDir, 
+                                     "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm") 
+    # separate ROIs
+    
+    MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
+                                     "MR4_S3_brain_SEG_20201030_133110.dcm")
+    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") 
+    # one ROI!
+    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm") 
+    # two ROIs
+    MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
+                                     "MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") 
+    # two ROIs
+    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
+    #                                 "MR4_S3_tumour_SEG_20201216_085421.dcm") 
+    # single frame on slice 10
+    
+    
+    
+    """ DICOM directories for MR12 """
+    
+    MR12_Ser3_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
                                     r"3-T2 TSE AX IPAT2-08659") 
     # 336, 448, 24
     # 0.54, 0.54, 7.5 mm
     # 5.0 mm
     
-    MR12_Ser4_DcmDir = os.path.join(Subject2_Dir, MR12Dir,
+    MR12_Ser4_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
                                     r"4-T2 AXIAL FLAIR DARK FL-94212") 
     # 384, 512, 24
     # 0.47, 0.47, 7.5 mm
     # 5.0 mm
     
-    MR12_Ser5_DcmDir = os.path.join(Subject2_Dir, MR12Dir,
+    MR12_Ser5_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
                                     r"5-T1 SE AXIAL-43742") 
     # 192, 256, 35
     # 0.94, 0.94, 5.0 mm
     # 5.0 mm
     
     
-    MR12_Ser8_DcmDir = os.path.join(Subject2_Dir, MR12Dir,
+    MR12_Ser8_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
                                     r"8-T1 SE AXIAL POST FS FC-81428") 
     # 256, 192, 35 
     # 0.94, 0.94, 5.0 mm
     # 5.0 mm
     
     
-    #""" Export directories """
+    Dict = {}
     
-    #RtsExportDir = os.path.join(SubjectDir, "New_RTS")
-    #SegExportDir = os.path.join(SubjectDir, "New_SEG")
-    #PlotExportDir = os.path.join(SubjectDir, "Plots")
+    Dict['Sub1_Dir'] = Sub1_Dir
     
     
+    Dict['Ses1_Ser5_DcmDir'] = Ses1_Ser5_DcmDir
+    Dict['Ses1_Ser6_DcmDir'] = Ses1_Ser6_DcmDir
+    Dict['Ses1_Ser7_DcmDir'] = Ses1_Ser7_DcmDir
+    Dict['Ses1_Ser8_DcmDir'] = Ses1_Ser8_DcmDir
+    Dict['Ses1_Ser9_DcmDir'] = Ses1_Ser9_DcmDir
     
+    
+    Dict['Ses2_Ser2_DcmDir'] = Ses2_Ser2_DcmDir
+    Dict['Ses2_Ser3_DcmDir'] = Ses2_Ser3_DcmDir
+    Dict['Ses2_Ser4_DcmDir'] = Ses2_Ser4_DcmDir
+    Dict['Ses2_Ser5_DcmDir'] = Ses2_Ser5_DcmDir
+    
+    Dict['Ses2_Ser2_LeftEyeCT_RtsFpath'] = Ses2_Ser2_LeftEyeCT_RtsFpath
+    Dict['Ses2_Ser2_RightEyeCT_RtsFpath'] = Ses2_Ser2_RightEyeCT_RtsFpath
+    Dict['Ses2_Ser2_LeftEyeCT_SegFpath'] = Ses2_Ser2_LeftEyeCT_SegFpath
+    Dict['Ses2_Ser2_RightEyeCT_SegFpath'] = Ses2_Ser2_RightEyeCT_SegFpath
+    
+    
+    Dict['Ses3_Ser6_DcmDir'] = Ses3_Ser6_DcmDir
+    Dict['Ses3_Ser7_DcmDir'] = Ses3_Ser7_DcmDir
+    Dict['Ses3_Ser13_DcmDir'] = Ses3_Ser13_DcmDir
+    Dict['Ses3_Ser14_DcmDir'] = Ses3_Ser14_DcmDir
+    
+    
+    Dict['Ses4_Ser10_DcmDir'] = Ses4_Ser10_DcmDir
+    Dict['Ses4_Ser11_DcmDir'] = Ses4_Ser11_DcmDir
+    Dict['Ses4_Ser12_DcmDir'] = Ses4_Ser12_DcmDir
+    Dict['Ses4_Ser13_DcmDir'] = Ses4_Ser13_DcmDir
+    Dict['Ses4_Ser14_DcmDir'] = Ses4_Ser14_DcmDir
+    
+    Dict['Ses4_Ser11_Ventricles_RtsFpath'] = Ses4_Ser11_Ventricles_RtsFpath
+    Dict['Ses4_Ser13_NasalCavity_RtsFpath'] = Ses4_Ser13_NasalCavity_RtsFpath
+    Dict['Ses4_Ser11_Ventricles_SegFpath'] = Ses4_Ser11_Ventricles_SegFpath
+    Dict['Ses4_Ser13_NasalCavity_SegFpath'] = Ses4_Ser13_NasalCavity_SegFpath
+    
+    
+    Dict['Ses5_Ser6_DcmDir'] = Ses5_Ser6_DcmDir
+    Dict['Ses5_Ser7_DcmDir'] = Ses5_Ser7_DcmDir
+    Dict['Ses5_Ser12_DcmDir'] = Ses5_Ser12_DcmDir
+    Dict['Ses5_Ser14_DcmDir'] = Ses5_Ser14_DcmDir
+    Dict['Ses5_Ser16_DcmDir'] = Ses5_Ser16_DcmDir
+    
+    Dict['Ses5_Ser12_LeftEye_RtsFpath'] = Ses5_Ser12_LeftEye_RtsFpath
+    Dict['Ses5_Ser16_Tumour_RtsFpath'] = Ses5_Ser16_Tumour_RtsFpath
+    Dict['Ses5_Ser12_LeftEye_SegFpath'] = Ses5_Ser12_LeftEye_SegFpath
+    Dict['Ses5_Ser16_Tumour_SegFpath'] = Ses5_Ser16_Tumour_SegFpath
+    
+    
+    Dict['Ses6_Ser3_DcmDir'] = Ses6_Ser3_DcmDir
+    Dict['Ses6_Ser4_DcmDir'] = Ses6_Ser4_DcmDir
+    Dict['Ses6_Ser5_DcmDir'] = Ses6_Ser5_DcmDir
+    
+    
+    Dict['Ses7_Ser21_DcmDir'] = Ses7_Ser21_DcmDir
+    Dict['Ses7_Ser22_DcmDir'] = Ses7_Ser22_DcmDir
+    Dict['Ses7_Ser23_DcmDir'] = Ses7_Ser23_DcmDir
+    Dict['Ses7_Ser24_DcmDir'] = Ses7_Ser24_DcmDir
+    Dict['Ses7_Ser25_DcmDir'] = Ses7_Ser25_DcmDir
+    
+    
+    Dict['Ses8_Ser2_DcmDir'] = Ses8_Ser2_DcmDir
+    Dict['Ses8_Ser4_DcmDir'] = Ses8_Ser4_DcmDir
+    Dict['Ses8_Ser5_DcmDir'] = Ses8_Ser5_DcmDir
+    
+    
+    Dict['Ses9_Ser3_DcmDir'] = Ses9_Ser3_DcmDir
+    Dict['Ses9_Ser4_DcmDir'] = Ses9_Ser4_DcmDir
+    Dict['Ses9_Ser5_DcmDir'] = Ses9_Ser5_DcmDir
+    Dict['Ses9_Ser14_DcmDir'] = Ses9_Ser14_DcmDir
+    Dict['Ses9_Ser15_DcmDir'] = Ses9_Ser15_DcmDir
+    
+    
+    Dict['Ses10_Ser3_DcmDir'] = Ses10_Ser3_DcmDir
+    Dict['Ses10_Ser6_DcmDir'] = Ses10_Ser6_DcmDir
+    Dict['Ses10_Ser19_DcmDir'] = Ses10_Ser19_DcmDir
+    Dict['Ses10_Ser22_DcmDir'] = Ses10_Ser22_DcmDir
+    
+    Dict['Ses10_Ser3_RightEye_RtsFpath'] = Ses10_Ser3_RightEye_RtsFpath
+    Dict['Ses10_Ser3_LowerBrain_RtsFpath'] = Ses10_Ser3_LowerBrain_RtsFpath
+    
+    
+    Dict['Ses11_Ser2_DcmDir'] = Ses11_Ser2_DcmDir
+    Dict['Ses11_Ser3_DcmDir'] = Ses11_Ser3_DcmDir
+    Dict['Ses11_Ser5_DcmDir'] = Ses11_Ser5_DcmDir
+    Dict['Ses11_Ser9_DcmDir'] = Ses11_Ser9_DcmDir
+    Dict['Ses11_Ser10_DcmDir'] = Ses11_Ser10_DcmDir
+    
+    
+    
+    Dict['Sub2_Dir'] = Sub2_Dir
+    Dict['Sub2_RoiDir'] = Sub2_RoiDir
+    Dict['Sub2_RtsDir'] = Sub2_RtsDir
+    Dict['Sub2_SegDir'] = Sub2_SegDir
+    
+    Dict['MR4_Dir'] = MR4_Dir
+    
+    Dict['MR4_Ser3_DcmDir'] = MR4_Ser3_DcmDir
+    Dict['MR4_Ser4_DcmDir'] = MR4_Ser4_DcmDir
+    Dict['MR4_Ser5_DcmDir'] = MR4_Ser5_DcmDir
+    Dict['MR4_Ser7_DcmDir'] = MR4_Ser7_DcmDir
+    Dict['MR4_Ser8_DcmDir'] = MR4_Ser8_DcmDir
+    Dict['MR4_Ser9_DcmDir'] = MR4_Ser9_DcmDir
+    
+    Dict['MR4_Ser3_RtsFpath'] = MR4_Ser3_RtsFpath
+    Dict['MR4_Ser3_SegFpath'] = MR4_Ser3_SegFpath
+    Dict['MR4_Ser5_RtsFpath'] = MR4_Ser5_RtsFpath
+    Dict['MR4_Ser5_SegFpath'] = MR4_Ser5_SegFpath
+    Dict['MR4_Ser8_RtsFpath'] = MR4_Ser8_RtsFpath
+    Dict['MR4_Ser8_SegFpath'] = MR4_Ser8_SegFpath
+    Dict['MR4_Ser9_RtsFpath'] = MR4_Ser9_RtsFpath
+    Dict['MR4_Ser9_SegFpath'] = MR4_Ser9_SegFpath
+    
+    Dict['MR12_Dir'] = MR12_Dir
+    
+    Dict['MR12_Ser3_DcmDir'] = MR12_Ser3_DcmDir
+    Dict['MR12_Ser4_DcmDir'] = MR12_Ser4_DcmDir
+    Dict['MR12_Ser5_DcmDir'] = MR12_Ser5_DcmDir
+    Dict['MR12_Ser8_DcmDir'] = MR12_Ser8_DcmDir
+    
+    """
+    Dict[''] = 
+    Dict[''] = 
+    Dict[''] = 
+    Dict[''] = 
+    Dict[''] = 
+    """
+    
+    return Dict
+
+
+def GetInputsToCopyRoi(TestNum, UseOrigTrgRoi=False):
+    #import os
+    #from copy import deepcopy
+    
+    Dict = CreateDictOfPaths()
+    
+    """ ******************************************************************* """
+    """ TestNums for Testing                                                """
+    """ ******************************************************************* """
+    
+    """ Contours """
     
     if TestNum == 'RR1':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_LeftEyeCT_RtsFpath)
+        """ Rts Relationship-preserving copy test 1 """
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_LeftEyeCT_RtsFpath'
         
-        TrgDcmDir = deepcopy(Ses2_Ser4_DcmDir)
-        TrgRoiFpath = None
+        TrgDcmKey = 'Ses2_Ser4_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Left eye'
@@ -317,132 +723,163 @@ def GetInputsToCopyRoi(TestNum):
         #ToSliceNum = FromSliceNum + 1 # direct copy to next slice
         #ToSliceNum = 0
         
-        # NamePrefix for RTS StructureSetLabel / SEG Series Description and RTS/SEG filename:
-        #NamePrefix = f'{RunCase}_from_s{FromSliceNum}_in_{SrcLabel}_to_s{ToSliceNum}_in_{TrgLabel}'
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
-        
-
     
     elif TestNum == 'RR2':
-        SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
+        """ Rts Relationship-preserving copy test 2 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser10_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser10_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Nasal cavity'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser10'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
         
-        
     elif TestNum == 'RR3':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_LeftEyeCT_RtsFpath)
+        """ Rts Relationship-preserving copy test 3 """
         
-        TrgDcmDir = deepcopy(Ses2_Ser5_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_LeftEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses2_Ser5_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Left eye'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
     
-    
     elif TestNum == 'RR4':
-        SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
+        """ Rts Relationship-preserving copy test 4 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser11_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Nasal cavity'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser11'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 11'
-        
     
     elif TestNum == 'RR5':
-        SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
+        """ Rts Relationship-preserving copy test 5 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser14_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser14_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Nasal cavity'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser14'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
-        
     
     elif TestNum == 'RR6':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+        """ Rts Relationship-preserving copy test 6 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser10_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser10_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Ventricles'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
         
-        
     elif TestNum == 'RR7':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+        """ Rts Relationship-preserving copy test 7 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser12_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser12_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Ventricles'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser12'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 12'
     
-    
     elif TestNum == 'RR8':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+        """ Rts Relationship-preserving copy test 8 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser13_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Ventricles'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser13'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 13'
     
-    
     elif TestNum == 'RR9':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+        """ Rts Relationship-preserving copy test 9 """
         
-        TrgDcmDir = deepcopy(Ses4_Ser14_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser14_DcmDir'
+        TrgRoiKey = None
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser14'
         
         # Inputs required for this test:
         FromRoiLabel = 'Ventricles'
@@ -451,112 +888,177 @@ def GetInputsToCopyRoi(TestNum):
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
-        
+    
+    #elif TestNum == 'RR10':
+    #    """ Rts Relationship-preserving copy test 10 """
+    #    
+    #    SrcDcmKey = 'Ses2_Ser2_DcmDir'
+    #    SrcRoiKey = 'Ses2_Ser2_LeftEyeCT_RtsFpath'
+    #    
+    #    TrgDcmKey = 'Ses3_Ser6_DcmDir'
+    #    TrgRoiKey = None
+    #    
+    #    # Inputs required for this test:
+    #    FromRoiLabel = 'Left eye'
+    #    FromSliceNum = None # copy contours on all slices
+    #    ToSliceNum = None # relationship-preserving copy
+    #    
+    #    SrcLabel = 'Ses2_Ser2'
+    #    TrgLabel = 'Ses3_Ser6'
+    #    
+    #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+    #    TxtToAddToRoiLabel = ' 3_6'
+    #
+    #elif TestNum == 'RR11':
+    #    """ Rts Relationship-preserving copy test 11 """
+    #    
+    #    SrcDcmKey = 'Ses2_Ser2_DcmDir'
+    #    SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+    #    
+    #    TrgDcmKey = 'Ses3_Ser6_DcmDir'
+    #    TrgRoiKey = None
+    #    
+    #    # Inputs required for this test:
+    #    FromRoiLabel = 'Right eye'
+    #    FromSliceNum = None # copy contours on all slices
+    #    ToSliceNum = None # relationship-preserving copy
+    #    
+    #    SrcLabel = 'Ses2_Ser2'
+    #    TrgLabel = 'Ses3_Ser6'
+    #    
+    #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+    #    TxtToAddToRoiLabel = ' 3_6'
     
     elif TestNum == 'RR10':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_LeftEyeCT_RtsFpath)
+        """ Rts Relationship-preserving copy test 10 """
         
-        TrgDcmDir = deepcopy(MR4_Ser9_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
+        FromRoiLabel = 'Ventricles'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses3_Ser6'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR4 S9'
-    
-    
+        TxtToAddToRoiLabel = ' 3_6'
+        
     elif TestNum == 'RR11':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_LeftEyeCT_RtsFpath)
+        """ Rts Relationship-preserving copy test 11 """
         
-        TrgDcmDir = deepcopy(MR4_Ser7_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
+        FromRoiLabel = 'Nasal cavity'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses3_Ser6'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR4 S7'
-    
+        TxtToAddToRoiLabel = ' 3_6'
     
     elif TestNum == 'RR12':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+        """ Rts Relationship-preserving copy test 12 """
         
-        TrgDcmDir = deepcopy(MR4_Ser8_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses5_Ser12_DcmDir'
+        SrcRoiKey = 'Ses5_Ser12_LeftEye_RtsFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
+        FromRoiLabel = 'Left eye'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
-        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR4 S8'
+        SrcLabel = 'Ses5_Ser12'
+        TrgLabel = 'Ses3_Ser6'
         
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 3_6'
         
     elif TestNum == 'RR13':
-        SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
+        """ Rts Relationship-preserving copy test 13 """
         
-        TrgDcmDir = deepcopy(MR4_Ser4_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
         
-        # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
-        
-        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR4 S4'
-        
-    
-    elif TestNum == 'RR14':
-        SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
-        
-        TrgDcmDir = deepcopy(MR12_Ser8_DcmDir)
-        TrgRoiFpath = None
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Ventricles'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses1_Ser5'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR12 S8'
+        TxtToAddToRoiLabel = ' 1_5'
+    
+    elif TestNum == 'RR14':
+        """ Rts Relationship-preserving copy test 14 """
         
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
         
-    elif TestNum == 'RR15':
-        SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-        SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
-        
-        TrgDcmDir = deepcopy(MR12_Ser8_DcmDir)
-        TrgRoiFpath = None
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Nasal cavity'
         FromSliceNum = None # copy contours on all slices
         ToSliceNum = None # relationship-preserving copy
         
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses1_Ser5'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = ' MR12 S4'
+        TxtToAddToRoiLabel = ' 1_5'
     
-    
+    elif TestNum == 'RR15':
+        """ Rts Relationship-preserving copy test 15 """
+        
+        SrcDcmKey = 'Ses5_Ser12_DcmDir'
+        SrcRoiKey = 'Ses5_Ser12_LeftEye_RtsFpath'
+        
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Left eye'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses5_Ser12'
+        TrgLabel = 'Ses1_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 1_5'
+        
     #elif TestNum == 'RR16':
-    #    SrcDcmDir = deepcopy(Ses4_Ser13_DcmDir)
-    #    SrcRoiFpath = deepcopy(Ses4_Ser13_NasalCavity_RtsFpath)
+    # """ Rts Relationship-preserving copy test 16 """
+    #
+    #    SrcDcmKey = 'Ses4_Ser13_DcmDir'
+    #    SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
     #    
-    #    TrgDcmDir = deepcopy(MR12_Ser3_DcmDir)
-    #    TrgDcmDir = deepcopy(MR12_Ser4_DcmDir)
-    #    TrgDcmDir = deepcopy(MR12_Ser8_DcmDir)
-    #    TrgRoiFpath = None
+    #    TrgDcmKey = 'MR12_Ser3_DcmDir'
+    #    TrgDcmKey = 'MR12_Ser4_DcmDir'
+    #    TrgDcmKey = 'MR12_Ser8_DcmDir'
+    #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
     #    FromRoiLabel = 'Nasal cavity'
@@ -568,14 +1070,15 @@ def GetInputsToCopyRoi(TestNum):
     #    TxtToAddToRoiLabel = ' MR12 S4'
     #    TxtToAddToRoiLabel = ' MR12 S8'
     
-    
     #elif TestNum == 'RR16':
-    #    SrcDcmDir = deepcopy(Ses4_Ser11_DcmDir)
-    #    SrcRoiFpath = deepcopy(Ses4_Ser11_Ventricles_RtsFpath)
+    # """ Rts Relationship-preserving copy test 16 """
+    #
+    #    SrcDcmKey = 'Ses4_Ser11_DcmDir'
+    #    SrcRoiKey = 'Ses4_Ser11_Ventricles_RtsFpath'
     #    
-    #    TrgDcmDir = deepcopy(MR12_Ser3_DcmDir)
-    #    TrgDcmDir = deepcopy(MR12_Ser4_DcmDir)
-    #    TrgRoiFpath = None
+    #    TrgDcmKey = 'MR12_Ser3_DcmDir'
+    #    TrgDcmKey = 'MR12_Ser4_DcmDir'
+    #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
     #    FromRoiLabel = 'Ventricles'
@@ -585,47 +1088,55 @@ def GetInputsToCopyRoi(TestNum):
     #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
     #    TxtToAddToRoiLabel = ' MR12 S3'
     #    TxtToAddToRoiLabel = ' MR12 S4'
-
      
     if TestNum == 'RD1':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_RightEyeCT_RtsFpath)
+        """ Rts Direct copy test 1 """
         
-        TrgDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        TrgRoiFpath = deepcopy(SrcRoiFpath)
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses2_Ser2_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
+        FromSliceNum = 6
         ToSliceNum = FromSliceNum + 1
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser2'
     
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 2'
-        
-
     
     elif TestNum == 'RD2':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_RightEyeCT_RtsFpath)
+        """ Rts Direct copy test 2 """
         
-        TrgDcmDir = deepcopy(Ses2_Ser4_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses2_Ser4_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
         FromSliceNum = 5
         ToSliceNum = FromSliceNum + 1
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
         
-        
     elif TestNum == 'RD3':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_RightEyeCT_RtsFpath)
+        """ Rts Direct copy test 3 """
         
-        TrgDcmDir = deepcopy(Ses2_Ser5_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses2_Ser5_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
@@ -633,16 +1144,20 @@ def GetInputsToCopyRoi(TestNum):
         #ToSliceNum = FromSliceNum + 1
         ToSliceNum = 65 # Source slice 5 maps to Target slices 55-64
         
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser5'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
     
-    
     elif TestNum == 'RD4':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_RightEyeCT_RtsFpath)
+        """ Rts Direct copy test 4 """
         
-        TrgDcmDir = deepcopy(Ses6_Ser3_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses6_Ser3_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
@@ -650,16 +1165,20 @@ def GetInputsToCopyRoi(TestNum):
         #ToSliceNum = FromSliceNum + 1
         ToSliceNum = 8 # Source slice 5 maps to Target slice 7
         
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses6_Ser3'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_3'
         
-    
     elif TestNum == 'RD5':
-        SrcDcmDir = deepcopy(Ses2_Ser2_DcmDir)
-        SrcRoiFpath = deepcopy(Ses2_Ser2_RightEyeCT_RtsFpath)
+        """ Rts Direct copy test 5 """
         
-        TrgDcmDir = deepcopy(Ses6_Ser5_DcmDir)
-        TrgRoiFpath = None
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_RtsFpath'
+        
+        TrgDcmKey = 'Ses6_Ser5_DcmDir'
+        TrgRoiKey = None
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
@@ -667,12 +1186,683 @@ def GetInputsToCopyRoi(TestNum):
         #ToSliceNum = FromSliceNum + 1
         ToSliceNum = 78 # Source slice 5 maps to Target slices 67-77
         
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses6_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 6_5'
+        
+        
+    
+    """ Segmentations """
+    
+    
+    if TestNum == 'SR1':
+        """ Seg Relationship-preserving copy test 1 """
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_LeftEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses2_Ser4_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Left eye'
+        FromSliceNum = None # copy segmentations on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser4'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 4'
+    
+    elif TestNum == 'SR2':
+        """ Seg Relationship-preserving copy test 2 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser10_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser10'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 10'
+        
+    elif TestNum == 'SR3':
+        """ Seg Relationship-preserving copy test 3 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_LeftEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses2_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Left eye'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 5'
+    
+    elif TestNum == 'SR4':
+        """ Seg Relationship-preserving copy test 4 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser11_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser11'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 11'
+    
+    elif TestNum == 'SR5':
+        """ Seg Relationship-preserving copy test 5 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser14_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser14'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 14'
+    
+    elif TestNum == 'SR6':
+        """ Seg Relationship-preserving copy test 6 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser10_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser10'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 10'
+        
+    elif TestNum == 'SR7':
+        """ Seg Relationship-preserving copy test 7 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser12_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser12'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 12'
+    
+    elif TestNum == 'SR8':
+        """ Seg Relationship-preserving copy test 8 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser13_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser13'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 13'
+    
+    elif TestNum == 'SR9':
+        """ Seg Relationship-preserving copy test 9 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses4_Ser14_DcmDir'
+        TrgRoiKey = None
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses4_Ser14'
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 14'
+    
+    
+    elif TestNum == 'SR10':
+        """ Seg Relationship-preserving copy test 10 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser11'
+        TrgLabel = 'Ses3_Ser6'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 3_6'
+        
+    elif TestNum == 'SR11':
+        """ Seg Relationship-preserving copy test 11 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_SegFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses3_Ser6'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 3_6'
+    
+    elif TestNum == 'SR12':
+        """ Seg Relationship-preserving copy test 12 """
+        
+        SrcDcmKey = 'Ses5_Ser12_DcmDir'
+        SrcRoiKey = 'Ses5_Ser12_LeftEye_SegFpath'
+        
+        TrgDcmKey = 'Ses3_Ser6_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Left eye'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses5_Ser12'
+        TrgLabel = 'Ses3_Ser6'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 3_6'
+        
+    elif TestNum == 'SR13':
+        """ Seg Relationship-preserving copy test 13 """
+        
+        SrcDcmKey = 'Ses4_Ser11_DcmDir'
+        SrcRoiKey = 'Ses4_Ser11_Ventricles_SegFpath'
+        
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Ventricles'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses1_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 1_5'
+    
+    elif TestNum == 'SR14':
+        """ Seg Relationship-preserving copy test 14 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_SegFpath'
+        
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses1_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 1_5'
+    
+    elif TestNum == 'SR15':
+        """ Seg Relationship-preserving copy test 15 """
+        
+        SrcDcmKey = 'Ses5_Ser12_DcmDir'
+        SrcRoiKey = 'Ses5_Ser12_LeftEye_SegFpath'
+        
+        TrgDcmKey = 'Ses1_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Left eye'
+        FromSliceNum = None # copy contours on all slices
+        ToSliceNum = None # relationship-preserving copy
+        
+        SrcLabel = 'Ses5_Ser12'
+        TrgLabel = 'Ses1_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 1_5'
+        
+     
+    if TestNum == 'SD1':
+        """ Seg Direct copy test 1 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses2_Ser2_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Right eye'
+        FromSliceNum = 6 # <-- no segmentation on slice 6?
+        #FromSliceNum = 5
+        ToSliceNum = FromSliceNum + 1
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser2'
+    
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 2'
+    
+    elif TestNum == 'SD2':
+        """ Seg Direct copy test 2 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses2_Ser4_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Right eye'
+        FromSliceNum = 5
+        ToSliceNum = FromSliceNum + 1
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser4'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 4'
+        
+    elif TestNum == 'SD3':
+        """ Seg Direct copy test 3 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses2_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Right eye'
+        FromSliceNum = 5
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 65 # Source slice 5 maps to Target slices 55-64
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses2_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 5'
+    
+    elif TestNum == 'SD4':
+        """ Seg Direct copy test 4 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses6_Ser3_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Right eye'
+        FromSliceNum = 5
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 8 # Source slice 5 maps to Target slice 7
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses6_Ser3'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 6_3'
+        
+    elif TestNum == 'SD5':
+        """ Seg Direct copy test 5 """
+        
+        SrcDcmKey = 'Ses2_Ser2_DcmDir'
+        SrcRoiKey = 'Ses2_Ser2_RightEyeCT_SegFpath'
+        
+        TrgDcmKey = 'Ses6_Ser5_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Right eye'
+        FromSliceNum = 5
+        #ToSliceNum = FromSliceNum + 1
+        ToSliceNum = 78 # Source slice 5 maps to Target slices 67-77
+        
+        SrcLabel = 'Ses2_Ser2'
+        TrgLabel = 'Ses6_Ser5'
+        
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_5'
         
     
+    
+    
+    
+    
+    
+    
+        """ ************************************************************** """
+        """ ************************************************************** """
+        """ TestNums for Development                                       """
+        """ ************************************************************** """
+        """ ************************************************************** """
+    
+    elif TestNum in ['1R', '1S']:
+        """ UseCase 1 (direct copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser9_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser9_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser9_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 23
+        ToSliceNum = 29
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR4_Ser9'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        
+    elif TestNum in ['2aR', '2aS']:
+        """ UseCase 2a (direct copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser5_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser5_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser5_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 23
+        ToSliceNum = 22
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR4_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        
+    elif TestNum in ['2bR', '2bS']:
+        """ UseCase 2b (relationship-preserving copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser5_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser5_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser5_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 27
+        ToSliceNum = None
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR4_Ser5'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+    
+    elif TestNum in ['3aiR', '3aiS']:
+        """ UseCase 3ai (direct copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser3_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser3_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser3_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 25
+        ToSliceNum = 20
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR4_Ser3'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+    
+    elif TestNum in ['3aiiR', '3aiiS']:
+        """ UseCase 3aii (direct copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser3_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser3_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser3_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser9_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser9_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser9_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 11
+        ToSliceNum = 26
+        
+        SrcLabel = 'MR4_Ser3'
+        TrgLabel = 'MR4_Ser9'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+    
+    elif TestNum in ['3biR', '3biS']:
+        """ UseCase 3bi (relationship-preserving copy) Rts or Seg"""
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser3_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser3_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser3_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 26
+        ToSliceNum = None
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR4_Ser3'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+    
+    elif TestNum in ['3biiR', '3biiS']:
+        """ UseCase 3bii (relationship-preserving copy) Rts or Seg """
+        
+        SrcDcmKey = 'MR4_Ser3_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser3_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser3_SegFpath'
+        
+        TrgDcmKey = 'MR4_Ser9_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                TrgRoiKey = 'MR4_Ser9_RtsFpath'
+            else:
+                TrgRoiKey = 'MR4_Ser9_SegFpath'
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 11
+        ToSliceNum = None
+        
+        SrcLabel = 'MR4_Ser3'
+        TrgLabel = 'MR4_Ser9'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+    
+    elif TestNum in ['5bR', '5bS']:
+        """ UseCase 5b (relationship-preserving copy) Rts or Seg"""
+        
+        SrcDcmKey = 'MR4_Ser9_DcmDir'
+        if 'R' in TestNum:
+            SrcRoiKey = 'MR4_Ser9_RtsFpath'
+        else:
+            SrcRoiKey = 'MR4_Ser9_SegFpath'
+        
+        TrgDcmKey = 'MR12_Ser8_DcmDir'
+        if UseOrigTrgRoi:
+            if 'R' in TestNum:
+                raise Exception('A RTS does not yet exist for MR12 Ser8.')
+            else:
+                raise Exception('A SEG does not yet exist for MR12 Ser8.')
+        else:
+            TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'tumour'
+        FromSliceNum = 23
+        ToSliceNum = None
+        
+        SrcLabel = 'MR4_Ser9'
+        TrgLabel = 'MR12_Ser8'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+    
+    
+    
+    """ Use the keys to select the directories and file paths from Dict. """
+    SrcDcmDir = Dict[SrcDcmKey]
+    SrcRoiFpath = Dict[SrcRoiKey]
+    
+    TrgDcmDir = Dict[TrgDcmKey]
+    if TrgRoiKey:
+        TrgRoiFpath = Dict[TrgRoiKey]
+    else:
+        TrgRoiFpath = None
+    
+    
+    
     return SrcRoiFpath, FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir,\
-           TrgDcmDir, TrgRoiFpath, TxtToAddToRoiLabel
+           TrgDcmDir, TrgRoiFpath, TxtToAddToRoiLabel, SrcLabel, TrgLabel
         
 
 
@@ -680,18 +1870,23 @@ def GetInputsToCopyRoi(TestNum):
 """
 ******************************************************************************
 ******************************************************************************
-WHICH USE CASE APPLIES?
+CHECK VALIDITY OF INPUTS TO COPYROI
 ******************************************************************************
 ******************************************************************************
 """
 
-def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
-                 LogToConsole=False):
+def CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum,
+                          LogToConsole=False):
     """
-    Determine which of 5 Use Cases applies.
+    Establish whether the inputs FromRoiLabel, FromSliceNum and ToSliceNum
+    are valid combinations. If not raise exception.
     
     Inputs:
     ******
+    
+    FromRoiLabel : string
+        All or part of the Source ROI Name of the ROI containing the contour(s)
+        to be copied.
     
     FromSliceNum : integer or None
         The slice indeces within the Source DICOM stack corresponding to the
@@ -699,10 +1894,6 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
         contour). The index is zero-indexed.
         If FromSliceNum = None, a relationship-preserving copy will be made.
         
-    FromRoiLabel : string
-        All or part of the Source ROI Name of the ROI containing the contour(s)
-        to be copied.
-    
     ToSliceNum : integer or None
         The slice index within the Target DICOM stack corresponding to the 
         contour/segmentation to be copied to (applies only for the case of 
@@ -710,12 +1901,6 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
         If ToSliceNum = None, a relationship-preserving copy is to be made, 
         since the slice location(s) where the contour(s)/segmentation(s) will 
         be copied to will not depend on user input.
-    
-    SrcDcmDir : string
-        Directory containing the Source DICOMs.
-                       
-    TrgDcmDir : string
-        Directory containing the Target DICOMs.
                         
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -724,16 +1909,9 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
     Outputs:
     ******
         
-    UseCase : string
-        String that denotes the Use Case that applies.
+    IsValid : boolean
+        True if the combinations of inputs are valid.
     """
-    
-    from DicomTools import GetDicomUids
-    from ImageTools import GetImageAttributes
-    from GeneralTools import AreListsEqualToWithinEpsilon#, PrintTitle
-    
-    """ Establish whether the inputs FromRoiLabel, FromSliceNum and ToSliceNum
-    are valid. If not raise exception. """
     
     if FromRoiLabel == None:
         msg = f'WARNING: FromRoiLabel = {FromRoiLabel}, so all contours/'\
@@ -768,7 +1946,82 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
               
         raise Exception(msg)
     
+    return True
+
+
+
+
         
+"""
+******************************************************************************
+******************************************************************************
+WHICH USE CASE APPLIES?
+******************************************************************************
+******************************************************************************
+"""
+
+def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir, 
+                 ForceRegistration, LogToConsole=False):
+    """
+    Determine which of 5 Use Cases applies.
+    
+    Inputs:
+    ******
+        
+    FromSliceNum : integer or None
+        The slice indeces within the Source DICOM stack corresponding to the
+        contour to be copied (applies for the case of direct copies of a single 
+        contour). The index is zero-indexed.
+        If FromSliceNum = None, a relationship-preserving copy will be made.
+        
+    FromRoiLabel : string
+        All or part of the Source ROI Name of the ROI containing the contour(s)
+        to be copied.
+    
+    ToSliceNum : integer or None
+        The slice index within the Target DICOM stack corresponding to the 
+        contour/segmentation to be copied to (applies only for the case of 
+        direct copies of single entities). The index is zero-indexed.
+        If ToSliceNum = None, a relationship-preserving copy is to be made, 
+        since the slice location(s) where the contour(s)/segmentation(s) will 
+        be copied to will not depend on user input.
+    
+    SrcDcmDir : string
+        Directory containing the Source DICOMs.
+                       
+    TrgDcmDir : string
+        Directory containing the Target DICOMs.
+    
+    ForceRegistration : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+
+              
+    Outputs:
+    ******
+        
+    UseCaseThatApplies : string
+        String that denotes the Use Case that applies.
+    
+    UseCaseToApply : string
+        String that denotes the Use Case that will be applied.  This will be
+        the same as UseCaseThatApplies unless ForceRegistration is True and
+        UseCaseThatApplies is '3a', '3b', '4a' or '4b'.
+    """
+    
+    from DicomTools import GetDicomUids
+    from ImageTools import GetImageAttributes
+    from GeneralTools import AreListsEqualToWithinEpsilon#, PrintTitle
+    
+    """ Establish whether the inputs FromRoiLabel, FromSliceNum and ToSliceNum
+    are valid. If not raise exception. """
+    
+    CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
+    
     
     """ Get the DICOM UIDs. """
     SrcStudyuid, SrcSeriesuid, SrcFORuid,\
@@ -776,10 +2029,6 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
     
     TrgStudyuid, TrgSeriesuid, TrgFORuid,\
     TrgSOPuids = GetDicomUids(DicomDir=TrgDcmDir)
-    
-    #if LogToConsole:
-    #    print(f'\nToSliceNum = {ToSliceNum}')
-    #    print(f'len(TrgSOPuids) = {len(TrgSOPuids)}')
         
     if ToSliceNum:
         if ToSliceNum > len(TrgSOPuids) - 1:
@@ -790,11 +2039,11 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
     
     
     """ Get the Image Attributes for Source and Target using SimpleITK. """
-    SrcSize, SrcSpacing, SrcST, SrcIPPs,\
-    SrcDirs = GetImageAttributes(DicomDir=SrcDcmDir, Package='sitk')
+    SrcSize, SrcSpacing, SrcST, SrcIPPs, SrcDirs,\
+    ListOfWarnings = GetImageAttributes(DicomDir=SrcDcmDir, Package='sitk')
     
-    TrgSize, TrgSpacing, TrgST, TrgIPPs,\
-    TrgDirs = GetImageAttributes(DicomDir=TrgDcmDir, Package='sitk')
+    TrgSize, TrgSpacing, TrgST, TrgIPPs, TrgDirs,\
+    ListOfWarnings = GetImageAttributes(DicomDir=TrgDcmDir, Package='sitk')
     
     
     """ Are the Source and Target part of the same study, series and do they 
@@ -835,38 +2084,61 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
     """ Check which case follows. """
     if SameFOR:
         if SameDirs:
+            """ 
+            Comment 11/02:
+                
+            It's not entirely necessary to resample the Source image to the 
+            Target domain just because their origins differ. It depends on
+            whether the slice in Source coincide with slices in Target.
+            
+            Even if the slices don't coincide, an approximation can be made as
+            follows.  When dealing contours, the in-plane coordinates don't 
+            need to be changed, and the destination slice can be determined by 
+            matching on the out-of-plane (z) coordinates as best as possible. 
+            When dealing with segmentations, the destination slice can be 
+            determined by matching on the z components of the IPPs as best as
+            possible.  Once the destination slice number is known, the 
+            necessary shift in pixels for the in-plane components can be 
+            applied accordingly. 
+            
+            Perhaps the approximation can be justified if the difference 
+            between the planes in Source and Target are close to an integer.
+            If the difference is large, the Source image should be resampled to
+            the Target image.  For now I will treat UseCase 2 data sets as 
+            UseCase 3 if their origins are not the same. Further complexity
+            (taking into account the error in the above approximation) can be
+            considered for future work. """
             if SameSpacings and SameOrigins:
+            #if SameSpacings:
                 if SameSeries:
-                    ##if isinstance(ToSliceNum, int):
-                    #if ToSliceNum:
-                    #    UseCase = '1a' # Direct copy
-                    #else:
-                    #    UseCase = '1b' # Relationship-preserving copy
-                    UseCase = '1' # Direct copy
+                    UseCaseThatApplies = '1' # Direct copy
                 else:
                     if isinstance(ToSliceNum, int):
-                        UseCase = '2a' # Direct copy
+                        UseCaseThatApplies = '2a' # Direct copy
                     else:
-                        UseCase = '2b' # Relationship-preserving copy
+                        UseCaseThatApplies = '2b' # Relationship-preserving copy
             else:
+                """ Comment 11/02:
+                    
+                Arguably resampling is only required if the spacings along any
+                direction are different when dealing with segmentations.  When
+                dealing with contours, resampling is probably unnecessary if
+                the spacings are different only in the out-of-plane (z)
+                direction. """
                 if isinstance(ToSliceNum, int):
-                    UseCase = '3a' # Direct copy
+                    UseCaseThatApplies = '3a' # Direct copy
                 else:
-                    UseCase = '3b' # Relationship-preserving copy
+                    UseCaseThatApplies = '3b' # Relationship-preserving copy
         else:
-            UseCase = '4'
-            
             if isinstance(ToSliceNum, int):
-                UseCase = '4a' # Direct copy
+                UseCaseThatApplies = '4a' # Direct copy
             else:
-                UseCase = '4b' # Relationship-preserving copy
+                UseCaseThatApplies = '4b' # Relationship-preserving copy
     else:
-        UseCase = '5'
-        
         if isinstance(ToSliceNum, int):
-            UseCase = '5a' # Direct copy
+            UseCaseThatApplies = '5a' # Direct copy
         else:
-            UseCase = '5b' # Relationship-preserving copy
+            UseCaseThatApplies = '5b' # Relationship-preserving copy
     
         
     """ Print comparisons to the console. """
@@ -954,12 +2226,24 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
                   f'               {TrgDirs[6]}, {TrgDirs[7]}, {TrgDirs[8]}]')
         
     
-    if LogToConsole:
+    if True:#LogToConsole:
         #PrintTitle(f'Case {UseCase} applies.')
-        print(f'Case {UseCase} applies.')
+        if ForceRegistration and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+            UseCaseToApply = UseCaseThatApplies.replace('3', '5').replace('4', '5')
+            
+            msg = f'\n*UseCase {UseCaseThatApplies} applies but since '\
+                  + f'ForceRegistration = {ForceRegistration}, UseCase '\
+                  + f'{UseCaseToApply} will be applied.'
+            
+            print(msg)
+        else:
+            UseCaseToApply = UseCaseThatApplies
+            
+            print(f'\n*UseCase {UseCaseThatApplies} applies.')
+            
         print('-'*120)
         
-    return UseCase
+    return UseCaseThatApplies, UseCaseToApply
 
 
 
@@ -974,966 +2258,16 @@ COPY A CONTOUR
 ******************************************************************************
 """
 
-def CopyContour(SrcRts, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
-                TrgRts=None, ToSliceNum=None, Sigma=(1,1,1), ThreshLevel=0.75,
-                AddText='', LogToConsole=False):
-    """
-    Note 01/02/2021:
-        This function (which can only copy a single contour) was formerly 
-        called CopyRts. Now CopyRts will copy all contours in all ROIs within
-        the RTS.
-        
-        
-    Inputs:
-    ******
-    
-    SrcRts : Pydicom object
-        Source RTS object.
-                             
-    FromSearchString : string
-        All or part of the Source ROI Name of the ROI containing the contour to
-        be copied.
-    
-    SrcDcmDir : string
-        Directory containing the Source DICOMs.
-                            
-    FromSliceNum : integer
-        Slice index of the Source DICOM stack corresponding to the contour to
-        be copied (counting from 0).
-    
-    TrgDcmDir : string
-        Directory containing the Target DICOMs.
-        
-    TrgRts : Pydicom object (optional; None by default)
-        Target RTS object that the contour is to be copied to. TrgRts is only 
-        non-None if a Direct copy of the contour is to be made and added to 
-        existing Direct-copied contour(s).     
-        
-    ToSliceNum : integer (optional; None by default)
-        Slice index within the Target DICOM stack where the contour is to
-        be copied to (counting from 0).  This only applies for Direct copies,
-        hence the default value None.
-        
-    Sigma : tuple (optional; (1,1,1) by default)
-        The sigma values that will define the Gaussian if Gaussian image 
-        blurring is used.  The tuple will define the sigma along x, y and z
-        directions.
-        
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if used.  The threshold value will be ThreshLevel*M, where
-        M is the maximum intensity value of the image.
-    
-    AddText : string (optional, '' by default)
-        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
-        a filename for the new Target RTS/SEG.
-                           
-    LogToConsole : boolean (default False)
-        Denotes whether some results will be logged to the console.
-          
-                  
-    Outputs:
-    *******
-        
-    TrgRts : Pydicom object
-        The new (if making a Relationship-preserving copy) or the modified (if
-        making a Direct copy of a contour to an existing Direct-copied contour)
-        Target RTS object.
-    """
-    
-    import importlib
-    import RtsTools
-    importlib.reload(RtsTools)
-    import ConversionTools
-    importlib.reload(ConversionTools)
-    import GeneralTools
-    importlib.reload(GeneralTools)
-    
-    from copy import deepcopy
-    from GeneralTools import PrintTitle
-    from GeneralTools import UniqueItems
-    from DicomTools import GetRoiNum
-    #from RtsTools import GetPtsInContour
-    from RtsTools import GetPtsByCntForSliceNum, ProportionOfContourInExtent
-    from GeneralTools import GetPixelShiftBetweenSlices
-    from GeneralTools import ShiftFrame
-    from RtsTools import InitialiseRts
-    from RtsTools import ModifyRts
-    
-    
-    # Verify that an ROI exists whose name matches FromSearchString:
-    #SrcRoiLabels = GetRoiLabels(SrcRts)
-    FromRoiNum = GetRoiNum(Roi=SrcRts, SearchString=FromSearchString)
-    
-    PtsByCnt = GetPtsByCntForSliceNum(Rts=SrcRts, DicomDir=SrcDcmDir, 
-                                      SliceNum=FromSliceNum,
-                                      SearchString=FromSearchString,
-                                      LogToConsole=LogToConsole)
-    
-    """
-    At present the algorithm can only copy a single contour so irrespective of
-    the number of contours on FromSliceNum, only work with the first contour:
-    """
-    PtsToCopy = PtsByCnt[0]
-    
-    if LogToConsole:
-        print(f'\n\nThe contour to be copied from slice {FromSliceNum} has',
-              f'{len(PtsToCopy)} points.')# and CStoSliceIndsToCopy =',
-              #f'{CStoSliceIndsToCopy}.')
-    
-    
-    """
-    First must determine whether the pixels that make up the mask coincide 
-    with the Target image extent (14/01/2021). 
-    """
-    FracProp = ProportionOfContourInExtent(Points=PtsToCopy,
-                                           TrgDicomDir=TrgDcmDir,
-                                           LogToConsole=LogToConsole)
-    
-    if LogToConsole:
-        print(f'\n{round(FracProp*100, 1)}% of the points in the contour to',
-              'be copied lie within the physical extent of the Target image.')
-    
-    if FracProp == 0:
-        msg = 'None of the points in the contour to be copied lie '\
-              + 'within the physical extent of the Target image.'
-              
-        raise Exception(msg)
-        
-        return None
-    
-    
-    # Determine which Use Case applies:
-    UseCase = WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole)
-    
-    if LogToConsole:
-        PrintTitle(f'Case {UseCase} applies.')
-    
-    """
-    **************************************************************************
-    What follows is UseCase-specific.
-    **************************************************************************
-    """
-    
-    if 'a' in UseCase:
-        #from RtsTools import GetPtsInRoi
-        from RtsTools import GetPtsByCntForRoi
-        from RtsTools import AddCopiedPtsByCnt
-        from ImageTools import GetImageAttributes
-        from ImageTools import ImportImage
-        from ConversionTools import Points2Indices
-        from GeneralTools import ChangeZinds
-        from ConversionTools import Indices2Points
-        
-        
-    if UseCase in ['1a', '2a']:
-        """
-        The contour will be copied to a different slice location, so the
-        z-components of the coordinates will need to be modified.  For 
-        UseCase 3a this operation will be done in index space (i.e. by
-        shifting pixels).
-        """
-        
-        SrcSize, SrcSpacings, SrcST,\
-        SrcIPPs, SrcDirs = GetImageAttributes(DicomDir=SrcDcmDir)
-        
-        # Import the source image:
-        SrcIm = ImportImage(SrcDcmDir)
-        
-        # Convert PtsToCopy to indices:
-        IndsToCopy = Points2Indices(Points=PtsToCopy, 
-                                    RefIm=SrcIm, 
-                                    Rounding=False)
-        
-        if LogToConsole:
-            print(f'\n\nIndsToCopy prior to changing z-index = {IndsToCopy[:6]}...')
-        
-        # Modify the z-component (k) of the indices to ToSliceNum:
-        IndsToCopy = ChangeZinds(Indices=IndsToCopy, NewZind=ToSliceNum)
-        
-        if LogToConsole:
-            print(f'\n\nIndsToCopy after changing z-index = {IndsToCopy[:6]}...')
-        
-            print(f'\n\nPtsToCopy prior to changing z-index = {PtsToCopy[:6]}...')
-        
-        # Convert back to physical points:
-        #PtsToCopy = Indices2Points(Indices=IndsToCopy, Origin=SrcIPPs[0], 
-        #                           Directions=SrcDirs, Spacings=SrcSpacings)
-        PtsToCopy = Indices2Points(Indices=IndsToCopy, RefIm=SrcIm)
-        
-        if LogToConsole:
-            print(f'\n\nPtsToCopy after changing z-index = {PtsToCopy[:6]}...')
-        
-        
-        if TrgRts:
-            """
-            Since this is a Direct copy, any existing contours in Target with ROI
-            label matching FromSearchString are to be preserved.
-            """
-            
-            # Get all points (by contour) in the Target ROI containing the contour
-            # to be copied:
-            TrgPtsInRoiByCnt,\
-            TrgCStoSliceIndsInRoi = GetPtsByCntForRoi(Rts=TrgRts, 
-                                                      DicomDir=TrgDcmDir,
-                                                      SearchString=FromSearchString)
-            
-            print('\nThe Target ROI containing the contour to be copied has',
-                  f'{len(TrgPtsInRoiByCnt)} contours. \nTrgCStoSliceIndsInRoi =',
-                  f'{TrgCStoSliceIndsInRoi}.')
-            
-            
-            """
-            PtsToCopy need to be added to previously Direct-copied contour points
-            in TrgPtsInRoiByCnt.  The contour-sequence-to-slice-index will be
-            [ToSliceNum] rather than [FromSliceNum].
-            
-            Note:
-                Since PtsToCopy is a list of points it needs to be enclosed in []
-                so that it is a list (of length 1) of a list of points so that it
-                is in the form expected of PtsToAddByCnt.
-            """
-            
-            if LogToConsole:
-                print('\n\nInputs to AddCopiedPtsByCnt:')
-                print(f'   len(TrgPtsInRoiByCnt) = {len(TrgPtsInRoiByCnt)}')
-                [print(f'   len(TrgPtsInRoiByCnt[{i}]) = {len(TrgPtsInRoiByCnt[i])}') for i in range(len(TrgPtsInRoiByCnt))]
-                print(f'   TrgCStoSliceIndsInRoi = {TrgCStoSliceIndsInRoi}')
-                print(f'   len(PtsToCopy) = {len(PtsToCopy)}')
-                print(f'   ToSliceNum = {ToSliceNum}')
-            
-            
-            TrgCntDataByObjByFrame,\
-            TrgPtsByObjByFrame,\
-            TrgCStoSliceInds = AddCopiedPtsByCnt(OrigPtsByCnt=TrgPtsInRoiByCnt, 
-                                                 OrigCStoSliceInds=TrgCStoSliceIndsInRoi, 
-                                                 PtsToAddByCnt=[PtsToCopy], 
-                                                 CStoSliceIndsToAddByCnt=[ToSliceNum],
-                                                 LogToConsole=LogToConsole)
-        
-        else:
-            """
-            A Target RTS was not provided.
-            """
-            
-            from ConversionTools import Points2ContourData
-            
-            TrgCStoSliceInds = deepcopy([FromSliceNum])
-            
-            TrgPtsByObjByFrame = [[deepcopy(PtsToCopy)]]
-            
-            TrgCntDataByObjByFrame = [[Points2ContourData(PtsToCopy)]]
-        
-    
-    if UseCase in ['1b', '2b']:
-        """
-        TrgPtsByCnt is simply [PtsToCopy], so that it is a list (of length 1, 
-        for the single contour).  Likewise for TrgCntDataByCnt.  The Target
-        contour-sequence-to-slice-index will be [FromSliceNum].
-        """
-        
-        from ConversionTools import Points2ContourData
-        
-        #TrgPtsByCnt = [deepcopy(PtsToCopy)]
-        TrgPtsByObjByFrame = [[deepcopy(PtsToCopy)]]
-        
-        #TrgCntDataByCnt = [Points2ContourData(PtsToCopy)]
-        TrgCntDataByObjByFrame = [[Points2ContourData(PtsToCopy)]]
-        
-        #TrgCStoSliceInds = deepcopy(CStoSliceIndsToCopy)
-        TrgCStoSliceInds = deepcopy([FromSliceNum])
-        
-        #print(f'\n\nlen(PtsToCopy) = {len(PtsToCopy)}')
-        #print(f'len(TrgPtsByCnt[0]) = {len(TrgPtsByCnt[0])}')
-        #print(f'len(TrgCntDataByCnt[0]) = {len(TrgCntDataByCnt[0])}')
-        
-        
-    
-    if UseCase in ['3a', '3b', '4', '5']:
-        import numpy as np
-        from ImageTools import ImportImage
-        from ImageTools import ResampleImage
-        from ImageTools import GaussianBlurImage
-        from ImageTools import BinaryThresholdImage
-        from ImageTools import GetImageInfo
-        from ConversionTools import ConvertImagePixelType
-        #from RtsTools import GetMaskFromRts
-        from RtsTools import GetMaskFromContoursForSliceNum
-        from ConversionTools import PixArr2Image
-        from ConversionTools import Image2PixArr
-        #from ConversionTools import PixArr2Contours
-        from ConversionTools import PixArr2PtsByContour
-        from GeneralTools import ProportionOfPixArrInExtent
-        from ConversionTools import NumOfListsAtDepthTwo
-        
-        
-        # Import the 3D images:
-        SrcIm = ImportImage(SrcDcmDir)
-        TrgIm = ImportImage(TrgDcmDir)
-        
-        
-        """
-        ***********************************************************************
-        Convert the contour to be copied to a 3D labelmap image.
-        ***********************************************************************
-        """    
-        # Convert the contour data to be copied to a 2D mask:
-        PixArrToCopy = GetMaskFromContoursForSliceNum(Rts=SrcRts,  
-                                                      SliceNum=FromSliceNum, 
-                                                      DicomDir=SrcDcmDir,
-                                                      RefImage=SrcIm,
-                                                      SearchString=FromSearchString,
-                                                      LogToConsole=LogToConsole)
-        
-        if LogToConsole:
-            print(f'\nPixArrToCopy.shape = {PixArrToCopy.shape}')
-        
-        
-        """
-        Determine whether the pixels that make up the mask coincide 
-        with the Target image extent (14/01/2021). 
-        """
-        FracProp = ProportionOfPixArrInExtent(PixArr=PixArrToCopy, 
-                                              FrameToSliceInds=[FromSliceNum],
-                                              SrcDicomDir=SrcDcmDir,
-                                              TrgDicomDir=TrgDcmDir)
-        
-        if LogToConsole:
-            print(f'\n{round(FracProp*100, 1)}% of the voxels in the',
-                  'segmentation to be copied lie within the physical extent',
-                  'of the Target image.')
-        
-        if FracProp == 0:
-            msg = 'None of the voxels in the segmentation to be copied lie '\
-                  + 'within the physical extent of the Target image.'
-                  
-            raise Exception(msg)
-            
-            return None
-        
-        
-        # Convert PixArrToCopy to a labelmap image:
-        LabmapImToCopy = PixArr2Image(PixArr=PixArrToCopy,
-                                      FrameToSliceInds=[FromSliceNum],
-                                      RefIm=SrcIm)
-        
-        if LogToConsole:
-            print(f'\nLabmapImToCopy.GetSize() = {LabmapImToCopy.GetSize()}')
-        
-        
-        
-        
-    
-    if UseCase in ['3a', '3b', '4']:
-        
-        """ First try resampling the image using a NearestNeighbor 
-        interpolation. """
-        interp = 'NearestNeighbor'
-        
-        if LogToConsole:
-            print('\nUsing', interp, 'interpolation...')
-        
-        # Resample LabmapImToCopy to the Target image's grid:
-        ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                          RefImage=TrgIm, 
-                                          Interpolation=interp)
-        
-        #print(f'\nResLabmapImToCopy.GetSize() = {ResLabmapImToCopy.GetSize()}')
-        
-        if LogToConsole:
-            print('\nAfter resampling:')
-            
-        
-        # PixID required for if statement below.
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-            
-        """ 
-        If resampling to a smaller grid size aliasing can occur, leading to
-        the appearent disappearance of segmentations (i.e. F2Sinds = []). 
-        
-        Try suggestions from Ziv Yaniv here:
-            https://github.com/SimpleITK/SimpleITK/issues/1277
-                
-        1. Use the sitkLabelGaussian interpolator.
-        
-        2. Gaussian blur the segmentation, then resample using a linear 
-        interpolator, and then threshold so that values in [a<1<b] are mapped
-        to 1. You will need to select appropriate values for a, b.
-        
-        3. Compute the distance map of the segmentation, then resample using a
-        linear interpolator, and then threshold the absolute value of the 
-        distance map (sitk.Abs(lowres_distance_map)<dist_threshold). Again, you 
-        need to select an appropriate dist_threshold.
-
-        Tried:
-        
-        1. Resulting Gaussian interpolated resampled image had zeros only 
-        (the image was converted to float prior to resampling).
-        
-        2. Works for UseCase 3B-i_SEG with FromSliceNum = 26 with binary
-        threshold value of 0.04.
-        
-        
-        Comment from Bradley Lowecamp:
-            The implementation of the sitkLabelGaussian interpolator in the 
-            ResampleImageFilter sets the sigma to the pixel spacing of the 
-            input image to the resample filter. This is why it does not do a 
-            better job in reducing aliasing.
-        """
-        #Workaround = 1
-        Workaround = 2
-        #Workaround = 0 # i.e. no workaround
-        
-        
-        if not F2Sinds and Workaround:
-            if LogToConsole:
-                print('\nThe resampled image has no non-zero frames (e.g. due',
-                      f'to aliasing).  \nTry workaround #{Workaround}.')
-            
-            # Convert LabmapImToCopy from 32-bit unsigned integer to a float:
-            LabmapImToCopy = ConvertImagePixelType(Image=LabmapImToCopy, 
-                                                   NewPixelType='sitkFloat32')
-            
-            if LogToConsole:
-                print('\nAfter converting to float:')
-                
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(LabmapImToCopy, LogToConsole)
-        
-            if Workaround == 1:
-                if LogToConsole:
-                    print(f'\nTrying workaround #{Workaround}...')
-                
-                interp = 'Gaussian' # <-- get zeros only (image was converted 
-                # to float prior to resampling)
-                
-                if LogToConsole:
-                    print('\nUsing', interp, 'interpolation...')
-                    
-                # Resample LabmapImToCopy to the Target image's grid:
-                ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                                  RefImage=TrgIm, 
-                                                  Interpolation=interp)
-                
-                if LogToConsole:
-                    print('\nAfter resampling:')
-                
-                
-                # PixID required for if statement below.
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                    
-                    
-                """ Will need to convert back to unsigned int and may need to
-                do some binary thresholding, but only proceed if there are
-                non-zero frames in the resampled image. """
-                
-                if not F2Sinds:
-                    Workaround = 2 # try Workaround #2
-                    
-                    
-            if Workaround == 2:
-                if LogToConsole:
-                    print(f'\nTrying workaround #{Workaround}...')
-                      
-                SrcSpacings = SrcIm.GetSpacing()
-                TrgSpacings = TrgIm.GetSpacing()
-                
-                SpacingsRatio = tuple(tup1/tup0 for tup0, tup1 in zip(SrcSpacings, TrgSpacings))
-                
-                """ 
-                The FWHM of the Gaussian is:
-                    FWHM = 2*sqrt(2*ln(2))*sigma ~= 2.355*sigma
-                    
-                Due to the Nyquist-Shannon sampling theorem, the FWHM should be
-                at least 2x the voxel spacings of the Target image. For 
-                symmetry considerations, it makes sense for one Source voxel 
-                width to be blurred to three Target voxels widths.  :
-                    
-                    sigma = (3*TrgSpacings)/2.355
-                    
-                """
-                
-                if LogToConsole:
-                    print(f'\nSpacingsRatio = {SpacingsRatio}')
-                      
-                # Gaussian blur the image:
-                #LabmapImToCopy = GaussianBlurImage(LabmapImToCopy)
-                LabmapImToCopy = GaussianBlurImage(Im=LabmapImToCopy,
-                                                   Variance=Sigma)
-                
-                # Use the RecursiveGaussian image filter:
-                #LabmapImToCopy = RecursiveGaussianBlurImage(LabmapImToCopy, 
-                #                                            Sigma=3,
-                #                                            Direction=2)
-                
-                if LogToConsole:
-                    print('\nAfter applying Gaussian blur:')
-                    
-                    PixID, PixIDTypeAsStr, UniqueVals,\
-                    F2Sinds = GetImageInfo(LabmapImToCopy, LogToConsole)
-                
-                #if not F2Sinds:
-                #    Workaround = 3 # try Workaround #3
-                    
-                # Linearly resample the blurred image:
-                interp = 'Linear'
-                
-                if LogToConsole:
-                    print('\nUsing', interp, 'interpolation...')
-                    print(f'   LabmapImToCopy.GetSize() = {LabmapImToCopy.GetSize()}')
-                    print(f'   LabmapImToCopy.GetSpacing() = {LabmapImToCopy.GetSpacing()}')
-                    print(f'   TrgIm.GetSize() = {TrgIm.GetSize()}')
-                    print(f'   TrgIm.GetSpacing() = {TrgIm.GetSpacing()}')
-                    
-                # Resample LabmapImToCopy to the Target image's grid:
-                ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                                  RefImage=TrgIm, 
-                                                  Interpolation=interp)
-                
-                if LogToConsole:
-                    print('\nAfter resampling:')
-                    
-                    PixID, PixIDTypeAsStr, UniqueVals,\
-                    F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                
-                
-                """ Prior to converting back to unsigned integer, must first
-                binary threshold the image. """
-    
-                ThreshValue = ThreshLevel*max(UniqueVals)
-                
-                if LogToConsole:
-                    print('\nBinary thresholding at',
-                      f'{ThreshLevel}*{max(UniqueVals)} = {ThreshValue}...')
-                
-                ResLabmapImToCopy = BinaryThresholdImage(Im=ResLabmapImToCopy, 
-                                                         Thresh=ThreshValue)
-                
-                if LogToConsole:
-                    print(f'\nAfter binary thresholding:')
-                
-                
-                # PixID required for if statement below.
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-        
-        
-        
-        """ Ensure that ResLabmapImToCopy is a 32-bit unsigned integer. """
-        if not PixID == 5:
-            if LogToConsole:
-                print(f'\nPixelID = {PixID} ({PixIDTypeAsStr})). Converting',
-                      f'to unsigned 32-bit integer (sitkUInt32)..')
-            
-            # Convert ResLabmapImToCopy from float to 32-bit unsigned integer:
-            ResLabmapImToCopy = ConvertImagePixelType(Image=ResLabmapImToCopy, 
-                                                      NewPixelType='sitkUInt32')
-            
-            if LogToConsole:
-                print('\nAfter converting to 32-bit unsigned int:')
-                
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-        
-        
-        
-        # Convert ResLabmapImToCopy to a pixel array:
-        ResPixArrToCopy,\
-        TrgCStoSliceInds = Image2PixArr(LabmapIm=ResLabmapImToCopy)
-        
-        #print(f'\nResPixArrToCopy.shape = {ResPixArrToCopy.shape}')
-        #
-        #unique = UniqueItems(Items=ResPixArrToCopy, IgnoreZero=False)
-        #print(f'\nThere are {len(unique)} unique items in ResPixArrToCopy')
-        #
-        #F = ResPixArrToCopy.shape[0]
-        #
-        #print(f'\nThe segmentation (from the contour) on slice {FromSliceNum}',
-        #      f'has been resampled to {F} frames (contours).\nTrgCStoSliceInds',
-        #      f'= {TrgCStoSliceInds}.')
-        
-        if LogToConsole:
-            print('\nAfter converting to a pixel array:')
-            
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-            
-            for i in range(ResPixArrToCopy.shape[0]):
-                maxval = np.amax(ResPixArrToCopy[i])
-                minval = np.amin(ResPixArrToCopy[i])
-                
-                print(f'Frame {i} has max = {maxval}, min = {minval}')
-        
-    
-        
-    if UseCase == '3a':
-        """
-        For a Direct copy, one contour/segment is always copied to a single
-        contour/segmentation (irrespective of how many frames are in the 
-        resampled labelmap-image-to-copy).  So if after resampling there is 
-        more than one frame, the frames will be averaged.
-        """
-        
-        from GeneralTools import MeanPixArr
-        
-        # F required to determine whether ResPixArrToCopy will be averaged. 
-        F = ResPixArrToCopy.shape[0]
-        
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=ResPixArrToCopy, IgnoreZero=False)
-            
-            print(f'\nThere are {len(unique)} unique items in ResPixArrToCopy')
-            print('\nThe segmentation from the contour on FromSliceNum =',
-                  f'{FromSliceNum} has been resampled to {F} frames/contours:',
-                  f'{TrgCStoSliceInds}')
-        
-        if F > 1: 
-            if LogToConsole:
-                print(f'\nResPixArrToCopy has {F} frames so the pixel arrays',
-                      'will be averaged...')
-            
-            # Take pixel-by-pixel mean across all frames in ResPixArrToCopy:
-            ResPixArrToCopy = MeanPixArr(ResPixArrToCopy)
-            
-            if LogToConsole:
-                print(f'\nResPixArrToCopy.shape = {ResPixArrToCopy.shape}')
-            
-                F = ResPixArrToCopy.shape[0]
-            
-                print(f'\nResPixArrToCopy now has {F} frames')
-        else:
-            if LogToConsole:
-                print(f'\nResPixArrToCopy has F frames')
-        
-        
-        # Get pixel shift between FromSliceNum in SrcIm and ToSliceNum in 
-        # TrgIm in the Target image domain:
-        PixShift = GetPixelShiftBetweenSlices(Image0=SrcIm, 
-                                              SliceNum0=FromSliceNum, 
-                                              Image1=TrgIm,
-                                              SliceNum1=ToSliceNum,
-                                              RefImage=TrgIm)
-        
-        if LogToConsole:
-            print(f'\nPixShift = {PixShift}')
-        
-        # Shift the the in-plane elements in ResPixArrToCopy:
-        ResPixArrToCopy = ShiftFrame(Frame=ResPixArrToCopy, PixShift=PixShift)
-        
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=ResPixArrToCopy, IgnoreZero=False)
-            
-            print(f'\nThere are {len(unique)} unique items in ResPixArrToCopy',
-                  'after shifting the frame.')
-        
-        # Modify TrgCStoSliceInds to reflect the slice to which ResPixArrToCopy
-        # relates to:
-        TrgCStoSliceInds = deepcopy([ToSliceNum])
-        
-        
-            
-    #if '3' in UseCase: # 18/01/2021
-    #if UseCase in ['3', '4']: # 18/01/2021
-    if UseCase in ['3a', '3b', '4']: # 20/01/2021 <-- need to check this is ok
-        # Convert ResPixArrToCopy to a list of ContourData by contour and a
-        # list of points by contour: 
-        TrgPtsByObjByFrame,\
-        TrgCntDataByObjByFrame = PixArr2PtsByContour(PixArr=ResPixArrToCopy,
-                                                     FrameToSliceInds=TrgCStoSliceInds,
-                                                     DicomDir=TrgDcmDir)
-        
-        """
-        03/12/20: The z-coordinates are suspiciously all the same.  Should look
-        into this.
-        """
-        
-        if LogToConsole:
-            print(f'\nAfter converting ResPixArrToCopy to ContourData and',
-                  f'points TrgCStoSliceInds = {TrgCStoSliceInds}.')
-        
-            #print(f'\nlen(TrgCntDataByCnt) = {len(TrgCntDataByCnt)}')
-            #print(f'\nlen(TrgPtsByCnt) = {len(TrgPtsByCnt)}')
-            print(f'\nThere are {len(TrgCntDataByObjByFrame)} frames in',
-                  'TrgCntDataByObjByFrame.')
-            Ncontours = NumOfListsAtDepthTwo(TrgCntDataByObjByFrame)
-            print(f'There are {Ncontours} contours in TrgCntDataByObjByFrame.')
-            if len(TrgCntDataByObjByFrame) != Ncontours:
-                for f in range(len(TrgCntDataByObjByFrame)):
-                    print(f'   Frame {f} has {len(TrgCntDataByObjByFrame[f])}',
-                          'contours.')
-            print(f'\nThere are {len(TrgPtsByObjByFrame)} frames in',
-                  'TrgPtsByObjByFrame.')
-            Ncontours = NumOfListsAtDepthTwo(TrgPtsByObjByFrame)
-            print(f'There are {Ncontours} contours in TrgPtsByObjByFrame.')
-            if len(TrgPtsByObjByFrame) != Ncontours:
-                for f in range(len(TrgPtsByObjByFrame)):
-                    print(f'   Frame {f} has {len(TrgPtsByObjByFrame[f])}',
-                          'contours.')
-        
-        
-    
-    if UseCase == '3a':
-        if TrgRts:
-            """
-            Since this is a Direct copy, any existing contours in Target with 
-            ROI label matching FromSearchString are to be preserved.
-            """
-            
-            # Get all points (by contour) in the Target ROI containing the 
-            # contour to be copied:
-            TrgPtsInRoiByCnt,\
-            TrgCStoSliceIndsInRoi = GetPtsByCntForRoi(Rts=TrgRts, 
-                                                      DicomDir=TrgDcmDir,
-                                                      SearchString=FromSearchString)
-            
-            if LogToConsole:
-                print('\nThe Target ROI containing the contour to be copied',
-                      f'has {len(TrgPtsInRoiByCnt)} contours.',
-                      f'\nTrgCStoSliceIndsInRoi = {TrgCStoSliceIndsInRoi}.')
-            
-            
-            """
-            The contour points that arose from ResPixArrToCopy, 
-            TrgPtsByObjByFrame (previously TrgPtsByCnt), need to be added to 
-            previously Direct-copied contour points TrgPtsInRoiByCnt.
-            
-            NOTE:
-                Need to check behaviour of AddCopiedPtsByCnt following change
-                to format of contour data from TrgPtsByCnt to 
-                TrgPtsByObjByFrame.
-            """
-            
-            TrgCntDataByCnt,\
-            TrgPtsByCnt,\
-            TrgCStoSliceInds = AddCopiedPtsByCnt(OrigPtsByCnt=TrgPtsInRoiByCnt, 
-                                                 OrigCStoSliceInds=TrgCStoSliceIndsInRoi, 
-                                                 PtsToAddByCnt=TrgPtsByObjByFrame[0], 
-                                                 CStoSliceIndsToAddByCnt=TrgCStoSliceInds,
-                                                 LogToConsole=LogToConsole)
-            """ 19/01/21:  Need to verify that indexing TrgPtsByObjByFrame with
-            [0] will result in behaviour previously obtained with TrgPtsByCnt.
-            """
-            
-        #else:
-            """
-            A Target RTS was not provided.
-            """
-            
-            #TrgPtsByCnt = deepcopy()
-            #TrgCntDataByCnt = deepcopy()
-            #TrgCStoSliceInds = deepcopy()
-            
-        
-    #if UseCase == '4':
-    
-    
-    if UseCase == '5':
-        from ImageTools import RegisterImages
-        from ImageTools import TransformImage
-        from ImageTools import BinaryThresholdImage
-    
-        # Register the images using an affine transformation:
-        RegSrcIm, RegImFilt = RegisterImages(FixIm=TrgIm, MovIm=SrcIm, 
-                                             Tx='affine',
-                                             LogToConsole=LogToConsole)
-        
-        # Transform LabmapImToCopy using RegImFilt:
-        TxLabmapImToCopy = TransformImage(Im=LabmapImToCopy, 
-                                          RegImFilt=RegImFilt,
-                                          Interpolation='Nearestneighbor')
-        
-        """ This isn't required: """
-        if False:
-            # Store the pre-transformed labelmap image (LabmapImToCopy) and the 
-            # pre-binary thresholded labelmap image (TxLabmapImToCopy):
-            ListOfLabmapIms = [LabmapImToCopy, TxLabmapImToCopy]
-            
-            # Convert LabmapImToCopy to a pixel array:
-            PixArrToCopy,\
-            F2Sinds = Image2PixArr(LabmapIm=LabmapImToCopy)
-            
-            # Convert TxLabmapImToCopy to a pixel array:
-            TxPixArrPreBinary,\
-            F2SindsPreBinary = Image2PixArr(LabmapIm=TxLabmapImToCopy)
-            
-            unique = UniqueItems(Items=TxPixArrPreBinary, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in TxPixArrToCopy',
-                  'prior to binary thresholding TxLabmapImToCopy')
-        """ end """
-        
-        
-        
-        """
-        21/12/20:  
-            Following the use of a nearestneighbor interpolator when 
-            transforming LabmapImToCopy, i.e.:
-            
-            TxMap[0]["ResampleInterpolator"] = ["FinalNearestNeighborInterpolator"]
-            
-            it's no longer necessary to perform the binary thresholding step.
-            
-        # Binary threshold TxLabmapImToCopy:
-        TxLabmapImToCopy = BinaryThresholdImage(Im=TxLabmapImToCopy,
-                                                Thresh=Thresh)
-        """
-        
-        # Convert TxLabmapImToCopy to a pixel array:
-        TxPixArrToCopy,\
-        TrgCStoSliceInds = Image2PixArr(LabmapIm=TxLabmapImToCopy)
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=TxPixArrToCopy, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in TxPixArrToCopy',
-                  'after binary thresholding TxLabmapImToCopy')
-            
-            F = TxPixArrToCopy.shape[0]
-            
-            print('\nThe segmentation (from the contour) on slice',
-                  f'{FromSliceNum} has been registered to {F} frames',
-                  f'(contours): {TrgCStoSliceInds}.')
-        
-        
-        if False:
-            # Append the post-binary thresholded labelmap image (TxLabmapImToCopy):
-            ListOfLabmapIms.append(TxLabmapImToCopy)
-            
-            # Create lists of the pre-transformed, pre-binary thresholded and 
-            # post-binary thresholded pixel arrays and frame-to-slice indices:
-            ListOfPixArrs = [PixArrToCopy, TxPixArrPreBinary, TxPixArrToCopy]
-            ListOfFrameToSliceInds = [F2Sinds, F2SindsPreBinary, TrgCStoSliceInds]
-            ListOfPlotTitles = ['PixArrToCopy', 'TxPixArrToCopyPreBinary', 
-                                'TxPixArrToCopyPostBinary']
-        
-            return ListOfLabmapIms, ListOfPixArrs, ListOfFrameToSliceInds,\
-                   ListOfPlotTitles
-        
-        
-        if False:
-            import PlottingTools
-            importlib.reload(PlottingTools)
-            from PlottingTools import Plot_PixelArrays
-            
-            Plot_PixelArrays(ListOfPixArrs=ListOfPixArrs, 
-                             ListOfFrameToSliceInds=ListOfFrameToSliceInds, 
-                             ListOfPlotTitles=ListOfPlotTitles)
-        
-        
-            
-    
-        #return LabmapImToCopy, RegImFilt
-        
-        
-        # Convert TxPixArrToCopy to a list of ContourData by contour and a
-        # list of points by contour: 
-        TrgPtsByObjByFrame,\
-        TrgCntDataByObjByFrame = PixArr2PtsByContour(PixArr=TxPixArrToCopy,
-                                                     FrameToSliceInds=TrgCStoSliceInds,
-                                                     DicomDir=TrgDcmDir)
-        
-        if LogToConsole:
-            print(f'\nThere are {len(TrgCntDataByObjByFrame)} frames in',
-                  'TrgCntDataByObjByFrame.')
-            Ncontours = NumOfListsAtDepthTwo(TrgCntDataByObjByFrame)
-            print(f'There are {Ncontours} contours in TrgCntDataByObjByFrame.')
-            if len(TrgCntDataByObjByFrame) != Ncontours:
-                for f in range(len(TrgCntDataByObjByFrame)):
-                    print(f'   Frame {f} has {len(TrgCntDataByObjByFrame[f])}',
-                          'contours.')
-            print(f'\nThere are {len(TrgPtsByObjByFrame)} frames in',
-                  'TrgPtsByObjByFrame.')
-            Ncontours = NumOfListsAtDepthTwo(TrgPtsByObjByFrame)
-            print(f'There are {Ncontours} contours in TrgPtsByObjByFrame.')
-            if len(TrgPtsByObjByFrame) != Ncontours:
-                for f in range(len(TrgPtsByObjByFrame)):
-                    print(f'   Frame {f} has {len(TrgPtsByObjByFrame[f])}',
-                          'contours.')
-    
-    
-    #if 'a' in UseCase:
-    #    """ 
-    #    For UseCases 1a/b, 2a/b or 3a, there will always be a single 
-    #    ContourImageSequence, and the single index will be slice ToSliceNum. 
-    #    Over-write previous TrgCStoSliceInds.
-    #    """
-    #    
-    #    TrgCStoSliceInds = [ToSliceNum]
-    #    
-    #    print(f'\nTrgCStoSliceInds over-written to {TrgCStoSliceInds}')
-    
-    
-    """ 
-    If UseCase is 1a/2a/3a (i.e. a Direct copy is to be made) and a RTS has 
-    been provided for Target this is not a clean copy, i.e. the copied contour
-    is to be added to an existing ROI containing previously copied contour(s). 
-    If a Relationship-preserving copy is to be made or if a Target RTS has not 
-    been provided, the Source RTS will be used as a template.
-    """
-    #if not 'a' in UseCase or not TrgRts:
-    #    TrgRts = InitialiseRts(RtsTemplate=SrcRts, RoiNum=FromRoiNum,
-    #                           CStoSliceInds=TrgCStoSliceInds, 
-    #                           DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
-    
-    if LogToConsole:
-        print('\n\nInputs to InitialiseRts:')
-        print(f'   FromRoiNum = {FromRoiNum}')
-        print(f'   TrgCStoSliceInds = {TrgCStoSliceInds}')
-    
-    
-    if TrgRts:
-        """ Use TrgRts to initialise the Target RTS. """
-        TrgRts = InitialiseRts(RtsTemplate=TrgRts, RoiNum=FromRoiNum,
-                               CStoSliceInds=TrgCStoSliceInds,
-                               CntDataByObjByFrame=TrgCntDataByObjByFrame,
-                               DicomDir=TrgDcmDir, NamePrefix=AddText,
-                               LogToConsole=LogToConsole)
-    else:
-        """ Use SrcRts to initialise the Target RTS. """
-        TrgRts = InitialiseRts(RtsTemplate=SrcRts, RoiNum=FromRoiNum,
-                               CStoSliceInds=TrgCStoSliceInds,
-                               CntDataByObjByFrame=TrgCntDataByObjByFrame,
-                               DicomDir=TrgDcmDir, NamePrefix=AddText,
-                               LogToConsole=LogToConsole)
-    
-    if LogToConsole:
-        print('\n\nInputs to ModifyRts:')
-        #print(f'   len(TrgCntDataByCnt) = {len(TrgCntDataByCnt)}')
-        #[print(f'   len(TrgCntDataByCnt[{i}]) = {len(TrgCntDataByCnt[i])}') for i in range(len(TrgCntDataByCnt))]
-        #print(f'   len(TrgPtsByCnt) = {len(TrgPtsByCnt)}')
-        #[print(f'   len(TrgPtsByCnt[{i}]) = {len(TrgPtsByCnt[i])}') for i in range(len(TrgPtsByCnt))]
-        print(f'   len(TrgCntDataByObjByFrame) = {len(TrgCntDataByObjByFrame)}')
-        [print(f'   len(TrgCntDataByObjByFrame[{i}]) = {len(TrgCntDataByObjByFrame[i])}') for i in range(len(TrgCntDataByObjByFrame))]
-        print(f'   len(TrgPtsByObjByFrame) = {len(TrgPtsByObjByFrame)}')
-        [print(f'   len(TrgPtsByObjByFrame[{i}]) = {len(TrgPtsByObjByFrame[i])}') for i in range(len(TrgPtsByObjByFrame))]
-        print(f'   TrgCStoSliceInds = {TrgCStoSliceInds}')
-    
-    # Modify the tags in TrgRts:
-    TrgRts = ModifyRts(Rts=TrgRts, CntDataByObjByFrame=TrgCntDataByObjByFrame, 
-                       PtsByObjByFrame=TrgPtsByObjByFrame, 
-                       CStoSliceInds=TrgCStoSliceInds,
-                       DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
-    
-    
-    return TrgRts
-
-
-
-
-
-
-
-
 def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
-            TrgRts=None, ToSliceNum=None, Sigma=(1,1,1), ThreshLevel=0.75,
-            AddTxtToRoiLabel='', LogToConsole=False):
+            TrgRts=None, ToSliceNum=None, Interpolation='LabelGaussian',
+            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
+            ForceRegistration=False, AddTxtToRoiLabel='', LogToConsole=False):
     """
     Note 01/02/2021:
-        This function (which will copy all contours in all ROIs of an RTS) is
-        adapted from CopyContour (which can only copy a single contour and was 
-        formerly called CopyRts).
+        This function will, depending on the inputs, copy either:
+            1. A specific contour
+            2. All contours in a specific ROI
+            3. All contours in all ROIs
         
      
     Inputs:
@@ -1961,7 +2295,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     TrgRts : Pydicom object (optional; None by default)
         Target RTS object that the contour is to be copied to. TrgRts is only 
         non-None if a Direct copy of the contour is to be made and added to 
-        existing Direct-copied contour(s).     
+        existing contour(s).     
         
     ToSliceNum : integer (optional; None by default)
         The slice index within the Target DICOM stack where the contour will be
@@ -1970,20 +2304,44 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         If ToSliceNum = None, a relationship-preserving copy will be made, 
         since the slice location(s) where the contour(s) will be copied to will
         not depend on user input.
+    
+    Interpolation : string
+        The type of interpolation to be used if the Source labelmap image(s)
+        is/are to be resampled to the Target grid.  Acceptable inputs are:
+        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
+        'nearestneighbour'; Default value)
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding)
+    
+    Variance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if a 
+        Gaussian blurring + linearly resampling approach is taken for 
+        resampling of the Source labelmap image(s).
         
-    Sigma : tuple (optional; (1,1,1) by default)
-        The sigma values that will define the Gaussian if Gaussian image 
-        blurring is used.  The tuple will define the sigma along x, y and z
-        directions.
+    ThreshPreRes : float (optional; 0.75 by default)
+        The threshold level used to perform binary thresholding prior to 
+        resampling. Example use is on a labelmap image if a Gaussian blurring 
+        + linearly resampling approach is taken to combat aliasing effects.
+    
+    ThreshPostTx : float (optional; 0.05 by default)
+        The threshold level used to perform binary thresholding after 
+        registration transformation.  
+    
+    Tx : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
         
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if used.  The threshold value will be ThreshLevel*M, where
-        M is the maximum intensity value of the image.
+    ForceRegistration : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
     
     AddTxtToRoiLabel : string (optional, '' by default)
-        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
-        a filename for the new Target RTS/SEG.
+        String of text to add to the ROI Name of the new Target RTS.
                            
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
@@ -1993,9 +2351,20 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     *******
         
     TrgRts : Pydicom object
-        The new (if making a Relationship-preserving copy) or the modified (if
-        making a Direct copy of a contour to an existing Direct-copied contour)
-        Target RTS object.
+        The new (if making a Relationship-preserving copy) or modified (if
+        making a Direct copy) Target RTS object.
+        
+    TimingMsgs : list of strings
+        A list (for each message) of timings for individual operations.
+        
+        
+    Notes:
+    *****
+    
+    An example use of the ForceRegistration option is to overcome translations 
+    in the patient that are not reflected in the ImagePositionPatient tag. If 
+    using resampling techniques the Target contours will appear displaced w.r.t. 
+    the anatomical features highlighted in the Source image.
     """
     
     import importlib
@@ -2010,19 +2379,25 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     import SegTools
     importlib.reload(SegTools)
     
+    import time
     from copy import deepcopy
     #from RtsTools import GetPtsByCntByRoi
     from RtsTools import GetRtsDataOfInterest, ProportionOfRoisInExtent
     from RtsTools import CreateRts
     from GeneralTools import UniqueItems, PrintIndsByRoi#, PrintTitle
     from GeneralTools import ZshiftPtsByCntByRoi#, GetPixelShiftBetweenSlices
+    from GeneralTools import ShiftPtsByCntByRoi
     #from GeneralTools import ShiftFrame
     #from DicomTools import GetRoiNum
     #from ConversionTools import Points2ContourData
     from ConversionTools import PtsByCntByRoi2CntDataByCntByRoi
+    from ImageTools import ImportImage
     
     if LogToConsole:
         from DicomTools import GetRoiLabels
+        
+        print('\n\n', '-'*120)
+        print(f'Running CopyRts():')
         
         SrcRoiLabels = GetRoiLabels(SrcRts)
         
@@ -2034,15 +2409,43 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             print(f'\nTrgRoiLabels = {TrgRoiLabels}')
     
     
-    """ Determine which Use Case applies. """
-    UseCase = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
-                           SrcDcmDir, TrgDcmDir, LogToConsole)
+    """ Log timing messages. """
+    TimingMsgs = []
     
+    """ Start timing. """
+    times = []
+    times.append(time.time())
+    
+    #""" Check the validity of the combination of inputs. """
+    #CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
+    
+    """ Determine which Use Case to apply. """
+    UseCaseThatApplies,\
+    UseCaseToApply = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
+                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
+                                  LogToConsole=True)
+    
+    #""" Manipulate UseCase if ForceRegistration = True and UseCase was 3 or 4. """
+    #if ForceRegistration and not '5' in UseCase:
+    #    msg = f'\nUseCase was {UseCase} but will be treated as UseCase '
+    #    
+    #    UseCase.replace('3', '5').replace('4', '5')
+    #    
+    #    msg = f'{UseCase}.'
+    #    
+    #    print(msg)
     
     """ Get the data of interest from the Source RTS. """
     SrcPtsByCntByRoi,\
     SrcC2SindsByRoi = GetRtsDataOfInterest(SrcRts, FromSliceNum, FromRoiLabel, 
                                            SrcDcmDir, LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to parse the Source RTS file for the ROI.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
     
     """ Raise exception if there is no data of interest from the Source RTS."""
     if not UniqueItems(SrcC2SindsByRoi):
@@ -2059,15 +2462,28 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                         TrgDicomDir=TrgDcmDir,
                                         LogToConsole=LogToConsole)
     
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to check whether the Source ROI(s) intersect the '\
+          + 'Target grid space.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
+        
     if LogToConsole:
-        print(f'\n{round(FracProp*100, 1)}% of the points in the RTS lie',
+        print(f'\n{round(FracProp*100, 1)}% of the points in the ROI lie ',
               'within the physical extent of the Target image.')
     
     if FracProp == 0:
-        msg = 'None of the points in the RTS lie within the physical extent'\
+        msg = 'None of the points in the ROI lie within the physical extent '\
               + 'of the Target image.'
         raise Exception(msg)
         return None
+    
+    
+    """ Import the 3D images. """
+    SrcIm = ImportImage(SrcDcmDir)
+    TrgIm = ImportImage(TrgDcmDir)
     
     
     
@@ -2078,8 +2494,9 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     """
     
     #if UseCase in ['1', '2a', '3a']: # 08/02
-    if UseCase in ['1', '2a']: # 08/02
-        """ Direct copy of a contour. """
+    if UseCaseToApply in ['1', '2a']: # 08/02
+        """ Direct copy of a contour without resampling or registration
+        transformation. """
         
         from GeneralTools import ReplaceIndInC2SindsByRoi
         
@@ -2090,7 +2507,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                    ReplacementInd=ToSliceNum)
         
         if LogToConsole:
-                print(f'\nModfied SrcCStoSliceIndsByRoi = {SrcC2SindsByRoi}.')
+                print(f'\nModfied SrcC2SindsByRoi = {SrcC2SindsByRoi}.')
                 
         if TrgRts:
             """ Direct copy of a contour to an existing RTS. """
@@ -2105,24 +2522,47 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                    FromRoiLabel, TrgDcmDir,
                                                    LogToConsole)
             
+            times.append(time.time())
+            Dtime = round(times[-1] - times[-2], 1)
+            msg = f'Took {Dtime} s to parse the Target RTS file for '\
+                  + 'existing contours within the ROI.\n'
+            TimingMsgs.append(msg)
+            print(f'*{msg}')
+            
+            
             if LogToConsole:
-                print(f'TrgCStoSliceIndsByRoi = {TrgC2SindsByRoi}.')
+                print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}.')
         
 
-    if UseCase in ['1', '2a']:
-        """ Direct copy without resampling.
-        
+    #if UseCase in ['1', '2a']:
+        #""" Direct copy without resampling or registration transformation.
+        """
         The contour will be copied to a different slice location, so the
-        z-components of the coordinates will need to be modified. For UseCase
-        3a this operation will be done in index space (i.e. by shifting 
-        pixels). """
+        z-components of the coordinates will need to be modified. """
         
-        """ Modify the z-component of the points in SrcPtsByCntByRoi, then 
-        convert back to physical points. """
+        """ Shift the out-of-plane (z) components of the points in
+        SrcPtsByCntByRoi. """
         SrcPtsByCntByRoi = ZshiftPtsByCntByRoi(PtsByCntByRoi=SrcPtsByCntByRoi,
                                                NewZind=ToSliceNum,
                                                DicomDir=SrcDcmDir)
         
+        """ Shift the points to account for any difference in the origin of
+        SrcIm and TrgIm, and to apply the necessary shift from FromSliceNum to
+        ToSliceNum. """
+        SrcPtsByCntByRoi,\
+        SrcC2SindsByRoi = ShiftPtsByCntByRoi(PtsByCntByRoi=SrcPtsByCntByRoi, 
+                                             C2SindsByRoi=SrcC2SindsByRoi, 
+                                             SrcImage=SrcIm, 
+                                             SrcSliceNum=FromSliceNum, 
+                                             TrgImage=TrgIm, 
+                                             TrgSliceNum=ToSliceNum, 
+                                             RefImage=TrgIm, ShiftInX=False,  
+                                             ShiftInY=False, ShiftInZ=True, 
+                                             Fractional=False, 
+                                             LogToConsole=LogToConsole)
+        
+        if LogToConsole:
+                print(f'\nShifted SrcC2SindsByRoi = {SrcC2SindsByRoi}.')
         
         
         if TrgRts:
@@ -2141,63 +2581,113 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             
             TrgPtsByCntByRoi = deepcopy(SrcPtsByCntByRoi)
             
-            print(f'\nSrcC2SindsByRoi = {SrcC2SindsByRoi}')
-            print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}')
+            if LogToConsole:
+                print(f'\nSrcC2SindsByRoi = {SrcC2SindsByRoi}')
+                print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}')
            
         
         """ Convert points to contour data format. """
         TrgCntDataByCntByRoi = PtsByCntByRoi2CntDataByCntByRoi(TrgPtsByCntByRoi)
     
     
-    if UseCase == '2b':
-        """ Relationship-preserving copy without resampling.
+    if UseCaseToApply == '2b':
+        """ Relationship-preserving copy without resampling or registration
+        transformation. """
         
-        TrgPtsByCntByRoi is simply SrcPtsByCntByRoi, and 
-        TrgC2SindsByRoi is SrcC2SindsByRoi. """
+        if False:
+            """ TrgPtsByCntByRoi is simply SrcPtsByCntByRoi, and 
+            TrgC2SindsByRoi is SrcC2SindsByRoi. """
+            
+            TrgPtsByCntByRoi = deepcopy(SrcPtsByCntByRoi)
+            TrgC2SindsByRoi = deepcopy(SrcC2SindsByRoi)
         
+        
+        
+        
+        if False:
+            """ Shift the points to account for any difference in the origin (i.e.
+            slice number 0) of SrcIm and TrgIm, and to apply the necessary shift in 
+            the z components of the points, and to the indices in SrcC2SindsByRoi. """
+            SrcPtsByCntByRoi,\
+            SrcC2SindsByRoi = ShiftPtsByCntByRoi(PtsByCntByRoi=SrcPtsByCntByRoi, 
+                                                 C2SindsByRoi=SrcC2SindsByRoi, 
+                                                 SrcImage=SrcIm, 
+                                                 SrcSliceNum=0, 
+                                                 TrgImage=TrgIm, 
+                                                 TrgSliceNum=0, 
+                                                 RefImage=TrgIm, ShiftInX=False,  
+                                                 ShiftInY=False, ShiftInZ=True, 
+                                                 Fractional=False, 
+                                                 LogToConsole=LogToConsole)
+            
+        
+        #from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1
+        from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2
+        
+        """ Shift the indices in SrcC2SindsByRoi to account for any differences
+        in the origin of SrcIm and TrgIm. (new 13/02/21) """
+        #TrgC2SindsByRoi = GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1(SrcC2SindsByRoi, 
+        #                                                        SrcIm, TrgIm)
+        
+        TrgC2SindsByRoi = GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcC2SindsByRoi, 
+                                                                SrcIm, TrgIm)
+        
+        """ TrgPtsByCntByRoi is simply SrcPtsByCntByRoi. """
         TrgPtsByCntByRoi = deepcopy(SrcPtsByCntByRoi)
-        TrgC2SindsByRoi = deepcopy(SrcC2SindsByRoi)
-        
+            
         """ Convert points to contour data format. """
         TrgCntDataByCntByRoi = PtsByCntByRoi2CntDataByCntByRoi(TrgPtsByCntByRoi)
+        
+        
+        if LogToConsole:
+            print(f'\nSrcC2SindsByRoi = {SrcC2SindsByRoi}')
+            print(f'TrgC2SindsByRoi (= shifted SrcC2SindsByRoi) =',
+                  f'{SrcC2SindsByRoi}.')
     
     
-    if UseCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
-        """ Direct or relationship-preserving copy with resampling. """
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copy with resampling or
+        registration transformation. """
         
         #import numpy as np
-        from ImageTools import ImportImage, GetImageInfo#, ResampleImage
+        from ImageTools import GetImageInfo, ResampleLabmapImByRoi
         #from ImageTools import GaussianBlurImage, BinaryThresholdImage 
-        from ImageTools import ResampleLabmapImByRoi
         #from ConversionTools import ConvertImagePixelType
         #from ConversionTools import PixArr2Image, Image2PixArr
         from ConversionTools import PtsByCntByRoi2PixArrByRoi
         from ConversionTools import PixArrByRoi2LabmapImByRoi
         from ConversionTools import PixArrByRoi2PtsByCntByRoi
         #from RtsTools import GetMaskFromContoursForSliceNum
-        from SegTools import ProportionOfSegsInExtent
+        #from SegTools import ProportionOfSegsInExtent
         #from GeneralTools import NumOfListsAtDepthTwo
         
         
-        # Import the 3D images:
-        SrcIm = ImportImage(SrcDcmDir)
-        TrgIm = ImportImage(TrgDcmDir)
+        #""" Import the 3D images. """
+        #SrcIm = ImportImage(SrcDcmDir)
+        #TrgIm = ImportImage(TrgDcmDir)
         
         """ Convert the RTS data of interest to a list of 3D pixel arrays for 
         each ROI in SrcPtsByCntByRoi. """
         SrcPixArrByRoi = PtsByCntByRoi2PixArrByRoi(SrcPtsByCntByRoi, SrcIm, 
                                                    LogToConsole)
         
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to convert the Source points to pixel arrays.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+        
+        
         """ Determine whether the pixels that make up SrcPixArrByRoi intersect 
         with the Target image extent. 
         
         Note:
-            This is somewhat redundant as this was already checked for the 
-            points. Just useful as a confirmation that the conversion from 
-            points to pixel arrays was correct. """
+            This is redundant since this was already checked for the points.  
+            Only useful as a confirmation that the conversion from points to 
+            pixel arrays was correct.
         
-        FracProp = ProportionOfSegsInExtent(PixArrByRoi=SrcPixArrByRoi, 
-                                            F2SindsByRoi=SrcC2SindsByRoi,
+        FracProp = ProportionOfSegsInExtent(PixArrBySeg=SrcPixArrByRoi, 
+                                            F2SindsBySeg=SrcC2SindsByRoi,
                                             SrcDicomDir=SrcDcmDir,
                                             TrgDicomDir=TrgDcmDir,
                                             LogToConsole=LogToConsole)
@@ -2212,6 +2702,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                   + 'within the physical extent of the Target image.'
             raise Exception(msg)
             return None
+        """
         
         
         """ Convert pixel arrays to binary labelmap images. """
@@ -2219,6 +2710,14 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                      F2SindsByRoi=SrcC2SindsByRoi, 
                                                      RefIm=SrcIm,
                                                      LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to generate labelmap images from the Source '\
+              + 'pixel arrays.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+        
         
         """ Get the frame-to-slice indices in the order associated with
         SrcLabmapImByRoi.
@@ -2229,31 +2728,43 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
 
         for SrcLabmapIm in SrcLabmapImByRoi:
             PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(SrcLabmapIm, LogToConsole)
+            F2Sinds = GetImageInfo(SrcLabmapIm, LogToConsole=False)
             
             SrcF2SindsByRoi.append(F2Sinds)
     
     
-    if UseCase in ['3a', '3b', '4a', '4b']:
+    if UseCaseToApply in ['3a', '3b', '4a', '4b']:
         """ Direct or relationship-preserving copy with resampling. """
         
         
         """ Resample the source labelmaps.
         Comment:
             Should use SrcF2SindsByRoi rather than SrcC2SindsByRoi?..."""
-        ResSrcLabmapImByRoi,\
-        ResSrcPixArrByRoi,\
+        
+        #Interp = 'NearestNeighbor'
+        #Interp = 'LabelGaussian'
+        
+        ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
         ResSrcF2SindsByRoi = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi, 
                                                    #F2SindsByRoi=SrcC2SindsByRoi,
                                                    F2SindsByRoi=SrcF2SindsByRoi,
                                                    SrcImage=SrcIm, 
-                                                   TrgImage=TrgIm, 
-                                                   Variance=Sigma,
-                                                   ThreshLevel=ThreshLevel,
+                                                   TrgImage=TrgIm,
+                                                   Interpolation=Interpolation,
+                                                   Variance=Variance,
+                                                   ThreshLevel=ThreshPreRes,
                                                    LogToConsole=LogToConsole)
         
-    if UseCase in ['5a', '5b']:
-        """ Direct or relationship-preserving copying with registration. """
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+    
+        
+    if UseCaseToApply in ['5a', '5b']:
+        """ Direct or relationship-preserving copying with registration
+        transformation. """
         
         from ImageTools import TransformLabmapImByRoi
     
@@ -2261,18 +2772,27 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         SrcIm to TrgIm. 
         
         Note:
-            Even thought the data is being transformed the prefix 'Res' will be
+            Even though the data is being transformed the prefix 'Res' will be
             used since further operations below will need to be applied to
             either resampled or transformed data. """
         
         ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
         ResSrcF2SindsByRoi = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
+                                                    F2SindsByRoi=SrcF2SindsByRoi,
                                                     FixImage=TrgIm, MovImage=SrcIm, 
-                                                    #Tx='affine', 
+                                                    Tx=Tx, ThreshLevel=ThreshPostTx,
                                                     LogToConsole=LogToConsole)
         
+        
+        
+        
+        #times.append(time.time())
+        #Dtime = round(times[-1] - times[-2], 1)
+        #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
+        #      'from the registration transformation.')
+        
     
-    if UseCase in ['3a', '4a', '5a']:
+    if UseCaseToApply in ['3a', '4a', '5a']:
         """ Direct copy with resampling/registration and averaging of multi-
         framed pixel arrays.
         
@@ -2285,45 +2805,145 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         operation will be performed.
         """
         
-        from GeneralTools import ShiftFramesInPixArrByRoi
+        from GeneralTools import ShiftFramesInPixArrBySeg
+        from PlottingTools import PlotPixArrBySeg
         
+        R = len(ResSrcPixArrByRoi) # number of ROIs
         
-        """ Perform averaging or OR operation? """
-        #ReduceUsing = 'mean'
-        ReduceUsing = 'OR'
+        """ Get the number of frames in each pixel array. """
+        NumOfFramesBySeg = [ResSrcPixArrByRoi[r].shape[0] for r in range(R)]
         
-        if ReduceUsing == 'mean':
-            from GeneralTools import MeanPixArrByRoi
+        MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+        
+        if MaxNumOfFramesBySeg > 1:
+            """ Reduce the number of frames in each pixel array to 1. """
             
-            """ The threshold used when converting the averaged (non-binary)  
-            pixel array to a binary pixel array. """
-            BinaryThresh = 0.5
-
-            ResSrcPixArrByRoi = MeanPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi,
-                                                MakeBinary=True, 
-                                                BinaryThresh=BinaryThresh,
-                                                LogToConsole=LogToConsole)
-        
-        else:
-            from GeneralTools import OrPixArrByRoi
+            """ Perform averaging or OR operation? """
+            #ReduceUsing = 'mean'
+            ReduceUsing = 'OR'
             
-            ResSrcPixArrByRoi = OrPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi,
-                                              LogToConsole=LogToConsole)
-        
-        
-        """ Shift the in-plane elements in ResSrcPixArrByRoi. """
-        ResSrcPixArrByRoi = ShiftFramesInPixArrByRoi(PixArrByRoi=ResSrcPixArrByRoi, 
-                                                     F2SindsByRoi=ResSrcF2SindsByRoi, 
-                                                     SrcImage=SrcIm, 
-                                                     SrcSliceNum=FromSliceNum,
-                                                     TrgImage=TrgIm, 
-                                                     TrgSliceNum=ToSliceNum, 
-                                                     RefImage=TrgIm, 
-                                                     Fractional=False,
-                                                     LogToConsole=LogToConsole)
-        
+            if LogToConsole:
+                print(f'\nThere are {NumOfFramesBySeg} frames in each',
+                      f'ROI/segment. Using {ReduceUsing} operation to reduce',
+                      'to single-framed pixel array(s)')
+                
+                PlotPixArrBySeg(ResSrcPixArrByRoi, ResSrcF2SindsByRoi, 
+                                f'Prior to {ReduceUsing} operation')
+            
+            
+            if ReduceUsing == 'mean':
+                from GeneralTools import MeanFrameInPixArrBySeg
+                
+                """ 14/02:  There sems to be a problem with the averaging 
+                operation that results in many more than 1 F2Sind and many more
+                than 1 contour.. """
+                
+                """ The threshold used when converting the averaged (non-binary)  
+                pixel array to a binary pixel array. """
+                BinaryThresh = 0.5
     
-    if UseCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
+                ResSrcPixArrByRoi,\
+                ResF2SindsByRoi = MeanFrameInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
+                                                         F2SindsBySeg=ResSrcF2SindsByRoi,
+                                                         MakeBinary=True, 
+                                                         BinaryThresh=BinaryThresh,
+                                                         LogToConsole=LogToConsole)
+            
+            else:
+                from GeneralTools import OrFrameOfPixArrBySeg
+                
+                #print(f'\n\n\nBefore running OrPixArrByRoi():')
+                #print(f'ResSrcPixArrByRoi = {ResSrcPixArrByRoi}')
+                #print(f'len(ResSrcPixArrByRoi) = {len(ResSrcPixArrByRoi)}')
+                #for r in range(len(ResSrcPixArrByRoi)):
+                #    print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
+                #    print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
+                    
+                ResSrcPixArrByRoi,\
+                ResF2SindsByRoi = OrFrameOfPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
+                                                       F2SindsBySeg=ResSrcF2SindsByRoi,
+                                                       LogToConsole=LogToConsole)
+                
+                #print(f'\nAfter running OrPixArrByRoi():')
+                #print(f'ResSrcPixArrByRoi = {ResSrcPixArrByRoi}')
+                #print(f'len(ResSrcPixArrByRoi) = {len(ResSrcPixArrByRoi)}')
+                #for r in range(len(ResSrcPixArrByRoi)):
+                #    print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
+                #    print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
+            
+            
+            if LogToConsole:
+                NumOfFramesBySeg = [ResSrcPixArrByRoi[r].shape[0] for r in range(R)]
+        
+                MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+                
+                print(f'\nFollowing {ReduceUsing} operation there are',
+                      f'{NumOfFramesBySeg} frames in each ROI/segment.')
+                
+                PlotPixArrBySeg(ResSrcPixArrByRoi, ResSrcF2SindsByRoi, 
+                                'After {ReduceUsing} operation')
+        
+        
+        
+        """ Shift the out-of-plane elements in ResSrcPixArrByRoi to account for
+        the shift from FromSliceNumber to ToSliceNum. 
+        Note:
+            The function below was incorrectly applying in-plane shifts as well
+            up until the added inputs ShiftInX / Y / Z was added on 10/02. 
+        
+        14/02: I think SrcSliceNum shouldn't be FromSliceNum but instead
+        ResSrcF2SindsByRoi[0][0], since this is the frame-to-slice number of the
+        resampled/transformed labelmap.  The slice number of the original
+        (Source) labelmap is not relevant.
+        
+        Likewise, the inputs SrcImage and TrgImage should both be TrgImage 
+        since the resampled labelmap shares the TrgImage grid, and it will be
+        shifted to another location, still within the TrgImage grid.
+        """
+        
+        """ FromSliceNum --> ResFromSliceNum following resampling or 
+        transformation. """
+        ResFromSliceNum = ResSrcF2SindsByRoi[0][0]
+        
+        if True:#LogToConsole:
+            #print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+            #      f'{ResFromSliceNum}')
+            #print(f'ToSliceNum = {ToSliceNum}')
+            print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+                  f'{ResFromSliceNum} following resampling/transformation -->',
+                  f'ToSliceNum = {ToSliceNum} for direct copy')
+            print('\nResSrcF2SindsByRoi prior to shifting of out-of-plane',
+                  f'elements: {ResSrcF2SindsByRoi}')
+        
+        ResSrcPixArrByRoi,\
+        ResSrcF2SindsByRoi = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi, 
+                                                      F2SindsBySeg=ResSrcF2SindsByRoi, 
+                                                      ##SrcImage=SrcIm, 
+                                                      ##SrcSliceNum=FromSliceNum,
+                                                      ##TrgImage=TrgIm,
+                                                      #SrcImage=ResSrcLabmapImByRoi[0], 
+                                                      #SrcSliceNum=ResFromSliceNum,
+                                                      #TrgImage=ResSrcLabmapImByRoi[0],
+                                                      SrcImage=TrgIm, 
+                                                      SrcSliceNum=ResFromSliceNum,
+                                                      TrgImage=TrgIm,
+                                                      TrgSliceNum=ToSliceNum, 
+                                                      RefImage=TrgIm,
+                                                      ShiftInX=False,
+                                                      ShiftInY=False,
+                                                      ShiftInZ=True,
+                                                      Fractional=False,
+                                                      LogToConsole=LogToConsole)
+        
+        if True:#LogToConsole:
+            print(f'\nAfter running ShiftFramesInPixArrBySeg():')
+            print(f'ResSrcF2SindsByRoi = {ResSrcF2SindsByRoi}')
+            print(f'len(ResSrcPixArrByRoi) = {len(ResSrcPixArrByRoi)}')
+            for r in range(len(ResSrcPixArrByRoi)):
+                print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
+                print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
         """ Direct or relationship-preserving copying with resampling or
         registration-transformation. """
         
@@ -2331,21 +2951,46 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         each contour) of ContourData, and a list (for each ROI) of a list (for
         each contour) of a list (for each point) of coordinates. """
         
-        ResSrcPtsByCntByRoi,\
-        ResSrcCntDataByCntByRoi,\
+        #print(f'\nBefore running PixArrByRoi2PtsByCntByRoi():')
+        #print(f'ResSrcF2SindsByRoi = {ResSrcF2SindsByRoi}')
+        #print(f'len(ResSrcPixArrByRoi) = {len(ResSrcPixArrByRoi)}')
+        #for r in range(len(ResSrcPixArrByRoi)):
+        #    #print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
+        #    print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
+        
+        """ Is Thresh = 0.5 below too high? """
+            
+        ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi,\
         ResSrcC2SindsByRoi = PixArrByRoi2PtsByCntByRoi(PixArrByRoi=ResSrcPixArrByRoi,
                                                        F2SindsByRoi=ResSrcF2SindsByRoi,
                                                        DicomDir=TrgDcmDir,
-                                                       Thresh=0.5)
+                                                       Thresh=0.5,
+                                                       LogToConsole=LogToConsole)
         
-        if LogToConsole:
+        #print(f'\nAfter running PixArrByRoi2PtsByCntByRoi():')
+        #print(f'ResSrcC2SindsByRoi = {ResSrcC2SindsByRoi}')
+        #print(f'len(ResSrcPtsByCntByRoi) = {len(ResSrcPtsByCntByRoi)}')
+        #for r in range(len(ResSrcPtsByCntByRoi)):
+        #    C = len(ResSrcPtsByCntByRoi[r])
+        #    print(f'   There are {C} contours in the {r}^th ROI')
+        #    for c in range(C):
+        #        P = len(ResSrcPtsByCntByRoi[r][c])
+        #        print(f'      There are {P} points in the {c}^th contour')
+            
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to convert the Source pixel arrays to points.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+        
+        if True:#LogToConsole:
             #print('\n\n', '-'*120)
             print(f'\n\nAfter converting ResPixArrToCopy to ContourData and',
                   f'points ResSrcC2SindsByRoi =')
             PrintIndsByRoi(ResSrcC2SindsByRoi)
         
     
-        if UseCase in ['3a', '4a', '5a']:
+        if UseCaseToApply in ['3a', '4a', '5a']:
             """ Direct copying with resampling/transformation. """
             
             if TrgRts:
@@ -2378,6 +3023,22 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             TrgC2SindsByRoi = deepcopy(ResSrcC2SindsByRoi)
     
     
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 1)
+    msg = f'Took {Dtime} s to copy the ROI(s) from Source to Target.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
+    if True:#LogToConsole:
+        print(f'\n\n\nPrior to running CreateRts():')
+        print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}')
+        for r in range(len(TrgPtsByCntByRoi)):
+            C = len(TrgPtsByCntByRoi[r])
+            print(f'   There are {C} in the {r}^th ROI')
+            for c in range(len(TrgPtsByCntByRoi[r])):
+                P = len(TrgPtsByCntByRoi[r][c])
+                print(f'      There are {P} pts in the {c}^th contour')
+    
     
     """ Create the Target RTS. """
     TrgRts = CreateRts(SrcRts=SrcRts, 
@@ -2388,8 +3049,18 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                        AddTxtToSSLabel=AddTxtToRoiLabel,
                        LogToConsole=LogToConsole)
     
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to create the RTS object.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
+    if LogToConsole:
+        print('\nEnd of CopyRts().')
+        print('-'*120)
+        
     #return TrgRts
-    return TrgRts, TrgPtsByCntByRoi, TrgC2SindsByRoi
+    return TrgRts, TrgPtsByCntByRoi, TrgC2SindsByRoi, TimingMsgs
 
 
 
@@ -2404,58 +3075,92 @@ COPY A SEGMENTATION
 ******************************************************************************
 """
 
-
-
-def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
-            TrgSeg=None, ToSliceNum=None, Sigma=(1,1,1), ThreshLevel=0.75,
-            AddText='', LogToConsole=False):
-                                
+def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
+            TrgSeg=None, ToSliceNum=None, Interpolation='LabelGaussian',
+            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
+            ForceRegistration=False, AddTxtToSegLabel='', LogToConsole=False):
     """
+    Note 09/02/2021:
+        This function will, depending on the inputs, copy either:
+            1. A specific segmentation
+            2. All segmentations in a specific segment
+            3. All segmentations in all segments
+        
+     
     Inputs:
     ******
     
     SrcSeg : Pydicom object
-        Source DICOM SEG object.
-                             
-    FromSearchString : string
-        All or part of the Source Segment Label of the segment containing the 
-        segmentation to be copied.
-                     
+        Source SEG object.
+    
+    FromSliceNum : integer or None
+        The slice indeces within the Source DICOM stack corresponding to the
+        segmentation to be copied (applies for the case of direct copies of a  
+        single segmentation). The index is zero-indexed.
+        If FromSliceNum = None, a relationship-preserving copy will be made.
+        
+    FromSegLabel : string
+        All or part of the Source segment Description of the segment containing 
+        the segmentation(s) to be copied.
+    
     SrcDcmDir : string
         Directory containing the Source DICOMs.
-                            
-    FromSliceNum : integer
-        Slice index of the Source DICOM stack corresponding to the segmentation
-        to be copied (counting from 0).
     
     TrgDcmDir : string
         Directory containing the Target DICOMs.
-                 
+        
     TrgSeg : Pydicom object (optional; None by default)
-        Target SEG object that the segmentation is to be copied to. TrgSeg is  
-        only non-None if a Direct copy of the segmentation is to be made and 
-        added to existing Direct-copied segmentation(s).
-               
+        Target SEG object that the segmentation(s) is to be copied to. TrgSeg 
+        is only non-None if a Direct copy of the segmentation(s) is to be made 
+        and added to existing segmentation(s).     
+        
     ToSliceNum : integer (optional; None by default)
-        Slice index within the Target DICOM stack where the segmentation is to
-        be copied to (counting from 0).  This only applies for Direct copies,
-        hence the default value None.
+        The slice index within the Target DICOM stack where the segmentation 
+        will be copied to (applies only for the case of direct copies of single 
+        segmentations). The index is zero-indexed.
+        If ToSliceNum = None, a relationship-preserving copy will be made, 
+        since the slice location(s) where the segmentation(s) will be copied to 
+        will not depend on user input.
         
-    Sigma : tuple (optional; (1,1,1) by default)
-        The sigma values that will define the Gaussian if Gaussian image 
-        blurring is used.  The tuple will define the sigma along x, y and z
-        directions.
-        
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if used.  The threshold value will be ThreshLevel*M, where
-        M is the maximum intensity value of the image.
+    Interpolation : string
+        The type of interpolation to be used if the Source labelmap image(s)
+        is/are to be resampled to the Target grid.  Acceptable inputs are:
+        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
+        'nearestneighbour'; Default value)
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding)
     
-    AddText : string (optional; '' by default)
-        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
-        a filename for the new Target RTS/SEG.
+    Variance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if a 
+        Gaussian blurring + linearly resampling approach is taken for 
+        resampling of the Source labelmap image(s).
         
-    LogToConsole : boolean (optional; False by default)
+    ThreshPreRes : float (optional; 0.75 by default)
+        The threshold level used to perform binary thresholding prior to 
+        resampling. Example use is on a labelmap image if a Gaussian blurring 
+        + linearly resampling approach is taken to combat aliasing effects.
+    
+    ThreshPostTx : float (optional; 0.05 by default)
+        The threshold level used to perform binary thresholding after 
+        registration transformation.
+    
+    Tx : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+        
+    ForceRegistration : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+        
+    AddTxtToRoiLabel : string (optional, '' by default)
+        String of text to add to the ROI Name of the new Target SEG.
+                           
+    LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
           
                   
@@ -2464,96 +3169,130 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         
     TrgSeg : Pydicom object
         The new (if making a Relationship-preserving copy) or modified (if
-        making a Direct copy of a segmentation to an existing Direct-copied 
-        contour) Target SEG object.
+        making a Direct copy) Target SEG object.
+      
+    TimingMsgs : list of strings
+        A list (for each message) of timings for individual operations.
+        
+        
+    Notes:
+    *****
+    
+    An example use of the ForceRegistration option is to overcome translations 
+    in the patient that are not reflected in the ImagePositionPatient tag. If 
+    using resampling techniques the Target segmentations will appear displaced  
+    w.r.t. the anatomical features highlighted in the Source image.
     """
     
     import importlib
-    
-    import SegTools
-    importlib.reload(SegTools)
-    import DicomTools
-    importlib.reload(DicomTools)
-    import ImageTools
-    importlib.reload(ImageTools)
-    import GeneralTools
-    importlib.reload(GeneralTools)
     import ConversionTools
     importlib.reload(ConversionTools)
+    import GeneralTools
+    importlib.reload(GeneralTools)
+    import ImageTools
+    importlib.reload(ImageTools)
+    import SegTools
+    importlib.reload(SegTools)
     
+    import time
     from copy import deepcopy
-    import numpy as np
-    from DicomTools import GetRoiNum
-    from SegTools import GetFrameFromPixArr
-    from GeneralTools import PrintTitle
-    from GeneralTools import UniqueItems
-    from ImageTools import ImportImage
-    from SegTools import InitialiseSeg
-    from SegTools import ModifySeg
-    from ImageTools import GetImageInfo
-    from GeneralTools import ProportionOfPixArrInExtent
-    
-    
-    # Verify that a segment exists whose label matches FromSearchString:
-    #SrcSearchStrings = GetRoiLabels(SrcSeg)
-    FromSegNum = GetRoiNum(Roi=SrcSeg, SearchString=FromSearchString)
+    from ImageTools import ImportImage#, GetImageInfo
+    from SegTools import GetSegDataOfInterest, ProportionOfSegsInExtent
+    from SegTools import CreateSeg
+    from GeneralTools import UniqueItems#, PrintIndsByRoi#, PrintTitle
+    #from GeneralTools import ZshiftPtsByCntByRoi#, GetPixelShiftBetweenSlices
+    #from GeneralTools import ShiftFrame
     
     if LogToConsole:
-        print(f'\n\n\n***FromSegNum = {FromSegNum}')
-    
-    #ToSegNum = GetRoiNum(Roi=TrgSeg, SearchString=FromSearchString) # 04/12
+        from DicomTools import GetRoiLabels
         
+        print('\n\n', '-'*120)
+        print(f'Running CopySeg():')
         
-    # Print the list of PFFGStoSliceInds:
-    """This isn't required but useful."""
-    from DicomTools import GetDicomSOPuids
-    from SegTools import GetPFFGStoSliceIndsBySeg
+        SrcSegLabels = GetRoiLabels(SrcSeg)
+        
+        print(f'\nSrcSegLabels = {SrcSegLabels}')
+        
+        if TrgSeg:
+            TrgSegLabels = GetRoiLabels(TrgSeg)
+        
+            print(f'\nTrgSegLabels = {TrgSegLabels}')
     
-    SegSOPuids = GetDicomSOPuids(DicomDir=SrcDcmDir)
     
-    SegPFFGStoSliceIndsBySeg = GetPFFGStoSliceIndsBySeg(Seg=SrcSeg, 
-                                                        SOPuids=SegSOPuids)
+    """ Log timing messages. """
+    TimingMsgs = []
     
-    SegPFFGStoSliceIndsInSeg = SegPFFGStoSliceIndsBySeg[FromSegNum]
+    """ Start timing. """
+    times = []
+    times.append(time.time())
     
-    if LogToConsole:
-        print(f'\nThe Source SEG matching "{FromSearchString}" has'
-              f'segmentations on slices {SegPFFGStoSliceIndsInSeg}.')
-    """End of not-required code."""
+    #""" Check the validity of the combination of inputs. """
+    #CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
     
-    # The pixel array that only contains the frame to be copied:
-    PixArrToCopy = GetFrameFromPixArr(Seg=SrcSeg, DicomDir=SrcDcmDir, 
-                                      SearchString=FromSearchString, 
-                                      SliceNum=FromSliceNum,
-                                      LogToConsole=LogToConsole)
+    """ Determine which Use Case to apply. """
+    UseCaseThatApplies,\
+    UseCaseToApply = WhichUseCase(FromSliceNum, FromSegLabel, ToSliceNum, 
+                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
+                                  LogToConsole=True)
+    
+    #""" Manipulate UseCase if ForceRegistration = True and UseCase was 3 or 4. """
+    #if ForceRegistration and not '5' in UseCase:
+    #    msg = f'\nUseCase was {UseCase} but will be treated as UseCase '
+    #    
+    #    UseCase.replace('3', '5').replace('4', '5')
+    #    
+    #    msg = f'{UseCase}.'
+    #    
+    #    print(msg)
+        
+    """ Get the data of interest from the Source SEG. """
+    SrcPixArrBySeg,\
+    SrcF2SindsBySeg = GetSegDataOfInterest(SrcSeg, FromSliceNum, FromSegLabel, 
+                                           SrcDcmDir, LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to parse the Source SEG file for the ROI.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
+    """ Raise exception if there is no data of interest from the Source SEG."""
+    if not UniqueItems(SrcF2SindsBySeg):
+        msg = f'There are no segmentations on slice {FromSliceNum} in any '\
+              + 'segment in the Source SEG.'
+        
+        raise Exception(msg)
     
     """
-    First must determine whether the pixels that make up the mask coincide with
-    the Target image extent (14/01/2021). 
+    Determine whether the segmentations that make up the segment(s) intersect 
+    with the Target image extent. 
     """
-    FracProp = ProportionOfPixArrInExtent(PixArr=PixArrToCopy, 
-                                          FrameToSliceInds=[FromSliceNum],
-                                          SrcDicomDir=SrcDcmDir,
-                                          TrgDicomDir=TrgDcmDir)
+    FracProp = ProportionOfSegsInExtent(PixArrBySeg=SrcPixArrBySeg,
+                                        F2SindsBySeg=SrcF2SindsBySeg, 
+                                        SrcDicomDir=SrcDcmDir,
+                                        TrgDicomDir=TrgDcmDir,
+                                        LogToConsole=LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to check whether the Source segment(s) intersect '\
+          + 'the Target grid space.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
     
     if LogToConsole:
-        print(f'\n{round(FracProp*100, 1)}% of the voxels in the segmentation',
-              'to be copied lie within the physical extent of the Target image.')
+        print(f'\n{round(FracProp*100, 1)}% of the indices in the SEG lie',
+              'within the physical extent of the Target image.')
     
     if FracProp == 0:
-        msg = 'None of the voxels in the segmentation to be copied lie within'\
-              + ' the physical extent of the Target image.'
-              
+        msg = 'None of the indices in the SEG lie within the physical extent'\
+              + 'of the Target image.'
         raise Exception(msg)
-        
         return None
-        
     
-    # Determine which Use Case applies:
-    UseCase = WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole)
-    
-    if LogToConsole:
-        PrintTitle(f'Case {UseCase} applies.')
+    """ Import the 3D images. """
+    SrcIm = ImportImage(SrcDcmDir)
+    TrgIm = ImportImage(TrgDcmDir)
     
     
     """
@@ -2562,790 +3301,400 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     **************************************************************************
     """
     
-    #if 'a' in UseCase:
-    #    """ 
-    #    For UseCases 1a/b, 2a/b or 3a, there will always be a single 
-    #    PerFrameFunctionalGroupsSequence. 
-    #    """
-    #    
-    #    TrgPFFGStoSliceInds = [FromSliceNum] # moved to end
+    #if UseCase in ['1', '2a', '3a']: # 08/02
+    if UseCaseToApply in ['1', '2a']: # 08/02
+        """ Direct copy of a segmentation without resampling or registration
+        transformation. """
         
-    
-    if 'a' in UseCase:
-        """ 
+        from GeneralTools import ReplaceIndInC2SindsByRoi
+        from GeneralTools import ShiftFramesInPixArrBySeg
+        
+        """ The segmentation on FromSliceNum is to be copied to ToSliceNum. 
+        Modify the frame-to-slice index (from FromSliceNum) to ToSliceNum. """
+        SrcF2SindsBySeg = ReplaceIndInC2SindsByRoi(C2SindsByRoi=SrcF2SindsBySeg,
+                                                   IndToReplace=FromSliceNum, 
+                                                   ReplacementInd=ToSliceNum)
+        
+        if LogToConsole:
+                print(f'\nModfied SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
+                
+        if TrgSeg:
+            """ Direct copy of a segmentation to an existing SEG. """
+            
+            """ An existing Target SEG is to be modified.  Since this is a  
+            Direct copy, any existing segmentations in Target with segment 
+            label matching FromSegLabel are to be preserved. """
+            
+            """ Get the data of interest from the Target RTS. """
+            TrgPixArrBySeg,\
+            TrgF2SindsBySeg = GetSegDataOfInterest(TrgSeg, FromSliceNum,
+                                                   FromSegLabel, TrgDcmDir,
+                                                   LogToConsole)
+            
+            times.append(time.time())
+            Dtime = round(times[-1] - times[-2], 1)
+            msg = f'Took {Dtime} s to parse the Target SEG file for '\
+                  + 'existing segmentations within the ROI.\n'
+            TimingMsgs.append(msg)
+            print(f'*{msg}')
+            
+            if LogToConsole:
+                print(f'TrgF2SindsByRoi = {TrgF2SindsBySeg}.')
+        
+
+    #if UseCase in ['1', '2a']:
+        #""" Direct copy without resampling or registration transformation.
+        """
         The segmentation will be copied to a different slice location, so the
-        pixel shift between the indices at FromSliceNum and ToSliceNum needs to
-        be determined.  This is common for all Direct copy sub-use cases.
-        """
+        z-components of the indices will need to be modified. """
         
-        from GeneralTools import GetPixelShiftBetweenSlices
-        from GeneralTools import ShiftFrame
-        from SegTools import GetPixArrInSeg
-        from SegTools import AddCopiedPixArr
-        
-        if LogToConsole:
-            print(f'\nCopying slice {FromSliceNum} from Source SEG to slice',
-                  f'{ToSliceNum} in Target SEG..')
-        
-        # Import the Source 3D image:
-        SrcIm = ImportImage(SrcDcmDir)
-        TrgIm = ImportImage(TrgDcmDir)
-        
-        # Get pixel shift between FromSliceNum in SrcIm and ToSliceNum in
-        # TrgIm in the Target image domain:
-        PixShift = GetPixelShiftBetweenSlices(Image0=SrcIm, 
-                                              SliceNum0=FromSliceNum, 
-                                              Image1=TrgIm,
-                                              SliceNum1=ToSliceNum,
-                                              RefImage=TrgIm)
-        
-        if LogToConsole:
-            print(f'\nPixShift = {PixShift}')
-        
-        
-    if UseCase in ['1a', '2a']:
-        # Shift the the in-plane elements in PixArrToCopy:
-        PixArrToCopy = ShiftFrame(Frame=PixArrToCopy, 
-                                  PixShift=PixShift)
-        
-        if TrgSeg:
-            """
-            Since this is a Direct copy, any existing segmentations in Target 
-            with segment label matching FromSearchString are to be preserved.
-            """
-            
-            # Get all frames in the Target segment containing the segmentation 
-            # to be copied:
-            TrgPixArrInSeg,\
-            TrgPFFGStoSliceIndsInSeg = GetPixArrInSeg(Seg=TrgSeg, 
-                                                      DicomDir=TrgDcmDir,
-                                                      SearchString=FromSearchString)
-            
-            """
-            PixArrToCopy needs to be added to previously Direct-copied 
-            segmentations in TrgPixArrInSeg.
-            """
-            
-            TrgPixArr,\
-            TrgPFFGStoSliceInds = AddCopiedPixArr(OrigPixArr=TrgPixArrInSeg, 
-                                                  OrigPFFGStoSliceInds=TrgPFFGStoSliceIndsInSeg, 
-                                                  PixArrToAdd=PixArrToCopy, 
-                                                  PFFGStoSliceIndsToAdd=[ToSliceNum])
-            
-        else:
-            """
-            A Target SEG was not provided.
-            """
-            TrgPixArr = deepcopy(PixArrToCopy)
-            
-            TrgPFFGStoSliceInds = deepcopy([ToSliceNum]) # 15/12 verify?
-    
-    
-    if UseCase in ['1b', '2b']:
-        
-        TrgPixArr = deepcopy(PixArrToCopy)
-        
-        TrgPFFGStoSliceInds = deepcopy([FromSliceNum]) # 04/12 verify?
-    
-        
-        
-    if UseCase in ['3a', '3b', '4', '5']:
-        from ConversionTools import PixArr2Image
-        from ConversionTools import Image2PixArr
-        from ImageTools import ResampleImage
-        from ImageTools import GaussianBlurImage
-        #from ImageTools import RecursiveGaussianBlurImage
-        from ImageTools import BinaryThresholdImage
-        from ConversionTools import ConvertImagePixelType
-        
-        # Import the 3D images:
-        if not 'a' in UseCase:
-            SrcIm = ImportImage(SrcDcmDir)
-            TrgIm = ImportImage(TrgDcmDir)
-        
-        # Convert PixArrToCopy to a labelmap image:
-        LabmapImToCopy = PixArr2Image(PixArr=PixArrToCopy,
-                                      FrameToSliceInds=[FromSliceNum],
-                                      RefIm=SrcIm)
-        
-        if LogToConsole:
-            #from ImageTools import ImageMax
-            #from ImageTools import ImageMin
-            unique = UniqueItems(Items=PixArrToCopy, IgnoreZero=False)
-            print('\nPrior to resampling:')
-            #print(f'type(LabmapImToCopy) = {type(LabmapImToCopy)}')
-            #print(f'LabmapImToCopy.GetPixelIDTypeAsString() = {LabmapImToCopy.GetPixelIDTypeAsString()}')
-            #print(f'PixArrToCopy.shape = {PixArrToCopy.shape}')
-            #print(f'There are {len(unique)} unique items in PixArrToCopy')
-            #print(f'Max of LabmapImToCopy = {ImageMax(LabmapImToCopy)}')
-            #print(f'Min of LabmapImToCopy = {ImageMin(LabmapImToCopy)}')
-            #print(f'LabmapImToCopy.GetSize() = {LabmapImToCopy.GetSize()}')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(LabmapImToCopy, LogToConsole)
-            
-        
-        
-    if UseCase in ['3a', '3b', '4', '5']:
-        
-        #import SimpleITK as sitk
-        
-        
-        """ First try resampling the image using a NearestNeighbor 
-        interpolation. """
-        interp = 'NearestNeighbor'
-        
-        if LogToConsole:
-            print('\nUsing', interp, 'interpolation...')
-            
-        # Resample LabmapImToCopy to the Target image's grid:
-        ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                          RefImage=TrgIm, 
-                                          Interpolation=interp,
-                                          LogToConsole=LogToConsole)
-        
-        if LogToConsole:
-            print('\nAfter resampling:')
-        
-        
-        # PixID required for if statement below.
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-            
-        
-        
-        """ 
-        If resampling to a smaller grid size aliasing can occur, leading to
-        the appearent disappearance of segmentations (i.e. F2Sinds = []). 
-        
-        Try suggestions from Ziv Yaniv here:
-            https://github.com/SimpleITK/SimpleITK/issues/1277
-                
-        1. Use the sitkLabelGaussian interpolator.
-        
-        2. Gaussian blur the segmentation, then resample using a linear 
-        interpolator, and then threshold so that values in [a<1<b] are mapped
-        to 1. You will need to select appropriate values for a, b.
-        
-        3. Compute the distance map of the segmentation, then resample using a
-        linear interpolator, and then threshold the absolute value of the 
-        distance map (sitk.Abs(lowres_distance_map)<dist_threshold). Again, you 
-        need to select an appropriate dist_threshold.
-
-        Tried:
-        
-        1. Resulting Gaussian interpolated resampled image had zeros only 
-        (the image was converted to float prior to resampling).
-        
-        2. Works for UseCase 3B-i_SEG with FromSliceNum = 26 with binary
-        threshold value of 0.04.
-        
-        
-        Comment from Bradley Lowecamp:
-            The implementation of the sitkLabelGaussian interpolator in the 
-            ResampleImageFilter sets the sigma to the pixel spacing of the 
-            input image to the resample filter. This is why it does not do a 
-            better job in reducing aliasing.
-        """
-        #Workaround = 1
-        Workaround = 2
-        #Workaround = 0 # i.e. no workaround
-        
-        if not F2Sinds and Workaround:
-            if LogToConsole:
-                print('\nThe resampled image has no non-zero frames (e.g. due',
-                      f'to aliasing).  \nTry workaround #{Workaround}.')
-            
-            # Convert LabmapImToCopy from 32-bit unsigned integer to a float:
-            LabmapImToCopy = ConvertImagePixelType(Image=LabmapImToCopy, 
-                                                   NewPixelType='sitkFloat32')
-            
-            if LogToConsole:
-                print('\nAfter converting to float:')
-                
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(LabmapImToCopy, LogToConsole)
-        
-            if Workaround == 1:
-                if LogToConsole:
-                    print(f'\nTrying workaround #{Workaround}...')
-                
-                interp = 'Gaussian' # <-- get zeros only (image was converted 
-                # to float prior to resampling)
-                
-                if LogToConsole:
-                    print('\nUsing', interp, 'interpolation...')
-                    
-                # Resample LabmapImToCopy to the Target image's grid:
-                ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                                  RefImage=TrgIm, 
-                                                  Interpolation=interp,
-                                                  LogToConsole=LogToConsole)
-                
-                if LogToConsole:
-                    print('\nAfter resampling:')
-                
-                
-                # PixID required for if statement below.
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                    
-                    
-                """ Will need to convert back to unsigned int and may need to
-                do some binary thresholding, but only proceed if there are
-                non-zero frames in the resampled image. """
-                
-                if not F2Sinds:
-                    Workaround = 2 # try Workaround #2
-                    
-                    
-            if Workaround == 2:
-                if LogToConsole:
-                    print(f'\nTrying workaround #{Workaround}...')
-                      
-                SrcSpacings = SrcIm.GetSpacing()
-                TrgSpacings = TrgIm.GetSpacing()
-                
-                SpacingsRatio = tuple(tup1/tup0 for tup0, tup1 in zip(SrcSpacings, TrgSpacings))
-                
-                """ 
-                The FWHM of the Gaussian is:
-                    FWHM = 2*sqrt(2*ln(2))*sigma ~= 2.355*sigma
-                    
-                Due to the Nyquist-Shannon sampling theorem, the FWHM should be
-                at least 2x the voxel spacings of the Target image. For 
-                symmetry considerations, it makes sense for one Source voxel 
-                width to be blurred to three Target voxels widths.  :
-                    
-                    sigma = (3*TrgSpacings)/2.355
-                    
-                """
-                
-                if LogToConsole:
-                    print(f'\nSpacingsRatio = {SpacingsRatio}')
-                      
-                # Gaussian blur the image:
-                """
-                For UseCase3B-i_SEG:
-                    different image sizes:
-                       Source: (208, 256, 50) 
-                       Target: (378, 448, 21)
-                
-                   different voxel sizes:
-                       Source: (0.8984375, 0.8984375, 2.9999990463256836) 
-                       Target: (0.51339286565781, 0.51339286565781, 7.499998569488525)
-                
-                   different slice thickness:
-                       Source: 3.0 
-                       Target: 5.0
-                
-                Segmentation on slice 26.
-                
-                
-                With Variance = (0, 0, 0.1):
-                    --> blurred to 3 slices: [25, 26, 27] with 3 unique values: [0, 0.0055, 0.989]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.0051 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                    
-                With Variance = (0, 0, 0.5):
-                    --> blurred to 3 slices: [25, 26, 27] with 3 unique values: [0, 0.026, 0.947]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.0247 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (1, 1, 1) (default):
-                    --> blurred to 3 slices: [25, 26, 27] with 727 unique values: [0, ..., 0.90]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.047 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                    
-                With Variance = (0, 0, 1):
-                    --> blurred to 3 slices: [25, 26, 27] with 3 unique values: [0, 0.050, 0.9001]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.047 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                    
-                With Variance = (0, 0, 1.5):
-                    --> blurred to 3 slices: [25, 26, 27] with 3 unique values: [0, 0.0712, 0.858]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.0663 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                    
-                With Variance = (0, 0, 2):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.005, 0.09, 0.811]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.0837 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                    
-                With Variance = (0, 0, 2.5):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.00736, 0.106, 0.773]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.10 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (0, 0, 3):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.010, 0.12, 0.737]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.114 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (0, 0, 4):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.016, 0.15, 0.675]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.137 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (0, 0, 5):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.023, 0.166, 0.622]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.156 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (0, 0, 6):
-                    --> blurred to 5 slices: [24, 25, 26, 27, 28] with 4 unique values: [0, 0.030, 0.182, 0.576]
-                    --> lin resampled to 2 slices: [10, 11] with Max = 0.171 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                With Variance = (0, 0, 7):
-                    --> blurred to 7 slices: [23, 24, 25, 26, 27, 28, 29] with 5 unique values: [0, 0.0047, 0.037, 0.192, 0.532]
-                    --> lin resampled to 4 slices: [9, 10, 11, 12] with Max = 0.183 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                
-                
-                With Variance = (0, 0, 10):
-                    --> blurred to 7 slices: [23, 24, 25, 26, 27, 28, 29] with 5 unique values: [0, 0.010, 0.056, 0.213, 0.440]
-                    --> lin resampled to 4 slices: [9, 10, 11, 12] with Max = 0.203 
-                    --> binary thresholded to 2 slices: [10, 11] with thresh = max/2
-                
-                
-                """
-                #LabmapImToCopy = GaussianBlurImage(LabmapImToCopy, 
-                #                                   Variance=(0, 0, 7))
-                LabmapImToCopy = GaussianBlurImage(Im=LabmapImToCopy,
-                                                   Variance=Sigma,
+        """ Shift the in-plane (x & y) and out-of-plane (z) components of the 
+        indices in SrcPixArrBySeg to account for the shift from FromSliceNum to
+        ToSliceNum. """
+        SrcPixArrBySeg,\
+        SrcF2SindsBySeg = ShiftFramesInPixArrBySeg(PixArrBySeg=SrcPixArrBySeg, 
+                                                   F2SindsBySeg=SrcF2SindsBySeg, 
+                                                   SrcImage=SrcIm, 
+                                                   SrcSliceNum=FromSliceNum,
+                                                   TrgImage=TrgIm, 
+                                                   TrgSliceNum=ToSliceNum, 
+                                                   RefImage=TrgIm,
+                                                   ShiftInX=True,
+                                                   ShiftInY=True,
+                                                   ShiftInZ=True,
+                                                   Fractional=False,
                                                    LogToConsole=LogToConsole)
-                
-                # Use the RecursiveGaussian image filter:
-                """
-                For UseCase4_SEG_S3_to_S7:
-                    
-                With SrcVoxelSize[2] = 6.25 and TrgVoxelSize[2] = 3.30, 
-                i.e. SrcVoxelSize[2] ~= TrgVoxelSize[2]/2 and input slice = 3:
-                    Sigma = 0.1 -->             1 blurred slice: [3]                                 --> linearly resampled to 0 slices: []
-                    Sigma = 0.2 -->             3 blurred slices: [2, 3, 4]                          --> linearly resampled to 0 slices: []
-                    Sigma = 0.3 -->             3 blurred slices: [2, 3, 4]                          --> linearly resampled to 0 slices: []
-                    Sigma = 0.4 -->             5 blurred slices: [0, 1, 3, 5, 6]                    --> linearly resampled to 8 slices: []
-                    Sigma = 0.5 --> Max = 1 and 6 blurred slices: [0, 2, 3, 4, 6, 7]                 --> linearly resampled to 0 slices: []
-                    Sigma = 0.6 -->             7 blurred slices: [0, 1, 2, 3, 4, 5, 6]              --> linearly resampled to 0 slices: []
-                    Sigma = 0.7 -->             3 blurred slices: [2, 3, 4]                          --> linearly resampled to 0 slices: []
-                    Sigma = 0.8 -->             4 blurred slices: [3, 7, 8, 9]                       --> linearly resampled to 4 slices: [0, 1, 2, 3]
-                    Sigma = 0.9 -->             6 blurred slices: [0, 3, 6, 7, 10, 11]               --> linearly resampled to 8 slices: [0, 1, 2, 3, 4, 5, 6, 7]
-                    Sigma = 1.0 --> Max = 1 and 10 blurred slices: [0, 1, 3, 5, 6, 8, 9, 11, 12, 14] --> linearly resampled to 13 slices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-                    Sigma = 1.1 --> 9 blurred slices: [1, 3, 5, 7, 8, 10, 13, 15, 16]    --> linearly resampled to 16 slices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-                    
-                    Sigma = 1.5 --> Max = 1    and  9 blurred slices: [0, 3, 6, 8, 10, 12, 15, 17, 19]                  --> lin resampled to 23 slices with Max = 3e-13
-                    Sigma = 1.7 --> Max = 1    and 12 blurred slices: [0, 2, 3, 4, 6, 8, 9, 11, 14, 16, 19, 21]         --> lin resampled to 23 slices with Max = 3e-12
-                    Sigma = 1.8 --> Max = 1    and 13 blurred slices: [0, 2, 3, 4, 6, 9, 11, 12, 14, 17, 19, 20, 22]    --> lin resampled to 23 slices with Max = 4e-13
-                    Sigma = 1.9 --> Max = 0.99 and 14 blurred slices: [0, 2, 3, 4, 6, 7, 9, 12, 15, 17, 18, 20, 21, 23] --> lin resampled to 23 slices with Max = 3e-12
-                    Sigma = 2.0 --> Max = 0.99 and 17 blurred slices: [0, 2, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24] --> lin resampled to 23 slices with Max = 6e-12
-                    
-                    Sigma = 3.0 --> Max = 0.82 and 11 blurred slices: [2, 3, 4, 8, 9, 12, 13, 17, 18, 21, 22] --> lin resampled to 23 slices with Max = 1e-6
-                    
-                    Sigma = 4.0 --> Max = 0.62 and 14 blurred slices: [1, 2, 3, 4, 5, 9, 10, 11, 15, 16, 17, 21, 22, 23] --> lin resampled to 23 slices with Max = 1e-6
-                    
-                """
-                #LabmapImToCopy = RecursiveGaussianBlurImage(LabmapImToCopy, 
-                #                                            Sigma=3,
-                #                                            Direction=2)
-                
-                if LogToConsole:
-                    print('\nAfter applying Gaussian blur:')
-                
-                    PixID, PixIDTypeAsStr, UniqueVals,\
-                    F2Sinds = GetImageInfo(LabmapImToCopy, LogToConsole)
-                
-                #if not F2Sinds:
-                #    Workaround = 3 # try Workaround #3
-                    
-                # Linearly resample the blurred image:
-                interp = 'Linear'
-                
-                if LogToConsole:
-                    print('\nUsing', interp, 'interpolation...')
-                    print(f'   LabmapImToCopy.GetSize() = {LabmapImToCopy.GetSize()}')
-                    print(f'   LabmapImToCopy.GetSpacing() = {LabmapImToCopy.GetSpacing()}')
-                    print(f'   TrgIm.GetSize() = {TrgIm.GetSize()}')
-                    print(f'   TrgIm.GetSpacing() = {TrgIm.GetSpacing()}')
-                    
-                # Resample LabmapImToCopy to the Target image's grid:
-                ResLabmapImToCopy = ResampleImage(Image=LabmapImToCopy, 
-                                                  RefImage=TrgIm, 
-                                                  Interpolation=interp,
-                                                  LogToConsole=LogToConsole)
-                
-                if LogToConsole:
-                    print('\nAfter resampling:')
-                
-                
-                # UniqueVals is required below:
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                    
-                
-                
-                """ Prior to converting back to unsigned integer, must first
-                binary threshold the image. """
-                # Thresh values with results for Case3B-i_SEG and 
-                # FromSliceNum = 26 (max value in Pix array prior to binary
-                # thresholding = 0.0468482):
-                #Thresh = 0.5 # no frames
-                #Thresh = 0.005 # two frames (slices 10 & 11)
-                #Thresh = 0.04 # one frame (slice 11)
-                #Thresh = 0.5*max(UniqueVals) # 13/01/2021
-                #Thresh = 0.75*max(UniqueVals) # 13/01/2021
-                
-                """
-                Get 2 slices with 0.5*max
-                Get 1 slice with 0.75*max
-                """
-                
-                ThreshValue = ThreshLevel*max(UniqueVals)
-                
-                if LogToConsole:
-                    #print(f'\nBinary thresholding with Thresh = {Thresh} ',
-                    #      f'(max = {max(UniqueVals)})...')
-                    print('\nBinary thresholding at',
-                          f'{ThreshLevel}*{max(UniqueVals)} = {ThreshValue}...')
-                
-                #ResLabmapImToCopy = BinaryThresholdImage(ResLabmapImToCopy, 
-                #                                         Thresh)
-                ResLabmapImToCopy = BinaryThresholdImage(Im=ResLabmapImToCopy, 
-                                                         Thresh=ThreshValue)
-                
-                if LogToConsole:
-                    print('\nAfter binary thresholding:')
-                    
-                
-                # PixID will be needed for if statement below.
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                    
-                
-                """ Following code was moved outside loop since useful to run
-                under all conditions. """
-                #""" ... then convert back to unsigned integer. """
-                #if not PixID == 5:
-                #    print(f'\nPixelID (= {PixID}) != 5 (sitkUInt32 = Unsigned',
-                #          '32 bit integer).  Converting to sitkUInt32..')
-                #    
-                #    # Convert ResLabmapImToCopy from float to 32-bit unsigned 
-                #    # integer:
-                #    ResLabmapImToCopy = ConvertImagePixelType(Image=ResLabmapImToCopy, 
-                #                                              NewPixelType='sitkUInt32')
-                #    
-                #    if True:#LogToConsole:
-                #        print('\nAfter converting to unsigned int:')
-                #        PixID, PixIDTypeAsStr, UniqueVals,\
-                #        F2Sinds = GetImageInfo(ResLabmapImToCopy, 
-                #                               LogToConsole=True)
-                
-                
-            #if Workaround == 3:
-            #    print(f'\nTrying workaround #{Workaround}...')
-            #          
-            #    print('\nStill need to write Workaround 3...')
-                
-        
-        
-        #""" 16/12:
-        #    Instead of using NearestNeighbor, use a BSpline interpolation, then
-        #    binary threshold the image using a low threshold (much lower than
-        #    0.5).
-        #"""
-        #interp = 'BSpline'
-        #interp = 'Linear'
-        #interp = 'NearestNeighbor'
-        #interp = 'Gaussian' # <-- get zeros only (image was converted to float 
-        # prior to resampling)
-        
-        
-            
-        
-        #""" For some reason when binary thresholding an empty image, the 
-        #threshold value SetLowerThreshold is being rounded down to 0, resulting
-        #in a non-binary image.  So only apply binary thresholding if there are
-        #at least 2 unique values in the input image. """
-        if False:
-            PixArr, F2Sinds = Image2PixArr(LabmapIm=ResLabmapImToCopy)
-            unique = UniqueItems(Items=PixArr, IgnoreZero=False)
-            
-            if len(unique) < 2:
-                ResLabmapImToCopy = BinaryThresholdImage(ResLabmapImToCopy, Thresh=0.5)
-                
-                if LogToConsole:
-                    print('\nAfter binary thresholding:')
-                    PixID, PixIDTypeAsStr, UniqueVals,\
-                    F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-            
-        
-        
-        """ Ensure that ResLabmapImToCopy is a 32-bit unsigned integer. """
-        if not PixID == 5:
-            if LogToConsole:
-                print(f'\nPixelID = {PixID} ({PixIDTypeAsStr})). Converting',
-                      f'to unsigned 32-bit integer (sitkUInt32)..')
-            
-            # Convert ResLabmapImToCopy from float to 32-bit unsigned 
-            # integer:
-            ResLabmapImToCopy = ConvertImagePixelType(Image=ResLabmapImToCopy, 
-                                                      NewPixelType='sitkUInt32')
-            
-            if LogToConsole:
-                print('\nAfter converting to 32-bit unsigned int:')
-            
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-                        
-                        
-        # Convert ResLabmapImToCopy back to a pixel array:
-        ResPixArrToCopy,\
-        PFFGStoSliceIndsToCopy = Image2PixArr(LabmapIm=ResLabmapImToCopy)
         
         if LogToConsole:
-            print('\nAfter converting to a pixel array:')
-            
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(ResLabmapImToCopy, LogToConsole)
-            
-            for i in range(ResPixArrToCopy.shape[0]):
-                maxval = np.amax(ResPixArrToCopy[i])
-                minval = np.amin(ResPixArrToCopy[i])
+                print(f'\nShifted SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
                 
-                print(f'Frame {i} has max = {maxval}, min = {minval}')
-        
-        #from ImageTools import BinaryThresholdImage
-        #
-        #if not 'earest' in interp:
-        #    ResLabmapImToCopy = BinaryThresholdImage(ResLabmapImToCopy, 
-        #                                             Thresh=0.5)
-        
-    
-        
-        
-    if UseCase == '3a':
-        """
-        For a Direct copy, one segmentation is always copied to a single
-        segmentation, so if after resampling there is more than one frame, the
-        frames will need to be averaged.
-        """
-        from GeneralTools import MeanPixArr
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=ResPixArrToCopy, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in ResPixArrToCopy')
-        
-        F = ResPixArrToCopy.shape[0]
-        
-        if LogToConsole:
-            print(f'\nThe segmentation on FromSliceNum = {FromSliceNum} has',
-                  f'been resampled to {F} frames: {PFFGStoSliceIndsToCopy}')
-        
-        if F > 1:
-            if LogToConsole:
-                print(f'\nResPixArrToCopy has {F} frames so the pixel arrays',
-                      'will be averaged...')
-            
-            # Take pixel-by-pixel mean across all frames in ResPixArrToCopy:
-            ResPixArrToCopy = MeanPixArr(ResPixArrToCopy)
-            
-            if LogToConsole:
-                F = ResPixArrToCopy.shape[0]
-            
-                print(f'\nResPixArrToCopy now has {F} frames')
-        else:
-            if LogToConsole:
-                print(f'\nResPixArrToCopy has F frames')
-            
-        
-        # Shift the in-plane elements in ResPixArrToCopy:
-        ResPixArrToCopy = ShiftFrame(Frame=ResPixArrToCopy, PixShift=PixShift)
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=ResPixArrToCopy, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in ResPixArrToCopy',
-                  'after shifting the frame.')
-        
         
         if TrgSeg:
-            """
-            Since this is a Direct copy, any existing segmentations in Target
-            with segment label matching FromSearchString are to be preserved.
-            """
+            """ An existing Target SEG is to be modified. 
+            Concatenate TrgF2SindsBySeg and SrcF2SindsBySeg, and 
+            TrgPixArrBySeg and SrcPixArrBySeg. """
             
-            # Get all frames in the Target segment containing the segmentation 
-            # to be copied:
-            TrgPixArrInSeg,\
-            TrgPFFGStoSliceIndsInSeg = GetPixArrInSeg(Seg=TrgSeg, 
-                                                      DicomDir=TrgDcmDir,
-                                                      SearchString=FromSearchString)
+            TrgF2SindsBySeg = [TrgF2SindsBySeg[s] + SrcF2SindsBySeg[s] for s in range(len(TrgF2SindsBySeg))]
             
-            """
-            ResPixArrToCopy needs to be added to previously Direct-copied 
-            segmentations in TrgPixArrInSeg.
-            """
-            
-            TrgPixArr,\
-            TrgPFFGStoSliceInds = AddCopiedPixArr(OrigPixArr=TrgPixArrInSeg, 
-                                                  OrigPFFGStoSliceInds=TrgPFFGStoSliceIndsInSeg, 
-                                                  PixArrToAdd=ResPixArrToCopy, 
-                                                  PFFGStoSliceIndsToAdd=[ToSliceNum])
+            TrgPixArrBySeg = [TrgPixArrBySeg[s] + SrcPixArrBySeg[s] for s in range(len(TrgPixArrBySeg))]
+        
         else:
-            """
-            A Target SEG was not provided.
-            """
-            TrgPixArr = deepcopy(ResPixArrToCopy)
+            """ A Target SEG was not provided. """
             
-            TrgPFFGStoSliceInds = deepcopy([ToSliceNum]) # 04/12 verify?
+            TrgF2SindsBySeg = deepcopy(SrcF2SindsBySeg)
             
+            TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
+            
+            if LogToConsole:
+                print(f'\nSrcF2SindsBySeg = {SrcF2SindsBySeg}')
+                print(f'TrgF2SindsBySeg = {TrgF2SindsBySeg}')
     
     
-    if UseCase in ['3b', '4']:
-        TrgPixArr = deepcopy(ResPixArrToCopy)
-        
-        TrgPFFGStoSliceInds = deepcopy(PFFGStoSliceIndsToCopy)
-        
-        
     
-    #if UseCase == '4':
-    
+    if UseCaseToApply == '2b':
+        """ Relationship-preserving copy without resampling or registration
+        transformation. """
         
-    if UseCase == '5':
-        from ImageTools import RegisterImages
-        from ImageTools import TransformImage
-        from ImageTools import BinaryThresholdImage
-    
-        # Register the images using an affine transformation:
-        RegSrcIm, RegImFilt = RegisterImages(FixIm=TrgIm, MovIm=SrcIm, 
-                                             Tx='affine',
-                                             LogToConsole=LogToConsole)
+        if False:
+            """ TrgPixArrBySeg is simply SrcPixArrBySeg, and 
+            TrgF2SindsBySeg is SrcF2SindsBySeg. """
+            
+            TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
+            TrgF2SindsBySeg = deepcopy(SrcF2SindsBySeg)
+            
         
-        # Transform LabmapImToCopy using RegImFilt:
-        TxLabmapImToCopy = TransformImage(Im=LabmapImToCopy, 
-                                          RegImFilt=RegImFilt,
-                                          Interpolation='Nearestneighbor')
+        #from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1
+        from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2
+        
+        """ Shift the indices in SrcC2SindsByRoi to account for any differences
+        in the origin of SrcIm and TrgIm. (new 13/02/21) """
+        TrgF2SindsBySeg = GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcF2SindsBySeg, 
+                                                                SrcIm, TrgIm)
+        
+        
+        """ TrgPixArrBySeg is simply SrcPixArrBySeg. """
+        TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
         
         if LogToConsole:
-            print('\nAfter transforming LabmapImToCopy by the registration',
-                  'transformation:')
-            
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(TxLabmapImToCopy, LogToConsole)
+            print(f'\nSrcF2SindsBySeg = {SrcF2SindsBySeg}')
+            print(f'TrgF2SindsBySeg (= shifted SrcF2SindsBySeg) =',
+                  f'{SrcF2SindsBySeg}.')
+    
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copy with resampling or
+        registration transformation. """
         
+        #import numpy as np
+        #from ImageTools import GaussianBlurImage, BinaryThresholdImage 
+        from ImageTools import ResampleLabmapImByRoi#, GetImageInfo
+        #from ConversionTools import ConvertImagePixelType
+        #from ConversionTools import PixArr2Image, Image2PixArr
+        from ConversionTools import PixArrByRoi2LabmapImByRoi
+        #from GeneralTools import NumOfListsAtDepthTwo
+        
+        """ Convert pixel arrays to binary labelmap images. """
+        SrcLabmapImBySeg = PixArrByRoi2LabmapImByRoi(PixArrByRoi=SrcPixArrBySeg, 
+                                                     F2SindsByRoi=SrcF2SindsBySeg, 
+                                                     RefIm=SrcIm,
+                                                     LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to generate labelmap images from the Source '\
+              'pixel arrays.\n'
+        TimingMsgs.append(msg)
+        print(f'\n*{msg}')
+    
+    
+    
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b']:
+        """ Direct or relationship-preserving copy with resampling. """
+        
+        
+        """ Resample the source labelmaps. """
+        
+        #Interp = 'NearestNeighbor'
+        #Interp = 'LabelGaussian'
+        
+        ResSrcLabmapImBySeg, ResSrcPixArrBySeg,\
+        ResSrcF2SindsBySeg = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg, 
+                                                   #F2SindsByRoi=SrcC2SindsByRoi,
+                                                   F2SindsByRoi=SrcF2SindsBySeg,
+                                                   SrcImage=SrcIm, 
+                                                   TrgImage=TrgIm,
+                                                   Interpolation=Interpolation,
+                                                   Variance=Variance,
+                                                   ThreshLevel=ThreshPreRes,
+                                                   LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+        
+        
+    if UseCaseToApply in ['5a', '5b']:
+        """ Direct or relationship-preserving copying with registration
+        transformation. """
+        
+        from ImageTools import TransformLabmapImByRoi
+    
+        """ Transform SrcLabmapImBySeg using the transformation that registers
+        SrcIm to TrgIm. 
+        
+        Note:
+            Even though the data is being transformed the prefix 'Res' will be
+            used since further operations below will need to be applied to
+            either resampled or transformed data. """
+        
+        ResSrcLabmapImBySeg, ResSrcPixArrBySeg,\
+        ResSrcF2SindsBySeg = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg,
+                                                    F2SindsByRoi=SrcF2SindsBySeg,
+                                                    FixImage=TrgIm, MovImage=SrcIm, 
+                                                    Tx=Tx, ThreshLevel=ThreshPostTx, 
+                                                    LogToConsole=LogToConsole)
+        
+        #times.append(time.time())
+        #Dtime = round(times[-1] - times[-2], 1)
+        #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
+        #      'from the registration transformation.')
+        
+    
+    if UseCaseToApply in ['3a', '4a', '5a']:
+        """ Direct copy with resampling/registration and averaging of multi-
+        framed pixel arrays.
+        
+        Note:
+        
+        For a Direct copy, one contour/segment is always copied to a single
+        contour/segmentation (irrespective of how many frames are in the 
+        resampled/registered labelmap image).  So if after resampling there are 
+        more than one frame, the frames will be averaged or a logical OR 
+        operation will be performed.
         """
-        21/12/20:  
-            Following the use of a nearestneighbor interpolator when 
-            transforming LabmapImToCopy, i.e.:
+        
+        from GeneralTools import ShiftFramesInPixArrBySeg
+        from PlottingTools import PlotPixArrBySeg
+        
+        R = len(ResSrcPixArrBySeg) # number of segments
+        
+        """ Get the number of frames in each pixel array. """
+        NumOfFramesBySeg = [ResSrcPixArrBySeg[r].shape[0] for r in range(R)]
+        
+        MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+        
+        if MaxNumOfFramesBySeg > 1:
+            """ Reduce the number of frames in each pixel array to 1. """
             
-            TxMap[0]["ResampleInterpolator"] = ["FinalNearestNeighborInterpolator"]
+            """ Perform averaging or OR operation? """
+            #ReduceUsing = 'mean'
+            ReduceUsing = 'OR'
             
-            it's no longer necessary to perform the binary thresholding step.
+            if LogToConsole:
+                print(f'\nThere are {NumOfFramesBySeg} frames in each',
+                      f'ROI/segment. Using {ReduceUsing} operation to reduce',
+                      'to single-framed pixel array(s)')
+                
+                PlotPixArrBySeg(ResSrcPixArrBySeg, ResSrcF2SindsBySeg, 
+                                f'Prior to {ReduceUsing} operation')
+                
+            if ReduceUsing == 'mean':
+                from GeneralTools import MeanFrameInPixArrBySeg
+                
+                """ 14/02:  There sems to be a problem with the averaging 
+                operation that results in many more than 1 F2Sind and many more
+                than 1 contour.. """
+                
+                """ The threshold used when converting the averaged (non-binary)  
+                pixel array to a binary pixel array. """
+                BinaryThresh = 0.5 # <-- is this too high?
+    
+                ResSrcPixArrBySeg,\
+                ResF2SindsBySeg = MeanFrameInPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg,
+                                                         F2SindsBySeg=ResSrcF2SindsBySeg,
+                                                         MakeBinary=True, 
+                                                         BinaryThresh=BinaryThresh,
+                                                         LogToConsole=LogToConsole)
+            
+            else:
+                from GeneralTools import OrFrameOfPixArrBySeg
+                
+                ResSrcPixArrBySeg,\
+                ResSrcF2SindsBySeg = OrFrameOfPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg,
+                                                          F2SindsBySeg=ResSrcF2SindsBySeg,
+                                                          LogToConsole=LogToConsole)
         
-        # Binary threshold TxLabmapImToCopy:
-        Thresh = 0.1
+            
+            if LogToConsole:
+                NumOfFramesBySeg = [ResSrcPixArrBySeg[r].shape[0] for r in range(R)]
         
-        TxLabmapImToCopy = BinaryThresholdImage(Im=TxLabmapImToCopy, 
-                                                Thresh=Thresh)
+                MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+                
+                print(f'\nFollowing {ReduceUsing} operation there are',
+                      f'{NumOfFramesBySeg} frames in each ROI/segment, and',
+                      f'the new ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}.')
+                
+                PlotPixArrBySeg(ResSrcPixArrBySeg, ResSrcF2SindsBySeg, 
+                                'After {ReduceUsing} operation')
+                
+                
         
-        if LogToConsole:
-                print('\nAfter binary thresholding with Thresh = {Thresh}:')
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = GetImageInfo(TxLabmapImToCopy, LogToConsole)
+        """ Shift the out-of-plane elements in ResSrcPixArrBySeg to account for
+        the shift from FromSliceNumber to ToSliceNum. 
+        Note:
+            The function below was incorrectly applying in-plane shifts as well
+            up until the added inputs ShiftInX / Y / Z was added on 10/02. 
+        
+        14/02: I think SrcSliceNum shouldn't be FromSliceNum but instead
+        ResSrcF2SindsBySeg[0][0], since this is the frame-to-slice number of the
+        resampled/transformed labelmap.  The slice number of the original
+        (Source) labelmap is not relevant.
+        
+        Likewise, the inputs SrcImage and TrgImage should both be TrgImage 
+        since the resampled labelmap shares the TrgImage grid, and it will be
+        shifted to another location, still within the TrgImage grid.
         """
         
+        """ FromSliceNum --> ResFromSliceNum following resampling or 
+        transformation. """
+        ResFromSliceNum = ResSrcF2SindsBySeg[0][0]
         
-        # Convert TxLabmapImToCopy to a pixel array:
-        TrgPixArr,\
-        TrgPFFGStoSliceInds = Image2PixArr(LabmapIm=TxLabmapImToCopy)
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=TrgPixArr, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in TrgPixArr')
+        if True:#LogToConsole:
+            #print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+            #      f'{ResFromSliceNum}')
+            #print(f'ToSliceNum = {ToSliceNum}')
+            print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+                  f'{ResFromSliceNum} following resampling/transformation -->',
+                  f'ToSliceNum = {ToSliceNum} for direct copy')
+            print('\nResSrcF2SindsBySeg prior to shifting of out-of-plane',
+                  f'elements: {ResSrcF2SindsBySeg}')
             
-            F = TrgPixArr.shape[0]
+        ResSrcPixArrBySeg,\
+        ResSrcF2SindsBySeg = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg, 
+                                                      F2SindsBySeg=ResSrcF2SindsBySeg, 
+                                                      SrcImage=TrgIm, 
+                                                      SrcSliceNum=ResFromSliceNum,
+                                                      TrgImage=TrgIm, 
+                                                      TrgSliceNum=ToSliceNum, 
+                                                      RefImage=TrgIm,
+                                                      ShiftInX=False,
+                                                      ShiftInY=False,
+                                                      ShiftInZ=True,
+                                                      Fractional=False,
+                                                      LogToConsole=LogToConsole)
+        
+        if True:#LogToConsole:
+            print(f'\nAfter running ShiftFramesInPixArrBySeg():')
+            print(f'ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}')
+            print(f'len(ResSrcPixArrBySeg) = {len(ResSrcPixArrBySeg)}')
+            for r in range(len(ResSrcPixArrBySeg)):
+                print(f'type(ResSrcPixArrBySeg[{r}]) = {type(ResSrcPixArrBySeg[r])}')
+                print(f'ResSrcPixArrBySeg[{r}].shape = {ResSrcPixArrBySeg[r].shape}')
+                
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copying with resampling or
+        registration-transformation. """
+    
+        if UseCaseToApply in ['3a', '4a', '5a']:
+            """ Direct copying with resampling/transformation. """
             
-            print(f'\nThe segmentation on slice {FromSliceNum} has been',
-                  f'registered to {F} frames: {TrgPFFGStoSliceInds}.')
-    
-    
-    
-    #if 'a' in UseCase:
-    #    """ 
-    #    For UseCases 1a/b, 2a/b or 3a, there will always be a single 
-    #    PerFrameFunctionalGroupsSequence, and the single index will be slice
-    #    ToSliceNum.  Over-write previous TrgPFFGStoSliceInds. 
-    #    """
-    #    
-    #    TrgPFFGStoSliceInds = [ToSliceNum]
-    #    
-    #    print(f'\nTrgPFFGStoSliceInds over-written to {TrgPFFGStoSliceInds}')
+            if TrgSeg:
+                """ An existing Target SEG is to be modified. 
+                Concatenate TrgF2SindsBySeg and ResSrcF2SindsBySeg, and
+                TrgPixArrBySeg and ResSrcPixArrBySeg. """
+                
+                TrgF2SindsBySeg = [TrgF2SindsBySeg[s] + ResSrcF2SindsBySeg[s] for s in range(len(TrgF2SindsBySeg))]
+                
+                TrgPixArrBySeg = [TrgPixArrBySeg[s] + ResSrcPixArrBySeg[s] for s in range(len(TrgPixArrBySeg))]
+                
+            else:
+                """ A Target SEG was not provided. """
+                
+                TrgF2SindsBySeg = deepcopy(ResSrcF2SindsBySeg)
+                
+                TrgPixArrBySeg = deepcopy(ResSrcPixArrBySeg)
         
         
-    """ 
-    If UseCase is 1a/2a/3a (i.e. a Direct copy is to be made) and a SEG has 
-    been provided for Target this is not a clean copy, i.e. the copied 
-    segmentation is to be added to an existing segment containing previously 
-    copied segmentation(s). If a Relationship-preserving copy is to be made or 
-    if a Target SEG has not been provided, the Source SEG will be used as a 
-    template.
-    """
-    #if not 'a' in UseCase or not TrgSeg:
-    #    TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SegNum=FromSegNum,
-    #                           PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-    #                           DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
+        else:
+            """ UseCaseToApply is '3b', '4b' or '5b'. """
+            
+            TrgPixArrBySeg = deepcopy(ResSrcPixArrBySeg)
+            
+            TrgF2SindsBySeg = deepcopy(ResSrcF2SindsBySeg)
+    
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 1)
+    msg = f'Took {Dtime} s to copy the ROI(s) from Source to Target.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
+    
+    #print(f'\n\n\n\n\nTrgPixArrBySeg = {TrgPixArrBySeg}')
+    
+    """ Create/overwrite the Target SEG. """
+    TrgSeg = CreateSeg(SrcSeg=SrcSeg, TrgSeg=TrgSeg, 
+                       TrgPixArrBySeg=TrgPixArrBySeg, 
+                       TrgF2SindsBySeg=TrgF2SindsBySeg, TrgDicomDir=TrgDcmDir,
+                       FromSegLabel=FromSegLabel,
+                       AddTxtToSegLabel=AddTxtToSegLabel,
+                       LogToConsole=False)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to create the SEG object.\n'
+    TimingMsgs.append(msg)
+    print(f'*{msg}')
     
     if LogToConsole:
-        print('\n\nInputs to InitialiseSeg:')
-        print(f'   SegNum = {FromSegNum}')
-        print(f'   TrgPFFGStoSliceInds = {TrgPFFGStoSliceInds}')
+        print('\nEnd of CopySeg().')
+        print('-'*120)
         
-    """ 
-    09/12: When downsampling some resulting images have no segmentations,
-    hence TrgPFFGStoSliceInds = [].  This results in 
-    Seg.NumberOfFrames = f"{len(PFFGStoSliceInds)}"
-    in InitialiseSeg.
-    Until the cause of the above is determined, raise an exception if 
-    TrgPFFGStoSliceInds = [].
-    """
-    if TrgPFFGStoSliceInds == []:
-        msg = 'TrgPFFGStoSliceInds = []. There must be at least one slice '\
-              + 'number in TrgPFFGStoSliceInds.'
-        
-        raise Exception(msg)
-    
-        
-    if TrgSeg:
-        """ Use TrgSeg to initialise the Target SEG. """
-        #TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SegNum=ToSegNum,
-        TrgSeg = InitialiseSeg(SegTemplate=TrgSeg, SearchString=FromSearchString,
-                               PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-                               DicomDir=TrgDcmDir, NamePrefix=AddText,
-                               LogToConsole=LogToConsole)
-    else:
-        """ Use SrcSeg to initialise the Target SEG. """
-        TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SearchString=FromSearchString,
-                               PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-                               DicomDir=TrgDcmDir, NamePrefix=AddText,
-                               LogToConsole=LogToConsole)
-        
-    if LogToConsole:
-        print(f'\n\n\n***FromSegNum = {FromSegNum}')
-    
-        print('\n\nInputs to ModifySeg:')
-        print(f'   TrgPixArr.shape = {TrgPixArr.shape}')
-        [print(f'   np.amax(TrgPixArr[{i}]) = {np.amax(TrgPixArr[i])}') for i in range(TrgPixArr.shape[0])]
-        print(f'   TrgPFFGStoSliceInds = {TrgPFFGStoSliceInds}')
-        
-    # Modify the tags in TrgSeg:
-    TrgSeg = ModifySeg(Seg=TrgSeg, PixArr=TrgPixArr,
-                       PFFGStoSliceInds=TrgPFFGStoSliceInds, 
-                       DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
-    
-    
-    """ Had 1040 lines of code. Now 207. """
-    
-    return TrgSeg
-
+    #return TrgSeg
+    return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TimingMsgs
 
 
 
@@ -3485,8 +3834,9 @@ def CopyRoi_OLD(SrcRoi, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
 
 
 def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
-            TrgRoi=None, ToSliceNum=None, Sigma=(1,1,1), ThreshLevel=0.75,
-            TxtToAddToRoiLabel='', LogToConsole=False):
+            TrgRoi=None, ToSliceNum=None, Interpolation='LabelGaussian',
+            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
+            ForceRegistration=False, TxtToAddToRoiLabel='', LogToConsole=False):
     """
     
     Inputs:
@@ -3520,16 +3870,41 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         segmentation is to be copied to (counting from 0).  This only applies 
         for Direct copies, hence the default value None.
         
-    Sigma : tuple (optional; (1,1,1) by default)
-        The sigma values that will define the Gaussian if Gaussian image 
-        blurring is used.  The tuple will define the sigma along x, y and z
-        directions.
-        
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if used.  The threshold value will be ThreshLevel*M, where
-        M is the maximum intensity value of the image.
+    Interpolation : string
+        The type of interpolation to be used if the Source labelmap image(s)
+        is/are to be resampled to the Target grid.  Acceptable inputs are:
+        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
+        'nearestneighbour'; Default value)
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding)
     
+    Variance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if a 
+        Gaussian blurring + linearly resampling approach is taken for 
+        resampling of the Source labelmap image(s).
+        
+    ThreshPreRes : float (optional; 0.75 by default)
+        The threshold level used to perform binary thresholding prior to 
+        resampling. Example use is on a labelmap image if a Gaussian blurring 
+        + linearly resampling approach is taken to combat aliasing effects.
+    
+    ThreshPostTx : float (optional; 0.05 by default)
+        The threshold level used to perform binary thresholding after 
+        registration transformation.
+    
+    Tx : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+        
+    ForceRegistration : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+        
     TxtToAddToRoiLabel : string (optional, '' by default)
         Sting of text to pass to ModifyRts/ModifySeg to be used when generating
         a filename for the new Target RTS/SEG.
@@ -3545,13 +3920,22 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         The new (if making a Relationship-preserving copy) or the modified (if
         making a Direct copy of a contour/segmentation to an existing Direct-
         copied contour(s)/segmentation(s)) Target RTS/SEG object.
+        
+        
+    Notes:
+    *****
+    
+    An example use of the ForceRegistration option is to overcome translations 
+    in the patient that are not reflected in the ImagePositionPatient tag. If 
+    using resampling techniques the Target contours/segmentations will appear 
+    displaced w.r.t. the anatomical features highlighted in the Source image.
     """
 
     import time
     from DicomTools import IsSameModalities
     from GeneralTools import PrintTitle
     
-    # Start timing:
+    """ Start timing. """
     times = []
     times.append(time.time())
     
@@ -3583,17 +3967,23 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         #                        Sigma, ThreshLevel, AddText, LogToConsole)
         
         NewTrgRoi = CopyRts(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, 
-                            TrgDcmDir, TrgRoi, ToSliceNum, Sigma, ThreshLevel, 
-                            TxtToAddToRoiLabel, LogToConsole)
+                            TrgDcmDir, TrgRoi, ToSliceNum, Interpolation,
+                            Variance, ThreshPreRes, ThreshPostTx, Tx, 
+                            ForceRegistration, TxtToAddToRoiLabel, LogToConsole)
     
     elif SrcModality == 'SEG':
-        if isinstance(FromSliceNum, int):
-            NewTrgRoi = CopySegmentation(SrcRoi, FromSearchString, SrcDcmDir, 
-                                         FromSliceNum, TrgDcmDir, TrgRoi, 
-                                         ToSliceNum, Sigma, ThreshLevel,
-                                         AddText, LogToConsole)
-        else:
-            NewTrgRoi = CopySeg()
+        #if isinstance(FromSliceNum, int):
+        #    NewTrgRoi = CopySegmentation(SrcRoi, FromSearchString, SrcDcmDir, 
+        #                                 FromSliceNum, TrgDcmDir, TrgRoi, 
+        #                                 ToSliceNum, Sigma, ThreshLevel,
+        #                                 AddText, LogToConsole)
+        #else:
+        #    NewTrgRoi = CopySeg()
+        
+        NewTrgRoi = CopySeg(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir,
+                            TrgDcmDir, TrgRoi, ToSliceNum, Interpolation,
+                            Variance, ThreshPreRes, ThreshPostTx, Tx, 
+                            ForceRegistration, TxtToAddToRoiLabel, LogToConsole)
         
     else:
         msg = f'The Source modality ({SrcModality}) must be either "RTS" or '\
@@ -3606,7 +3996,10 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
         #print(f'\n\nDone.  Took {Dtime} s to run.')
-        PrintTitle(f'Done.  Took {Dtime} s to run.')
+        msg = f'*Took {Dtime} s to copy the ROI(s) and create the RTS/SEG '\
+              + 'object.'  
+        #PrintTitle(msg)
+        print(f'\n*{msg}')
         
     return NewTrgRoi
 
@@ -3655,6 +4048,10 @@ def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
     import time
     import os
     
+    """ Start timing. """
+    times = []
+    times.append(time.time())
+    
     if Roi.Modality == 'RTSTRUCT':
         import RtsTools
         import importlib
@@ -3675,6 +4072,10 @@ def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
         LogList = None
         Nerrors = None
     
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    print(f'*Took {Dtime} s to error check the RTS/SEG object.')
     
     CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
     
@@ -4170,7 +4571,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\nTook {Dtime} s to import the 3D images.')
+        print(f'\n*Took {Dtime} s to import the 3D images.')
         
     # The Transform parameter file:
     ParamFname = 'TransformParameters.0.txt'
@@ -4182,7 +4583,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\nTook {Dtime} s to parse the transform parameter file.')
+        print(f'\n*Took {Dtime} s to parse the transform parameter file.')
 
     TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0']
     
@@ -4318,7 +4719,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to get the transform matrix type.')
+        print(f'\n   *Took {Dtime} s to get the transform matrix type.')
         
     """ 
     Consider adding FrameOfReferenceTransformationComment. 
@@ -4360,7 +4761,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to add sequences to',
+        print(f'\n   *Took {Dtime} s to add sequences to',
               'ReferencedInstanceSequence in ReferencedSeriesSequence for',
               'the fixed series.')
         
@@ -4377,7 +4778,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to update the ReferencedInstanceSequences',
+        print(f'\n   *Took {Dtime} s to update the ReferencedInstanceSequences',
               'for the fixed series.')
     
     
@@ -4413,7 +4814,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to add sequences to',
+        print(f'\n   *Took {Dtime} s to add sequences to',
               'ReferencedInstanceSequence in ReferencedSeriesSequence for',
               'the moving series.')
         
@@ -4430,7 +4831,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to update the ReferencedInstanceSequences',
+        print(f'\n   *Took {Dtime} s to update the ReferencedInstanceSequences',
               'for the moving series.')
         
     
@@ -4474,7 +4875,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to add sequences to',
+        print(f'\n   *Took {Dtime} s to add sequences to',
               'ReferencedInstanceSequence in',
               'StudiesContainingOtherReferencedInstancesSequence for the',
               'fixed series.')
@@ -4495,7 +4896,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to modify the',
+        print(f'\n   *Took {Dtime} s to modify the',
               'ReferencedInstanceSequences in',
               'StudiesContainingOtherReferencedInstancesSequence for the',
               'fixed series.')
@@ -4541,7 +4942,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to add sequences to',
+        print(f'\n   *Took {Dtime} s to add sequences to',
               'ReferencedInstanceSequence in',
               'StudiesContainingOtherReferencedInstancesSequence for the',
               'moving series.')
@@ -4561,7 +4962,7 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to modify the',
+        print(f'\n   *Took {Dtime} s to modify the',
               'ReferencedInstanceSequences in',
               'StudiesContainingOtherReferencedInstancesSequence for the',
               'moving series.')
@@ -4586,12 +4987,12 @@ def CreateDro(SrcDicomDir, TrgDicomDir, Description='', LogToConsole=False):
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        print(f'\n   Took {Dtime} s to delete all GroupLength tags.')
+        print(f'\n   *Took {Dtime} s to delete all GroupLength tags.')
         
     
     Dtime = round(times[-1] - times[0], 1)
     if True:#LogToConsole:
-        print(f'\n   Took a total of {Dtime} s to create the DRO.')
+        print(f'\n   *Took a total of {Dtime} s to create the DRO.')
         
         
     return Dro

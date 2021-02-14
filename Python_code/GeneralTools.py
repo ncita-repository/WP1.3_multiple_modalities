@@ -150,20 +150,8 @@ def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
 
 
 
-def ReplaceIndInC2SindsByRoi(C2SindsByRoi, IndToReplace, ReplacementInd):
-    
-    for r in range(len(C2SindsByRoi)):
-        for c in range(len(C2SindsByRoi[r])):
-            if C2SindsByRoi[r][c] == IndToReplace:
-                C2SindsByRoi[r][c] = ReplacementInd
-    
-    return C2SindsByRoi
 
 
-
-
-
-    
 def AppendItemToListAndSort(OrigList, ItemToAppend):
     """
     Append an item to a list and return the sorted list. 
@@ -401,8 +389,16 @@ def PrintTitle(Title):
 
 
 def PrintIndsByRoi(IndsByRoi):
+    """ Print the list of indices in each ROI, e.g. from a list of C2SindsByRoi
+    or F2SindsBySeg. """
     
     R = len(IndsByRoi)
+    print(f'There are {R} ROIs/segments in IndsByRoi')
+    
+    C = [len(IndsByRoi[r]) for r in range(R)]
+    print(f'There are {C} contours/frames in each ROI/segment')
+    
+    print('IndsByRoi:')
     
     for r in range(R):
         if r == 0:
@@ -417,18 +413,114 @@ def PrintIndsByRoi(IndsByRoi):
             msg += ']'
                 
         print(msg)
+        
+    return
 
-    C = [len(IndsByRoi[r]) for r in range(R)]
+
+
+
+
+
+def PrintPtsByCnt(PtsByCnt):
+    """ Print the number of points in each contour in PtsByCnt. """
     
-    print(f'   Number of contours in each ROI = {C}')
+    C = len(PtsByCnt)
+    print(f'There are {C} contours')
+    
+    for c in range(C):
+        P = len(PtsByCnt[c])
+        print(f'   There are {P} points in the {c}^th contour')
     
     return
 
 
 
 
-            
-            
+
+
+
+def PrintPtsByCntByRoi(PtsByCntByRoi):
+    """ Print the number of points in each contour of each ROI in 
+    PtsByCntByRoi. """
+    
+    R = len(PtsByCntByRoi)
+    print(f'There are two ROIs/segments in IndsByRoi')
+    
+    #C = [len(PtsByCntByRoi[r]) for r in range(R)]
+    #print(f'There are {C} contours/frames in each ROI/segment')
+    
+    for r in range(R):
+        C = len(PtsByCntByRoi[r])
+        print(f'There are {C} contours in the {r}^th ROI')
+        
+        for c in range(C):
+            P = len(PtsByCntByRoi[r][c])
+            print(f'   There are {P} points in the {c}^th contour')
+    
+    return
+
+
+
+
+
+
+
+def PrintPixArrBySeg(PixArrBySeg):
+    """ If PixArrBySeg is a list of pixel arrays (as the input variable name
+    suggests):
+        - print the number of pixel arrays in the list
+        - print the shape of each pixel array
+    
+    If PixArrBySeg is a pixel array (not a list as the variable name suggests):
+        - print the shape of the pixel array """
+    
+    if isinstance(PixArrBySeg, list):
+        S = len(PixArrBySeg)
+        print(f'There are {S} pixel arrays in PixArrBySeg')
+        
+        for s in range(S):
+            print(f'   The {s}^th pixel array has shape {PixArrBySeg[s].shape}')
+    else:
+        print(f'The pixel array has shape {PixArrBySeg.shape}')
+    
+    return
+
+
+
+
+
+def PrintPixArrShapeBySeg(PixArrBySeg):
+    #import numpy as np
+    
+    S = len(PixArrBySeg)
+    
+    print('\n   Shape of PixArrBySeg:')
+    
+    for s in range(S):
+        if s == 0:
+            msg = f'   [{PixArrBySeg[s].shape}'
+        else:
+            msg = f'    {PixArrBySeg[s].shape}'
+        
+        if s < S - 1:
+            msg += ','
+        
+        if s == S - 1:
+            msg += ']'
+                
+        print(msg)
+
+    F = [PixArrBySeg[s].shape[0] for s in range(S)]
+    
+    print(f'   Number of frames in each segment = {F}')
+    
+    return
+
+
+
+
+
+
 def IsPointInPolygon(point, vertices):
     """
     Determine if a point lies within a polygon.
@@ -699,7 +791,83 @@ def GetPixelShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1, RefImage,
 
 
 
+def ReplaceIndInC2SindsByRoi(C2SindsByRoi, IndToReplace, ReplacementInd):
     
+    for r in range(len(C2SindsByRoi)):
+        for c in range(len(C2SindsByRoi[r])):
+            if C2SindsByRoi[r][c] == IndToReplace:
+                C2SindsByRoi[r][c] = ReplacementInd
+    
+    return C2SindsByRoi
+
+
+
+
+
+
+def GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1(SrcC2SindsByRoi, SrcImage, TrgImage):
+    """ This doesn't seem to work for some reason. """
+    
+    TrgC2SindsByRoi = []
+    
+    for r in range(len(SrcC2SindsByRoi)):
+        TrgC2Sinds = []
+        
+        for c in range(len(SrcC2SindsByRoi[r])):
+            s = SrcC2SindsByRoi[r][c]
+            
+            """ Get the Source IPP for this slice: """
+            IPP = SrcImage.TransformIndexToPhysicalPoint([0,0,s])
+            
+            """ Convert to an index in TrgIm: """
+            Ind = TrgImage.TransformPhysicalPointToIndex(IPP)
+            
+            TrgC2Sinds.append(Ind[2])
+            
+        TrgC2SindsByRoi.append(TrgC2Sinds)
+    
+    return TrgC2SindsByRoi
+
+
+
+
+
+
+def GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcC2SindsByRoi, SrcImage, TrgImage):
+    
+    """ Compare origins: """
+    SrcOrigin = SrcImage.GetOrigin()
+    TrgOrigin = TrgImage.GetOrigin()
+    
+    #dim = len(SrcOrigin)
+    
+    #mmDiff = [TrgOrigin[i] - SrcOrigin[i] for i in range(dim)]
+    
+    Dz_mm = TrgOrigin[2] - SrcOrigin[2]
+    
+    dk = TrgImage.GetSpacing()[2]
+    
+    Dz_pix = round(Dz_mm/dk)
+    
+    TrgC2SindsByRoi = []
+    
+    for r in range(len(SrcC2SindsByRoi)):
+        TrgC2Sinds = []
+        
+        for c in range(len(SrcC2SindsByRoi[r])):
+            #TrgC2Sinds.append(SrcC2SindsByRoi[r][c] + Dz_pix)
+            TrgC2Sinds.append(SrcC2SindsByRoi[r][c] - Dz_pix)
+            
+        TrgC2SindsByRoi.append(TrgC2Sinds)
+    
+    return TrgC2SindsByRoi
+
+
+
+
+
+
+
 def ShiftFrame(Frame, PixShift):
     """
     Shift the items in a 2D frame.
@@ -789,40 +957,49 @@ def ShiftFrame(Frame, PixShift):
 
 
 
-def ShiftFramesInPixArrByRoi(PixArrByRoi, F2SindsByRoi, SrcImage, SrcSliceNum,
-                             TrgImage, TrgSliceNum, RefImage, Fractional=False,
+def ShiftFramesInPixArrBySeg(PixArrBySeg, F2SindsBySeg, SrcImage, SrcSliceNum,
+                             TrgImage, TrgSliceNum, RefImage, ShiftInX=True,
+                             ShiftInY=True, ShiftInZ=True, Fractional=False,
                              LogToConsole=False):
     """
     Shift the items in each frame of each pixel array in a list of 
-    pixel-arrays-by-ROI.  This is intended for use with single-framed pixel
-    arrays, as in the case of a direct copy to a specified slice.
+    pixel-arrays-by-segment.  Example uses: To compensate for differences in 
+    z-positions of a single-framed Source pixel array to be "direct" copied to
+    a Target slice at a different stack position; or compensating for 
+    differences in the origin of Source and Target images for relationship-
+    preserving copies of images with equal voxel spacings.
     
     Inputs:
     ******
     
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays.
+    PixArrBySeg : list of Numpy arrays
+        A list (for each segment) of pixel arrays.
     
-    F2SindsByRoi : list of a list of integers
-        List (for each ROI) of a list (for each frame) of slice numbers that 
-        correspond to each frame in the pixel arrays in PixArrByRoi.
+    F2SindsBySeg : list of a list of integers
+        List (for each segment) of a list (for each frame) of slice numbers that 
+        correspond to each frame in the pixel arrays in PixArrBySeg.
         
     SrcImage : SimpleITK image
         The Source 3D image.
     
     SrcSliceNum : integer
-        The slice number within the Source image stack that the ROI relates to.
+        The slice number within the Source image stack that the segment relates
+        to.
     
     TrgImage : SimpleITK image
         The Target 3D image.
     
     TrgSliceNum : integer
-        The slice number within the Target image stack that the ROI is to be 
-        copied to following the shift in z-components.
+        The slice number within the Target image stack that the segment is to  
+        be copied to following the shift in z-components.
         
     RefImage : SimpleITK image
-        The reference image whose voxel spacings will be used to convert the
-        physical shift to pixels (e.g. TrgImage).
+        The reference image whose voxel spacings will be used to convert apply
+        the shift in pixels (e.g. TrgImage).
+    
+    ShiftInX / ShiftInY / ShiftInZ : boolean (optional; True by default)
+        If True the pixel shift between the origins of SrcImage and TrgImage
+        will be applied along the x / y / z direction.
     
     Fractional : boolean (optional; False by default)
         If True the pixel shift will be rounded to the nearest integer value.
@@ -834,37 +1011,78 @@ def ShiftFramesInPixArrByRoi(PixArrByRoi, F2SindsByRoi, SrcImage, SrcSliceNum,
     Outputs:
     *******
     
-    PixArrByRoi : list of Numpy arrays
-        As above but with shifted frame with shape (1, R, C). Only the x- and 
-        y-components are shifted.
+    PixArrBySeg : list of Numpy arrays
+        As above but with shifted frame with shape (1, R, C).
+    
+    F2SindsBySeg : list of a list of integers
+        As above but with shifted slice indices that correspond to the shifted 
+        PixArrBySeg.
     """
     
-    # Get pixel shift between FromSliceNum in SrcIm and ToSliceNum in 
-    # TrgIm in the Target image domain:
-    PixShift = GetPixelShiftBetweenSlices(Image0=SrcImage, SliceNum0=SrcSliceNum, 
-                                          Image1=TrgImage, SliceNum1=TrgSliceNum,
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of ShiftFramesInPixArrBySeg():')
+        
+    # Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
+    # TrgImage in the Target image domain:
+    PixShift = GetPixelShiftBetweenSlices(Image0=SrcImage, 
+                                          SliceNum0=SrcSliceNum, 
+                                          Image1=TrgImage, 
+                                          SliceNum1=TrgSliceNum,
                                           RefImage=TrgImage)
     
     if LogToConsole:
-        print(f'\nPixShift = {PixShift}')
-            
+        print(f'   \nPixShift between slices = {PixShift}')
+        print(f'   \nF2SindsBySeg prior to shifting = {F2SindsBySeg}')
+        
+        #print(f'\n   Prior to shifting frames:')
+        ##print(f'PixArrBySeg = {PixArrBySeg}')
+        #print(f'   len(PixArrBySeg) = {len(PixArrBySeg)}')
+        #for r in range(len(PixArrBySeg)):
+        #    print(f'      type(PixArrBySeg[{r}]) = {type(PixArrBySeg[r])}')
+        #    print(f'      PixArrBySeg[{r}].shape = {PixArrBySeg[r].shape}')
     
-    for r in range(len(PixArrByRoi)):
-        #if PixArrByRoi[r]:
-        if PixArrByRoi[r].shape[0]: 
-            # Replace PixArrByRoi[r] with the result of shifting the in-plane 
-            # elements, and replace F2SindsByRoi[r] with [TrgSliceNum]:
-            PixArrByRoi[r] = ShiftFrame(Frame=PixArrByRoi[r], PixShift=PixShift)
-            F2SindsByRoi[r] = [TrgSliceNum]
+    if not ShiftInX:
+        PixShift[0] = 0
+    if not ShiftInY:
+        PixShift[1] = 0
+    if not ShiftInZ:
+        PixShift[2] = 0
+    
+    if LogToConsole:
+        print(f'   \nPixShift that will be applied = {PixShift}')
+        
+    for s in range(len(PixArrBySeg)):
+        #if PixArrBySeg[s]:
+        if PixArrBySeg[s].shape[0]:
+            #print('   \nBefore shifting frame:')
+            #print(f'   type(PixArrBySeg[{s}]) = {type(PixArrBySeg[s])}')
+            #print(f'   PixArrBySeg[{s}].shape = {PixArrBySeg[s].shape}')
+            
+            # Replace PixArrBySeg[s] with the result of shifting the in-plane 
+            # elements, and replace F2SindsBySeg[s] with [TrgSliceNum]:
+            PixArrBySeg[s] = ShiftFrame(Frame=PixArrBySeg[s], PixShift=PixShift)
+            
+            #print('   \nAfter shifting frame:')
+            #print(f'   type(PixArrBySeg[{s}]) = {type(PixArrBySeg[s])}')
+            #print(f'   PixArrBySeg[{s}].shape = {PixArrBySeg[s].shape}')
+            
+            #F2SindsBySeg[s] = [TrgSliceNum] # 11/02
+            
+            # Shift the frame-to-slice indices by PixShift[2]:
+            F2SindsBySeg[s] = [F2SindsBySeg[s][i] + PixShift[2] for i in range(len(F2SindsBySeg[s]))]
             
             if LogToConsole:
-                unique = UniqueItems(Items=PixArrByRoi[r], IgnoreZero=False)
+                unique = UniqueItems(Items=PixArrBySeg[s], IgnoreZero=False)
                 
                 print(f'\nThere are {len(unique)} unique items in',
-                      f'PixArrByRoi[{r}] after shifting the frame.')
+                      f'PixArrBySeg[{s}] after shifting the frame.')
     
+    if LogToConsole:
+        print(f'   F2SindsBySeg after shifting = {F2SindsBySeg}')
+        print('-'*120)
         
-    return PixArrByRoi
+    return PixArrBySeg, F2SindsBySeg
     
     
 
@@ -948,12 +1166,12 @@ def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
     """ Convert PtsByCntByRoi to indices, modify the z-component of the
     indices, then convert back to physical points. """
     
-    IndsByCntByRoi = []
+    #IndsByCntByRoi = []
     NewPtsByCntByRoi = []
     
     # Iterate through ROIs:
     for r in range(len(PtsByCntByRoi)): 
-        IndsByCnt = []
+        #IndsByCnt = []
         NewPtsByCnt = []
         
         if PtsByCntByRoi[r]:
@@ -966,24 +1184,138 @@ def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
                 # Modify the z-component (k) of the indices to NewZind:
                 inds = ChangeZinds(inds, NewZind)
                 
-                IndsByCnt.append(inds)
+                #IndsByCnt.append(inds)
                 
                 # Convert back to physical points:
                 pts = Indices2Points(inds, RefIm=Im)
                 
                 NewPtsByCnt.append(pts)
         
-        IndsByCntByRoi.append(IndsByCnt)
+        #IndsByCntByRoi.append(IndsByCnt)
         NewPtsByCntByRoi.append(NewPtsByCnt)
         
     return NewPtsByCntByRoi
 
 
 
-    
-    
 
-def MeanPixArr(PixArr, MakeBinary=True, BinaryThresh=0.5):
+
+def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum, 
+                       TrgImage, TrgSliceNum, RefImage, ShiftInX=True,  
+                       ShiftInY=True, ShiftInZ=True, Fractional=False, 
+                       LogToConsole=False):
+    
+    #NewZind, DicomDir, 
+    
+    """
+    Shift the points in each list of points in each list of contours in each
+    list of ROIs.  Example uses: To compensate for differences in 
+    z-positions of a single-contour Source points to be "direct" copied to
+    a Target slice at a different stack position; or compensating for 
+    differences in the origin of Source and Target images for relationship-
+    preserving copies of images with equal voxel spacings.
+    
+    Inputs:
+    ******
+    
+    PtsByCntByRoi : list of list of a list of a list of floats
+        List (for each ROI) of a list (for all contours) of a list (for each
+        point) of a list (for each dimension) of coordinates.
+        
+    NewZind : integer
+        The value to re-assign to the z-components (i.e. k) of Indeces (e.g.
+        ToSliceNum).
+    
+    DicomDir : string 
+        Directory containing the corresponding DICOMs.
+    
+        
+    Ouputs:
+    ******
+    
+    NewPtsByCntByRoi : list of list of a list of a list of floats
+        As PtsByCntByRoi but with modified z-components.
+    """
+    
+    #from ImageTools import ImportImage
+    from ConversionTools import Points2Indices, Indices2Points
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of ShiftPtsByCntByRoi():')
+        
+    # Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
+    # TrgImage in the Target image domain:
+    PixShift = GetPixelShiftBetweenSlices(Image0=SrcImage, 
+                                          SliceNum0=SrcSliceNum, 
+                                          Image1=TrgImage, 
+                                          SliceNum1=TrgSliceNum,
+                                          RefImage=TrgImage)
+    
+    if LogToConsole:
+        print(f'   PixShift between slices = {PixShift}')
+    
+    if not ShiftInX:
+        PixShift[0] = 0
+    if not ShiftInY:
+        PixShift[1] = 0
+    if not ShiftInZ:
+        PixShift[2] = 0
+    
+    if LogToConsole:
+        print(f'   PixShift that will be applied = {PixShift}')
+    
+    
+    """ Convert PtsByCntByRoi to indices, modify the indices, then convert back
+    to physical points. """
+    
+    #IndsByCntByRoi = []
+    NewPtsByCntByRoi = []
+    NewC2SindsByRoi = []
+    
+    # Iterate through ROIs:
+    for r in range(len(PtsByCntByRoi)): 
+        #IndsByCnt = []
+        NewPtsByCnt = []
+        NewC2Sinds = []
+        
+        if PtsByCntByRoi[r]:
+            # Iterate through contours:
+            for c in range(len(PtsByCntByRoi[r])):
+                Pts = PtsByCntByRoi[r][c]
+                
+                # Inds are the list of relationship-preserving indices that
+                # correspond to Pts:
+                Inds = Points2Indices(Points=Pts, RefIm=TrgImage, 
+                                      Rounding=False)
+                
+                # Apply the required pixel shifts:
+                Inds = [Inds[i] + PixShift[i] for i in range(len(Inds))]
+                
+                #IndsByCnt.append(inds)
+                
+                # Convert back to physical points:
+                Pts = Indices2Points(Inds, RefIm=TrgImage)
+                
+                NewPtsByCnt.append(Pts)
+                
+                # Shift the contour-to-slice indices by PixShift[2]:
+                #C2SindsByRoi[r][c] += PixShift[2]
+                NewC2Sinds.append(C2SindsByRoi[r][c] + PixShift[2])
+        
+        #IndsByCntByRoi.append(IndsByCnt)
+        NewPtsByCntByRoi.append(NewPtsByCnt)
+        NewC2SindsByRoi.append(NewC2Sinds)
+        
+    return NewPtsByCntByRoi, NewC2SindsByRoi
+
+
+
+
+
+
+def MeanFrameInPixArr(PixArr, F2Sinds, MakeBinary=True, BinaryThresh=0.5,
+                      LogToConsole=False):
     """
     Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
     binary pixel array if binary=True (or undefined).
@@ -994,6 +1326,10 @@ def MeanPixArr(PixArr, MakeBinary=True, BinaryThresh=0.5):
     PixArr : Numpy array
         PixelData from a SEG file loaded as a Numpy array
         
+    F2Sinds : List of integers
+        A list (for each frame) of the slice numbers that correspond to each 
+        frame in PixArr.
+        
     MakeBinary : boolean (optional; True by default)
         If MakeBinary = True the mean pixel array will be converted to a binary
         pixel array by thresholding pixel values by BinaryThreshold.
@@ -1001,6 +1337,9 @@ def MeanPixArr(PixArr, MakeBinary=True, BinaryThresh=0.5):
     BinaryThreshold : float (optional; 0.5 by default)
         The threshold that will be used when converting to a binary pixel array
         if MakeBinary = True.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
         
         
     Outputs:
@@ -1008,41 +1347,85 @@ def MeanPixArr(PixArr, MakeBinary=True, BinaryThresh=0.5):
     
     MeanPixArr : Numpy array
         Mean pixel array.
+    
+    MeanF2Sind : integer or float
+        The integer or fractional frame-to-slice index corresponding to the 
+        mean pixel array.  MeanF2Sind will be an integer if MeanF2Sind % 1 = 0,
+        and a fractional float otherwise.
     """
     
     import numpy as np
     
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of MeanFrameInPixArr():')
+        
     F, R, C = PixArr.shape
     
-    # Initialise MeanPixArr:
-    MeanPixArr = np.zeros((1, R, C), dtype='uint')
+    if LogToConsole:
+        print(f'\nPixArr.shape = {PixArr.shape}')
+        #print(f'np.amax(PixArr, axis=0) = {np.amax(PixArr, axis=0)}')
+        #print(f'np.max(PixArr, axis=0) = {np.max(PixArr, axis=0)}')
+        print(f'Max along each frame = {[np.amax(PixArr[f]) for f in range(PixArr.shape[0])]}')
     
-    result = np.mean(PixArr, axis=0)
+    MeanPixArr = np.mean(PixArr, axis=0)
+    
+    if LogToConsole:
+        print(f'Max of MeanPixArr after averaging = {np.amax(MeanPixArr)}')
             
     if MakeBinary:
-        MeanPixArr[0] = (result >= BinaryThresh) * result
-    else:
-        MeanPixArr[0] = result
+        #MeanPixArr = (MeanPixArr >= BinaryThresh) * MeanPixArr
+        MeanPixArr = (MeanPixArr >= BinaryThresh) * 1
         
-    return MeanPixArr
+        if LogToConsole:
+            print('Max of MeanPixArr after binary thresholding =',
+                  f'{np.amax(MeanPixArr)}')
+    
+    MeanPixArr = np.reshape(MeanPixArr, (1, R, C))
+    
+    if LogToConsole:
+        print(f'Max of MeanPixArr after reshape = {np.amax(MeanPixArr)}')
+    
+    MeanPixArr = MeanPixArr.astype(dtype='uint8')
+    
+    if LogToConsole:
+        print(f'Max of MeanPixArr after change to uint8 = {np.amax(MeanPixArr)}')
+    
+    """ Find the mean slice index: """
+    MeanF2Sind = sum(F2Sinds)/len(F2Sinds)
+    
+    if MeanF2Sind % 1 == 0:
+        MeanF2Sind = int(MeanF2Sind)
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return MeanPixArr, MeanF2Sind
 
 
 
 
 
 
-def MeanPixArrByRoi(PixArrByRoi, MakeBinary=True, BinaryThresh=0.5,
-                    LogToConsole=False):
+def MeanFrameInPixArrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True, 
+                           BinaryThresh=0.5, LogToConsole=False):
     """
     Perform pixel-by-pixel mean of all frames in all pixel arrays in a list
     of pixel-arrays-by-ROI which have more than 1 frame. No changes will be
-    made to empty or single-framed pixel arrays.
+    made to empty or single-framed pixel arrays.  If there are less than 2
+    frames in any given pixel array the pixel array will be returned unchanged.
+    Likewise for the F2SindsBySeg.
     
     Inputs:
     ******
     
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays.
+    PixArrBySeg : list of Numpy arrays
+        A list (for each ROI/segment) of pixel arrays.
+    
+    F2SindsBySeg : list of a list of integers
+        A list (for each ROI/segment) of a list (for each contour/frame) of the 
+        slice numbers that correspond to each contour/frame in each pixel array
+        in PixArrBySeg.
         
     MakeBinary : boolean (optional; True by default)
         If MakeBinary = True the mean pixel array will be converted to a binary
@@ -1059,34 +1442,58 @@ def MeanPixArrByRoi(PixArrByRoi, MakeBinary=True, BinaryThresh=0.5,
     Outputs:
     *******
     
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays averaged to a single-framed
-        pixel array.
+    MeanPixArrByRoi : list of Numpy arrays
+        A list (for each ROI/segment) of pixel arrays averaged to a single-
+        framed pixel array.
+        
+    MeanF2SindByRoi : list of a list (of length 1) of an integer or float
+        A list (for each ROI/segment) of a list (of length 1, since there is 
+        only 1 frame per pixel array) of the integer or fractional frame-to-
+        slice index corresponding to the mean pixel array.  MeanF2Sind will be 
+        an integer if MeanF2Sind % 1 = 0, and a fractional float otherwise.
     """
     
-    # Determine the number of frames in each pixel array: 
-    NumOfFramesByRoi = [PixArr.shape[0] for PixArr in PixArrByRoi]
-    
-    for r in range(len(PixArrByRoi)):
-        if NumOfFramesByRoi[r] > 1: 
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames',
-                      'so the pixel arrays will be averaged.')
-            
-            # Replace PixArrByRoi[r] with the pixel-by-pixel mean across all 
-            # frames in the pixel array:
-            PixArrByRoi[r] = MeanPixArr(PixArrByRoi[r], MakeBinary,
-                                        BinaryThresh)
-            
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] had {NumOfFramesByRoi[r]} frames,',
-                      f'but now has {PixArrByRoi[r].shape[0]}.')
-        else:
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames,',
-                      'so no frame averaging was required.')
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of MeanFrameInPixArrBySeg():')
         
-    return PixArrByRoi
+    MeanPixArrBySeg = []
+    MeanF2SindBySeg = []
+    
+    for s in range(len(PixArrBySeg)):
+        PixArr = PixArrBySeg[s]
+        F2Sinds = F2SindsBySeg[s]
+        
+        """ The number of frames in PixArr """
+        F = PixArr.shape[0]
+        
+        if F > 1: 
+            if LogToConsole:
+                print(f'\nPixArrBySeg[{s}] has {F} frames so the pixel arrays',
+                      'will be averaged.')
+            
+            MeanPixArr,\
+            MeanF2Sind = MeanFrameInPixArr(PixArr, F2Sinds, MakeBinary, 
+                                           BinaryThresh, LogToConsole)
+            
+            MeanPixArrBySeg.append(MeanPixArr)
+            MeanF2SindBySeg.append([MeanF2Sind])
+            
+            if LogToConsole:
+                print(f'\nPixArr had {F} frames but now has',
+                      f'{MeanPixArr.shape[0]}.')
+        else:
+            MeanPixArrBySeg.append(PixArr)
+            
+            MeanF2SindBySeg.append(F2Sinds)
+            
+            if LogToConsole:
+                print(f'\nPixArr has {F} frames so no frame averaging required.')
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return MeanPixArrBySeg, MeanF2SindBySeg
 
 
 
@@ -1094,18 +1501,25 @@ def MeanPixArrByRoi(PixArrByRoi, MakeBinary=True, BinaryThresh=0.5,
 
 
 
-def OrPixArrByRoi(PixArrByRoi, LogToConsole=False):
+def OrFrameOfPixArrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
     """
     Perform pixel-by-pixel logical OR of all frames in all pixel arrays in a 
-    list of pixel-arrays-by-ROI which have more than 1 frame. No changes will 
-    be made to empty or single-framed pixel arrays.
+    list of pixel-arrays-by-segment which have more than 1 frame. No changes 
+    will be made to empty or single-framed pixel arrays. If there are less than
+    2 frames in any given pixel array the pixel array will be returned 
+    unchanged.  Likewise for the F2SindsBySeg.  
     
     Inputs:
     ******
     
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays.
+    PixArrBySeg : list of Numpy arrays
+        A list (for each ROI/segment) of pixel arrays.
     
+    F2SindsBySeg : list of a list of integers
+        A list (for each ROI/segment) of a list (for each contour/frame) of the 
+        slice numbers that correspond to each contour/frame in each pixel array
+        in PixArrBySeg.
+        
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
     
@@ -1113,41 +1527,80 @@ def OrPixArrByRoi(PixArrByRoi, LogToConsole=False):
     Outputs:
     *******
     
-    PixArrByRoi : list of Numpy arrays
-        A list (for each ROI) of pixel arrays averaged to a single-framed
-        pixel array.
+    OrPixArrBySeg : list of Numpy arrays
+        A list (for each ROI/segment) of pixel arrays averaged to a single-
+        framed pixel array.
+    
+    MeanF2SindBySeg : list of a list (of length 1) of an integer or float
+        A list (for each ROI/segment) of a list (of length 1, since there is 
+        only 1 frame per pixel array) of the integer or fractional frame-to-
+        slice index corresponding to the OR pixel array.  MeanF2Sind will be 
+        an integer if MeanF2Sind % 1 = 0, and a fractional float otherwise.
     """
     
     import numpy as np
     
-    # Determine the number of frames in each pixel array: 
-    NumOfFramesByRoi = [PixArr.shape[0] for PixArr in PixArrByRoi]
-    
-    # Get the shape of any pixel array:
-    F, R, C = PixArrByRoi[0].shape
-    
-    for r in range(len(PixArrByRoi)):
-        if NumOfFramesByRoi[r] > 1: 
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames',
-                      'so the pixel arrays will be logically ORed.')
-            
-            # Replace PixArrByRoi[r] with the pixel-by-pixel logical OR across 
-            # all frames in the pixel array:
-            OrPixArr = PixArrByRoi[r].any(axis=0)
-            
-            # Reshape to a (1, R, C) pixel array:
-            PixArrByRoi[r] = np.reshape(OrPixArr, (1, R, C))
-            
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] had {NumOfFramesByRoi[r]} frames,',
-                      f'but now has {PixArrByRoi[r].shape[0]}.')
-        else:
-            if LogToConsole:
-                print(f'\nPixArrByRoi[{r}] has {NumOfFramesByRoi[r]} frames,',
-                      'so no logical ORing was required.')
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of OrFrameOfPixArrBySeg():')
         
-    return PixArrByRoi
+    # Get the shape of any pixel array:
+    F, R, C = PixArrBySeg[0].shape
+    
+    OrPixArrBySeg = []
+    MeanF2SindBySeg = []
+    
+    for s in range(len(PixArrBySeg)):
+        PixArr = PixArrBySeg[s]
+        F2Sinds = F2SindsBySeg[s]
+        
+        """ The number of frames in PixArr """
+        F = PixArr.shape[0]
+        
+        if F > 1: 
+            if LogToConsole:
+                print(f'\nPixArrBySeg[{s}] has {F} frames so the pixel arrays',
+                      'will be logically ORed.')
+            
+            OrPixArr = PixArr.any(axis=0)
+            
+            """ Reshape to a (1, R, C) pixel array: """
+            OrPixArr = np.reshape(OrPixArr, (1, R, C))
+            
+            """ Convert from boolean to uint8: """
+            OrPixArr = OrPixArr.astype('uint8')
+            
+            OrPixArrBySeg.append(OrPixArr)
+            
+            """ Find the mean slice index: """
+            MeanF2Sind = sum(F2Sinds)/len(F2Sinds)
+            
+            """
+            14/02: It may be useful to return the fractional index but for now
+            I'll simply round it to the nearest integer...
+            if MeanF2Sind % 1 == 0:
+                MeanF2Sind = int(MeanF2Sind)
+            """
+            MeanF2Sind = round(MeanF2Sind)
+            
+            MeanF2SindBySeg.append([MeanF2Sind])
+            
+            if LogToConsole:
+                print(f'\nPixArr had {F} frames but now has,',
+                      f'{OrPixArr.shape[0]}.')
+        else:
+            OrPixArrBySeg.append(PixArr)
+            
+            MeanF2SindBySeg.append(F2Sinds)
+            
+            if LogToConsole:
+                print(f'\nPixArr has {F} frames so no logical ORing required.')
+    
+    if LogToConsole:
+        print(f'MeanF2SindBySeg = {MeanF2SindBySeg}')
+        print('-'*120)
+        
+    return OrPixArrBySeg, MeanF2SindBySeg
 
 
 
@@ -1921,4 +2374,125 @@ def GetTxMatrixType(LogToConsole=False):
         print('Matrix type is', MatrixType)
     
     return MatrixType
+
+
+
+
+
+def ReduceDictToKeysMatchingKeyword(Dict, Keyword='', KeepDirectories=True,
+                                    KeepFilepaths=True):
+    """ Reduce a dictionary to a dictionary containing only the elements in
+    Dict whose key matches a keyword. If the keyword is empty (''), the 
+    elements won't be filtered by key.  Elements can be filtered further based
+    on whether their keys are paths to directories or files. """
+    
+    import os
+    
+    NewDict = {}
+    
+    for Key, Val in Dict.items():
+        if Keyword:
+            """ Filter by keys that match Keyword: """
+            if Keyword in Key:
+                """ Filter by keys that are directory paths: """
+                if os.path.isdir(Val) and KeepDirectories:
+                    NewDict[Key] = Val
+                """ Filter by keys that are file paths: """
+                if os.path.isfile(Val) and KeepFilepaths:
+                    NewDict[Key] = Val
+        else:
+            """ Filter by keys that are directory paths: """
+            if os.path.isdir(Val) and KeepDirectories:
+                NewDict[Key] = Val
+            """ Filter by keys that are file paths: """
+            if os.path.isfile(Val) and KeepFilepaths:
+                NewDict[Key] = Val
+    
+    return NewDict
+
+
+
+
+def ReduceDictToKeysMatchingKeywords(Dict, ListOfKeywords, 
+                                     KeepDirectories=True, KeepFilepaths=True):
+    """ Reduce a dictionary to a dictionary containing only the elements in
+    Dict whose key matches all of the keywords in a list of keyword. """
+    
+    
+    for Keyword in ListOfKeywords:
+        Dict = ReduceDictToKeysMatchingKeyword(Dict, Keyword, KeepDirectories,
+                                               KeepFilepaths)
+    
+    return Dict
+
+
+
+
+
+def DisplayAttributesDict(Dict):
+    """ Display dictionary containing image attributes as a pandas data frame
+    and return the data frame. 
+    
+    See https://stackoverflow.com/questions/49661018/displaying-embedded-newlines-in-a-text-column-of-a-pandas-dataframe
+    
+    for two options below.
+    """
+    
+    import pandas as pd
+    from IPython.display import display, HTML
+    
+    df = pd.DataFrame.from_dict(Dict, orient ='index')
+    
+    #option = 1
+    option = 2
+    
+    if option == 1:
+        display(HTML(df.to_html().replace("\\n","<br>")))
+    else:
+        display(df.style.set_properties(**{'text-align': 'center',
+                                           'white-space': 'pre-wrap'}))
+    
+    return df
+
+
+
+
+def DisplayAttributesOfAllData(Keyword='Dcm', RemoveFromKeys='_DcmDir',
+                               Package='pydicom'):
+    """ Display the image attributes of all DICOMs whose directories are listed
+    in CreateDictOfPaths() as a pandas dataframe. Optional inputs allow for:
+    - filtering of paths in the dictionary (containing root directories of 
+    sessions, directories containing DICOM series, and filepaths of RTS/SEG
+    files;
+    - removing of character strings from the keys in the dictionary of paths
+    when creating the dictionary of image attributes;
+    - selection of the package to use when obtaining the image attributes. """
+    
+    import time
+    from RoiCopyTools import CreateDictOfPaths
+    from ImageTools import GetImageAttributesFromDict
+    #from GeneralTools import DisplayAttributesDict
+    
+    Dict = CreateDictOfPaths()
+    
+    print(f'There are {len(list(Dict.keys()))} keys in Dict\n')
+    
+    ##Package = 'sitk'
+    #Package = 'pydicom'
+    
+    """ Start timing. """
+    times = []
+    times.append(time.time())
         
+    Dict, AttDict = GetImageAttributesFromDict(Dict, Keyword, Package, 
+                                               RemoveFromKeys)
+    
+    print(f'\nThere are {len(list(AttDict.keys()))} keys in AttDict\n')
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    print(f'\n*Took {Dtime} s using {Package}.')
+    
+    AttDf = DisplayAttributesDict(AttDict)
+    
+    return AttDf
