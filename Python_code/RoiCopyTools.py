@@ -3078,7 +3078,8 @@ COPY A SEGMENTATION
 def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
             TrgSeg=None, ToSliceNum=None, Interpolation='LabelGaussian',
             Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, AddTxtToSegLabel='', LogToConsole=False):
+            ForceRegistration=False, AddTxtToSegLabel='', RefAllSOPs=False,
+            LogToConsole=False):
     """
     Note 09/02/2021:
         This function will, depending on the inputs, copy either:
@@ -3159,7 +3160,13 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         
     AddTxtToRoiLabel : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target SEG.
-                           
+    
+    RefAllSOPs : boolean (optional; False by default)
+        If True, all SOPInstanceUIDs in the series will be referenced in
+        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
+        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
+        will be referenced.
+        
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
           
@@ -3675,12 +3682,25 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     
     #print(f'\n\n\n\n\nTrgPixArrBySeg = {TrgPixArrBySeg}')
     
+    
     """ Create/overwrite the Target SEG. """
+    
+    if RefAllSOPs:
+        msg = 'All SOPInstanceUIDs will be referenced in '\
+              + 'ReferencedSeriesSequence[0].ReferencedInstanceSequence when '\
+              + 'creating the new SEG.\n'
+    else:
+        msg = 'Only the SOPInstanceUIDs that contain segmentations will be '\
+              + 'referenced in ReferencedSeriesSequence[0].'\
+              + 'ReferencedInstanceSequence when creating the new SEG.\n'
+    print(msg)
+    
     TrgSeg = CreateSeg(SrcSeg=SrcSeg, TrgSeg=TrgSeg, 
                        TrgPixArrBySeg=TrgPixArrBySeg, 
                        TrgF2SindsBySeg=TrgF2SindsBySeg, TrgDicomDir=TrgDcmDir,
                        FromSegLabel=FromSegLabel,
                        AddTxtToSegLabel=AddTxtToSegLabel,
+                       RefAllSOPs=RefAllSOPs,
                        LogToConsole=False)
     
     times.append(time.time())
@@ -3708,135 +3728,12 @@ COPY A CONTOUR / SEGMENTATION
 ******************************************************************************
 """
 
-def CopyRoi_OLD(SrcRoi, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
-            TrgRoi=None, ToSliceNum=None, Sigma=(1,1,1), ThreshLevel=0.75,
-            AddText='', LogToConsole=False):
-    """
-    
-    Inputs:
-    ******
-    
-    SrcRoi : Pydicom object
-        Source RTS/SEG object.
-                             
-    FromSearchString : string
-        All or part of the Source ROIName/SegmentLabel of the ROI/segment 
-        containing the contour/segmentation to be copied.
-    
-    SrcDcmDir : string
-        Directory containing the Source DICOMs.
-                            
-    FromSliceNum : integer
-        Slice index of the Source DICOM stack corresponding to the contour/
-        segmentation to be copied (counting from 0).
-    
-    TrgDcmDir : string
-        Directory containing the Target DICOMs.
-        
-    TrgRts : Pydicom object (optional; None by default)
-        Target RTS object that the contour(s)/segmentation(s) is to be copied 
-        to. TrgRts is only non-None if a Direct copy of the contour/
-        segmentation is to be made and added to existing Direct-copied 
-        contour(s)/segmentation(s).     
-        
-    ToSliceNum : integer (optional; None by default)
-        Slice index within the Target DICOM stack where the contour/
-        segmentation is to be copied to (counting from 0).  This only applies 
-        for Direct copies, hence the default value None.
-        
-    Sigma : tuple (optional; (1,1,1) by default)
-        The sigma values that will define the Gaussian if Gaussian image 
-        blurring is used.  The tuple will define the sigma along x, y and z
-        directions.
-        
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if used.  The threshold value will be ThreshLevel*M, where
-        M is the maximum intensity value of the image.
-    
-    AddText : string (optional, '' by default)
-        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
-        a filename for the new Target RTS/SEG.
-        
-    LogToConsole : boolean (default False)
-        Denotes whether some results will be logged to the console.
-          
-                  
-    Outputs:
-    *******
-        
-    TrgRts : Pydicom object
-        The new (if making a Relationship-preserving copy) or the modified (if
-        making a Direct copy of a contour/segmentation to an existing Direct-
-        copied contour(s)/segmentation(s)) Target RTS/SEG object.
-    """
-
-    import time
-    from DicomTools import IsSameModalities
-    
-    # Start timing:
-    times = []
-    times.append(time.time())
-    
-    # Compare the modalities of the RTSs/SEGs:
-    SrcModality = SrcRoi.Modality
-    
-    if TrgRoi:
-        TrgModality = TrgRoi.Modality
-        
-        if not IsSameModalities(SrcRoi, TrgRoi):
-            msg = f"The Source ({SrcModality}) and Target ({TrgModality}) " \
-                  + "modalities are different."
-            
-            raise Exception(msg)
-            
-    
-    if SrcModality == 'RTSTRUCT':
-        """ If a single contour is to be copied FromSliceNum will be an integer.
-        If FromSliceNum is None, all contours on all ROIs are to be copied
-        (01/02/2021). """
-        
-        if isinstance(FromSliceNum, int):
-            NewTrgRoi = CopyContour(SrcRoi, FromSearchString, SrcDcmDir, 
-                                    FromSliceNum, TrgDcmDir, TrgRoi, ToSliceNum, 
-                                    Sigma, ThreshLevel, AddText, LogToConsole)
-        else:
-            NewTrgRoi = CopyRts(SrcRoi, FromSearchString, SrcDcmDir, 
-                                FromSliceNum, TrgDcmDir, TrgRoi, ToSliceNum, 
-                                Sigma, ThreshLevel, AddText, LogToConsole)
-    
-    elif SrcModality == 'SEG':
-        if isinstance(FromSliceNum, int):
-            NewTrgRoi = CopySegmentation(SrcRoi, FromSearchString, SrcDcmDir, 
-                                         FromSliceNum, TrgDcmDir, TrgRoi, 
-                                         ToSliceNum, Sigma, ThreshLevel,
-                                         AddText, LogToConsole)
-        else:
-            NewTrgRoi = CopySeg()
-        
-    else:
-        msg = f'The Source modality ({SrcModality}) must be either "RTS" or '\
-              + '"SEG".'
-        
-        raise Exception(msg)
-
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    if True:#LogToConsole:
-        print(f'\n\nDone.  Took {Dtime} s to run.')
-        
-    return NewTrgRoi
-
-
-
-
-
 
 def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             TrgRoi=None, ToSliceNum=None, Interpolation='LabelGaussian',
             Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, TxtToAddToRoiLabel='', LogToConsole=False):
+            ForceRegistration=False, TxtToAddToRoiLabel='', RefAllSOPs=False,
+            LogToConsole=False):
     """
     
     Inputs:
@@ -3908,6 +3805,12 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     TxtToAddToRoiLabel : string (optional, '' by default)
         Sting of text to pass to ModifyRts/ModifySeg to be used when generating
         a filename for the new Target RTS/SEG.
+    
+    RefAllSOPs : boolean (optional; False by default)
+        If True, all SOPInstanceUIDs in the series will be referenced in
+        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
+        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
+        will be referenced.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
@@ -3933,7 +3836,7 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
 
     import time
     from DicomTools import IsSameModalities
-    from GeneralTools import PrintTitle
+    #from GeneralTools import PrintTitle
     
     """ Start timing. """
     times = []
@@ -3983,7 +3886,8 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         NewTrgRoi = CopySeg(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir,
                             TrgDcmDir, TrgRoi, ToSliceNum, Interpolation,
                             Variance, ThreshPreRes, ThreshPostTx, Tx, 
-                            ForceRegistration, TxtToAddToRoiLabel, LogToConsole)
+                            ForceRegistration, TxtToAddToRoiLabel, RefAllSOPs,
+                            LogToConsole)
         
     else:
         msg = f'The Source modality ({SrcModality}) must be either "RTS" or '\
@@ -3996,10 +3900,10 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
         #print(f'\n\nDone.  Took {Dtime} s to run.')
-        msg = f'*Took {Dtime} s to copy the ROI(s) and create the RTS/SEG '\
-              + 'object.'  
+        msg = f'Took {Dtime} s to copy the ROI(s) and create the RTS/SEG '\
+              + 'object.\n'  
         #PrintTitle(msg)
-        print(f'\n*{msg}')
+        print(f'*{msg}')
         
     return NewTrgRoi
 
@@ -4017,7 +3921,7 @@ CHECK FOR ERRORS IN NEW TARGET RTS / SEG
 ******************************************************************************
 """
 
-def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
+def ErrorCheckRoi(Roi, DicomDir, RefAllSOPs=False, LogToConsole=False):
     """
     Check a RTS/SEG for errors in dependencies based on provided directory of
     the DICOMs that relate to the RTS/SEG.  
@@ -4030,6 +3934,12 @@ def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
         
     DicomDir : string
         Directory containing the DICOMs that relate to Roi.
+    
+    RefAllSOPs : boolean (optional; False by default)
+        If True, all SOPInstanceUIDs in the series will be referenced in
+        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
+        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
+        will be referenced.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
@@ -4066,7 +3976,8 @@ def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False):
         importlib.reload(SegTools)
         from SegTools import ErrorCheckSeg
         
-        LogList, Nerrors = ErrorCheckSeg(Roi, DicomDir, LogToConsole)
+        LogList, Nerrors = ErrorCheckSeg(Roi, DicomDir, RefAllSOPs, 
+                                         LogToConsole)
         
     else:
         LogList = None
