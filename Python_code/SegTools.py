@@ -29,6 +29,278 @@ SEGMENT FUNCTIONS
 ******************************************************************************
 """      
 
+def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir, 
+                         LogToConsole=False):
+    """
+    Get data of interest from a SEG.
+    
+    Inputs:
+    ******
+    
+    SegFpath : string
+        Filepath of the Source SEG file.
+        
+    FromSliceNum : integer or None
+        The slice indeces within the Source DICOM stack corresponding to the
+        segmentation to be copied (applies for the case of direct copies of a 
+        single segmentation). The index is zero-indexed.
+        If FromSliceNum = None, a relationship-preserving copy will be made.
+        
+    FromSegLabel : string
+        All or part of the Source segment Description of the segment containing 
+        the segmentation(s) to be copied.
+    
+    DicomDir : string 
+        Directory containing the corresponding DICOMs.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+                       
+                            
+    Outputs:
+    *******
+    
+    PixArrBySeg : list of Numpy arrays
+        List (for each segment) of the pixel array containing the frames that
+        belong to each segment.  The pixel array is a sub-array of the (entire)
+        SEG's pixel array. 
+        
+    F2SindsBySeg : List of a list of integers
+        List (for each segment) of the slice numbers that correspond to each
+        frame in each pixel array in PixArrBySeg.
+        
+        
+    Notes:
+    *****
+    
+    There are 3 possible main use cases:
+        1. Copy a single segmentation
+        2. Copy an entire segment
+        3. Copy all segments
+        
+    Which main case applies depends on the inputs:
+        FromSliceNum
+        FromSegLabel
+    
+    If FromSliceNum != None (i.e. if a slice number is defined) a single 
+    segmentation will be copied from the segment that matches FromSegLabel 
+    (--> Main Use Case 1).  
+    
+    Need to decide what to do if there are multiple segments and 
+    FromSegLabel = None.  Possible outcomes:
+
+        - Raise exception with message "There are multiple segments so the 
+        description of the desired segment must be provided"
+        - Copy the segmentation to all segments that have a segmentation on 
+        slice FromSliceNum (* preferred option?)
+        
+    If FromSliceNum = None but FromSegLabel != None, all segmentations within 
+    the segment given by FromSegLabel will be copied (--> Main Use Case 2).  
+    
+    If FromSliceNum = None and FromSegLabel = None, all segmentations within 
+    all segments will be copied (--> Main Use Case 3).
+    
+    If FromSliceNum = None and FromSegLabel = None, all segments will be copied.  
+    If not, get the segment number (zero-indexed) to be copied, and reduce 
+    PixArrBySeg and F2SindsBySeg to the corresponding item.
+    """
+    
+    import numpy as np
+    from DicomTools import GetRoiNums, GetRoiLabels
+    from copy import deepcopy
+    from pydicom import dcmread
+    
+    if LogToConsole:
+        from GeneralTools import PrintIndsByRoi, PrintPixArrShapeBySeg
+        
+        print('\n\n', '-'*120)
+        print('Results of GetSegDataOfInterest():')
+        print(f'   FromSegLabel = {FromSegLabel}')
+        print(f'   FromSliceNum = {FromSliceNum}')
+    
+    
+    Seg = dcmread(SegFpath)
+    
+    AllPixArrBySeg, AllF2SindsBySeg = GetPixArrBySeg(Seg, DicomDir, 
+                                                     LogToConsole)
+    
+    #print('\n\nAllPixArrBySeg =', AllPixArrBySeg)
+    #print(f'\n\nAllF2SindsBySeg = {AllF2SindsBySeg}')
+    
+    Nsegs = len(AllF2SindsBySeg)
+    
+    """ Get the segment labels: """
+    SegLabels = GetRoiLabels(Roi=Seg)
+    
+    """ The shape of the first pixel array: """
+    F, R, C = AllPixArrBySeg[0].shape
+    
+    if LogToConsole:
+        print(f'   SegLabels = {SegLabels}')
+        #print('   AllF2SindsBySeg =')
+        PrintIndsByRoi(AllF2SindsBySeg)
+    
+    """ Initialise variable that indicates if the SEG data was reduced by
+    frame/slice number (FromSliceNum): """
+    ReducedBySlice = False
+            
+    if FromSliceNum:
+        """ Limit data to those which belong to the chosen slice number. """
+        
+        PixArrBySeg = []
+        F2SindsBySeg = []
+    
+        for s in range(Nsegs):
+            """ The pixel array and frame-to-slice indices for this segment:"""
+            AllPixArr = deepcopy(AllPixArrBySeg[s])
+            AllF2Sinds = deepcopy(AllF2SindsBySeg[s])
+                
+            """ Get the frame number(s) that relate to FromSliceNum: """
+            FromFrmNums = [i for i, x in enumerate(AllF2Sinds) if x==FromSliceNum]
+            
+            if LogToConsole:
+                print(f'\nAllF2Sinds = {AllF2Sinds}')
+                print(f'FromFrmNums = {FromFrmNums}')
+            
+            if len(FromFrmNums) != len(AllF2Sinds):
+                """ Some frames will be rejected: """
+                ReducedBySlice = True
+                
+                """ Initialise PixArr with the reduced number of frames 
+                matching len(FromFrmNums): """
+                PixArr = np.zeros((len(FromFrmNums), R, C), dtype='uint')
+                F2Sinds = []
+                
+                if FromFrmNums:
+                    """ Keep only the indeces and frames that relate to 
+                    FromFrmNums. """
+                    #PixArr = [AllPixArr[f] for f in FromFrmNums]
+                    
+                    #""" Set PixArr to the first frame in FromFrmNums: """
+                    #PixArr = AllPixArr[0]
+                    #
+                    #if len(FromFrmNums) > 1:
+                    #    """ Add additional frames: """
+                    #    for f in range(1, len(FromFrmNums)):
+                    #        PixArr = np.vstack((PixArr, AllPixArr[f]))
+                    
+                    for f in range(len(FromFrmNums)):
+                        PixArr[f] = AllPixArr[FromFrmNums[f]]
+                        
+                        F2Sinds.append(AllF2Sinds[FromFrmNums[f]])
+                    
+                    if LogToConsole:
+                        print(f'F2Sinds = {F2Sinds}')
+                    
+                    """ Append non-empty pixel arrays and non-empty F2Sinds:"""
+                    PixArrBySeg.append(PixArr)
+                    F2SindsBySeg.append(F2Sinds)
+                
+                #else:
+                #    #PixArr = []
+                #    #PixArr = np.zeros((0, R, C), dtype='uint')
+                #    F2Sinds = []
+                
+                #""" Append empty pixel arrays and empty F2Sinds: """
+                #PixArrBySeg.append(PixArr)
+                #F2SindsBySeg.append(F2Sinds)
+            """ else all frames to remain. """
+        
+        #print('\n\nPixArrBySeg =', PixArrBySeg)
+        
+        if ReducedBySlice:
+            """ Replace AllPixArrByRoi and AllF2SindsBySeg with PixArrBySeg  
+            and F2SindsBySeg in case further restricting of data is required 
+            below: """
+            AllPixArrBySeg = deepcopy(PixArrBySeg)
+            AllF2SindsBySeg = deepcopy(F2SindsBySeg)
+        """ else AllPixArrBySeg and AllF2SindsBySeg remain unchanged. """
+        
+        #print('\n\nAllPixArrBySeg =', AllPixArrBySeg)
+        
+        if LogToConsole and ReducedBySlice:
+            print('\n   After limiting data to those that relate to slice',
+                  f'number {FromSliceNum}:')#, the F2SindsBySeg =')
+            PrintIndsByRoi(F2SindsBySeg)
+            print('   PixArrBySeg = ', PixArrBySeg)
+            PrintPixArrShapeBySeg(PixArrBySeg)
+    
+    
+    """ Initialise variable that indicates if the SEG data was reduced by
+    chosen segment label (FromSegLabel): """
+    ReducedBySeg = False
+    
+    if FromSegLabel:
+        """ Limit data to those which belong to the chosen segment(s). """
+        
+        PixArrBySeg = []
+        F2SindsBySeg = []
+        
+        """ Get the segment number(s) whose name matches FromSegLabel: """
+        FromSegNums = GetRoiNums(Roi=Seg, SearchString=FromSegLabel)
+        
+        #print(f'\nFromSegNums = {FromSegNums}')
+        #print(f'AllF2SindsBySeg = {AllF2SindsBySeg}')
+        
+        """ 10/02:  Not sure about this if statement... """
+        #if len(FromSegNums) != len(AllF2SindsBySeg):
+        #    #ReducedBySeg = True
+        #
+        #    """ Get the names of all ROIs: """
+        #    FromSegNames = GetRoiLabels(Roi=Seg)
+        #
+        #    """ Limit the list of segment descriptions to those that belong to 
+        #    the chosen segment(s): """
+        #    FromSegNames = [FromSegNames[i] for i in FromSegNums]
+        #    
+        #    
+        #    PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
+        #    F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
+        #    
+        #    if LogToConsole:
+        #        print('\n   After limiting data to those whose segment name',
+        #              f'matches {FromSegNames}:')#, the F2SindsBySeg =')
+        #        PrintIndsByRoi(F2SindsBySeg)
+        #        PrintPixArrShapeBySeg(PixArrBySeg)
+        #        
+        #else:
+        #    PixArrBySeg = deepcopy(AllPixArrBySeg)
+        #    F2SindsBySeg = deepcopy(AllF2SindsBySeg)
+        
+        
+    
+        """ Limit the list of segment descriptions to those that belong to 
+        the chosen segment(s): """
+        FromSegLabels = [SegLabels[i] for i in FromSegNums]
+        
+        #print(f'\n\nlen(FromSegNums) = {len(FromSegNums)}')
+        #print(f'len(AllPixArrBySeg) = {len(AllPixArrBySeg)}')
+        
+        PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
+        F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
+        
+        if len(F2SindsBySeg) != len(AllF2SindsBySeg):
+            ReducedBySeg = True
+        
+        if LogToConsole and ReducedBySeg:
+            print('\n   After limiting data to those whose segment name',
+                  f'matches {FromSegLabels}:')#, the F2SindsBySeg =')
+            PrintIndsByRoi(F2SindsBySeg)
+            PrintPixArrShapeBySeg(PixArrBySeg)
+    
+    if LogToConsole:
+        print('\n   Final outputs of GetSegDataOfInterest():')
+        PrintPixArrShapeBySeg(PixArrBySeg)
+        PrintIndsByRoi(F2SindsBySeg)
+        print('-'*120)
+        
+    return PixArrBySeg, F2SindsBySeg
+
+
+
+
+
+
 
 def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir, 
                                TrgDicomDir, LogToConsole=False):
@@ -1167,271 +1439,6 @@ def GetPixArrBySeg(Seg, DicomDir, LogToConsole=False):
 
 
 
-def GetSegDataOfInterest(Seg, FromSliceNum, FromSegLabel, DicomDir, 
-                         LogToConsole=False):
-    """
-    Get data of interest from a SEG.
-    
-    Inputs:
-    ******
-    
-    Seg : Pydicom object
-        SEG object from an SEG file.
-        
-    FromSliceNum : integer or None
-        The slice indeces within the Source DICOM stack corresponding to the
-        segmentation to be copied (applies for the case of direct copies of a 
-        single segmentation). The index is zero-indexed.
-        If FromSliceNum = None, a relationship-preserving copy will be made.
-        
-    FromSegLabel : string
-        All or part of the Source segment Description of the segment containing 
-        the segmentation(s) to be copied.
-    
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-                       
-                            
-    Outputs:
-    *******
-    
-    PixArrBySeg : list of Numpy arrays
-        List (for each segment) of the pixel array containing the frames that
-        belong to each segment.  The pixel array is a sub-array of the (entire)
-        SEG's pixel array. 
-        
-    F2SindsBySeg : List of a list of integers
-        List (for each segment) of the slice numbers that correspond to each
-        frame in each pixel array in PixArrBySeg.
-        
-        
-    Notes:
-    *****
-    
-    There are 3 possible main use cases:
-        1. Copy a single segmentation
-        2. Copy an entire segment
-        3. Copy all segments
-        
-    Which main case applies depends on the inputs:
-        FromSliceNum
-        FromSegLabel
-    
-    If FromSliceNum != None (i.e. if a slice number is defined) a single 
-    segmentation will be copied from the segment that matches FromSegLabel 
-    (--> Main Use Case 1).  
-    
-    Need to decide what to do if there are multiple segments and 
-    FromSegLabel = None.  Possible outcomes:
-
-        - Raise exception with message "There are multiple segments so the 
-        description of the desired segment must be provided"
-        - Copy the segmentation to all segments that have a segmentation on 
-        slice FromSliceNum (* preferred option?)
-        
-    If FromSliceNum = None but FromSegLabel != None, all segmentations within 
-    the segment given by FromSegLabel will be copied (--> Main Use Case 2).  
-    
-    If FromSliceNum = None and FromSegLabel = None, all segmentations within 
-    all segments will be copied (--> Main Use Case 3).
-    
-    If FromSliceNum = None and FromSegLabel = None, all segments will be copied.  
-    If not, get the segment number (zero-indexed) to be copied, and reduce 
-    PixArrBySeg and F2SindsBySeg to the corresponding item.
-    """
-    
-    import numpy as np
-    from DicomTools import GetRoiNums, GetRoiLabels
-    from copy import deepcopy
-    
-    if LogToConsole:
-        from GeneralTools import PrintIndsByRoi, PrintPixArrShapeBySeg
-        
-        print('\n\n', '-'*120)
-        print('Results of GetSegDataOfInterest():')
-        print(f'   FromSegLabel = {FromSegLabel}')
-        print(f'   FromSliceNum = {FromSliceNum}')
-    
-    AllPixArrBySeg, AllF2SindsBySeg = GetPixArrBySeg(Seg, DicomDir, 
-                                                     LogToConsole)
-    
-    #print('\n\nAllPixArrBySeg =', AllPixArrBySeg)
-    #print(f'\n\nAllF2SindsBySeg = {AllF2SindsBySeg}')
-    
-    Nsegs = len(AllF2SindsBySeg)
-    
-    """ Get the segment labels: """
-    SegLabels = GetRoiLabels(Roi=Seg)
-    
-    """ The shape of the first pixel array: """
-    F, R, C = AllPixArrBySeg[0].shape
-    
-    if LogToConsole:
-        print(f'   SegLabels = {SegLabels}')
-        #print('   AllF2SindsBySeg =')
-        PrintIndsByRoi(AllF2SindsBySeg)
-    
-    """ Initialise variable that indicates if the SEG data was reduced by
-    frame/slice number (FromSliceNum): """
-    ReducedBySlice = False
-            
-    if FromSliceNum:
-        """ Limit data to those which belong to the chosen slice number. """
-        
-        PixArrBySeg = []
-        F2SindsBySeg = []
-    
-        for s in range(Nsegs):
-            """ The pixel array and frame-to-slice indices for this segment:"""
-            AllPixArr = deepcopy(AllPixArrBySeg[s])
-            AllF2Sinds = deepcopy(AllF2SindsBySeg[s])
-                
-            """ Get the frame number(s) that relate to FromSliceNum: """
-            FromFrmNums = [i for i, x in enumerate(AllF2Sinds) if x==FromSliceNum]
-            
-            if LogToConsole:
-                print(f'\nAllF2Sinds = {AllF2Sinds}')
-                print(f'FromFrmNums = {FromFrmNums}')
-            
-            if len(FromFrmNums) != len(AllF2Sinds):
-                """ Some frames will be rejected: """
-                ReducedBySlice = True
-                
-                """ Initialise PixArr with the reduced number of frames 
-                matching len(FromFrmNums): """
-                PixArr = np.zeros((len(FromFrmNums), R, C), dtype='uint')
-                F2Sinds = []
-                
-                if FromFrmNums:
-                    """ Keep only the indeces and frames that relate to 
-                    FromFrmNums. """
-                    #PixArr = [AllPixArr[f] for f in FromFrmNums]
-                    
-                    #""" Set PixArr to the first frame in FromFrmNums: """
-                    #PixArr = AllPixArr[0]
-                    #
-                    #if len(FromFrmNums) > 1:
-                    #    """ Add additional frames: """
-                    #    for f in range(1, len(FromFrmNums)):
-                    #        PixArr = np.vstack((PixArr, AllPixArr[f]))
-                    
-                    for f in range(len(FromFrmNums)):
-                        PixArr[f] = AllPixArr[FromFrmNums[f]]
-                        
-                        F2Sinds.append(AllF2Sinds[FromFrmNums[f]])
-                    
-                    if LogToConsole:
-                        print(f'F2Sinds = {F2Sinds}')
-                    
-                    """ Append non-empty pixel arrays and non-empty F2Sinds:"""
-                    PixArrBySeg.append(PixArr)
-                    F2SindsBySeg.append(F2Sinds)
-                
-                #else:
-                #    #PixArr = []
-                #    #PixArr = np.zeros((0, R, C), dtype='uint')
-                #    F2Sinds = []
-                
-                #""" Append empty pixel arrays and empty F2Sinds: """
-                #PixArrBySeg.append(PixArr)
-                #F2SindsBySeg.append(F2Sinds)
-            """ else all frames to remain. """
-        
-        #print('\n\nPixArrBySeg =', PixArrBySeg)
-        
-        if ReducedBySlice:
-            """ Replace AllPixArrByRoi and AllF2SindsBySeg with PixArrBySeg  
-            and F2SindsBySeg in case further restricting of data is required 
-            below: """
-            AllPixArrBySeg = deepcopy(PixArrBySeg)
-            AllF2SindsBySeg = deepcopy(F2SindsBySeg)
-        """ else AllPixArrBySeg and AllF2SindsBySeg remain unchanged. """
-        
-        #print('\n\nAllPixArrBySeg =', AllPixArrBySeg)
-        
-        if LogToConsole and ReducedBySlice:
-            print('\n   After limiting data to those that relate to slice',
-                  f'number {FromSliceNum}:')#, the F2SindsBySeg =')
-            PrintIndsByRoi(F2SindsBySeg)
-            print('   PixArrBySeg = ', PixArrBySeg)
-            PrintPixArrShapeBySeg(PixArrBySeg)
-    
-    
-    """ Initialise variable that indicates if the SEG data was reduced by
-    chosen segment label (FromSegLabel): """
-    ReducedBySeg = False
-    
-    if FromSegLabel:
-        """ Limit data to those which belong to the chosen segment(s). """
-        
-        PixArrBySeg = []
-        F2SindsBySeg = []
-        
-        """ Get the segment number(s) whose name matches FromSegLabel: """
-        FromSegNums = GetRoiNums(Roi=Seg, SearchString=FromSegLabel)
-        
-        #print(f'\nFromSegNums = {FromSegNums}')
-        #print(f'AllF2SindsBySeg = {AllF2SindsBySeg}')
-        
-        """ 10/02:  Not sure about this if statement... """
-        #if len(FromSegNums) != len(AllF2SindsBySeg):
-        #    #ReducedBySeg = True
-        #
-        #    """ Get the names of all ROIs: """
-        #    FromSegNames = GetRoiLabels(Roi=Seg)
-        #
-        #    """ Limit the list of segment descriptions to those that belong to 
-        #    the chosen segment(s): """
-        #    FromSegNames = [FromSegNames[i] for i in FromSegNums]
-        #    
-        #    
-        #    PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
-        #    F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
-        #    
-        #    if LogToConsole:
-        #        print('\n   After limiting data to those whose segment name',
-        #              f'matches {FromSegNames}:')#, the F2SindsBySeg =')
-        #        PrintIndsByRoi(F2SindsBySeg)
-        #        PrintPixArrShapeBySeg(PixArrBySeg)
-        #        
-        #else:
-        #    PixArrBySeg = deepcopy(AllPixArrBySeg)
-        #    F2SindsBySeg = deepcopy(AllF2SindsBySeg)
-        
-        
-    
-        """ Limit the list of segment descriptions to those that belong to 
-        the chosen segment(s): """
-        FromSegLabels = [SegLabels[i] for i in FromSegNums]
-        
-        PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
-        F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
-        
-        if len(F2SindsBySeg) != len(AllF2SindsBySeg):
-            ReducedBySeg = True
-        
-        if LogToConsole and ReducedBySeg:
-            print('\n   After limiting data to those whose segment name',
-                  f'matches {FromSegLabels}:')#, the F2SindsBySeg =')
-            PrintIndsByRoi(F2SindsBySeg)
-            PrintPixArrShapeBySeg(PixArrBySeg)
-    
-    if LogToConsole:
-        print('\n   Final outputs of GetSegDataOfInterest():')
-        PrintPixArrShapeBySeg(PixArrBySeg)
-        PrintIndsByRoi(F2SindsBySeg)
-        print('-'*120)
-        
-    return PixArrBySeg, F2SindsBySeg
-
-
-
-
-
-
 
 def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds, 
                     PixArrToAdd, PFFGStoSliceIndsToAdd):
@@ -1529,8 +1536,8 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
 
 
 
-def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir, 
-              FromSegLabel, AddTxtToSegLabel='', RefAllSOPs=False,
+def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg, 
+              TrgDicomDir, FromSegLabel, AddTxtToSegLabel='', 
               LogToConsole=False):
     """
     Create an SEG object for the target dataset.
@@ -1539,13 +1546,14 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     Inputs:
     ******
     
-    SrcSeg : Pydicom object
-        The Source SEG object. If TrgSeg = None, SrcSeg will be used as a 
-        template for NewTrgSeg.
+    SrcSegFpath : string
+        Filepath of the Source SEG file. If TrgSegFpath = None, the Source SEG
+        will be used as a template for the new Target SEG (NewTrgSeg).
     
-    TrgSeg : Pydicom object or None
-        If TrgSeg != None, the TrgSeg will be modified to create NewTrgSeg.
-        If TrgSeg = None, the SrcSeg will be used as a template.
+    TrgSegFpath : string or None
+        If TrgSegFpath != None, the Target SEG will be modified to create 
+        NewTrgSeg.  If TrgSegFpath = None, the Source SEG will be used as a 
+        template.
 
     TrgPixArrBySeg : list of Numpy arrays
         List (for each segment) of the pixel array containing the frames that
@@ -1565,11 +1573,6 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     
     AddTxtToSegLabel : string (optional; '' by default)
         String to be added to SeriesDescription for the new SEG. 
-    
-    RefAllSOPs : boolean (optional; False by default)
-        If True, all SOPInstanceUIDs in the series will be referenced in
-        ReferencedSeriesSequence[0].ReferencedInstanceSequence. If False, only
-        the SOPInstanceUIDs that have segmentations will be referenced.
         
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
@@ -1580,8 +1583,35 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
         
     NewTrgSeg : Pydicom object
         New SEG object.
+        
+    
+    Notes:
+    *****
+    
+    Performance of adding/removing sequences using append()/pop():
+        
+    - Took 168.4 ms to add 10000 sequences to ReferencedInstanceSequence 
+    (16.8 us/sequence)
+    - Took 81.7 ms to remove 10000 sequences to ReferencedInstanceSequence 
+    (8.2 us/sequence)
+    
+    - Took 92.4 ms to add 10000 sequences to PerFrameFunctionalGroupsSequence 
+    (9.2 us/sequence)
+    -Took 45.8 ms to remove 10000 sequences to PerFrameFunctionalGroupsSequence 
+    (4.6 us/sequence)
+    
+    19/02:
+        After avoiding the use of deepcopy to increase sequences in RtsSeg()
+        I've had to re-instate them since the tag values were being duplicated 
+        despite calls to modify them.  For some reason the removal of deepcopy
+        from CreateSeg() hasn't resulted in the unexpected behaviours found 
+        with CreateRts().  Nevertheless deepcopy was re-instated in CreateSeg()
+        as a precaution.  Oddly the re-introduction of deepcopy doesn't seem to
+        have lengthened the time to run CreateSeg() or to perform error 
+        checking.
     """
     
+    from pydicom import dcmread
     from pydicom.uid import generate_uid
     import time
     from copy import deepcopy
@@ -1596,10 +1626,19 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
         print(f'Results of CreateSeg():')
         print(f'   TrgF2SindsBySeg = {TrgF2SindsBySeg}')
         print(f'   len(TrgPixArrBySeg) = {len(TrgPixArrBySeg)}')
-            
+    
+    SrcSeg = dcmread(SrcSegFpath)
+    
+    """ Use TrgSeg or SrcSeg as a template for NewTrgSeg. """
+    if TrgSegFpath:
+        NewTrgSeg = dcmread(TrgSegFpath)
+    else:
+        NewTrgSeg = deepcopy(SrcSeg)
+    
     TrgDicoms = ImportDicoms(TrgDicomDir)
     
-    NumOfDicoms = len(TrgDicoms)
+    Size, Spacings, ST, IPPs, Dirs,\
+    ListOfWarnings = GetImageAttributes(DicomDir=TrgDicomDir, Package='sitk')
     
     NumOfFramesBySeg = []
     for s in range(len(TrgPixArrBySeg)):
@@ -1614,42 +1653,33 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     """ Get the list of SegmentNumber for the segments of interest in SrcSeg. """
     SegNums = GetRoiNums(SrcSeg, FromSegLabel)
     
-    Size, Spacings, ST, IPPs, Dirs,\
-    ListOfWarnings = GetImageAttributes(DicomDir=TrgDicomDir, Package='sitk')
+    UniqueTrgF2Sinds = UniqueItems(Items=TrgF2SindsBySeg, IgnoreZero=False, 
+                                   MaintainOrder=True)
     
-    UniqueF2Sinds = UniqueItems(Items=TrgF2SindsBySeg, IgnoreZero=False, 
-                                MaintainOrder=True)
-    
-    FlattenedF2Sinds = FlattenList(TrgF2SindsBySeg)
+    FlattenedTrgF2Sinds = FlattenList(TrgF2SindsBySeg)
     
     if LogToConsole:
-        print(f'   NumOfDicoms = {NumOfDicoms}')
         print(f'   SegNums = {SegNums}')
         print(f'   NumOfFramesBySeg = {NumOfFramesBySeg}')
         print(f'   NumOfFrames = {NumOfFrames}')
     
-    # Use TrgSeg or SrcSeg as a template for NewTrgSeg:
-    if TrgSeg:
-        NewTrgSeg = deepcopy(TrgSeg)
-    else:
-        NewTrgSeg = deepcopy(SrcSeg)
     
-    # Generate a new SOPInstance UID:
+    """ Generate a new SOPInstanceUID. """
     NewSOPuid = generate_uid()
     NewTrgSeg.SOPInstanceUID = deepcopy(NewSOPuid)
     NewTrgSeg.file_meta.MediaStorageSOPInstanceUID = deepcopy(NewSOPuid)
     
-    # Generate a new SeriesInstance UID:
+    """ Generate a new SeriesInstanceUID. """
     NewTrgSeg.SeriesInstanceUID = generate_uid()
     
     NewDate = time.strftime("%Y%m%d", time.gmtime())
     NewTime = time.strftime("%H%M%S", time.gmtime())
     
-    """ If TrgSeg != None, some tags will not need to be replaced.
-    If TrgSeg = None, use the corresponding values in the first Target 
+    """ If TrgSegFpath != None, some tags will not need to be replaced.
+    If TrgSegFpath = None, use the corresponding values in the first Target 
     DICOM. """
     
-    if TrgSeg == None:
+    if TrgSegFpath == None:
         NewTrgSeg.StudyDate = TrgDicoms[0].StudyDate
         NewTrgSeg.SeriesDate = TrgDicoms[0].SeriesDate
         #NewTrgSeg.ContentDate = TrgDicoms[0].ContentDate
@@ -1721,7 +1751,7 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     
     """ Modify NumberOfFrames. """
     
-    NewTrgSeg.NumberOfFrames = f"{len(FlattenedF2Sinds)}"
+    NewTrgSeg.NumberOfFrames = f"{len(FlattenedTrgF2Sinds)}"
     
     
     """ Modify ReferencedSeriesSequence. """
@@ -1729,46 +1759,24 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     NewTrgSeg.ReferencedSeriesSequence[0]\
              .SeriesInstanceUID = TrgDicoms[0].SeriesInstanceUID
     
-    """ Modify ReferencedInstanceSequence in ReferencedSeriesSequence. 
-    Note:
-        If TrgSeg was used as a template no changes should need to be made. But 
-        since it's not computationally expensive to do so, ensure that all 
-        TrgDicoms are referenced anyhow. """
-    
-    """ Loop through each TrgDicom. 
-    14/02: Appending sequences to reference every SOP UID is incredibly time
-    consuming so instead will only reference the SOP UIDs that have 
-    segmentations. 
-    
-    At 21:20 on 14/02 changed from looping through range(NumOfFrames) to
-    range(len(UniqueF2Sinds)), since some slices are repeated.
-    
-    15/02/21: Variable RefAllSOPs allows for both scenarios.
-    """
-    
-    """ Define the required number of ReferencedInstanceSequence and slice
-    indices that correspond to the SOPInstanceUIDs to reference. """
-    if RefAllSOPs:
-        ReqNumOfRIS = deepcopy(NumOfDicoms)
-        ReqIndsToRef = list(range(NumOfDicoms))
-    else:
-        ReqNumOfRIS = len(UniqueF2Sinds)
-        ReqIndsToRef = deepcopy(UniqueF2Sinds)
+    """ Modify ReferencedInstanceSequence in ReferencedSeriesSequence. """
         
-    for i in range(ReqNumOfRIS):#range(len(UniqueF2Sinds)):#range(NumOfFrames):#range(NumOfDicoms):
-        #s = FlattenedF2Sinds[i]
-        #s = UniqueF2Sinds[i]
-        s = ReqIndsToRef[i]
+    for i in range(len(UniqueTrgF2Sinds)):
+        """ The slice index s determines the SOPInstanceUID to reference. """
+        s = UniqueTrgF2Sinds[i]
         
         """ The number of sequences in ReferencedSeriesSequence: """
-        RSS = deepcopy(NewTrgSeg.ReferencedSeriesSequence[0]\
-                                .ReferencedInstanceSequence)
-        
-        N = len(RSS)
+        N = len(NewTrgSeg.ReferencedSeriesSequence[0]\
+                         .ReferencedInstanceSequence)
         
         if i > N - 1:
             """ Increase the sequence by one. """
-            LastItem = deepcopy(RSS[-1])
+            #NewTrgSeg.ReferencedSeriesSequence[0]\
+            #         .ReferencedInstanceSequence.append(NewTrgSeg.ReferencedSeriesSequence[0]\
+            #                                                     .ReferencedInstanceSequence[-1])
+                     
+            LastItem = deepcopy(NewTrgSeg.ReferencedSeriesSequence[0]\
+                                         .ReferencedInstanceSequence[-1])
             
             NewTrgSeg.ReferencedSeriesSequence[0]\
                      .ReferencedInstanceSequence.append(LastItem)
@@ -1784,11 +1792,11 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     
     """ Check if there are more sequences in ReferencedInstanceSequence than 
     required. """
-    NumOfRIS = len(NewTrgSeg.ReferencedSeriesSequence[0]\
-                            .ReferencedInstanceSequence)
+    N = len(NewTrgSeg.ReferencedSeriesSequence[0]\
+                     .ReferencedInstanceSequence)
     
-    if NumOfRIS > ReqNumOfRIS:#len(UniqueF2Sinds):#NumOfFrames:#NumOfDicoms:
-        for i in range(NumOfRIS - ReqNumOfRIS):#len(UniqueF2Sinds)):#NumOfFrames):#NumOfDicoms):
+    if N > len(UniqueTrgF2Sinds):
+        for i in range(N - len(UniqueTrgF2Sinds)):
             """ Remove the last sequence. """
             NewTrgSeg.ReferencedSeriesSequence[0]\
                      .ReferencedInstanceSequence.pop()
@@ -1824,21 +1832,21 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     """ Get the ReferencedSOPInstanceUIDs in the ReferencedInstanceSequence."""
     RefSOPsInRIS = GetRSOPuidsInRIS(NewTrgSeg)
     
-    ReqNumOfPFFGS = len(FlattenedF2Sinds)
-    
     i = 0 # total frame counter (for all segments)
     
     for s in range(len(TrgF2SindsBySeg)):
-        for f in range(len(TrgF2SindsBySeg[s])):
-            PFFGS = deepcopy(NewTrgSeg.PerFrameFunctionalGroupsSequence)
-            
-            N = len(PFFGS)
+        for f in range(len(TrgF2SindsBySeg[s])):  
+            N = len(NewTrgSeg.PerFrameFunctionalGroupsSequence)
             
             if i > N - 1:
                 """ Increase the sequence by one. """
-                LastItem = deepcopy(PFFGS[-1])
+                #NewTrgSeg.PerFrameFunctionalGroupsSequence\
+                #         .append(NewTrgSeg.PerFrameFunctionalGroupsSequence[-1])
+                         
+                LastItem = deepcopy(NewTrgSeg.PerFrameFunctionalGroupsSequence[-1])
                 
-                NewTrgSeg.PerFrameFunctionalGroupsSequence.append(LastItem)
+                NewTrgSeg.PerFrameFunctionalGroupsSequence\
+                         .append(LastItem)
             
             """ The DICOM slice number: """
             d = TrgF2SindsBySeg[s][f]
@@ -1853,49 +1861,16 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
                      .SourceImageSequence[0]\
                      .ReferencedSOPInstanceUID = TrgDicoms[d].SOPInstanceUID
             
-            """ The index of the ReferencedSOPInstanceUID in 
-            ReferencedInstanceSequence is d, since the sequence was overwritten
-            in the same order as the list of DICOMs in TrgDicoms. 
-            Note:
-                While s (segment number) and d (DICOM slice number) are both
-                0-indexed, DimensionIndexValues are 1-indexed.
-            
-            14/02/21: Following change to no longer reference all SOP UIDs 
-            instead of mirroring the sequence of ReferencedSOPInstanceUIDs in
-            ReferencedInstanceSequence (which matched the order of DICOMs), and
-            hence, the second element in DimensionIndexValues was d + 1, now
-            the second value will simply be f + 1.
-            
-            At 21:20 on 14/02:  It's wrong to use f+1 since there will be more
-            frames than the number of ReferencedSOPInstanceUIDs if there are
-            more than one segmentation on any given frame. So instead need to 
-            get the index of the ReferencedSOPInstanceUID in the 
-            ReferencedInstanceSequence that matches the d^th DICOM 
-            SOPInstanceUID.
-            
-            Alternatively since UniqueF2Sinds was created maintaining the order
-            of indices in TrgF2SindsBySeg, the index (+1) of the UniqueF2Sind 
-            that matches slice number d will be the required second element.
-            
-            15/02: Now the index is the index of slice d within ReqIndsToRef.
-            """
-            
-            #ind = UniqueF2Sinds.index(d)
-            #ind = ReqIndsToRef.index(d)
-            
-            """ Some SEGs are not rendered at all so try more fail-proof
-            method. """
-            
             SOPuid = TrgDicoms[d].SOPInstanceUID
             
-            """ Get the index of SOPuid in the ReferencedSOPInstanceUIDs from
-            ReferencedInstanceSequence (RefSOPsInRIS): """
             ind = RefSOPsInRIS.index(SOPuid)
             
-        
+            """ Note: While s (segment number) and ind (the index of SOPuid
+            within the ReferencedSOPInstanceUIDs in ReferencedInstanceSequence)
+            are are both 0-indexed, DimensionIndexValues are 1-indexed. """
             NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
                      .FrameContentSequence[0]\
-                     .DimensionIndexValues = [s + 1, ind + 1]# [s + 1, f + 1] # [s + 1, d + 1]
+                     .DimensionIndexValues = [s + 1, ind + 1]
             
             NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
                      .PlanePositionSequence[0]\
@@ -1909,10 +1884,10 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
     
     """ Check if there are more sequences in PerFrameFunctionalGroupsSequence 
     than required. """
-    NumOfPFFGS = len(NewTrgSeg.PerFrameFunctionalGroupsSequence)
+    N = len(NewTrgSeg.PerFrameFunctionalGroupsSequence)
     
-    if NumOfPFFGS > ReqNumOfPFFGS:
-        for i in range(NumOfPFFGS - ReqNumOfPFFGS):
+    if N > len(FlattenedTrgF2Sinds):
+        for i in range(N - len(FlattenedTrgF2Sinds)):
             """ Remove the last sequence: """
             NewTrgSeg.PerFrameFunctionalGroupsSequence.pop()        
     
@@ -1946,7 +1921,7 @@ def CreateSeg(SrcSeg, TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir,
 
 
 
-def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
+def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     """
     Check a SEG for errors in dependencies based on provided directory of
     the DICOMs that relate to the SEG.  
@@ -1959,11 +1934,6 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         
     DicomDir : string
         Directory containing the DICOMs that relate to Seg.
-    
-    RefAllSOPs : boolean (optional; False by default)
-        If True, all SOPInstanceUIDs in the series were referenced in
-        ReferencedSeriesSequence[0].ReferencedInstanceSequence. If False, only
-        the SOPInstanceUIDs that have segmentations were referenced.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
@@ -1980,9 +1950,9 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         The number of errors found.
     """
     
-    import importlib
-    import GeneralTools
-    importlib.reload(GeneralTools)
+    #import importlib
+    #import GeneralTools
+    #importlib.reload(GeneralTools)
     
     from copy import deepcopy
     from DicomTools import GetDicomSOPuids
@@ -2026,8 +1996,8 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     
     
     """Determine whether MediaStorageSOPInstanceUID matches SOPInstanceUID."""
-    MSSOPuid = deepcopy(Seg.file_meta.MediaStorageSOPInstanceUID)
-    SOPuid = deepcopy(Seg.SOPInstanceUID)
+    MSSOPuid = Seg.file_meta.MediaStorageSOPInstanceUID
+    SOPuid = Seg.SOPInstanceUID
     
     if MSSOPuid == SOPuid:
         msg = f'INFO:  MediaStorageSOPInstanceUID {MSSOPuid} matches '\
@@ -2042,33 +2012,12 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         print(msg)
     
     
-    """Determine whether the number of sequences in 
-    ReferencedInstanceSequence matches the number of DICOMs.
-    14/02/21: Due to the excessive time taken to append sequences there was a
-    change to only reference the SOP UIDs that have segmentations. 
-    15/02/21: Variable RefAllSOPs allows for both scenarios. """
-    
-    RIS = deepcopy(Seg.ReferencedSeriesSequence[0]\
-                      .ReferencedInstanceSequence)
-    
-    if RefAllSOPs:
-        if len(RIS) == len(SOPuids):
-            msg = f'INFO:  The number of SOPInstanceUIDs, {len(SOPuids)},'\
-                  + ' matches the number of sequences in '\
-                  + f'ReferencedInstanceSequence, {len(RIS)}.\n'
-        else:
-            msg = f'ERROR:  The number of SOPInstanceUIDs, {len(SOPuids)}, '\
-                  + 'does not match the number of sequences in '\
-                  + f'ReferencedInstanceSequence, {len(RIS)}.\n'
-            LogList.append(msg) 
-            Nerrors = Nerrors + 1
-        if LogToConsole:
-            print(msg)
-    
-    
-    
     """Determine whether any of the ReferencedSOPInstanceUIDs do not
     match the SOPInstanceUIDs."""        
+    
+    RIS = Seg.ReferencedSeriesSequence[0]\
+             .ReferencedInstanceSequence
+    
     RefSOPuidsInRIS = [RIS[i].ReferencedSOPInstanceUID for i in range(len(RIS))]
 
     IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInRIS]
@@ -2096,42 +2045,6 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         LogList.append(msg)
         if LogToConsole:
             print(msg)
-                
-                
-    
-    """Determine whether any of the SOPInstanceUIDs are not referenced in the
-    ReferencedSOPInstanceUIDs.
-    14/02/21: Following the change to not reference every SOP UID this check is
-    no longer required: 
-    15/02/21: Variable RefAllSOPs allows for both scenarios. """        
-    
-    if RefAllSOPs:
-        IsMatch = [SOPuid in RefSOPuidsInRIS for SOPuid in SOPuids]
-        
-        #NumOfMatches = IsMatch.count(True)
-        
-        # Find the indices of any non-matching SOP UIDs:
-        Inds = [i for i, x in enumerate(IsMatch) if x==False]
-        
-        if Inds:        
-            for i in range(len(Inds)):
-                uid = SOPuids[Inds[i]]
-                
-                msg = f'ERROR:  SOPInstanceUID {uid} is not referenced in any '\
-                      + 'ReferencedSOPInstanceUID in '\
-                      + 'ReferencedInstanceSequence.\n'
-                LogList.append(msg)
-                Nerrors = Nerrors + 1
-                if LogToConsole:
-                    print(msg)
-        else:
-            msg = f'INFO:  All SOPInstanceUIDs are referenced in the '\
-                      + 'ReferencedSOPInstanceUIDs in '\
-                      + 'ReferencedInstanceSequence.\n'        
-            LogList.append(msg)
-            if LogToConsole:
-                print(msg)
-    
     
                            
     if Seg.ReferencedSeriesSequence[0].SeriesInstanceUID == Dicom.SeriesInstanceUID:
@@ -2313,9 +2226,9 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     
     
     """Check various tags in SharedFunctionalGroupsSequence."""
-    SegIOP = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
-                         .PlaneOrientationSequence[0]\
-                         .ImageOrientationPatient)
+    SegIOP = Seg.SharedFunctionalGroupsSequence[0]\
+                .PlaneOrientationSequence[0]\
+                .ImageOrientationPatient
     
     SegIOP = [float(item) for item in SegIOP]
     
@@ -2341,9 +2254,9 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         print(msg)
        
     
-    SegST = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
-                        .PixelMeasuresSequence[0]\
-                        .SliceThickness)
+    SegST = Seg.SharedFunctionalGroupsSequence[0]\
+               .PixelMeasuresSequence[0]\
+               .SliceThickness
     
     """ The SliceThickness appears to be the z-Spacing rather than the
     SliceThickness from the DICOM metadata. """
@@ -2375,9 +2288,9 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         print(msg)
     
     
-    SegSBS = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
-                         .PixelMeasuresSequence[0]\
-                         .SpacingBetweenSlices)
+    SegSBS = Seg.SharedFunctionalGroupsSequence[0]\
+                .PixelMeasuresSequence[0]\
+                .SpacingBetweenSlices
     
     if float(SegSBS) == Spacings[2]:
         msg = 'INFO:  SEG SpacingBetweenSlices in '\
@@ -2405,9 +2318,9 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         print(msg)
 
     
-    SegPS = deepcopy(Seg.SharedFunctionalGroupsSequence[0]\
-                        .PixelMeasuresSequence[0]\
-                        .PixelSpacing)
+    SegPS = Seg.SharedFunctionalGroupsSequence[0]\
+               .PixelMeasuresSequence[0]\
+               .PixelSpacing
     
     SegPS = [float(item) for item in SegPS]
     
@@ -2434,7 +2347,7 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     
     """Verify that the number of sequences in PerFrameFunctionalGroupsSequence
     is equal to NumberOfFrames."""
-    PFFGS = deepcopy(Seg.PerFrameFunctionalGroupsSequence)
+    PFFGS = Seg.PerFrameFunctionalGroupsSequence
     
     if len(PFFGS) == int(Seg.NumberOfFrames):
         msg = f'INFO:  The number of sequences in '\
@@ -2489,17 +2402,10 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     DIVs = [PFFGS[i].FrameContentSequence[0]\
                     .DimensionIndexValues for i in range(len(PFFGS))]
     
-    # Determine whether any of the first elements in the DIVs are not 1  
-    # (there should only be one segment, so the first element should always
-    # be 1):
     FirstElements = [int(DIVs[i][0]) for i in range(len(DIVs))]
     
-    #NumOfMatches = FirstElements.count('1')
-    
-    ## Find the indices of any non-matching elements:
-    #Inds = [i for i, x in enumerate(FirstElements) if x != 1]
-    # Find the indices of any elements that exceed the number of sequences in
-    # SegmentSequence, NumSS:
+    """ Find the indices of any elements that exceed the number of sequences in
+    SegmentSequence, NumSS: """
     Inds = [i for i, x in enumerate(FirstElements) if x > NumSS]
     
     if Inds:        
@@ -2520,11 +2426,11 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     if LogToConsole:
         print(msg)
                 
-    # Determine if any of the second elements in the DIVs exceed the number
-    # of sequences in ReferencedInstanceSequence:
+    """ Determine if any of the second elements in the DIVs exceed the number
+    of sequences in ReferencedInstanceSequence: """
     SecondElements = [int(DIVs[i][1]) for i in range(len(DIVs))]
     
-    # Find the indices of any elements that exceed len(RIS):
+    """ Find the indices of any elements that exceed len(RIS): """
     Inds = [i for i, x in enumerate(SecondElements) if x > len(RIS)]
 
     if Inds:       
@@ -2558,7 +2464,7 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     for i in range(len(SecondElements)):
         RefSOPinPFFGS = RefSOPuidsInPFFGS[i]
         
-        # Need to -1 since i is zero-indexed:
+        """ -1 since i is zero-indexed: """
         ind = SecondElements[i] - 1
         
         #print(f'ind = {ind}')
@@ -2598,7 +2504,6 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
     IPPsInPFFGS = [PFFGS[i].PlanePositionSequence[0]\
                            .ImagePositionPatient for i in range(len(PFFGS))]
     
-    # Convert from strings to floats:
     IPPsInPFFGS = [[float(item) for item in IPP] for IPP in IPPsInPFFGS]
     
     c = 0
@@ -2705,7 +2610,7 @@ def ErrorCheckSeg(Seg, DicomDir, RefAllSOPs=False, LogToConsole=False):
         print(msg)
     
     
-    print(f'There were {Nerrors} errors found in the SEG.\n')
+    #print(f'There were {Nerrors} errors found in the SEG.\n')
     
     if LogToConsole:
         print('-'*120)
@@ -2732,9 +2637,9 @@ def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString,
     plot title.
     """
     
-    import importlib
-    import DicomTools
-    importlib.reload(DicomTools)
+    #import importlib
+    #import DicomTools
+    #importlib.reload(DicomTools)
     
     #import numpy as np
     from DicomTools import GetDicomFpaths

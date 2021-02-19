@@ -84,6 +84,7 @@ TO SOURCE AND TARGET DICOM DIRECTORIES, AND OTHER INPUTS REQUIRED.
 ******************************************************************************
 """
 
+
 def CreateDictOfPaths():
     import os
     
@@ -92,330 +93,272 @@ def CreateDictOfPaths():
         below!
     """
     
+    Dict = {}
+    
+    
     """ Subject TCGA-BB-A5HY in XNAT_TEST """
     
     Sub1_Dir = r"C:\Data\XNAT_TEST\TCGA-BB-A5HY"
     
+    Dict['Sub1_Dir'] = Sub1_Dir
+    
     """ Session 1 """
     
-    Ses1_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session1\scans\5_AX T2 BRAIN  PROPELLER\DICOM")
+    Dict['Ses1_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session1\scans\5_AX T2 BRAIN  PROPELLER\DICOM")
     
-    Ses1_Ser6_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session1\scans\6_AX GRE BRAIN\DICOM")
+    Dict['Ses1_Ser6_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session1\scans\6_AX GRE BRAIN\DICOM")
     
-    Ses1_Ser7_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session1\scans\7_AX T1 BRAIN\DICOM")
+    Dict['Ses1_Ser7_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session1\scans\7_AX T1 BRAIN\DICOM")
     
-    Ses1_Ser8_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session1\scans\8_Ax T2 FLAIR BRAIN POST\DICOM")
+    Dict['Ses1_Ser8_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session1\scans\8_Ax T2 FLAIR BRAIN POST\DICOM")
     
-    Ses1_Ser9_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session1\scans\9_AX T1 POST BRAIN\DICOM")
+    Dict['Ses1_Ser9_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session1\scans\9_AX T1 POST BRAIN\DICOM")
     
     
     """ Session 2 """
-    # IPP =
-    # [1.0, 2.1e-10, 0.0,
-    # -2.1e-10, 1.0, 0.0,
-    # 0.0, 0.0, 1.0]
+    
+    Dict['Ses2_Ser2_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session2\scans\2_Head Routine  5.0  H30s\DICOM")
+    
+    Dict['Ses2_Ser3_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session2\scans\3_Head Routine  5.0  J30s  3\DICOM")
+    
+    Dict['Ses2_Ser4_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session2\scans\4_Head Routine  5.0  H60s\DICOM")
+    
+    Dict['Ses2_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session2\scans\5_Head Routine  0.75  H20s\DICOM")
 
-
-    Ses2_Ser2_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session2\scans\2_Head Routine  5.0  H30s\DICOM")
-    # 512, 512, 33
-    # 0.4, 0.4, 5.0 
-    # 5.0
+    Dict['Ses2_Ser2_LeftEyeCT_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session2\assessors",
+                   r"RoiCollection_hkhGnxQ_2kX4w5b39s0\RTSTRUCT",
+                   r"AIM_20210201_000731.dcm")
     
-    Ses2_Ser3_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session2\scans\3_Head Routine  5.0  J30s  3\DICOM")
+    Dict['Ses2_Ser2_LeftEyeCT_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session2\assessors",
+                   r"RoiCollection_hlDxpyQ_7cJDZotLuP_icr_roiCollectionData\SEG",
+                   r"SEG_20210213_140215.dcm") 
     
-    Ses2_Ser4_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session2\scans\4_Head Routine  5.0  H60s\DICOM")
-    # 512, 512, 33
-    # 0.4, 0.4, 5.0 
-    # 5.0
+    Dict['Ses2_Ser2_RightEyeCT_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session2\assessors",
+                   r"RoiCollection_hkhGnxQ_2NZvk8B9pwA\RTSTRUCT",
+                   r"AIM_20210201_000842.dcm") 
     
-    Ses2_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session2\scans\5_Head Routine  0.75  H20s\DICOM")
-    # 512, 512, 330
-    # 0.4, 0.4, 0.5
-    # 0.75
-
-    Ses2_Ser2_LeftEyeCT_RtsFpath = os.path.join(Sub1_Dir,
-                                                r"Session2\assessors",
-                                                r"RoiCollection_hkhGnxQ_2kX4w5b39s0\RTSTRUCT",
-                                                r"AIM_20210201_000731.dcm")
-    
-    Ses2_Ser2_LeftEyeCT_SegFpath = os.path.join(Sub1_Dir,
-                                                r"Session2\assessors",
-                                                r"RoiCollection_hlDxpyQ_7cJDZotLuP_icr_roiCollectionData\SEG",
-                                                r"SEG_20210213_140215.dcm") 
-    # Left eye CT
-    # 512, 512, 33
-    # 0.4, 0.4, 5.0 
-    # 5.0
-    
-    Ses2_Ser2_RightEyeCT_RtsFpath = os.path.join(Sub1_Dir,
-                                                 r"Session2\assessors",
-                                                 r"RoiCollection_hkhGnxQ_2NZvk8B9pwA\RTSTRUCT",
-                                                 r"AIM_20210201_000842.dcm") 
-    
-    Ses2_Ser2_RightEyeCT_SegFpath = os.path.join(Sub1_Dir,
-                                                 r"Session2\assessors",
-                                                 r"RoiCollection_hlDxpyQ_AqEfVVmmysA_icr_roiCollectionData\SEG",
-                                                 r"SEG_20210213_135857.dcm") 
-    # Right eye CT (single slice) <-- on slice 5 (0-indexed)
-    # 512, 512, 33
-    # 0.4, 0.4, 5.0 
-    # 5.0
+    Dict['Ses2_Ser2_RightEyeCT_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session2\assessors",
+                   r"RoiCollection_hlDxpyQ_AqEfVVmmysA_icr_roiCollectionData\SEG",
+                   r"SEG_20210213_135857.dcm") 
     
     
     """ Session 3 """
     
-    Ses3_Ser6_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session3\scans",
-                                     r"6_T2 FLAIR Ax\DICOM")
+    Dict['Ses3_Ser6_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session3\scans", r"6_T2 FLAIR Ax\DICOM")
     
-    Ses3_Ser7_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session3\scans",
-                                     r"7_Diff Ax\DICOM")
+    Dict['Ses3_Ser7_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session3\scans", r"7_Diff Ax\DICOM")
     
-    Ses3_Ser13_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session3\scans",
-                                     r"13_T1 Ax Post fs IAC\DICOM")
+    Dict['Ses3_Ser13_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session3\scans", r"13_T1 Ax Post fs IAC\DICOM")
     
-    Ses3_Ser14_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session3\scans",
-                                     r"14_T1 Ax Post Brain\DICOM")
+    Dict['Ses3_Ser14_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session3\scans", r"14_T1 Ax Post Brain\DICOM")
     
     
     """ Session 4 """
     
-    Ses4_Ser10_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session4\scans",
-                                     r"10_T1  AXIAL 2MM POST repeat_S7_DIS3D\DICOM")
-    # 192, 192, 80
-    # 1.2, 1.2, 2.0 
-    # 2.0
+    Dict['Ses4_Ser10_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session4\scans", r"10_T1  AXIAL 2MM POST repeat_S7_DIS3D\DICOM")
     
-    Ses4_Ser11_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session4\scans\11_T1 3D AX POST_S5_DIS3D\DICOM")
-    # 512, 512, 192
-    # 0.5, 0.5, 1.0 
-    # 1.0
-
-    Ses4_Ser12_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session4\scans\12_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
-    # 204, 256, 57
-    # 0.9, 0.9, 3.0 
-    # 3.0
-
-    Ses4_Ser13_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session4\scans\13_T1  AXIAL 2MM_S3_DIS3D\DICOM")
-    # 192, 192, 80
-    # 1.2, 1.2, 2.0 
-    # 2.0
-
-    Ses4_Ser14_DcmDir = os.path.join(Sub1_Dir,
-                                     r"Session4\scans\14_T2_FLAIR 3MM_S2_DIS3D\DICOM")
-    # 512, 512, 46
-    # 0.45, 0.45, 3.9 
-    # 3.0
-
-    Ses4_Ser11_Ventricles_RtsFpath = os.path.join(Sub1_Dir,
-                                                  r"Session4\assessors",
-                                                  r"RoiCollection_hkhGnxQ_BNths5fNmA\RTSTRUCT",
-                                                  r"AIM_20210131_230845.dcm") 
+    Dict['Ses4_Ser11_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session4\scans\11_T1 3D AX POST_S5_DIS3D\DICOM")
     
-    Ses4_Ser11_Ventricles_SegFpath = os.path.join(Sub1_Dir,
-                                                  r"Session4\assessors",
-                                                  r"RoiCollection_hlDxpyQ_5Dz9OulRH6n_icr_roiCollectionData\SEG",
-                                                  r"SEG_20210213_144855.dcm") 
-    # Ventricles
-    # 512, 512, 192
-    # 0.5, 0.5, 1.0 
-    # 1.0
+    Dict['Ses4_Ser12_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session4\scans\12_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
     
-    Ses4_Ser13_NasalCavity_RtsFpath = os.path.join(Sub1_Dir,
-                                                   r"Session4\assessors",
-                                                   r"RoiCollection_hkhGnxQ_6daB7S8Eckp\RTSTRUCT",
-                                                   r"AIM_20210131_214821.dcm") 
+    Dict['Ses4_Ser13_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session4\scans\13_T1  AXIAL 2MM_S3_DIS3D\DICOM")
     
-    Ses4_Ser13_NasalCavity_SegFpath = os.path.join(Sub1_Dir,
-                                                   r"Session4\assessors",
-                                                   r"RoiCollection_hlDxpyQ_AJ47Vd6ikeE_icr_roiCollectionData\SEG",
-                                                   r"SEG_20210213_152014.dcm") 
-    # Nasal cavity
-    # 192, 192, 80
-    # 1.2, 1.2, 2.0 
-    # 2.0
+    Dict['Ses4_Ser14_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session4\scans\14_T2_FLAIR 3MM_S2_DIS3D\DICOM")
+    
+    Dict['Ses4_Ser11_Ventricles_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session4\assessors",
+                    r"RoiCollection_hkhGnxQ_BNths5fNmA\RTSTRUCT",
+                     r"AIM_20210131_230845.dcm") 
+    
+    Dict['Ses4_Ser11_Ventricles_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session4\assessors",
+                    r"RoiCollection_hlDxpyQ_5Dz9OulRH6n_icr_roiCollectionData\SEG",
+                     r"SEG_20210213_144855.dcm") 
+    
+    Dict['Ses4_Ser13_NasalCavity_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session4\assessors",
+                   r"RoiCollection_hkhGnxQ_6daB7S8Eckp\RTSTRUCT",
+                   r"AIM_20210131_214821.dcm") 
+    
+    Dict['Ses4_Ser13_NasalCavity_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session4\assessors",
+                   r"RoiCollection_hlDxpyQ_AJ47Vd6ikeE_icr_roiCollectionData\SEG",
+                   r"SEG_20210213_152014.dcm") 
     
     
     """ Session 5"""
-
-    Ses5_Ser6_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session5\scans\6_T2 FLAIR Ax\DICOM")
     
-    Ses5_Ser7_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session5\scans\7_CISS Ax\DICOM")
+    Dict['Ses5_Ser6_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session5\scans\6_T2 FLAIR Ax\DICOM")
     
-    Ses5_Ser12_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session5\scans\12_T2 Ax fs Post Brain\DICOM")
+    Dict['Ses5_Ser7_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session5\scans\7_CISS Ax\DICOM")
     
-    Ses5_Ser14_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session5\scans\14_T1 Ax Post fs IAC\DICOM")
+    Dict['Ses5_Ser12_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session5\scans\12_T2 Ax fs Post Brain\DICOM")
     
-    Ses5_Ser16_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session5\scans\16_T1 Ax Post fs IAC repeat\DICOM")
+    Dict['Ses5_Ser14_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session5\scans\14_T1 Ax Post fs IAC\DICOM")
     
-    Ses5_Ser12_LeftEye_RtsFpath = os.path.join(Sub1_Dir,
-                                               r"Session5\assessors",
-                                               r"RoiCollection_hkhGnxQ_4rFYFKE1r6r\RTSTRUCT",
-                                               r"AIM_20210131_212509.dcm")
+    Dict['Ses5_Ser16_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session5\scans\16_T1 Ax Post fs IAC repeat\DICOM")
     
-    Ses5_Ser12_LeftEye_SegFpath = os.path.join(Sub1_Dir,
-                                               r"Session5\assessors",
-                                               r"RoiCollection_hlDxpyQ_8CVLpZmvRD8_icr_roiCollectionData\SEG",
-                                               r"SEG_20210213_153745.dcm")
+    Dict['Ses5_Ser12_LeftEye_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session5\assessors",
+                   r"RoiCollection_hkhGnxQ_4rFYFKE1r6r\RTSTRUCT",
+                   r"AIM_20210131_212509.dcm")
     
-    Ses5_Ser16_Tumour_RtsFpath = os.path.join(Sub1_Dir,
-                                               r"Session5\assessors",
-                                               r"RoiCollection_hkhGnxQ_79YdSO5eYPo\RTSTRUCT",
-                                               r"AIM_20210131_211622.dcm")
+    Dict['Ses5_Ser12_LeftEye_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session5\assessors",
+                   r"RoiCollection_hlDxpyQ_8CVLpZmvRD8_icr_roiCollectionData\SEG",
+                   r"SEG_20210213_153745.dcm")
     
-    Ses5_Ser16_Tumour_SegFpath = os.path.join(Sub1_Dir,
-                                               r"Session5\assessors",
-                                               r"RoiCollection_hlDxpyQ_18XInHEwVjJ_icr_roiCollectionData\SEG",
-                                               r"SEG_20210213_155524.dcm")
+    Dict['Ses5_Ser16_Tumour_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session5\assessors",
+                   r"RoiCollection_hkhGnxQ_79YdSO5eYPo\RTSTRUCT",
+                   r"AIM_20210131_211622.dcm")
+    
+    Dict['Ses5_Ser16_Tumour_SegFpath']\
+    = os.path.join(Sub1_Dir, r"Session5\assessors",
+                   r"RoiCollection_hlDxpyQ_18XInHEwVjJ_icr_roiCollectionData\SEG",
+                   r"SEG_20210213_155524.dcm")
     
     
     """ Session 6"""
-    # IPP =
-    # [1.0, 2.1e-10, 0.0,
-    # -2.1e-10, 1.0, 0.0,
-    # 0.0, 0.0, 1.0]
-
-
-    Ses6_Ser3_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session6\scans\3_Head Routine  5.0  H30f\DICOM")
-    # 512, 512, 38
-    # 0.43, 0.43, 5.0 
-    # 5.0
     
-    Ses6_Ser4_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session6\scans\4_Head Routine  5.0  J30f  3\DICOM")
+    Dict['Ses6_Ser3_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session6\scans\3_Head Routine  5.0  H30f\DICOM")
     
-    Ses6_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session6\scans\5_Head Routine  0.75  H20f\DICOM")
-    # 512, 512, 375
-    # 0.43, 0.43, 0.5 
-    # 0.75
+    Dict['Ses6_Ser4_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session6\scans\4_Head Routine  5.0  J30f  3\DICOM")
+    
+    Dict['Ses6_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session6\scans\5_Head Routine  0.75  H20f\DICOM")
     
     
     """ Session 7"""
     
-    Ses7_Ser21_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session7\scans\21_T1  AXIAL 2MM POST_S6_DIS3D\DICOM")
+    Dict['Ses7_Ser21_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session7\scans\21_T1  AXIAL 2MM POST_S6_DIS3D\DICOM")
     
-    Ses7_Ser22_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session7\scans\22_T1 3D AX POST_S5_DIS3D\DICOM")
+    Dict['Ses7_Ser22_DcmDir']\
+     = os.path.join(Sub1_Dir, r"Session7\scans\22_T1 3D AX POST_S5_DIS3D\DICOM")
     
-    Ses7_Ser23_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session7\scans\23_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
+    Dict['Ses7_Ser23_DcmDir']\
+     = os.path.join(Sub1_Dir, r"Session7\scans\23_T2 AX 3MM STRAIGHT (post)_S4_DIS3D\DICOM")
     
-    Ses7_Ser24_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session7\scans\24_T1  AXIAL 2MM_S3_DIS3D\DICOM")
+    Dict['Ses7_Ser24_DcmDir']\
+     = os.path.join(Sub1_Dir, r"Session7\scans\24_T1  AXIAL 2MM_S3_DIS3D\DICOM")
     
-    Ses7_Ser25_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session7\scans\25_T2_FLAIR 3MM_S2_DIS3D\DICOM")
-    
+    Dict['Ses7_Ser25_DcmDir']\
+     = os.path.join(Sub1_Dir, r"Session7\scans\25_T2_FLAIR 3MM_S2_DIS3D\DICOM")
+
     
     """ Session 8"""
     
-    Ses8_Ser2_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session8\scans\2_Head Routine  5.0  H30f\DICOM")
+    Dict['Ses8_Ser2_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session8\scans\2_Head Routine  5.0  H30f\DICOM")
     
-    Ses8_Ser4_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session8\scans\4_Head Routine  5.0  J30f  3\DICOM")
+    Dict['Ses8_Ser4_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session8\scans\4_Head Routine  5.0  J30f  3\DICOM")
     
-    Ses8_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session8\scans\5_Head Routine  0.75  H20f\DICOM")
-    
+    Dict['Ses8_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session8\scans\5_Head Routine  0.75  H20f\DICOM")
     
     
     """ Session 9"""
     
-    Ses9_Ser3_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session9\scans\3_T2 FLAIR Ax\DICOM")
+    Dict['Ses9_Ser3_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session9\scans\3_T2 FLAIR Ax\DICOM")
     
-    Ses9_Ser4_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session9\scans\4_Diff Ax\DICOM")
+    Dict['Ses9_Ser4_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session9\scans\4_Diff Ax\DICOM")
     
-    Ses9_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session9\scans\5_Diff Ax_ADC\DICOM")
+    Dict['Ses9_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session9\scans\5_Diff Ax_ADC\DICOM")
     
-    Ses9_Ser14_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session9\scans\14_T2spc Ax\DICOM")
+    Dict['Ses9_Ser14_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session9\scans\14_T2spc Ax\DICOM")
     
-    Ses9_Ser15_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session9\scans\15_T1 3D Ax Post\DICOM")
-    
+    Dict['Ses9_Ser15_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session9\scans\15_T1 3D Ax Post\DICOM")
     
     
     """ Session 10"""
     
-    Ses10_Ser3_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session10\3\DICOM")
+    Dict['Ses10_Ser3_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session10\3\DICOM")
     
-    Ses10_Ser6_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session10\6\DICOM")
+    Dict['Ses10_Ser6_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session10\6\DICOM")
     
-    Ses10_Ser19_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session10\19\DICOM")
+    Dict['Ses10_Ser19_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session10\19\DICOM")
     
-    Ses10_Ser22_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session10\22\DICOM")
+    Dict['Ses10_Ser22_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session10\22\DICOM")
     
-    Ses10_Ser3_RightEye_RtsFpath = os.path.join(Sub1_Dir,
-                                                r"Session10",
-                                                r"AIM_20210131_183753\RTSTRUCT",
-                                                r"AIM_20210131_183753.dcm")
+    Dict['Ses10_Ser3_RightEye_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session10", r"AIM_20210131_183753\RTSTRUCT", 
+                   r"AIM_20210131_183753.dcm")
     
-    Ses10_Ser3_LowerBrain_RtsFpath = os.path.join(Sub1_Dir,
-                                                  r"Session10",
-                                                  r"AIM_20210131_232127\RTSTRUCT",
-                                                  r"AIM_20210131_232127.dcm")
-    
+    Dict['Ses10_Ser3_LowerBrain_RtsFpath']\
+    = os.path.join(Sub1_Dir, r"Session10", r"AIM_20210131_232127\RTSTRUCT",
+                   r"AIM_20210131_232127.dcm")
     
     
     """ Session 11"""
     
-    Ses11_Ser2_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session11\scans\2_Head Routine  0.75  H20s\DICOM")
+    Dict['Ses11_Ser2_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session11\scans\2_Head Routine  0.75  H20s\DICOM")
     
-    Ses11_Ser3_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session11\scans\3_Head Routine  5.0  H30s\DICOM")
+    Dict['Ses11_Ser3_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session11\scans\3_Head Routine  5.0  H30s\DICOM")
     
-    Ses11_Ser5_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session11\scans\5_Head Routine  5.0  J30s  3\DICOM")
+    Dict['Ses11_Ser5_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session11\scans\5_Head Routine  5.0  J30s  3\DICOM")
     
-    Ses11_Ser9_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session11\scans\9_TEMPORAL BONES RIGHT  5.0  H30s\DICOM")
+    Dict['Ses11_Ser9_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session11\scans\9_TEMPORAL BONES RIGHT  5.0  H30s\DICOM")
     
-    Ses11_Ser10_DcmDir = os.path.join(Sub1_Dir,
-                                    r"Session11\scans\10_TEMPORAL BONES RIGHT  0.6  H30s\DICOM")
-    
+    Dict['Ses11_Ser10_DcmDir']\
+    = os.path.join(Sub1_Dir, r"Session11\scans\10_TEMPORAL BONES RIGHT  0.6  H30s\DICOM") 
     
     
     
     """ Subject ACRIN-FMISO-Brain-011 in ACRIN-FMISO-Brain """
     
     Sub2_Dir = r"C:\Data\Cancer imaging archive\ACRIN-FMISO-Brain\ACRIN-FMISO-Brain-011"
-    
     Sub2_RoiDir = r"C:\Data\Data copied to Google Drive\ACRIN-FMISO-Brain-011"
     Sub2_RtsDir = os.path.join(Sub2_RoiDir, "Fixed_RTS_Collections")
     Sub2_SegDir = os.path.join(Sub2_RoiDir, "Fixed_SEG_Collections")
+    
+    Dict['Sub2_Dir'] = Sub2_Dir
+    Dict['Sub2_RoiDir'] = Sub2_RoiDir
+    Dict['Sub2_RtsDir'] = Sub2_RtsDir
+    Dict['Sub2_SegDir'] = Sub2_SegDir
 
     MR4_Dir = r"04-10-1960-MRI Brain wwo Contrast-69626"
     # IPP =
@@ -429,41 +372,45 @@ def CreateDictOfPaths():
     # -0.10, 0.99, -0.03,
     # -0.07, 0.02, 1.00]
     
+    Dict['MR4_Dir'] = MR4_Dir
+    
+    Dict['MR12_Dir'] = MR12_Dir
+    
     
     """ DICOM directories for MR4 """
     
-    MR4_Ser3_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
-                                   r"3-T2 TSE AXIAL-07507") 
+    Dict['MR4_Ser3_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"3-T2 TSE AXIAL-07507") 
     # 378, 448, 21
     # 0.51, 0.51, 7.5 mm
     # 5.0 mm
     
-    MR4_Ser4_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
-                                   r"4-T2 AXIAL FLAIR DARK FL-48830") 
+    Dict['MR4_Ser4_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"4-T2 AXIAL FLAIR DARK FL-48830") 
     # 416, 512, 21 pix
     # 0.45, 0.45, 5.0 mm
     # 5.0 mm
     
-    MR4_Ser5_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
-                                   r"5-T1 SE AXIAL 3MM-81246")        
+    Dict['MR4_Ser5_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"5-T1 SE AXIAL 3MM-81246")  
     # 208, 256, 50 
     # 0.9, 0.9, 3.0 mm
     # 3.0 mm
     
-    MR4_Ser7_DcmDir = os.path.join(Sub2_Dir, MR4_Dir, 
-                                   r"7-ep2ddiff3scantracep2ADC-22197") 
+    Dict['MR4_Ser7_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"7-ep2ddiff3scantracep2ADC-22197")
     # 192, 192, 21 pix
     # 1.3, 1.3, 7.5 mm
     # 5.0 mm
     
-    MR4_Ser8_DcmDir = os.path.join(Sub2_Dir, MR4_Dir, 
-                                   r"8-T1 SE AXIAL POST FS FC-59362") 
+    Dict['MR4_Ser8_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"8-T1 SE AXIAL POST FS FC-59362") 
     # 212, 256, 30 pix
     # 0.9, 0.9, 5.0 mm
     # 5.0 mm
     
-    MR4_Ser9_DcmDir = os.path.join(Sub2_Dir, MR4_Dir,
-                                   r"9-T1 SE AXIAL POST 3MM 5 MIN DELAY-07268") 
+    Dict['MR4_Ser9_DcmDir']\
+    = os.path.join(Sub2_Dir, MR4_Dir, r"9-T1 SE AXIAL POST 3MM 5 MIN DELAY-07268") 
     # 208, 256, 50 pix
     # 0.9, 0.9, 3.0 mm
     # 3.0 mm
@@ -471,227 +418,98 @@ def CreateDictOfPaths():
     
     """ RTS/SEG filepaths for MR4 """
     
-    MR4_Ser8_RtsFpath = os.path.join(Sub2_RtsDir, 
-                                     "MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
-    # tumour
-    MR4_Ser8_SegFpath = os.path.join(Sub2_SegDir, 
-                                     "Seg_from_MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
-    # tumour
+    Dict['MR4_Ser3_RtsFpath']\
+    = os.path.join(Sub2_RtsDir, "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm")
+    #= os.path.join(Sub2_RtsDir, "MR4_S3_tumour_and_brain_RTS_AIM_20201112_162427.dcm") # tumour &
+    # brain are not separate ROIs!
     
-    MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
-                                     "MR4_S9_tumour_RTS_AIM_20201014_163721.dcm") 
-    # tumour drawn on S9 stack
-    #MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
-    #                                 "MR4_S9_brain_RTS_AIM_20201112_142559.dcm")
-    MR4_Ser9_RtsFpath = os.path.join(Sub2_RtsDir, 
-                                     "MR4_S9_tumour_and_brain_RTS_AIM_20201116_122858.dcm")
+    Dict['MR4_Ser3_SegFpath']\
+    = os.path.join(Sub2_SegDir, "MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") 
+    #= os.path.join(Sub2_SegDir, "MR4_S3_brain_SEG_20201030_133110.dcm")
+    #= os.path.join(Sub2_SegDir,"MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") # one ROI!
+    #= os.path.join(Sub2_SegDir, "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm") # two ROIs
+    #= os.path.join(Sub2_SegDir, "MR4_S3_tumour_SEG_20201216_085421.dcm") # single frame on slice 10
     
-    #MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "Seg_from_MR4_S9_tumour_RTS_AIM_20201014_163721.dcm") 
-    # tumour drawn on S9 stack
-    #MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "MR4_S9_tumour_SEG_20201105_115408.dcm")
-    MR4_Ser9_SegFpath = os.path.join(Sub2_SegDir, 
-                                     "MR4_S9_tumour_and_brain_SEG_20201105_115939.dcm")
+    Dict['MR4_Ser5_RtsFpath']\
+    = os.path.join(Sub2_RtsDir, "MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
     
-    MR4_Ser5_RtsFpath = os.path.join(Sub2_RtsDir, 
-                                     "MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
-    # tumour drawn on S5 stack
-    #MR4_Ser5_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "Seg_from_MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
-    # tumour drawn on S5 stack
-    MR4_Ser5_SegFpath = os.path.join(Sub2_SegDir, 
-                                     "MR4_S5_tumour_SEG_20201216_084441.dcm") 
-    # single frame on slice 24 or 26
+    Dict['MR4_Ser5_SegFpath']\
+    = os.path.join(Sub2_SegDir, "MR4_S5_tumour_SEG_20201216_084441.dcm") 
+    #= os.path.join(Sub2_SegDir, "Seg_from_MR4_S5_tumour_RTS_AIM_20201021_151904.dcm") 
     
-    #MR4_Ser3_RtsFpath = os.path.join(Sub2_RtsDir, 
-    #                                 "MR4_S3_tumour_and_brain_RTS_AIM_20201112_162427.dcm") 
-    # <-- WARNING: tumour & brain are not separate ROIs!
-    MR4_Ser3_RtsFpath = os.path.join(Sub2_RtsDir, 
-                                     "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm") 
-    # separate ROIs
+    Dict['MR4_Ser8_RtsFpath']\
+    = os.path.join(Sub2_RtsDir, "MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
     
-    MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
-                                     "MR4_S3_brain_SEG_20201030_133110.dcm")
-    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") 
-    # one ROI!
-    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "MR4_S3_tumour_and_brain_RTS_AIM_20201125_133250.dcm") 
-    # two ROIs
-    MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
-                                     "MR4_S3_tumour_and_brain_SEG_20201105_090359.dcm") 
-    # two ROIs
-    #MR4_Ser3_SegFpath = os.path.join(Sub2_SegDir, 
-    #                                 "MR4_S3_tumour_SEG_20201216_085421.dcm") 
-    # single frame on slice 10
+    Dict['MR4_Ser8_SegFpath']\
+    = os.path.join(Sub2_SegDir, "Seg_from_MR4_S8_tumour_RTS_AIM_20200511_073405.dcm") 
+    
+    Dict['MR4_Ser9_RtsFpath']\
+    = os.path.join(Sub2_RtsDir, "MR4_S9_tumour_and_brain_RTS_AIM_20201116_122858.dcm")
+    #= os.path.join(Sub2_RtsDir, "MR4_S9_brain_RTS_AIM_20201112_142559.dcm")
+    
+    Dict['MR4_Ser9_SegFpath']\
+    = os.path.join(Sub2_SegDir, "MR4_S9_tumour_and_brain_SEG_20201105_115939.dcm")
+    #= os.path.join(Sub2_SegDir, "Seg_from_MR4_S9_tumour_RTS_AIM_20201014_163721.dcm") 
+    #= os.path.join(Sub2_SegDir, "MR4_S9_tumour_SEG_20201105_115408.dcm")
     
     
     
     """ DICOM directories for MR12 """
     
-    MR12_Ser3_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
-                                    r"3-T2 TSE AX IPAT2-08659") 
-    # 336, 448, 24
-    # 0.54, 0.54, 7.5 mm
-    # 5.0 mm
+    Dict['MR12_Ser3_DcmDir']\
+    = os.path.join(Sub2_Dir, MR12_Dir, r"3-T2 TSE AX IPAT2-08659") 
     
-    MR12_Ser4_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
-                                    r"4-T2 AXIAL FLAIR DARK FL-94212") 
-    # 384, 512, 24
-    # 0.47, 0.47, 7.5 mm
-    # 5.0 mm
+    Dict['MR12_Ser4_DcmDir']\
+    = os.path.join(Sub2_Dir, MR12_Dir, r"4-T2 AXIAL FLAIR DARK FL-94212")
     
-    MR12_Ser5_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
-                                    r"5-T1 SE AXIAL-43742") 
-    # 192, 256, 35
-    # 0.94, 0.94, 5.0 mm
-    # 5.0 mm
+    Dict['MR12_Ser5_DcmDir']\
+    = os.path.join(Sub2_Dir, MR12_Dir, r"5-T1 SE AXIAL-43742")
     
-    
-    MR12_Ser8_DcmDir = os.path.join(Sub2_Dir, MR12_Dir,
-                                    r"8-T1 SE AXIAL POST FS FC-81428") 
-    # 256, 192, 35 
-    # 0.94, 0.94, 5.0 mm
-    # 5.0 mm
-    
-    
-    Dict = {}
-    
-    Dict['Sub1_Dir'] = Sub1_Dir
-    
-    
-    Dict['Ses1_Ser5_DcmDir'] = Ses1_Ser5_DcmDir
-    Dict['Ses1_Ser6_DcmDir'] = Ses1_Ser6_DcmDir
-    Dict['Ses1_Ser7_DcmDir'] = Ses1_Ser7_DcmDir
-    Dict['Ses1_Ser8_DcmDir'] = Ses1_Ser8_DcmDir
-    Dict['Ses1_Ser9_DcmDir'] = Ses1_Ser9_DcmDir
-    
-    
-    Dict['Ses2_Ser2_DcmDir'] = Ses2_Ser2_DcmDir
-    Dict['Ses2_Ser3_DcmDir'] = Ses2_Ser3_DcmDir
-    Dict['Ses2_Ser4_DcmDir'] = Ses2_Ser4_DcmDir
-    Dict['Ses2_Ser5_DcmDir'] = Ses2_Ser5_DcmDir
-    
-    Dict['Ses2_Ser2_LeftEyeCT_RtsFpath'] = Ses2_Ser2_LeftEyeCT_RtsFpath
-    Dict['Ses2_Ser2_RightEyeCT_RtsFpath'] = Ses2_Ser2_RightEyeCT_RtsFpath
-    Dict['Ses2_Ser2_LeftEyeCT_SegFpath'] = Ses2_Ser2_LeftEyeCT_SegFpath
-    Dict['Ses2_Ser2_RightEyeCT_SegFpath'] = Ses2_Ser2_RightEyeCT_SegFpath
-    
-    
-    Dict['Ses3_Ser6_DcmDir'] = Ses3_Ser6_DcmDir
-    Dict['Ses3_Ser7_DcmDir'] = Ses3_Ser7_DcmDir
-    Dict['Ses3_Ser13_DcmDir'] = Ses3_Ser13_DcmDir
-    Dict['Ses3_Ser14_DcmDir'] = Ses3_Ser14_DcmDir
-    
-    
-    Dict['Ses4_Ser10_DcmDir'] = Ses4_Ser10_DcmDir
-    Dict['Ses4_Ser11_DcmDir'] = Ses4_Ser11_DcmDir
-    Dict['Ses4_Ser12_DcmDir'] = Ses4_Ser12_DcmDir
-    Dict['Ses4_Ser13_DcmDir'] = Ses4_Ser13_DcmDir
-    Dict['Ses4_Ser14_DcmDir'] = Ses4_Ser14_DcmDir
-    
-    Dict['Ses4_Ser11_Ventricles_RtsFpath'] = Ses4_Ser11_Ventricles_RtsFpath
-    Dict['Ses4_Ser13_NasalCavity_RtsFpath'] = Ses4_Ser13_NasalCavity_RtsFpath
-    Dict['Ses4_Ser11_Ventricles_SegFpath'] = Ses4_Ser11_Ventricles_SegFpath
-    Dict['Ses4_Ser13_NasalCavity_SegFpath'] = Ses4_Ser13_NasalCavity_SegFpath
-    
-    
-    Dict['Ses5_Ser6_DcmDir'] = Ses5_Ser6_DcmDir
-    Dict['Ses5_Ser7_DcmDir'] = Ses5_Ser7_DcmDir
-    Dict['Ses5_Ser12_DcmDir'] = Ses5_Ser12_DcmDir
-    Dict['Ses5_Ser14_DcmDir'] = Ses5_Ser14_DcmDir
-    Dict['Ses5_Ser16_DcmDir'] = Ses5_Ser16_DcmDir
-    
-    Dict['Ses5_Ser12_LeftEye_RtsFpath'] = Ses5_Ser12_LeftEye_RtsFpath
-    Dict['Ses5_Ser16_Tumour_RtsFpath'] = Ses5_Ser16_Tumour_RtsFpath
-    Dict['Ses5_Ser12_LeftEye_SegFpath'] = Ses5_Ser12_LeftEye_SegFpath
-    Dict['Ses5_Ser16_Tumour_SegFpath'] = Ses5_Ser16_Tumour_SegFpath
-    
-    
-    Dict['Ses6_Ser3_DcmDir'] = Ses6_Ser3_DcmDir
-    Dict['Ses6_Ser4_DcmDir'] = Ses6_Ser4_DcmDir
-    Dict['Ses6_Ser5_DcmDir'] = Ses6_Ser5_DcmDir
-    
-    
-    Dict['Ses7_Ser21_DcmDir'] = Ses7_Ser21_DcmDir
-    Dict['Ses7_Ser22_DcmDir'] = Ses7_Ser22_DcmDir
-    Dict['Ses7_Ser23_DcmDir'] = Ses7_Ser23_DcmDir
-    Dict['Ses7_Ser24_DcmDir'] = Ses7_Ser24_DcmDir
-    Dict['Ses7_Ser25_DcmDir'] = Ses7_Ser25_DcmDir
-    
-    
-    Dict['Ses8_Ser2_DcmDir'] = Ses8_Ser2_DcmDir
-    Dict['Ses8_Ser4_DcmDir'] = Ses8_Ser4_DcmDir
-    Dict['Ses8_Ser5_DcmDir'] = Ses8_Ser5_DcmDir
-    
-    
-    Dict['Ses9_Ser3_DcmDir'] = Ses9_Ser3_DcmDir
-    Dict['Ses9_Ser4_DcmDir'] = Ses9_Ser4_DcmDir
-    Dict['Ses9_Ser5_DcmDir'] = Ses9_Ser5_DcmDir
-    Dict['Ses9_Ser14_DcmDir'] = Ses9_Ser14_DcmDir
-    Dict['Ses9_Ser15_DcmDir'] = Ses9_Ser15_DcmDir
-    
-    
-    Dict['Ses10_Ser3_DcmDir'] = Ses10_Ser3_DcmDir
-    Dict['Ses10_Ser6_DcmDir'] = Ses10_Ser6_DcmDir
-    Dict['Ses10_Ser19_DcmDir'] = Ses10_Ser19_DcmDir
-    Dict['Ses10_Ser22_DcmDir'] = Ses10_Ser22_DcmDir
-    
-    Dict['Ses10_Ser3_RightEye_RtsFpath'] = Ses10_Ser3_RightEye_RtsFpath
-    Dict['Ses10_Ser3_LowerBrain_RtsFpath'] = Ses10_Ser3_LowerBrain_RtsFpath
-    
-    
-    Dict['Ses11_Ser2_DcmDir'] = Ses11_Ser2_DcmDir
-    Dict['Ses11_Ser3_DcmDir'] = Ses11_Ser3_DcmDir
-    Dict['Ses11_Ser5_DcmDir'] = Ses11_Ser5_DcmDir
-    Dict['Ses11_Ser9_DcmDir'] = Ses11_Ser9_DcmDir
-    Dict['Ses11_Ser10_DcmDir'] = Ses11_Ser10_DcmDir
-    
-    
-    
-    Dict['Sub2_Dir'] = Sub2_Dir
-    Dict['Sub2_RoiDir'] = Sub2_RoiDir
-    Dict['Sub2_RtsDir'] = Sub2_RtsDir
-    Dict['Sub2_SegDir'] = Sub2_SegDir
-    
-    Dict['MR4_Dir'] = MR4_Dir
-    
-    Dict['MR4_Ser3_DcmDir'] = MR4_Ser3_DcmDir
-    Dict['MR4_Ser4_DcmDir'] = MR4_Ser4_DcmDir
-    Dict['MR4_Ser5_DcmDir'] = MR4_Ser5_DcmDir
-    Dict['MR4_Ser7_DcmDir'] = MR4_Ser7_DcmDir
-    Dict['MR4_Ser8_DcmDir'] = MR4_Ser8_DcmDir
-    Dict['MR4_Ser9_DcmDir'] = MR4_Ser9_DcmDir
-    
-    Dict['MR4_Ser3_RtsFpath'] = MR4_Ser3_RtsFpath
-    Dict['MR4_Ser3_SegFpath'] = MR4_Ser3_SegFpath
-    Dict['MR4_Ser5_RtsFpath'] = MR4_Ser5_RtsFpath
-    Dict['MR4_Ser5_SegFpath'] = MR4_Ser5_SegFpath
-    Dict['MR4_Ser8_RtsFpath'] = MR4_Ser8_RtsFpath
-    Dict['MR4_Ser8_SegFpath'] = MR4_Ser8_SegFpath
-    Dict['MR4_Ser9_RtsFpath'] = MR4_Ser9_RtsFpath
-    Dict['MR4_Ser9_SegFpath'] = MR4_Ser9_SegFpath
-    
-    Dict['MR12_Dir'] = MR12_Dir
-    
-    Dict['MR12_Ser3_DcmDir'] = MR12_Ser3_DcmDir
-    Dict['MR12_Ser4_DcmDir'] = MR12_Ser4_DcmDir
-    Dict['MR12_Ser5_DcmDir'] = MR12_Ser5_DcmDir
-    Dict['MR12_Ser8_DcmDir'] = MR12_Ser8_DcmDir
-    
-    """
-    Dict[''] = 
-    Dict[''] = 
-    Dict[''] = 
-    Dict[''] = 
-    Dict[''] = 
-    """
+    Dict['MR12_Ser8_DcmDir']\
+    = os.path.join(Sub2_Dir, MR12_Dir, r"8-T1 SE AXIAL POST FS FC-81428") 
     
     return Dict
 
 
-def GetInputsToCopyRoi(TestNum, UseOrigTrgRoi=False):
+
+
+
+
+def GetPathInputs(TestNum, UseOrigTrgRoi=False):
+    """
+    Convert a 3D SimpleITK image to a new pixel type.
+    
+    Inputs:
+    ******                      
+        
+    TestNum : string
+        The character string that denotes the test number to be run.
+        
+    UseOrigTrgRoi : boolean (optional; False by default)
+        If True, if the value for the RTS/SEG filepath key is not None, and if
+        a Direct copy is to be made, any existing contours/segmentations in the
+        original Target RTS/SEG that match the desired RoiLabelToCopy input to
+        CopyRoi() will be preserved.  If False, the value of the filepath key 
+        to the original Target RTS/SEG will be over-written with None, so that 
+        a new Target RTS/SEG file is created that does not contain any of the 
+        original contours/segmentations even if they exist for the ROI of 
+        interest.
+        
+
+    Outputs:
+    *******
+    
+    Image : SimpleITK image
+        The 3D image with modified pixel type.
+
+    
+    Note:
+    ----
+        While a linear (or BSpline) interpolator is appropriate for intensity 
+        images, only a NearestNeighbor interpolator is appropriate for binary 
+        images (e.g. segmentations) so that no new labels are introduced.
+    """
+    
     #import os
     #from copy import deepcopy
     
@@ -1100,7 +918,8 @@ def GetInputsToCopyRoi(TestNum, UseOrigTrgRoi=False):
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
-        FromSliceNum = 6
+        #FromSliceNum = 6
+        FromSliceNum = 5
         ToSliceNum = FromSliceNum + 1
         
         SrcLabel = 'Ses2_Ser2'
@@ -1509,8 +1328,8 @@ def GetInputsToCopyRoi(TestNum, UseOrigTrgRoi=False):
         
         # Inputs required for this test:
         FromRoiLabel = 'Right eye'
-        FromSliceNum = 6 # <-- no segmentation on slice 6?
-        #FromSliceNum = 5
+        #FromSliceNum = 6 # <-- no segmentation on slice 6?
+        FromSliceNum = 5
         ToSliceNum = FromSliceNum + 1
         
         SrcLabel = 'Ses2_Ser2'
@@ -1875,15 +1694,18 @@ CHECK VALIDITY OF INPUTS TO COPYROI
 ******************************************************************************
 """
 
-def CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum,
-                          LogToConsole=False):
+def CheckValidityOfInputs(SrcRoi, FromRoiLabel, FromSliceNum, ToSliceNum, 
+                          TrgRoi=None, LogToConsole=False):
     """
-    Establish whether the inputs FromRoiLabel, FromSliceNum and ToSliceNum
-    are valid combinations. If not raise exception.
+    Establish whether the inputs FromRoiLabel, FromSliceNum, ToSliceNum,
+    SrcRoi and TrgRoi are valid combinations. If not raise exception.
     
     Inputs:
     ******
     
+    SrcRoi : Pydicom object
+        Source RTS/SEG object.
+        
     FromRoiLabel : string
         All or part of the Source ROI Name of the ROI containing the contour(s)
         to be copied.
@@ -1893,7 +1715,7 @@ def CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum,
         contour to be copied (applies for the case of direct copies of a single 
         contour). The index is zero-indexed.
         If FromSliceNum = None, a relationship-preserving copy will be made.
-        
+    
     ToSliceNum : integer or None
         The slice index within the Target DICOM stack corresponding to the 
         contour/segmentation to be copied to (applies only for the case of 
@@ -1901,6 +1723,11 @@ def CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum,
         If ToSliceNum = None, a relationship-preserving copy is to be made, 
         since the slice location(s) where the contour(s)/segmentation(s) will 
         be copied to will not depend on user input.
+    
+    TrgRoi : Pydicom object (optional; None by default)
+        Target RTS/SEG object that the contour(s)/segmentation(s) is to be  
+        copied to. TrgRoi is only non-None if a Direct copy of the contour/
+        segmentation is to be made and added to an existing RTS/SEG.  
                         
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -1913,6 +1740,19 @@ def CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum,
         True if the combinations of inputs are valid.
     """
     
+    if TrgRoi:
+        from DicomTools import IsSameModalities
+        
+        SrcModality = SrcRoi.Modality
+        TrgModality = TrgRoi.Modality
+        
+        if not IsSameModalities(SrcRoi, TrgRoi):
+            msg = f"The Source ({SrcModality}) and Target ({TrgModality}) " \
+                  + "modalities are different. This is not valid."
+            
+            raise Exception(msg)
+            
+            
     if FromRoiLabel == None:
         msg = f'WARNING: FromRoiLabel = {FromRoiLabel}, so all contours/'\
               + 'segmentations in all ROIs/segments in the RTS/SEG are to'\
@@ -2016,11 +1856,6 @@ def WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir, TrgDcmDir,
     from DicomTools import GetDicomUids
     from ImageTools import GetImageAttributes
     from GeneralTools import AreListsEqualToWithinEpsilon#, PrintTitle
-    
-    """ Establish whether the inputs FromRoiLabel, FromSliceNum and ToSliceNum
-    are valid. If not raise exception. """
-    
-    CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
     
     
     """ Get the DICOM UIDs. """
@@ -2258,10 +2093,12 @@ COPY A CONTOUR
 ******************************************************************************
 """
 
-def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
-            TrgRts=None, ToSliceNum=None, Interpolation='LabelGaussian',
-            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, AddTxtToRoiLabel='', LogToConsole=False):
+def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
+            UseCaseToApply, TrgRtsFpath=None, ToSliceNum=None, 
+            Interpolation='BlurThenLinear', Variance=(1,1,1), 
+            ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
+            ForceRegistration=False, AddTxtToRoiLabel='', LogToConsole=False,
+            ListOfTimings=[]):
     """
     Note 01/02/2021:
         This function will, depending on the inputs, copy either:
@@ -2273,8 +2110,8 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     Inputs:
     ******
     
-    SrcRts : Pydicom object
-        Source RTS object.
+    SrcRtsFpath : string
+        Filepath of the Source RTS file.
     
     FromSliceNum : integer or None
         The slice indeces within the Source DICOM stack corresponding to the
@@ -2291,11 +2128,17 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     
     TrgDcmDir : string
         Directory containing the Target DICOMs.
+    
+    UseCaseToApply : string
+        String that denotes the Use Case that will be applied.  This will be
+        the same as UseCaseThatApplies unless ForceRegistration is True and
+        UseCaseThatApplies is '3a', '3b', '4a' or '4b'.
         
-    TrgRts : Pydicom object (optional; None by default)
-        Target RTS object that the contour is to be copied to. TrgRts is only 
-        non-None if a Direct copy of the contour is to be made and added to 
-        existing contour(s).     
+    TrgRtsFpath : string or None (optional; None by default)
+        Filepath to the Target RTS file that the contour(s) is/are to be copied 
+        to. TrgRtsFpath != None only if an existing Target RTS exists and is to
+        be added to. An existing RTS will be added to only for Direct copy 
+        operations.     
         
     ToSliceNum : integer (optional; None by default)
         The slice index within the Target DICOM stack where the contour will be
@@ -2309,10 +2152,10 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         The type of interpolation to be used if the Source labelmap image(s)
         is/are to be resampled to the Target grid.  Acceptable inputs are:
         - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour'; Default value)
+        'nearestneighbour')
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
-        (followed by binary thresholding)
+        (followed by binary thresholding) (Default value)
     
     Variance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if a 
@@ -2345,6 +2188,10 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                            
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
+    
+    LogOfTimings : list of strings (optional; empty by default)
+        A list of the time to execute certain tasks during the calling of 
+        CopyRts().
           
                   
     Outputs:
@@ -2354,7 +2201,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         The new (if making a Relationship-preserving copy) or modified (if
         making a Direct copy) Target RTS object.
         
-    TimingMsgs : list of strings
+    ListOfTimings : list of strings
         A list (for each message) of timings for individual operations.
         
         
@@ -2381,6 +2228,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     
     import time
     from copy import deepcopy
+    from pydicom import dcmread
     #from RtsTools import GetPtsByCntByRoi
     from RtsTools import GetRtsDataOfInterest, ProportionOfRoisInExtent
     from RtsTools import CreateRts
@@ -2399,18 +2247,22 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         print('\n\n', '-'*120)
         print(f'Running CopyRts():')
         
+        SrcRts = dcmread(SrcRtsFpath)
+        
         SrcRoiLabels = GetRoiLabels(SrcRts)
         
         print(f'\nSrcRoiLabels = {SrcRoiLabels}')
         
-        if TrgRts:
+        if TrgRtsFpath:
+            TrgRts = dcmread(TrgRtsFpath)
+            
             TrgRoiLabels = GetRoiLabels(TrgRts)
         
             print(f'\nTrgRoiLabels = {TrgRoiLabels}')
     
     
-    """ Log timing messages. """
-    TimingMsgs = []
+    #""" Log timing messages. """
+    #TimingMsgs = []
     
     """ Start timing. """
     times = []
@@ -2419,11 +2271,11 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     #""" Check the validity of the combination of inputs. """
     #CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
     
-    """ Determine which Use Case to apply. """
-    UseCaseThatApplies,\
-    UseCaseToApply = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
-                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
-                                  LogToConsole=True)
+    #""" Determine which Use Case to apply. """
+    #UseCaseThatApplies,\
+    #UseCaseToApply = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
+    #                              SrcDcmDir, TrgDcmDir, ForceRegistration,
+    #                              LogToConsole=True)
     
     #""" Manipulate UseCase if ForceRegistration = True and UseCase was 3 or 4. """
     #if ForceRegistration and not '5' in UseCase:
@@ -2437,20 +2289,40 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     
     """ Get the data of interest from the Source RTS. """
     SrcPtsByCntByRoi,\
-    SrcC2SindsByRoi = GetRtsDataOfInterest(SrcRts, FromSliceNum, FromRoiLabel, 
-                                           SrcDcmDir, LogToConsole)
+    SrcC2SindsByRoi = GetRtsDataOfInterest(SrcRtsFpath, FromSliceNum, 
+                                           FromRoiLabel, SrcDcmDir, 
+                                           LogToConsole)
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to parse the Source RTS file for the ROI.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     
     """ Raise exception if there is no data of interest from the Source RTS."""
     if not UniqueItems(SrcC2SindsByRoi):
-        msg = f'There are no contours on slice {FromSliceNum} in any ROI in '\
-              + 'the Source RTS.'
+        from DicomTools import GetRoiLabels, GetDicomSOPuids
+        from RtsTools import GetNumOfContoursByRoi, GetCStoSliceIndsByRoi
+        
+        SrcRts = dcmread(SrcRtsFpath)
+        
+        Names = GetRoiLabels(SrcRts)
+        N = len(Names)
+        
+        NumbyRoi = GetNumOfContoursByRoi(SrcRts)
+        
+        SOPuids = GetDicomSOPuids(SrcDcmDir)
+        
+        C2SindsByRoi = GetCStoSliceIndsByRoi(SrcRts, SOPuids)
+        
+        msg = f"There are no contours on slice {FromSliceNum} in any ROI in "\
+              + f"the Source RTS. There are {N} ROIs in the Source RTS:"
+        
+        for i in range(N):
+            msg += f"\nROI {i+1} with name '{Names[i]}' has {NumbyRoi[i]} "\
+                   + f"contours that correspond to slices {C2SindsByRoi[i]}" 
+        
         
         raise Exception(msg)
     
@@ -2466,7 +2338,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to check whether the Source ROI(s) intersect the '\
           + 'Target grid space.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
         
@@ -2509,7 +2381,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         if LogToConsole:
                 print(f'\nModfied SrcC2SindsByRoi = {SrcC2SindsByRoi}.')
                 
-        if TrgRts:
+        if TrgRtsFpath:
             """ Direct copy of a contour to an existing RTS. """
             
             """ An existing Target RTS is to be modified.  Since this is a  
@@ -2518,7 +2390,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             
             """ Get the data of interest from the Target RTS. """
             TrgPtsByCntByRoi,\
-            TrgC2SindsByRoi = GetRtsDataOfInterest(TrgRts, FromSliceNum,
+            TrgC2SindsByRoi = GetRtsDataOfInterest(TrgRtsFpath, FromSliceNum,
                                                    FromRoiLabel, TrgDcmDir,
                                                    LogToConsole)
             
@@ -2526,7 +2398,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             Dtime = round(times[-1] - times[-2], 1)
             msg = f'Took {Dtime} s to parse the Target RTS file for '\
                   + 'existing contours within the ROI.\n'
-            TimingMsgs.append(msg)
+            ListOfTimings.append(msg)
             print(f'*{msg}')
             
             
@@ -2565,7 +2437,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                 print(f'\nShifted SrcC2SindsByRoi = {SrcC2SindsByRoi}.')
         
         
-        if TrgRts:
+        if TrgRtsFpath:
             """ An existing Target RTS is to be modified. 
             Concatenate TrgC2SindsByRoi and SrcC2SindsByRoi, and 
             TrgPtsByCntByRoi and SrcPtsByCntByRoi. """
@@ -2674,7 +2546,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to convert the Source points to pixel arrays.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
         
         
@@ -2715,7 +2587,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to generate labelmap images from the Source '\
               + 'pixel arrays.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
         
         
@@ -2758,7 +2630,7 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
     
         
@@ -2980,20 +2852,21 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to convert the Source pixel arrays to points.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
         
-        if True:#LogToConsole:
+        if LogToConsole:
             #print('\n\n', '-'*120)
             print(f'\n\nAfter converting ResPixArrToCopy to ContourData and',
-                  f'points ResSrcC2SindsByRoi =')
+                  f'points, ResSrcC2SindsByRoi =')
             PrintIndsByRoi(ResSrcC2SindsByRoi)
+            print('')
         
     
         if UseCaseToApply in ['3a', '4a', '5a']:
             """ Direct copying with resampling/transformation. """
             
-            if TrgRts:
+            if TrgRtsFpath:
                 """ An existing Target RTS is to be modified. 
                 Concatenate TrgC2SindsByRoi and ResSrcC2SindsByRoi, and
                 TrgPtsByCntByRoi and ResSrcPtsByCntByRoi. """
@@ -3026,10 +2899,10 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     times.append(time.time())
     Dtime = round(times[-1] - times[0], 1)
     msg = f'Took {Dtime} s to copy the ROI(s) from Source to Target.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
-    if True:#LogToConsole:
+    if LogToConsole:
         print(f'\n\n\nPrior to running CreateRts():')
         print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}')
         for r in range(len(TrgPtsByCntByRoi)):
@@ -3041,26 +2914,22 @@ def CopyRts(SrcRts, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     
     
     """ Create the Target RTS. """
-    TrgRts = CreateRts(SrcRts=SrcRts, 
-                       CntDataByCntByRoi=TrgCntDataByCntByRoi,
-                       PtsByCntByRoi=TrgPtsByCntByRoi, 
-                       C2SindsByRoi=TrgC2SindsByRoi, 
-                       DcmDir=TrgDcmDir,
-                       AddTxtToSSLabel=AddTxtToRoiLabel,
-                       LogToConsole=LogToConsole)
+    TrgRts = CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi,
+                       TrgPtsByCntByRoi, TrgC2SindsByRoi, TrgDcmDir,
+                       AddTxtToRoiLabel, LogToConsole)
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to create the RTS object.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     if LogToConsole:
         print('\nEnd of CopyRts().')
         print('-'*120)
         
-    #return TrgRts
-    return TrgRts, TrgPtsByCntByRoi, TrgC2SindsByRoi, TimingMsgs
+    return TrgRts, ListOfTimings
+    #return TrgRts, TrgPtsByCntByRoi, TrgC2SindsByRoi, ListOfTimings
 
 
 
@@ -3075,11 +2944,12 @@ COPY A SEGMENTATION
 ******************************************************************************
 """
 
-def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
-            TrgSeg=None, ToSliceNum=None, Interpolation='LabelGaussian',
-            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, AddTxtToSegLabel='', RefAllSOPs=False,
-            LogToConsole=False):
+def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
+            UseCaseToApply, TrgSegFpath=None, ToSliceNum=None, 
+            Interpolation='BlurThenLinear', Variance=(1,1,1), 
+            ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
+            ForceRegistration=False, AddTxtToSegLabel='', LogToConsole=False,
+            ListOfTimings=[]):
     """
     Note 09/02/2021:
         This function will, depending on the inputs, copy either:
@@ -3091,8 +2961,8 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     Inputs:
     ******
     
-    SrcSeg : Pydicom object
-        Source SEG object.
+    SrcSegFpath : string
+        Filepath of the Source SEG file.
     
     FromSliceNum : integer or None
         The slice indeces within the Source DICOM stack corresponding to the
@@ -3109,11 +2979,17 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     
     TrgDcmDir : string
         Directory containing the Target DICOMs.
+    
+    UseCaseToApply : string
+        String that denotes the Use Case that will be applied.  This will be
+        the same as UseCaseThatApplies unless ForceRegistration is True and
+        UseCaseThatApplies is '3a', '3b', '4a' or '4b'.
         
-    TrgSeg : Pydicom object (optional; None by default)
-        Target SEG object that the segmentation(s) is to be copied to. TrgSeg 
-        is only non-None if a Direct copy of the segmentation(s) is to be made 
-        and added to existing segmentation(s).     
+    TrgRtsFpath : string or None (optional; None by default)
+        Filepath to the Target SEG file that the segmentation(s) is/are to be 
+        copied to. TrgSegFpath != None only if an existing Target SEG exists 
+        and is to added to. An existing SEG will be added to only for Direct 
+        copy operations.     
         
     ToSliceNum : integer (optional; None by default)
         The slice index within the Target DICOM stack where the segmentation 
@@ -3127,10 +3003,10 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         The type of interpolation to be used if the Source labelmap image(s)
         is/are to be resampled to the Target grid.  Acceptable inputs are:
         - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour'; Default value)
+        'nearestneighbour')
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
-        (followed by binary thresholding)
+        (followed by binary thresholding) (Default value)
     
     Variance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if a 
@@ -3160,15 +3036,13 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         
     AddTxtToRoiLabel : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target SEG.
-    
-    RefAllSOPs : boolean (optional; False by default)
-        If True, all SOPInstanceUIDs in the series will be referenced in
-        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
-        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
-        will be referenced.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
+    
+    ListOfTimings : list of strings
+        A list of the time to execute certain tasks during the calling of 
+        CopySeg().
           
                   
     Outputs:
@@ -3203,6 +3077,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     
     import time
     from copy import deepcopy
+    from pydicom import dcmread
     from ImageTools import ImportImage#, GetImageInfo
     from SegTools import GetSegDataOfInterest, ProportionOfSegsInExtent
     from SegTools import CreateSeg
@@ -3216,18 +3091,22 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         print('\n\n', '-'*120)
         print(f'Running CopySeg():')
         
+        SrcSeg = dcmread(SrcSegFpath)
+        
         SrcSegLabels = GetRoiLabels(SrcSeg)
         
         print(f'\nSrcSegLabels = {SrcSegLabels}')
         
-        if TrgSeg:
+        if TrgSegFpath:
+            TrgSeg = dcmread(TrgSegFpath)
+            
             TrgSegLabels = GetRoiLabels(TrgSeg)
         
             print(f'\nTrgSegLabels = {TrgSegLabels}')
     
     
-    """ Log timing messages. """
-    TimingMsgs = []
+    #""" Log timing messages. """
+    #TimingMsgs = []
     
     """ Start timing. """
     times = []
@@ -3236,11 +3115,11 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     #""" Check the validity of the combination of inputs. """
     #CheckValidityOfInputs(FromRoiLabel, FromSliceNum, ToSliceNum, LogToConsole)
     
-    """ Determine which Use Case to apply. """
-    UseCaseThatApplies,\
-    UseCaseToApply = WhichUseCase(FromSliceNum, FromSegLabel, ToSliceNum, 
-                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
-                                  LogToConsole=True)
+    #""" Determine which Use Case to apply. """
+    #UseCaseThatApplies,\
+    #UseCaseToApply = WhichUseCase(FromSliceNum, FromSegLabel, ToSliceNum, 
+    #                              SrcDcmDir, TrgDcmDir, ForceRegistration,
+    #                              LogToConsole=True)
     
     #""" Manipulate UseCase if ForceRegistration = True and UseCase was 3 or 4. """
     #if ForceRegistration and not '5' in UseCase:
@@ -3254,20 +3133,39 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         
     """ Get the data of interest from the Source SEG. """
     SrcPixArrBySeg,\
-    SrcF2SindsBySeg = GetSegDataOfInterest(SrcSeg, FromSliceNum, FromSegLabel, 
-                                           SrcDcmDir, LogToConsole)
+    SrcF2SindsBySeg = GetSegDataOfInterest(SrcSegFpath, FromSliceNum, 
+                                           FromSegLabel, SrcDcmDir, 
+                                           LogToConsole)
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to parse the Source SEG file for the ROI.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     """ Raise exception if there is no data of interest from the Source SEG."""
     if not UniqueItems(SrcF2SindsBySeg):
-        msg = f'There are no segmentations on slice {FromSliceNum} in any '\
-              + 'segment in the Source SEG.'
+        from DicomTools import GetRoiLabels, GetDicomSOPuids
+        from SegTools import GetPFFGStoSliceIndsBySeg
         
+        SrcSeg = dcmread(SrcSegFpath)
+        
+        Labels = GetRoiLabels(SrcSeg)
+        L = len(Labels)
+        
+        SOPuids = GetDicomSOPuids(SrcDcmDir)
+        
+        F2SindsBySeg = GetPFFGStoSliceIndsBySeg(SrcSeg, SOPuids)
+        
+        msg = f"There are no segmentations on slice {FromSliceNum} in any "\
+              + f"segment in the Source SEG. There are {L} segments in the "\
+              + f"Source SEG:"
+        
+        for i in range(L):
+            msg += f"\nSegment {i+1} with label '{Labels[i]}' has "\
+                   + f"{len(F2SindsBySeg[i])} segmentations that correspond "\
+                   + f"to slices {F2SindsBySeg[i]}" 
+                   
         raise Exception(msg)
     
     """
@@ -3284,7 +3182,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to check whether the Source segment(s) intersect '\
           + 'the Target grid space.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     if LogToConsole:
@@ -3325,7 +3223,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         if LogToConsole:
                 print(f'\nModfied SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
                 
-        if TrgSeg:
+        if TrgSegFpath:
             """ Direct copy of a segmentation to an existing SEG. """
             
             """ An existing Target SEG is to be modified.  Since this is a  
@@ -3334,7 +3232,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
             
             """ Get the data of interest from the Target RTS. """
             TrgPixArrBySeg,\
-            TrgF2SindsBySeg = GetSegDataOfInterest(TrgSeg, FromSliceNum,
+            TrgF2SindsBySeg = GetSegDataOfInterest(TrgSegFpath, FromSliceNum,
                                                    FromSegLabel, TrgDcmDir,
                                                    LogToConsole)
             
@@ -3342,7 +3240,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
             Dtime = round(times[-1] - times[-2], 1)
             msg = f'Took {Dtime} s to parse the Target SEG file for '\
                   + 'existing segmentations within the ROI.\n'
-            TimingMsgs.append(msg)
+            ListOfTimings.append(msg)
             print(f'*{msg}')
             
             if LogToConsole:
@@ -3376,7 +3274,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
                 print(f'\nShifted SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
                 
         
-        if TrgSeg:
+        if TrgSegFpath:
             """ An existing Target SEG is to be modified. 
             Concatenate TrgF2SindsBySeg and SrcF2SindsBySeg, and 
             TrgPixArrBySeg and SrcPixArrBySeg. """
@@ -3450,7 +3348,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to generate labelmap images from the Source '\
               'pixel arrays.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'\n*{msg}')
     
     
@@ -3479,7 +3377,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
         
         
@@ -3609,7 +3507,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         transformation. """
         ResFromSliceNum = ResSrcF2SindsBySeg[0][0]
         
-        if True:#LogToConsole:
+        if LogToConsole:
             #print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
             #      f'{ResFromSliceNum}')
             #print(f'ToSliceNum = {ToSliceNum}')
@@ -3633,7 +3531,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
                                                       Fractional=False,
                                                       LogToConsole=LogToConsole)
         
-        if True:#LogToConsole:
+        if LogToConsole:
             print(f'\nAfter running ShiftFramesInPixArrBySeg():')
             print(f'ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}')
             print(f'len(ResSrcPixArrBySeg) = {len(ResSrcPixArrBySeg)}')
@@ -3649,7 +3547,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         if UseCaseToApply in ['3a', '4a', '5a']:
             """ Direct copying with resampling/transformation. """
             
-            if TrgSeg:
+            if TrgSegFpath:
                 """ An existing Target SEG is to be modified. 
                 Concatenate TrgF2SindsBySeg and ResSrcF2SindsBySeg, and
                 TrgPixArrBySeg and ResSrcPixArrBySeg. """
@@ -3677,7 +3575,7 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     times.append(time.time())
     Dtime = round(times[-1] - times[0], 1)
     msg = f'Took {Dtime} s to copy the ROI(s) from Source to Target.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     #print(f'\n\n\n\n\nTrgPixArrBySeg = {TrgPixArrBySeg}')
@@ -3685,36 +3583,22 @@ def CopySeg(SrcSeg, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     
     """ Create/overwrite the Target SEG. """
     
-    if RefAllSOPs:
-        msg = 'All SOPInstanceUIDs will be referenced in '\
-              + 'ReferencedSeriesSequence[0].ReferencedInstanceSequence when '\
-              + 'creating the new SEG.\n'
-    else:
-        msg = 'Only the SOPInstanceUIDs that contain segmentations will be '\
-              + 'referenced in ReferencedSeriesSequence[0].'\
-              + 'ReferencedInstanceSequence when creating the new SEG.\n'
-    print(msg)
-    
-    TrgSeg = CreateSeg(SrcSeg=SrcSeg, TrgSeg=TrgSeg, 
-                       TrgPixArrBySeg=TrgPixArrBySeg, 
-                       TrgF2SindsBySeg=TrgF2SindsBySeg, TrgDicomDir=TrgDcmDir,
-                       FromSegLabel=FromSegLabel,
-                       AddTxtToSegLabel=AddTxtToSegLabel,
-                       RefAllSOPs=RefAllSOPs,
-                       LogToConsole=False)
+    TrgSeg = CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, 
+                       TrgF2SindsBySeg, TrgDcmDir, FromSegLabel,
+                       AddTxtToSegLabel, LogToConsole)
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     msg = f'Took {Dtime} s to create the SEG object.\n'
-    TimingMsgs.append(msg)
+    ListOfTimings.append(msg)
     print(f'*{msg}')
     
     if LogToConsole:
         print('\nEnd of CopySeg().')
         print('-'*120)
         
-    #return TrgSeg
-    return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TimingMsgs
+    return TrgSeg, ListOfTimings
+    #return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
 
 
 
@@ -3729,18 +3613,18 @@ COPY A CONTOUR / SEGMENTATION
 """
 
 
-def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
-            TrgRoi=None, ToSliceNum=None, Interpolation='LabelGaussian',
+def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
+            TrgRoiFpath=None, ToSliceNum=None, Interpolation='BlurThenLinear',
             Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, TxtToAddToRoiLabel='', RefAllSOPs=False,
-            LogToConsole=False):
+            ForceRegistration=False, TxtToAddToRoiLabel='', LogToConsole=False,
+            ExportLogFiles=False):
     """
     
     Inputs:
     ******
     
-    SrcRoi : Pydicom object
-        Source RTS/SEG object.
+    SrcRoiFpath : string
+        Filepath of Source RTS/SEG file.
     
     FromSliceNum : integer
         Slice index of the Source DICOM stack corresponding to the contour/
@@ -3756,11 +3640,11 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     TrgDcmDir : string
         Directory containing the Target DICOMs.
         
-    TrgRts : Pydicom object (optional; None by default)
-        Target RTS object that the contour(s)/segmentation(s) is to be copied 
-        to. TrgRts is only non-None if a Direct copy of the contour/
-        segmentation is to be made and added to existing Direct-copied 
-        contour(s)/segmentation(s).     
+    TrgRoiFpath : string or None (optional; None by default)
+        Filepath to the Target RTS/SEG file that the contour(s)/segmentation(s) 
+        is/are to be copied to. TrgRoiFpath != None only if an existing Target 
+        RTS/SEG exists and is to be added to. An existing RTS/SEG will be added 
+        to only for Direct copy operations.        
         
     ToSliceNum : integer (optional; None by default)
         Slice index within the Target DICOM stack where the contour/
@@ -3771,10 +3655,10 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         The type of interpolation to be used if the Source labelmap image(s)
         is/are to be resampled to the Target grid.  Acceptable inputs are:
         - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour'; Default value)
+        'nearestneighbour')
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
-        (followed by binary thresholding)
+        (followed by binary thresholding) (Default value)
     
     Variance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if a 
@@ -3803,26 +3687,34 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         accordingly.  
         
     TxtToAddToRoiLabel : string (optional, '' by default)
-        Sting of text to pass to ModifyRts/ModifySeg to be used when generating
-        a filename for the new Target RTS/SEG.
-    
-    RefAllSOPs : boolean (optional; False by default)
-        If True, all SOPInstanceUIDs in the series will be referenced in
-        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
-        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
-        will be referenced.
-        
+        String of text to pass to CreateRts()/CreateSeg(). The string will be
+        appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
+        the filename of the exported (new) Target RTS/SEG.
+            
     LogToConsole : boolean (default False)
-        Denotes whether some results will be logged to the console.
+        If True, some results will be logged to the console.
+    
+    ExportLogFiles : boolean (default False)
+        If True, log files will be exported.
           
                   
     Outputs:
     *******
         
-    TrgRts : Pydicom object
+    TrgRoi : Pydicom object
         The new (if making a Relationship-preserving copy) or the modified (if
-        making a Direct copy of a contour/segmentation to an existing Direct-
-        copied contour(s)/segmentation(s)) Target RTS/SEG object.
+        making a Direct copy of a contour/segmentation to an existing RTS/SEG) 
+        Target RTS/SEG object.
+        
+    DictOfInputs : dictionary
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings
+        A list containing the inputs that were called to CopyRoi().
+        
+    ListOfTimings : list of strings
+        A list of the time to execute certain tasks during the calling of 
+        CopyRoi() and subsequent tasks called within CopyRts() or CopySeg().
         
         
     Notes:
@@ -3835,63 +3727,108 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     """
 
     import time
-    from DicomTools import IsSameModalities
-    #from GeneralTools import PrintTitle
+    import os
+    from pydicom import dcmread
+    #from DicomTools import IsSameModalities
+    from GeneralTools import ExportDictionaryToJson, ExportListToTxt
+    
+    RunDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    ListOfInputs = [f'RunDateTime: {RunDateTime}\n',
+                    f'SrcRoiFpath = {SrcRoiFpath}\n',
+                    f'FromSliceNum = {FromSliceNum}\n',
+                    f'FromRoiLabel = {FromRoiLabel}\n',
+                    f'SrcDcmDir = {SrcDcmDir}\n',
+                    f'TrgDcmDir = {TrgDcmDir}\n',
+                    f'TrgRoiFpath = {TrgRoiFpath}\n',
+                    f'ToSliceNum = {ToSliceNum}\n',
+                    f'Interpolation = {Interpolation}\n',
+                    f'Variance = {Variance}\n',
+                    f'ThreshPreRes = {ThreshPreRes}\n',
+                    f'ThreshPostTx = {ThreshPostTx}\n',
+                    f'Tx = {Tx}\n',
+                    f'ForceRegistration = {ForceRegistration}\n',
+                    f'TxtToAddToRoiLabel = {TxtToAddToRoiLabel}\n',
+                    f'LogToConsole = {LogToConsole}']
+    
+    DictOfInputs = {'RunDateTime' : RunDateTime,
+                    'SrcRoiFpath' : SrcRoiFpath,
+                    'FromSliceNum' : FromSliceNum,
+                    'FromRoiLabel' : FromRoiLabel,
+                    'SrcDcmDir' : SrcDcmDir,
+                    'TrgDcmDir' : TrgDcmDir,
+                    'TrgRoiFpath' : TrgRoiFpath,
+                    'ToSliceNum' : ToSliceNum,
+                    'Interpolation' : Interpolation,
+                    'Variance' : Variance,
+                    'ThreshPreRes' : ThreshPreRes,
+                    'ThreshPostTx' : ThreshPostTx,
+                    'Tx' : Tx,
+                    'ForceRegistration' : ForceRegistration,
+                    'TxtToAddToRoiLabel' : TxtToAddToRoiLabel,
+                    'LogToConsole' : LogToConsole}
+    
+    
+    ListOfTimings = [f'RunDateTime: {RunDateTime}\n']
+    
+    times = []
+    
     
     """ Start timing. """
-    times = []
     times.append(time.time())
     
-    # Compare the modalities of the RTSs/SEGs:
-    SrcModality = SrcRoi.Modality
+    """ Establish whether the inputs are valid. """
+    CheckValidityOfInputs(SrcRoiFpath, FromRoiLabel, FromSliceNum, ToSliceNum, 
+                          TrgRoiFpath, LogToConsole)
     
-    if TrgRoi:
-        TrgModality = TrgRoi.Modality
+    times.append(time.time())
+    Dtime = round(1000*(times[-1] - times[-2]), 1)
+    if True:#LogToConsole:
+        msg = f'Took {Dtime} ms to check the validity of inputs to CopyRoi().\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
         
-        if not IsSameModalities(SrcRoi, TrgRoi):
-            msg = f"The Source ({SrcModality}) and Target ({TrgModality}) " \
-                  + "modalities are different."
-            
-            raise Exception(msg)
-            
+        
+    """ Determine which Use Case to apply. """
+    UseCaseThatApplies,\
+    UseCaseToApply = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
+                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
+                                  LogToConsole=True)
     
-    if SrcModality == 'RTSTRUCT':
-        """ If a single contour is to be copied FromSliceNum will be an integer.
-        If FromSliceNum is None, all contours on all ROIs are to be copied
-        (01/02/2021). """
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if True:#LogToConsole:
+        #print(f'\n\nDone.  Took {Dtime} s to run.')
+        msg = f'Took {Dtime} s to determine which UseCase applies.\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
         
-        #if isinstance(FromSliceNum, int):
-        #    NewTrgRoi = CopyContour(SrcRoi, FromSearchString, SrcDcmDir, 
-        #                            FromSliceNum, TrgDcmDir, TrgRoi, ToSliceNum, 
-        #                            Sigma, ThreshLevel, AddText, LogToConsole)
-        #else:
-        #    NewTrgRoi = CopyRts(SrcRoi, FromSearchString, SrcDcmDir, 
-        #                        FromSliceNum, TrgDcmDir, TrgRoi, ToSliceNum, 
-        #                        Sigma, ThreshLevel, AddText, LogToConsole)
-        
-        NewTrgRoi = CopyRts(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, 
-                            TrgDcmDir, TrgRoi, ToSliceNum, Interpolation,
-                            Variance, ThreshPreRes, ThreshPostTx, Tx, 
-                            ForceRegistration, TxtToAddToRoiLabel, LogToConsole)
     
-    elif SrcModality == 'SEG':
-        #if isinstance(FromSliceNum, int):
-        #    NewTrgRoi = CopySegmentation(SrcRoi, FromSearchString, SrcDcmDir, 
-        #                                 FromSliceNum, TrgDcmDir, TrgRoi, 
-        #                                 ToSliceNum, Sigma, ThreshLevel,
-        #                                 AddText, LogToConsole)
-        #else:
-        #    NewTrgRoi = CopySeg()
-        
-        NewTrgRoi = CopySeg(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir,
-                            TrgDcmDir, TrgRoi, ToSliceNum, Interpolation,
-                            Variance, ThreshPreRes, ThreshPostTx, Tx, 
-                            ForceRegistration, TxtToAddToRoiLabel, RefAllSOPs,
-                            LogToConsole)
+    DictOfInputs['UseCaseThatApplies'] = UseCaseThatApplies
+    DictOfInputs['UseCaseToApply'] = UseCaseToApply
+    
+    #print(f'\n\n\nSrcRoiFpath = {SrcRoiFpath}')
+    
+    Modality = dcmread(SrcRoiFpath).Modality
+    
+    if Modality == 'RTSTRUCT':        
+        TrgRoi, ListOfTimings\
+        = CopyRts(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, 
+                  TrgDcmDir, UseCaseToApply, TrgRoiFpath, ToSliceNum, 
+                  Interpolation, Variance, ThreshPreRes, ThreshPostTx, Tx,
+                  ForceRegistration, TxtToAddToRoiLabel, LogToConsole,
+                  ListOfTimings)
+    
+    elif Modality == 'SEG':
+        TrgRoi, ListOfTimings\
+        = CopySeg(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir,
+                  TrgDcmDir, UseCaseToApply, TrgRoiFpath, ToSliceNum, 
+                  Interpolation, Variance, ThreshPreRes, ThreshPostTx, Tx,
+                  ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
+                  ListOfTimings)
         
     else:
-        msg = f'The Source modality ({SrcModality}) must be either "RTS" or '\
-              + '"SEG".'
+        msg = f'The Source modality ({Modality}) must be "RTS" or "SEG".'
         
         raise Exception(msg)
 
@@ -3899,13 +3836,32 @@ def CopyRoi(SrcRoi, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
-        #print(f'\n\nDone.  Took {Dtime} s to run.')
-        msg = f'Took {Dtime} s to copy the ROI(s) and create the RTS/SEG '\
-              + 'object.\n'  
-        #PrintTitle(msg)
+        msg = f'Took {Dtime} s to copy the ROI(s) and create the {Modality}'\
+              + ' object.\n'  
+        ListOfTimings.append(msg)
         print(f'*{msg}')
+    
+    
+    if ExportLogFiles:
+        """ Export DictOfInputs as a json, and ListOfInputs as a txt, to a sub-
+        directory "logs" in the current working directory. """
+        JsonFname = RunDateTime + '_DictOfInputs.json'
+        TxtFname = RunDateTime + '_ListOfInputs.txt'
         
-    return NewTrgRoi
+        CWD = os.getcwd()
+        
+        ExportDir = os.path.join(CWD, 'logs')
+        
+        JsonFpath = os.path.join(ExportDir, JsonFname)
+        TxtFpath = os.path.join(ExportDir, TxtFname)
+        
+        ExportDictionaryToJson(DictOfInputs, JsonFname, ExportDir)
+        ExportListToTxt(ListOfInputs, TxtFname, ExportDir)
+            
+        print('Dictionary of inputs to CopyRoi() saved to:\n', JsonFpath, 
+              '\nand list of inputs saved to:\n', TxtFpath, '\n')
+        
+    return TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings
 
 
 
@@ -3921,7 +3877,8 @@ CHECK FOR ERRORS IN NEW TARGET RTS / SEG
 ******************************************************************************
 """
 
-def ErrorCheckRoi(Roi, DicomDir, RefAllSOPs=False, LogToConsole=False):
+def ErrorCheckRoi(Roi, DicomDir, LogToConsole=False, DictOfInputs=None,
+                  ExportLogFiles=False):
     """
     Check a RTS/SEG for errors in dependencies based on provided directory of
     the DICOMs that relate to the RTS/SEG.  
@@ -3934,15 +3891,16 @@ def ErrorCheckRoi(Roi, DicomDir, RefAllSOPs=False, LogToConsole=False):
         
     DicomDir : string
         Directory containing the DICOMs that relate to Roi.
-    
-    RefAllSOPs : boolean (optional; False by default)
-        If True, all SOPInstanceUIDs in the series will be referenced in
-        ReferencedSeriesSequence[0].ReferencedInstanceSequence when creating
-        the new SEG. If False, only the SOPInstanceUIDs that have segmentations
-        will be referenced.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
+    
+    DictOfInputs : dictionary or None (optional; None by default)
+        If !=None, it is a dictionary containing the inputs that were called to 
+        CopyRoi().
+    
+    ExportLogFiles : boolean (default False)
+        If True, log files will be exported.
                            
     
     Outputs:
@@ -3957,50 +3915,62 @@ def ErrorCheckRoi(Roi, DicomDir, RefAllSOPs=False, LogToConsole=False):
     
     import time
     import os
+    from GeneralTools import ExportListToTxt
+    
+    Modality = Roi.Modality
     
     """ Start timing. """
     times = []
     times.append(time.time())
     
-    if Roi.Modality == 'RTSTRUCT':
-        import RtsTools
-        import importlib
-        importlib.reload(RtsTools)
+    if Modality == 'RTSTRUCT':
+        #import RtsTools
+        #import importlib
+        #importlib.reload(RtsTools)
         from RtsTools import ErrorCheckRts
         
         LogList, Nerrors = ErrorCheckRts(Roi, DicomDir, LogToConsole)
         
-    elif Roi.Modality == 'SEG':
-        import importlib
-        import SegTools
-        importlib.reload(SegTools)
+    elif Modality == 'SEG':
+        #import importlib
+        #import SegTools
+        #importlib.reload(SegTools)
         from SegTools import ErrorCheckSeg
         
-        LogList, Nerrors = ErrorCheckSeg(Roi, DicomDir, RefAllSOPs, 
-                                         LogToConsole)
+        LogList, Nerrors = ErrorCheckSeg(Roi, DicomDir, LogToConsole)
         
     else:
+        msg = f'The modality ({Modality}) must be either "RTS" or "SEG".'
+        
+        raise Exception(msg)
+        
         LogList = None
         Nerrors = None
     
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
-    print(f'*Took {Dtime} s to error check the RTS/SEG object.')
+    if LogToConsole:
+        print(f'*Took {Dtime} s to error check the {Modality} object.\n')
     
-    CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
     
-    Fname = CurrentDateTime + '_RoiCopy.log'
-    
-    CWD = os.getcwd()
-    
-    Fpath = os.path.join(CWD, 'logs', Fname)
-    
-    with open(Fpath, 'w') as f:
-        for line in LogList:
-            f.write(line)
+    if ExportLogFiles:
+        """ Export log of error check results. """
+        if not DictOfInputs == None:
+            DateTime = DictOfInputs['RunDateTime']
+        else:
+            DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
-    print('\nLog file saved to:\n', Fpath)
+        Fname = DateTime + '_ErrorCheckLog.txt'
+        
+        CWD = os.getcwd()
+        ExportDir = os.path.join(CWD, 'logs')
+        
+        Fpath = os.path.join(ExportDir, Fname)
+        
+        ExportListToTxt(LogList, Fname, ExportDir)
+            
+        print('Log of error checks saved to:\n', Fpath, '\n')
     
     return LogList, Nerrors
 
@@ -4017,7 +3987,8 @@ EXPORT NEW TARGET RTS / SEG TO DISK
 ******************************************************************************
 """
 
-def ExportTrgRoi(TrgRoi, SrcRoiFpath, ExportDir, TxtToAddToFname=''):
+def ExportTrgRoi(TrgRoi, SrcRoiFpath, ExportDir, TxtToAddToFname='',
+                 DictOfInputs=None):
     """
     Export RTS/SEG to disk.  
     
@@ -4037,6 +4008,10 @@ def ExportTrgRoi(TrgRoi, SrcRoiFpath, ExportDir, TxtToAddToFname=''):
     NamePrefix : string (optional; '' by default)
         Prefix to be added to the assigned filename (after the DateTime stamp), 
         e.g. 'Case3b-i'.
+    
+    DictOfInputs : dictionary or None (optional; None by default)
+        If not None, a dictionary containing the inputs that were called to 
+        CopyRoi().
                            
     
     Outputs:
@@ -4052,23 +4027,389 @@ def ExportTrgRoi(TrgRoi, SrcRoiFpath, ExportDir, TxtToAddToFname=''):
     # Get the filename of the original RTS/SEG file:
     #SrcRoiFname = os.path.split(SrcRoiFpath)[1]
     
-    CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    if not os.path.isdir(ExportDir):
+        os.mkdir(ExportDir)
     
-    #FnamePrefix = CurrentDateTime + '_' + NamePrefix + '_from_' 
-    FnamePrefix = CurrentDateTime + '_' + TxtToAddToFname.replace(' ', '_')
+    if not DictOfInputs == None:
+        DateTime = DictOfInputs['RunDateTime']
+    else:
+        DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    #FnamePrefix = DateTime + '_' + NamePrefix + '_from_' 
+    FnamePrefix = DateTime + '_' + TxtToAddToFname.replace(' ', '_')
     
     # Create a new filename (this will appear under Label in XNAT):
     #TrgRoiFname = FnamePrefix + SrcRoiFname
     #TrgRoiFname = FnamePrefix
-    TrgRoiFname = FnamePrefix + '.dcm' # 'dcm' was missing (found 18/12)
+    TrgRoiFname = FnamePrefix + '.dcm'
     
     TrgRoiFpath = os.path.join(ExportDir, TrgRoiFname)
     
     TrgRoi.save_as(TrgRoiFpath)
         
-    print('\nNew Target RTS/SEG exported to:\n', TrgRoiFpath)
+    print(f'New Target {TrgRoi.Modality} exported to:\n', TrgRoiFpath, '\n')
     
     return TrgRoiFpath
+
+
+
+
+
+
+
+"""
+******************************************************************************
+******************************************************************************
+RUN COPYROI()
+******************************************************************************
+******************************************************************************
+"""
+
+
+def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='', 
+               Interpolation='BlurThenLinear', Variance=(1,1,1), 
+               ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine', 
+               ForceRegistration=False, ExportRoi=True, PlotResults=False, 
+               PlotAllSlices=False, ExportPlot=False, ExportLogFiles=True):
+    """
+    
+    Inputs:
+    ******
+    
+    TestNums : list of strings
+        A list of strings denoting the tests to run (as defined in 
+        CreateDictOfPaths()). Several tests can be run in series by providing
+        a list of comma-separated strings (e.g. ['SR1', 'SR2', 'SR3']). To 
+        run a single test a single-itemed list must be provided (e.g. ['RD4']).
+    
+    TxtToAddToRoiLabel : string (optional, '' by default)
+        String of text to pass to CreateRts()/CreateSeg(). The string will be
+        appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
+        the filename of the exported (new) Target RTS/SEG.
+    
+    LogToConsole : boolean (optional; False by default)
+        If True, intermediate results will be logged to the console during the
+        running of CopyRoi().
+    
+    Interpolation : string (optional; 'BlurThenLinear' by default)
+        The type of interpolation to be used if the Source labelmap image(s)
+        is/are to be resampled to the Target grid.  Acceptable inputs are:
+        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
+        'nearestneighbour')
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding) (Default value)
+    
+    Variance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if a 
+        Gaussian blurring + linearly resampling approach is taken for 
+        resampling of the Source labelmap image(s).
+        
+    ThreshPreRes : float (optional; 0.75 by default)
+        The threshold level used to perform binary thresholding prior to 
+        resampling. Example use is on a labelmap image if a Gaussian blurring 
+        + linearly resampling approach is taken to combat aliasing effects.
+    
+    ThreshPostTx : float (optional; 0.05 by default)
+        The threshold level used to perform binary thresholding after 
+        registration transformation.
+    
+    Tx : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+        
+    ForceRegistration : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+    
+    ExportRoi : boolean (optional; True by default)
+        If True, the new Target RTS/SEG will be exported to a directory called
+        "new_RTS"/"new_SEG" in the current working directory.
+        
+    PlotResults : boolean (optional; False by default)
+        If True, the new RTS/SEG will be parsed and all contours/segmentations
+        will be plotted.
+    
+    PlotAllSlices : boolean (optional; False by default)
+        If True, and if PlotResults is True, all slices in Source and Target
+        will be plotted. If False, only slices containing contours/segmentations
+        will be plotted.
+    
+    ExportPlot : boolean (optional; False by default)
+        If True, and if PlotResults is True, the plot will be exported to a .jpg
+        in a directory called "plots_RTS"/"plots_SEG" in the current working 
+        directory.
+    
+    ExportLogFiles : boolean (default False)
+        If True, log files will be exported.
+    """
+
+    import time
+    import os
+    from pydicom import dcmread
+    #from DicomTools import IsSameModalities
+    from GeneralTools import PrintTitle, ExportListToTxt, ExportDictionaryToJson
+    
+    if not isinstance(TestNums, list):
+        msg = 'The input argument "TestNums" must be a list of character '\
+              + 'strings.'
+        print(msg)
+    
+    CWD = os.getcwd()
+    RtsExportDir = os.path.join(CWD, 'new_RTS')
+    SegExportDir = os.path.join(CWD, 'new_SEG')
+    RtsPlotExportDir = os.path.join(CWD, 'plots_RTS')
+    SegPlotExportDir = os.path.join(CWD, 'plots_SEG')
+    LogExportDir = os.path.join(CWD, 'logs')
+    
+    ListOfTimings = [] # list of strings (messages outputted to console)
+    
+    """ Start timing. """
+    Times = []
+    Times.append(time.time())
+    
+    
+    for TestNum in TestNums:
+        TestRunTimes = [] # this this Test run only
+        TestRunTimes.append(time.time())
+        
+        PrintTitle(f'Running Test {TestNum}:')
+    
+        SrcRoiFpath, FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir,\
+        TrgDcmDir, TrgRoiFpath, TxtToAddToRoiLabel, SrcLabel,\
+        TrgLabel = GetPathInputs(TestNum)
+        
+        Times.append(time.time())
+        Dtime = round(1000*(Times[-1] - Times[-2]), 1)
+        msg = f'Took {Dtime} ms to get the inputs to CopyRoi().\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
+        
+        if LogToConsole:
+            print(f'Inputs to CopyRoi():\n FromRoiLabel = {FromRoiLabel}\n',
+                      f'FromSliceNum = {FromSliceNum}\n',
+                      f'ToSliceNum = {ToSliceNum}\n')
+        
+    
+        """ Import the RTS or SEGs: """
+        SrcRoi = dcmread(SrcRoiFpath)
+        SrcModality = SrcRoi.Modality
+        
+        #print(f'\n\nSrcRoiFpath = {SrcRoiFpath}')
+        #print(f'SrcModality = {SrcModality}')
+    
+        if TrgRoiFpath:
+            TrgRoi = dcmread(TrgRoiFpath)
+        else:
+            TrgRoi = None
+        
+        """ New ROI label for RTS StructureSetLabel / SEG Series Description 
+        and RTS/SEG filename: """
+        if 'RR' in TestNum or 'RD' in TestNum:
+            NewRoiLabel = SrcRoi.StructureSetLabel + TxtToAddToRoiLabel
+        else:
+            """ 'SR' in TestNum or 'SD' in TestNum: """
+            NewRoiLabel = SrcRoi.SeriesDescription + TxtToAddToRoiLabel
+            
+        
+        """ Text to add to file names: """
+        TxtToAddToFname = f'Test_{TestNum}_{NewRoiLabel}'
+        
+        
+        """ Copy Contours/Segmentations """
+        
+        if SrcModality == 'RTSTRUCT':
+            NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
+            = CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, 
+                      TrgDcmDir, TrgRoiFpath, ToSliceNum, Interpolation, 
+                      Variance, ThreshPreRes, ThreshPostTx, Tx,
+                      ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
+                      False)
+        else:
+            NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
+            = CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir,  
+                      TrgDcmDir, TrgRoiFpath, ToSliceNum, Interpolation,  
+                      Variance, ThreshPreRes, ThreshPostTx, Tx, 
+                      ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
+                      False)
+        
+        
+        if ExportLogFiles:
+            """ Export DictOfInputs as a json, and ListOfInputs as a txt, to a 
+            sub-directory "logs" in the current working directory. """
+            
+            if not DictOfInputs == None:
+                DateTime = DictOfInputs['RunDateTime']
+            else:
+                DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+                
+            JsonFname = DateTime + f'_TestRun_{TestNum}_DictOfInputs.json'
+            TxtFname = DateTime + f'_TestRun_{TestNum}_ListOfInputs.txt'
+            
+            CWD = os.getcwd()
+            
+            ExportDir = os.path.join(CWD, 'logs')
+            
+            JsonFpath = os.path.join(ExportDir, JsonFname)
+            TxtFpath = os.path.join(ExportDir, TxtFname)
+            
+            ExportDictionaryToJson(DictOfInputs, JsonFname, ExportDir)
+            ExportListToTxt(ListOfInputs, TxtFname, ExportDir)
+                
+            print('Dictionary of inputs to CopyRoi() saved to:\n', JsonFpath, 
+                  '\nand list of inputs saved to:\n', TxtFpath, '\n')
+        
+        
+        
+        """ Error check RTS/SEG """
+        Times.append(time.time())
+        
+        ErrorList, Nerrors = ErrorCheckRoi(NewTrgRoi, TrgDcmDir, LogToConsole,
+                                           DictOfInputs, False)
+        
+        Times.append(time.time())
+        Dtime = round(Times[-1] - Times[-2], 1)
+        msg = f'Took {Dtime} s to error check the {SrcModality}.  There were '\
+              + f'{Nerrors} errors found.\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
+        
+        if ExportLogFiles:
+            """ Export log of error check results. """
+            
+            Fname = DateTime + f'_TestRun_{TestNum}_ErrorCheckLog.txt'
+            
+            CWD = os.getcwd()
+            ExportDir = os.path.join(CWD, 'logs')
+            
+            Fpath = os.path.join(ExportDir, Fname)
+            
+            ExportListToTxt(ErrorList, Fname, ExportDir)
+                
+            print('Log of error checks saved to:\n', Fpath, '\n')
+        
+        
+    
+        """ Export RTS/SEG """
+    
+        if ExportRoi:# and not Nerrors:
+            UseCaseThatApplies = DictOfInputs['UseCaseThatApplies']
+            UseCaseToApply = DictOfInputs['UseCaseToApply']
+            
+            if ForceRegistration and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+                TxtToAddToFname += f'_ForcedRegistration_{Tx}'
+                
+            if not ForceRegistration and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+                TxtToAddToFname += f'_{Interpolation}'
+                
+            if UseCaseToApply in ['5a', '5b']:
+                TxtToAddToFname += f'_{Tx}'
+            
+            if NewTrgRoi.Modality == 'RTSTRUCT':
+                NewTrgRoiFpath = ExportTrgRoi(NewTrgRoi, SrcRoiFpath, RtsExportDir, 
+                                              TxtToAddToFname, DictOfInputs)
+            else:
+                NewTrgRoiFpath = ExportTrgRoi(NewTrgRoi, SrcRoiFpath, SegExportDir, 
+                                              TxtToAddToFname, DictOfInputs)
+        
+        
+        """ Plot Contours """
+    
+        if PlotResults:
+            if ExportPlot:
+                dpi = 120
+            else:
+                dpi = 80
+    
+    
+    
+            if TrgRoi:
+                ListOfRois = [SrcRoi, TrgRoi, NewTrgRoi]
+    
+                ListOfDicomDirs = [SrcDcmDir, TrgDcmDir, TrgDcmDir]
+    
+                ListOfPlotTitles = ['Source', 'Original Target', 'New Target']
+            else:
+                ListOfRois = [SrcRoi, NewTrgRoi]
+    
+                ListOfDicomDirs = [SrcDcmDir, TrgDcmDir]
+    
+                ListOfPlotTitles = ['Source', 'New Target']
+    
+    
+            #TxtToAdd = f'(RunCase = {RunCase}, \nFromSliceNum = {FromSliceNum}, '\
+            #           + f'\nToSliceNum = {ToSliceNum})'
+            
+            #print(f'\nListOfDicomDirs = {ListOfDicomDirs}')
+            
+            Times.append(time.time())
+            
+            if NewTrgRoi.Modality == 'RTSTRUCT':
+                from PlottingTools import PlotContoursFromListOfRtss_v1
+                
+                PlotContoursFromListOfRtss_v1(ListOfRois, ListOfDicomDirs, 
+                                              ListOfPlotTitles,
+                                              PlotAllSlices=PlotAllSlices,
+                                              AddTxt=TxtToAddToFname, 
+                                              ExportPlot=ExportPlot, 
+                                              ExportDir=RtsPlotExportDir, 
+                                              dpi=dpi, LogToConsole=False)
+    
+            else:
+                from PlottingTools import PlotPixArrsFromListOfSegs_v1
+                
+                PlotPixArrsFromListOfSegs_v1(ListOfRois, ListOfDicomDirs, 
+                                             ListOfPlotTitles,
+                                             PlotAllSlices=PlotAllSlices, 
+                                             AddTxt=TxtToAddToFname, 
+                                             ExportPlot=ExportPlot, 
+                                             ExportDir=SegPlotExportDir,  
+                                             dpi=dpi, LogToConsole=False)
+                
+            Times.append(time.time())
+            Dtime = round(Times[-1] - Times[-2], 1)
+            msg = f'Took {Dtime} s to plot the results.\n'
+            ListOfTimings.append(msg)
+            print(f'*{msg}')
+        
+            TestRunTimes.append(time.time())
+            Dtime = round(TestRunTimes[-1] - TestRunTimes[-2], 1)
+            msg = f'Took {Dtime} s to run test {TestNum}.\n'
+            ListOfTimings.append(msg)
+            print(f'*{msg}')
+    
+        
+    print('All Test run iterations complete.\n')
+    
+    Times.append(time.time())
+    Dtime = round(Times[-1] - Times[0], 1)
+    msg = f'Took {Dtime} s to run all tests.\n'
+    ListOfTimings.append(msg)
+    print(f'*{msg}')
+    
+    
+    if ExportLogFiles:
+        """ Export the ListOfTimings """
+        
+        Fname = DateTime + f'_TestRun_{TestNum}_ListOfTimings.txt'
+        
+        Fpath = os.path.join(LogExportDir, Fname)
+        
+        ExportListToTxt(ListOfTimings, Fname, LogExportDir)
+        
+        print('Log file saved to:\n', Fpath, '\n')
+    
+    
+    return 
+    #return NewTrgRoi
+    
+
+
+
 
 
 
@@ -4960,3 +5301,8 @@ def ExportDro(Dro, ExportDir, Description='', LogToConsole=False):
     print('\nNew DICOM Registration Object exported to:\n', DroFpath)
     
     return DroFpath
+
+
+
+
+

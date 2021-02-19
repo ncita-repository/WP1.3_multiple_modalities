@@ -421,9 +421,9 @@ def GetImageAttributesFromDict(Dict, ListOfKeywords=[], Package='pydicom',
 def GetImageInfo(Image, LogToConsole=False):
     import numpy as np
     from ConversionTools import Image2PixArr
-    import importlib
-    import GeneralTools
-    importlib.reload(GeneralTools)
+    #import importlib
+    #import GeneralTools
+    #importlib.reload(GeneralTools)
     from GeneralTools import UniqueItems
     
     PixArr, F2Sinds = Image2PixArr(LabmapIm=Image)
@@ -924,7 +924,7 @@ def BinaryThresholdImage(Im, Thresh=0.5):
     BinThreshImFilt.SetInsideValue(1)
     #BinThreshImFilt.SetOutputPixelType(sitk.sitkUInt32) # --> error:
     # 'BinaryThresholdImageFilter' object has no attribute 'SetOutputPixelType'
-    BinThreshImFilt.DebugOn()
+    #BinThreshImFilt.DebugOn()
     
     #BinThreshImFilt.Execute()
     #BinIm = BinThreshImFilt.GetOutput()
@@ -1620,8 +1620,8 @@ def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
     
     # Initiate RegImFilt:
     RegImFilt = sitk.ElastixImageFilter()
-    RegImFilt.LogToConsoleOn() # <-- no output in Jupyter
-    #RegImFilt.LogToConsoleOff() 
+    #RegImFilt.LogToConsoleOn() # <-- no output in Jupyter
+    RegImFilt.LogToConsoleOff() 
     RegImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
     
     # Define the fixed and moving images:
@@ -1880,147 +1880,6 @@ def TransformLabmapIm_NOT_COMPLETE(LabmapIm, RegImFilt, FixImage=None, MovImage=
 
 
 
-def TransformLabmapImByRoi_OLD(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage, 
-                           Tx='affine', LogToConsole=False):
-    """
-    Resample a list 3D SimpleITK images representing labelmaps. A 
-    NearestNeighbor interpolation will be applied initially.  If aliasing 
-    effects result in a empty labelmap, the labelmap will be Gaussian blurred,
-    linearly resampled and binary thresholded.  See Notes for more info.
-    
-    Inputs:
-    ******                      
-        
-    LabmapImByRoi : list of SimpleITK images
-        A list (for each ROI) of 3D labelmap images to be resampled. The 
-        labelmaps share the same image attributes as MovImage.
-    
-    F2SindsByRoi : list of a list of integers
-        The list (for each ROI) of a list (for each frame) of the frame-to-slice 
-        indices of each labelmap image in LabmapImByRoi.
-        
-    FixImage : SimpleITK image
-        The 3D image that MovImage will be registered to (e.g. SrcImage).
-    
-    MovImage : SimpleITK image
-        The 3D image that will be registered to FixImage (e.g. TrgImage).
-    
-    Tx : string (optional; 'affine' by default)
-        Denotes type of transformation to use for registration.  Acceptable 
-        values include:
-        - 'rigid'
-        - 'affine'
-        - 'bspline' (i.e. deformable)
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether some results will be logged to the console.
-        
-    
-    Outputs:
-    *******
-    
-    TxLabmapImByRoi : list of SimpleITK images
-        The list (for each ROI) of the 3D labelmap images in LabmapImByRoi
-        transformed to the FixImage grid space.
-        
-    TxPixArrByRoi : list of Numpy arrays
-        The list (for each ROI) of pixel arrays (converted from each labelmap 
-        in TxLabmapImByRoi).
-    
-    TxF2SindsByRoi : list of a list of integers
-        The list (for each ROI) of a list (for each frame) of the
-        frame-to-slice indices in TxPixArrByRoi.
-    """
-    
-    import time
-    from ConversionTools import Image2PixArr
-    from GeneralTools import UniqueItems
-    
-    if LogToConsole:
-        print('\n\n', '-'*120)
-        print(f'Results of TransformLabmapImByRoi():')
-        
-    if not Tx in ['rigid', 'affine', 'bspline']:
-        msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
-              + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
-        
-        raise Exception(msg)
-        
-    """ Start timing. """
-    times = []
-    times.append(time.time())
-    
-    print('\n*Performing registration...')
-    
-    """ Register the images. """
-    RegIm, RegImFilt = RegisterImages(FixIm=FixImage, MovIm=MovImage, 
-                                      Tx=Tx, LogToConsole=False)
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'\n*Took {Dtime} s to register the 3D image stacks.')
-    
-        
-    """ Transform LabmapImByRoi to the Target image's grid to get the resampled
-    pixel array. """
-    TxLabmapImByRoi = []
-    TxPixArrByRoi = []
-    TxF2SindsByRoi = [] 
-    
-    for r in range(len(LabmapImByRoi)):
-        """ Transform SrcLabmapIm using RegImFilt. """
-        TxLabmapIm = TransformImage(Im=LabmapImByRoi[r], RegImFilt=RegImFilt,
-                                    Interpolation='Nearestneighbor')
-        
-        TxLabmapImByRoi.append(TxLabmapIm)
-        
-        """ Convert TxLabmapIm to a pixel array. """
-        TxPixArr, TxF2Sinds = Image2PixArr(LabmapIm=TxLabmapIm)
-        
-        TxPixArrByRoi.append(TxPixArr)
-        TxF2SindsByRoi.append(TxF2Sinds)
-            
-        #PixID, PixIDTypeAsStr, UniqueVals,\
-        #F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
-        
-        if LogToConsole:
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
-        
-            unique = UniqueItems(Items=TxPixArr, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in TxPixArr',
-                  f'after transforming LabmapImByRoi[{r}]')
-            
-            F = TxPixArr.shape[0]
-            
-            print(f'\nThe segmentation has been registered to {F} frames/',
-                  f'contours: {TxF2Sinds}.')
-            
-        """ Check if there are fewer indices in TxF2Sinds than in 
-        F2SindsByRoi[r]. """
-        Nin = len(F2SindsByRoi[r])
-        Nout = len(TxF2Sinds)
-        
-        if Nout < Nin:
-            print(f'\nWARNING:  There are {Nin} F2Sinds in the input labelmap',
-                  f'but only {Nout} in the transformed labelmap.')
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'\n*Took {Dtime} s to transform the 3D labelmap images using the',
-          'image registration transformation.')
-    
-    if LogToConsole:
-        print('-'*120)
-        
-    return TxLabmapImByRoi, TxPixArrByRoi, TxF2SindsByRoi
-
-
-
-
-
-
-
 
 def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage, 
                            Tx='affine', ThreshLevel=0.75, LogToConsole=False):
@@ -2151,7 +2010,7 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
             
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
-        print(f'\n*Took {Dtime} s to Gaussian blur the {r}^th labelmap image')
+        print(f'\n*Took {Dtime} s to Gaussian blur the {r}^th labelmap image.\n')
         
         if LogToConsole:
             print(f'\n   Image info for LabmapIm after Gaussian blur:')
@@ -2223,9 +2082,9 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
         Nin = len(F2SindsByRoi[r])
         Nout = len(TxF2Sinds)
         
-        if Nout < Nin:
+        if Nout < Nin and LogToConsole:
             print(f'\nWARNING:  There are {Nin} F2Sinds in the input labelmap',
-                  f'but only {Nout} in the transformed labelmap.')
+                  f'but only {Nout} in the transformed labelmap.\n')
             
     if LogToConsole:
         print('-'*120)

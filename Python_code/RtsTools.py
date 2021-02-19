@@ -29,6 +29,215 @@ DICOM RTSTRUCT FUNCTIONS
 ******************************************************************************
 """
 
+
+def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir, 
+                         LogToConsole=False):
+    """
+    Get data of interest from an RTS.
+    
+    Inputs:
+    ******
+    
+    RtsFpath : string
+        Filepath of Source RTSTRUCT file.
+        
+    FromSliceNum : integer or None
+        The slice indeces within the Source DICOM stack corresponding to the
+        contour to be copied (applies for the case of direct copies of a single 
+        contour). The index is zero-indexed.
+        If FromSliceNum = None, a relationship-preserving copy will be made.
+        
+    FromRoiLabel : string
+        All or part of the Source ROI Name of the ROI containing the contour(s)
+        to be copied.
+    
+    DicomDir : string 
+        Directory containing the corresponding DICOMs.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+                       
+                            
+    Outputs:
+    *******
+    
+    PtsByCntByRoi : list of list of a list of a list of floats
+        List (for each ROI) of a list (for all contours) of a list (for each
+        point) of a list (for each dimension) of coordinates to be copied from 
+        the RTS.
+        
+    C2SindsByRoi : list of a list of integers
+        List (for each ROI) of a list (for each contour) of slice numbers that 
+        correspond to each contour to be copied from the RTS.
+        
+        
+    Notes:
+    *****
+    
+    There are 3 possible main use cases:
+        1. Copy a single contour
+        2. Copy an entire ROI
+        3. Copy all ROIs
+        
+    Which main case applies depends on the inputs:
+        FromSliceNum
+        FromRoiLabel
+    
+    If FromSliceNum != None (i.e. if a slice number is defined) a single 
+    contour will be copied from the ROI that matches FromRoiLabel 
+    (--> Main Use Case 1).  
+    
+    Need to decide what to do if there are multiple ROIs and 
+    FromRoiLabel = None.  Possible outcomes:
+
+        - Raise exception with message "There are multiple ROIs so the ROI
+        label must be provided"
+        - Copy the contour to all ROIs that have a contour on slice 
+        FromSliceNum (* preferred option?)
+        
+    If FromSliceNum = None but FromRoiLabel != None, all contours within the 
+    ROI given by FromRoiLabel will be copied (--> Main Use Case 2).  
+    
+    If FromSliceNum = None and FromRoiLabel = None, all contours within all
+    ROIs will be copied (--> Main Use Case 3).
+    
+    
+    If FromSliceNum = None and FromRoiLabel = None, all ROIs will be copied.  
+    If not, get the ROI number (zero-indexed) to be copied, and reduce 
+    PtsByCntByRoi and C2SindsByRoi to the corresponding item.
+    """
+    
+    #import DicomTools
+    #import importlib
+    #importlib.reload(DicomTools)
+    from DicomTools import GetRoiNums, GetRoiLabels
+    from copy import deepcopy
+    from pydicom import dcmread
+    
+    Rts = dcmread(RtsFpath)
+    
+    # Set LogToConsole for functions within this function:
+    LtoC = LogToConsole 
+    #LtoC = False
+    
+    AllPtsByCntByRoi, AllC2SindsByRoi = GetPtsByCntByRoi(Rts, DicomDir, LtoC)
+    
+    Nrois = len(AllC2SindsByRoi) # number of ROIs
+    
+    if LogToConsole:
+        from GeneralTools import PrintIndsByRoi, PrintPtsByCntByRoi
+        
+        print('\n\n', '-'*120)
+        print('Results of GetRtsDataOfInterest():')
+        print('   AllC2SindsByRoi =')
+        PrintIndsByRoi(AllC2SindsByRoi)
+        
+    
+    ReducedBySlice = False
+            
+    if FromSliceNum:
+        """ Limit data to those which belong to the chosen slice number. """
+        
+        PtsByCntByRoi = []
+        C2SindsByRoi = []
+    
+        for r in range(Nrois):
+            # All points-by-contour and contour-to-slice indices for this ROI:
+            AllPtsByCnt = deepcopy(AllPtsByCntByRoi[r])
+            AllC2Sinds = deepcopy(AllC2SindsByRoi[r])
+                
+            # Get the contour number(s) that relate to FromSliceNum:
+            FromCntNums = [i for i, e in enumerate(AllC2Sinds) if e==FromSliceNum]
+            
+            #print(f'\nFromCntNums = {FromCntNums}')
+            #print(f'AllC2Sinds = {AllC2Sinds}')
+            
+            if len(FromCntNums) != len(AllC2Sinds):
+                # Some contours will be rejected:
+                ReducedBySlice = True
+            
+                if FromCntNums:
+                    # Keep only the indeces and points that relate to 
+                    # FromCntNums:
+                    PtsByCnt = [AllPtsByCnt[c] for c in FromCntNums]
+                    C2Sinds = [AllC2Sinds[c] for c in FromCntNums]
+                else:
+                    PtsByCnt = []
+                    C2Sinds = []
+                
+                PtsByCntByRoi.append(PtsByCnt)
+                C2SindsByRoi.append(C2Sinds)
+            #else:
+                # All contours to remain.
+                
+        
+        if ReducedBySlice:
+            # Replace AllPtsByCntByRoi and AllC2SindsByRoi with PtsByCntByRoi  
+            # and C2SindsByRoi in case further restricting of data is required 
+            # below:
+            AllPtsByCntByRoi = deepcopy(PtsByCntByRoi)
+            AllC2SindsByRoi = deepcopy(C2SindsByRoi)
+        #else:
+            # AllPtsByCntByRoi and AllC2SindsByRoi remain unchanged.
+        
+        if LogToConsole and ReducedBySlice:
+            print('\n   After limiting data to those that relate to slice',
+                  f'number {FromSliceNum}, the C2SindsByRoi =')
+            PrintIndsByRoi(C2SindsByRoi)
+    
+    
+    #ReducedByRoi = False
+    
+    if FromRoiLabel:
+        """ Limit data to those which belong to the chosen ROI(s). """
+        
+        PtsByCntByRoi = []
+        C2SindsByRoi = []
+        
+        # Get the ROI number(s) whose name matches FromRoiLabel:
+        FromRoiNums = GetRoiNums(Roi=Rts, SearchString=FromRoiLabel)
+        
+        #print(f'\nFromRoiNums = {FromRoiNums}')
+        #print(f'AllC2SindsByRoi = {AllC2SindsByRoi}')
+        
+        if len(FromRoiNums) != len(AllC2SindsByRoi):
+            #ReducedByRoi = True
+        
+            # Get the names of all ROIs:
+            FromRoiNames = GetRoiLabels(Roi=Rts)
+        
+            # Limit the list of ROI names to those that belong to the chosen 
+            # ROIs(s):
+            FromRoiNames = [FromRoiNames[i] for i in FromRoiNums]
+            
+            
+            PtsByCntByRoi = [AllPtsByCntByRoi[r] for r in FromRoiNums]
+            C2SindsByRoi = [AllC2SindsByRoi[r] for r in FromRoiNums]
+            
+            if LogToConsole:
+                print('\n   After limiting data to those whose ROI name',
+                      f'matches {FromRoiNames}, the C2SindsByRoi =')
+                PrintIndsByRoi(C2SindsByRoi)
+                
+        else:
+            PtsByCntByRoi = deepcopy(AllPtsByCntByRoi)
+            C2SindsByRoi = deepcopy(AllC2SindsByRoi)
+    
+    if LogToConsole:
+        print('\n   Final outputs of GetRtsDataOfInterest():')
+        PrintPtsByCntByRoi(PtsByCntByRoi)
+        PrintIndsByRoi(C2SindsByRoi)
+        print('-'*120)
+        
+    return PtsByCntByRoi, C2SindsByRoi
+
+
+
+
+
+
+
+
 def ProportionOfContourInExtent(Points, TrgDicomDir, LogToConsole=False):
     """
     COMMENT 26/01/2021:
@@ -488,7 +697,7 @@ def GetCIStoSliceInds(Rts, SOPuids):
 def GetCStoSliceInds(Rts, SOPuids):
     """
     Get the slice numbers that correspond to each ReferencedSOPInstanceUID in
-    each ContourSequence in the first ROI in a RTSTRUCT ROI.
+    each ContourSequence in a RTSTRUCT ROI.
     
     WARNING:
     *******
@@ -874,397 +1083,6 @@ def GetPtsByCntByRoi(Rts, DicomDir, LogToConsole=False):
 
 
 
-
-
-
-
-
-
-def GetRtsDataOfInterest_OLD(Rts, FromSliceNum, FromRoiLabel, DicomDir, 
-                         LogToConsole=False):
-    """
-    Get data of interest from an RTS.
-    
-    Inputs:
-    ******
-    
-    Rts : Pydicom object
-        ROI object from an RTSTRUCT file.
-        
-    FromSliceNum : integer or None
-        The slice indeces within the Source DICOM stack corresponding to the
-        contour to be copied (applies for the case of direct copies of a single 
-        contour). The index is zero-indexed.
-        If FromSliceNum = None, a relationship-preserving copy will be made.
-        
-    FromRoiLabel : string
-        All or part of the Source ROI Name of the ROI containing the contour(s)
-        to be copied.
-    
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-                       
-                            
-    Outputs:
-    *******
-    
-    PtsByCntByRoi : list of list of a list of a list of floats
-        List (for each ROI) of a list (for all contours) of a list (for each
-        point) of a list (for each dimension) of coordinates to be copied from 
-        Rts.
-        
-    C2SindsByRoi : list of a list of integers
-        List (for each ROI) of a list (for each contour) of slice numbers that 
-        correspond to each contour to be copied from Rts.
-        
-        
-    Notes:
-    *****
-    
-    There are 3 possible main use cases:
-        1. Copy a single contour
-        2. Copy an entire ROI
-        3. Copy all ROIs
-        
-    Which main case applies depends on the inputs:
-        FromSliceNum
-        FromRoiLabel
-    
-    If FromSliceNum != None (i.e. if a slice number is defined) a single 
-    contour will be copied from the ROI that matches FromRoiLabel (--> Main Use
-    Case 1).  
-    
-    Need to decide what to do if there are multiple ROIs and 
-    FromRoiLabel = None.  Possible outcomes:
-
-        - Raise exception with message "There are multiple ROIs so the ROI
-        label must be provided"
-        - Copy the contour to all ROIs that have a contour on slice 
-        FromSliceNum (* preferred option?)
-        
-    If FromSliceNum = None but FromRoiLabel != None, all contours within the 
-    ROI given by FromRoiLabel will be copied (--> Main Use Case 2).  
-    
-    If FromSliceNum = None and FromRoiLabel = None, all contours within all
-    ROIs will be copied (--> Main Use Case 3).
-    
-    
-    If FromSliceNum = None and FromRoiLabel = None, all ROIs will be copied.  
-    If not, get the ROI
-    number (zero-indexed) to be copied, and reduce SrcPtsByCntByRoi and
-    SrcC2SindsByRoi to the corresponding item.
-    """
-    
-    from DicomTools import GetRoiNums, GetRoiLabels
-    from copy import deepcopy
-    
-    AllPtsByCntByRoi, AllC2SindsByRoi = GetPtsByCntByRoi(Rts, DicomDir, 
-                                                         LogToConsole)
-    
-    FromRoiLabels = GetRoiLabels(Roi=Rts)
-    
-    if FromRoiLabel:
-        """ Limit data to those which belong to the chosen ROI(s). """
-        
-        PtsByCntByRoi = []
-        C2SindsByRoi = []
-        
-        # Get the ROI number(s) whose name matches FromRoiLabel:
-        FromRoiNums = GetRoiNums(Roi=Rts, SearchString=FromRoiLabel)
-        
-        FromRoiLabels = [FromRoiLabels[i] for i in FromRoiNums]
-        
-        for r in range(len(FromRoiNums)):
-            # All points-by-contour and contour-to-slice indices for this ROI:
-            AllPtsByCnt = deepcopy(AllPtsByCntByRoi[FromRoiNums[r]])
-            AllC2Sinds = deepcopy(AllC2SindsByRoi[FromRoiNums[r]])
-                
-            if FromSliceNum:
-                """ Limit data to those which belong to the chosen slice 
-                number. """
-                
-                # Get the contour number(s) that relate to this slice (there 
-                # may be more than one contour on FromSliceNum):
-                FromCntNums = [i for i, e in enumerate(AllC2Sinds) if e==FromSliceNum]
-                
-                if FromCntNums:
-                    # Keep only the indeces and points that relate to 
-                    # FromCntNums:
-                    PtsByCnt = [AllPtsByCnt[c] for c in FromCntNums]
-                    C2Sinds = [AllC2Sinds[c] for c in FromCntNums]
-                else:
-                    PtsByCnt = []
-                    C2Sinds = []
-                
-                PtsByCntByRoi.append(PtsByCnt)
-                C2SindsByRoi.append(C2Sinds)
-                
-                if LogToConsole:
-                    print(f'\nThe {len(FromCntNums)} contour(s) on slice',
-                          f'{FromSliceNum} will be copied from ROI(s)',
-                          f'{FromRoiLabels}.')
-                    
-            else:
-                PtsByCntByRoi.append(AllPtsByCnt)
-                C2SindsByRoi.append(AllC2Sinds)
-                
-                if LogToConsole:
-                    print(f'\nAll {len(AllC2Sinds)} contour(s) in ROI(s)',
-                          f'{FromRoiLabels} will be copied.')
-    
-    else:
-        """ No limit will be put on the ROIs. """
-        
-        if FromSliceNum:
-            """ Limit data to those which belong to the chosen slice number. """
-            
-            PtsByCntByRoi = []
-            C2SindsByRoi = []
-            
-            for r in range(len(FromRoiLabels)):
-                # All points-by-contour and contour-to-slice indices for this
-                # ROI:
-                AllPtsByCnt = deepcopy(AllPtsByCntByRoi[r])
-                AllC2Sinds = deepcopy(AllC2SindsByRoi[r])
-                
-                # Get the contour number(s) that relate to this slice (there 
-                # may be more than one contour on FromSliceNum) in all ROIs:
-                FromCntNums = [[i for i, e in enumerate(AllC2Sinds) if e==FromSliceNum] for r in range(len(C2SindsByRoi))]
-                
-                PtsByCnt = []
-                C2Sinds = []
-                
-                if FromCntNums:
-                    for c in range(len(FromCntNums)):
-                        i = FromCntNums[c]
-                        
-                        PtsByCnt.append(AllPtsByCnt[i])
-                        C2Sinds.append(AllC2Sinds[i])
-                        
-                PtsByCntByRoi.append(PtsByCnt)
-                C2SindsByRoi.append(C2Sinds)
-                
-                if LogToConsole:
-                    print(f'\nAll contour(s) on slice {FromSliceNum} will be',
-                          f'copied from all ROIs.')
-                
-        else:
-            PtsByCntByRoi = deepcopy(AllPtsByCntByRoi)
-            C2SindsByRoi = deepcopy(AllC2SindsByRoi)
-            
-            if LogToConsole:
-                print('\nAll contour(s) on all slices in all ROIs will be',
-                      'copied.')
-    
-    if LogToConsole:
-        print(f'\nC2SindsByCntByRoi = {C2SindsByRoi}')
-        
-    return PtsByCntByRoi, C2SindsByRoi
-
-
-
-
-
-
-
-
-def GetRtsDataOfInterest(Rts, FromSliceNum, FromRoiLabel, DicomDir, 
-                         LogToConsole=False):
-    """
-    Get data of interest from an RTS.
-    
-    Inputs:
-    ******
-    
-    Rts : Pydicom object
-        ROI object from an RTSTRUCT file.
-        
-    FromSliceNum : integer or None
-        The slice indeces within the Source DICOM stack corresponding to the
-        contour to be copied (applies for the case of direct copies of a single 
-        contour). The index is zero-indexed.
-        If FromSliceNum = None, a relationship-preserving copy will be made.
-        
-    FromRoiLabel : string
-        All or part of the Source ROI Name of the ROI containing the contour(s)
-        to be copied.
-    
-    DicomDir : string 
-        Directory containing the corresponding DICOMs.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-                       
-                            
-    Outputs:
-    *******
-    
-    PtsByCntByRoi : list of list of a list of a list of floats
-        List (for each ROI) of a list (for all contours) of a list (for each
-        point) of a list (for each dimension) of coordinates to be copied from 
-        Rts.
-        
-    C2SindsByRoi : list of a list of integers
-        List (for each ROI) of a list (for each contour) of slice numbers that 
-        correspond to each contour to be copied from Rts.
-        
-        
-    Notes:
-    *****
-    
-    There are 3 possible main use cases:
-        1. Copy a single contour
-        2. Copy an entire ROI
-        3. Copy all ROIs
-        
-    Which main case applies depends on the inputs:
-        FromSliceNum
-        FromRoiLabel
-    
-    If FromSliceNum != None (i.e. if a slice number is defined) a single 
-    contour will be copied from the ROI that matches FromRoiLabel 
-    (--> Main Use Case 1).  
-    
-    Need to decide what to do if there are multiple ROIs and 
-    FromRoiLabel = None.  Possible outcomes:
-
-        - Raise exception with message "There are multiple ROIs so the ROI
-        label must be provided"
-        - Copy the contour to all ROIs that have a contour on slice 
-        FromSliceNum (* preferred option?)
-        
-    If FromSliceNum = None but FromRoiLabel != None, all contours within the 
-    ROI given by FromRoiLabel will be copied (--> Main Use Case 2).  
-    
-    If FromSliceNum = None and FromRoiLabel = None, all contours within all
-    ROIs will be copied (--> Main Use Case 3).
-    
-    
-    If FromSliceNum = None and FromRoiLabel = None, all ROIs will be copied.  
-    If not, get the ROI number (zero-indexed) to be copied, and reduce 
-    PtsByCntByRoi and C2SindsByRoi to the corresponding item.
-    """
-    
-    #import DicomTools
-    #import importlib
-    #importlib.reload(DicomTools)
-    from DicomTools import GetRoiNums, GetRoiLabels
-    from copy import deepcopy
-    
-    # Set LogToConsole for functions within this function:
-    LtoC = LogToConsole 
-    #LtoC = False
-    
-    AllPtsByCntByRoi, AllC2SindsByRoi = GetPtsByCntByRoi(Rts, DicomDir, LtoC)
-    
-    Nrois = len(AllC2SindsByRoi) # number of ROIs
-    
-    if LogToConsole:
-        from GeneralTools import PrintIndsByRoi
-        
-        print('\n\n', '-'*120)
-        print('Results of GetRtsDataOfInterest():')
-        print('   AllC2SindsByRoi =')
-        PrintIndsByRoi(AllC2SindsByRoi)
-        
-    
-    ReducedBySlice = False
-            
-    if FromSliceNum:
-        """ Limit data to those which belong to the chosen slice number. """
-        
-        PtsByCntByRoi = []
-        C2SindsByRoi = []
-    
-        for r in range(Nrois):
-            # All points-by-contour and contour-to-slice indices for this ROI:
-            AllPtsByCnt = deepcopy(AllPtsByCntByRoi[r])
-            AllC2Sinds = deepcopy(AllC2SindsByRoi[r])
-                
-            # Get the contour number(s) that relate to FromSliceNum:
-            FromCntNums = [i for i, e in enumerate(AllC2Sinds) if e==FromSliceNum]
-            
-            #print(f'\nFromCntNums = {FromCntNums}')
-            #print(f'AllC2Sinds = {AllC2Sinds}')
-            
-            if len(FromCntNums) != len(AllC2Sinds):
-                # Some contours will be rejected:
-                ReducedBySlice = True
-            
-                if FromCntNums:
-                    # Keep only the indeces and points that relate to 
-                    # FromCntNums:
-                    PtsByCnt = [AllPtsByCnt[c] for c in FromCntNums]
-                    C2Sinds = [AllC2Sinds[c] for c in FromCntNums]
-                else:
-                    PtsByCnt = []
-                    C2Sinds = []
-                
-                PtsByCntByRoi.append(PtsByCnt)
-                C2SindsByRoi.append(C2Sinds)
-            #else:
-                # All contours to remain.
-                
-        
-        if ReducedBySlice:
-            # Replace AllPtsByCntByRoi and AllC2SindsByRoi with PtsByCntByRoi  
-            # and C2SindsByRoi in case further restricting of data is required 
-            # below:
-            AllPtsByCntByRoi = deepcopy(PtsByCntByRoi)
-            AllC2SindsByRoi = deepcopy(C2SindsByRoi)
-        #else:
-            # AllPtsByCntByRoi and AllC2SindsByRoi remain unchanged.
-        
-        if LogToConsole and ReducedBySlice:
-            print('\n   After limiting data to those that relate to slice',
-                  f'number {FromSliceNum}, the C2SindsByRoi =')
-            PrintIndsByRoi(C2SindsByRoi)
-    
-    
-    #ReducedByRoi = False
-    
-    if FromRoiLabel:
-        """ Limit data to those which belong to the chosen ROI(s). """
-        
-        PtsByCntByRoi = []
-        C2SindsByRoi = []
-        
-        # Get the ROI number(s) whose name matches FromRoiLabel:
-        FromRoiNums = GetRoiNums(Roi=Rts, SearchString=FromRoiLabel)
-        
-        #print(f'\nFromRoiNums = {FromRoiNums}')
-        #print(f'AllC2SindsByRoi = {AllC2SindsByRoi}')
-        
-        if len(FromRoiNums) != len(AllC2SindsByRoi):
-            #ReducedByRoi = True
-        
-            # Get the names of all ROIs:
-            FromRoiNames = GetRoiLabels(Roi=Rts)
-        
-            # Limit the list of ROI names to those that belong to the chosen 
-            # ROIs(s):
-            FromRoiNames = [FromRoiNames[i] for i in FromRoiNums]
-            
-            
-            PtsByCntByRoi = [AllPtsByCntByRoi[r] for r in FromRoiNums]
-            C2SindsByRoi = [AllC2SindsByRoi[r] for r in FromRoiNums]
-            
-            if LogToConsole:
-                print('\n   After limiting data to those whose ROI name',
-                      f'matches {FromRoiNames}, the C2SindsByRoi =')
-                PrintIndsByRoi(C2SindsByRoi)
-                
-        else:
-            PtsByCntByRoi = deepcopy(AllPtsByCntByRoi)
-            C2SindsByRoi = deepcopy(AllC2SindsByRoi)
-    
-    if LogToConsole:
-        print('-'*120)
-        
-    return PtsByCntByRoi, C2SindsByRoi
 
 
 
@@ -1986,38 +1804,38 @@ def GetMaskFromContoursForSliceNum(Rts, SliceNum, DicomDir, RefImage,
 
 
 
-def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi, 
-              DcmDir, AddTxtToSSLabel='', LogToConsole=False):
+def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi, 
+              TrgC2SindsByRoi, TrgDicomDir, AddTxtToSSLabel='', 
+              LogToConsole=False):
     """
-    COMMENT 09/02:
-        Might make sense to have an additional input OrigTrgRts to use as a 
-        template rather than using SrcRts, especially if the original Target
-        RTS has many more sequences than the Source RTS has.
-        
-        
     Create an RTS object for the target dataset. 
     
     Inputs:
     ******
                               
-    SrcRts : Pydicom object
-        The Source RTS object.
+    SrcRtsFpath : string
+        Filepath of the Source RTS file.
     
-    CntDataByCntByRoi : list of a list of a list of strings
+    TrgRtsFpath : string or None
+        If TrgRtsFpath != None, the Target RTS will be modified to create 
+        NewTrgRts.  If TrgRtsFpath = None, the Source RTS will be used as a 
+        template.
+        
+    TrgCntDataByCntByRoi : list of a list of a list of strings
         A list (for each ROI) of a list (for each contour) of a flat list of 
         [x, y, z] coordinates (as strings) of the polygons that define each 
         Target contour.
         
-    PtsByCntByRoi : list of a list of a list of a list of floats
+    TrgPtsByCntByRoi : list of a list of a list of a list of floats
         A list (for each ROI) of a list (for each contour) of a list (for each 
         point) of a list (for each dimension) of the polygons that define each 
         Target contour.
     
-    C2SindsByRoi : list of a list of integers
+    TrgC2SindsByRoi : list of a list of integers
         A list (for each ROI) of a list (for each contour) of slice numbers 
         that correspond to each Target contour.
     
-    DicomDir : string
+    TrgDicomDir : string
         Directory containing the Target DICOMs.
     
     AddTxtToSSLabel : string (optional; '' by default)
@@ -2030,11 +1848,41 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     Output:
     ******
         
-    Rts : Pydicom object
+    NewTrgRts : Pydicom object
         New RTS object for the Target dataset.
+    
+    
+    Notes:
+    *****
+    
+    Performance of adding/removing sequences using append()/pop():
+        
+    * Took 329.9 ms to add 10000 sequences to ContourImageSequence 
+    (33.0 us/sequence)
+    * Took 165.4 ms to remove 10000 sequences to ContourImageSequence 
+    (16.5 us/sequence)
+    
+    * Took 177.7 ms to add 10000 sequences to ContourSequence 
+    (17.8 us/sequence)
+    * Took 81.7 ms to remove 10000 sequences to ContourSequence 
+    (8.2 us/sequence)
+    
+    19/02:
+        After avoiding the use of deepcopy to increase sequences I've had to
+        re-instate them since the tag values were being duplicated despite
+        calls to modify them.  For Test RR3, creating the new RTS with 45 
+        contours on 45 slices previously took 2 s to execute without using 
+        deepcopy.  Using deepcopy it takes 11 s.
+        
+        This has also lengthened the time it takes to error check the RTS. The
+        same RTS object formerly took 9 s to error check.  Now it takes 31 s.
+        It's not clear why error checking should take longer.
+        
+        Test RR4 previously took 1 s to create the RTS and 5 s to error check
+        it.  Now it takes 115 s and 343 s.
     """
     
-    
+    from pydicom import dcmread
     from pydicom.uid import generate_uid
     import time
     from copy import deepcopy
@@ -2044,126 +1892,147 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     if LogToConsole:
         print('\n\n', '-'*120)
         print(f'Results of CreateRts():')
-        print(f'   C2SindsByRoi = {C2SindsByRoi}')
-        print(f'   len(PtsByCntByRoi) = {len(PtsByCntByRoi)}')
-        for r in range(len(PtsByCntByRoi)):
-            print(f'   len(PtsByCntByRoi[{r}]) = {len(PtsByCntByRoi[r])}')
-        print(f'   len(CntDataByCntByRoi) = {len(CntDataByCntByRoi)}')
-        for r in range(len(CntDataByCntByRoi)):
-            print(f'   len(CntDataByCntByRoi[{r}] = {len(CntDataByCntByRoi[r])}')
+        print(f'   TrgC2SindsByRoi = {TrgC2SindsByRoi}')
+        print(f'   len(TrgPtsByCntByRoi) = {len(TrgPtsByCntByRoi)}')
+        for r in range(len(TrgPtsByCntByRoi)):
+            print(f'   len(TrgPtsByCntByRoi[{r}]) = {len(TrgPtsByCntByRoi[r])}')
+        print(f'   len(TrgCntDataByCntByRoi) = {len(TrgCntDataByCntByRoi)}')
+        for r in range(len(TrgCntDataByCntByRoi)):
+            print(f'   len(TrgCntDataByCntByRoi[{r}] = {len(TrgCntDataByCntByRoi[r])}')
     
-    Dicoms = ImportDicoms(DcmDir)
+    SrcRts = dcmread(SrcRtsFpath)
     
-    UniqueC2Sinds = UniqueItems(Items=C2SindsByRoi, IgnoreZero=False, 
-                                MaintainOrder=True)
+    #print(f'\n\n\nTrgRtsFpath = {TrgRtsFpath}')
     
-    Rts = deepcopy(SrcRts)
+    """ Use TrgRts or SrcRts as a template for NewTrgRts. """
+    if TrgRtsFpath:
+        NewTrgRts = dcmread(TrgRtsFpath)
+    else:
+        NewTrgRts = deepcopy(SrcRts)
     
-    # Generate a new SOPInstanceUID:
+    TrgDicoms = ImportDicoms(TrgDicomDir)
+    
+    UniqueTrgC2Sinds = UniqueItems(Items=TrgC2SindsByRoi, IgnoreZero=False, 
+                                   MaintainOrder=True)
+    
+    
+    """ Generate a new SOPInstanceUID. """
     NewSOPuid = generate_uid()
-    Rts.SOPInstanceUID = deepcopy(NewSOPuid)
-    Rts.file_meta.MediaStorageSOPInstanceUID = deepcopy(NewSOPuid)
+    NewTrgRts.SOPInstanceUID = deepcopy(NewSOPuid)
+    NewTrgRts.file_meta.MediaStorageSOPInstanceUID = deepcopy(NewSOPuid)
     
-    Rts.StudyDate = Dicoms[0].StudyDate
-    Rts.StudyTime = Dicoms[0].StudyTime
-    Rts.Manufacturer = Dicoms[0].Manufacturer
-    Rts.ManufacturerModelName = Dicoms[0].ManufacturerModelName
-    #Rts.SeriesDate = Dicoms[0].SeriesDate
-    Rts.PatientName = Dicoms[0].PatientName
-    Rts.PatientID = Dicoms[0].PatientID
-    Rts.PatientBirthDate = Dicoms[0].PatientBirthDate
-    Rts.PatientSex = Dicoms[0].PatientSex
-    Rts.StudyInstanceUID = Dicoms[0].StudyInstanceUID
+    """ Generate a new SeriesInstanceUID. """
+    NewTrgRts.SeriesInstanceUID = generate_uid()
     
-    # Generate a new SeriesInstanceUID:
-    Rts.SeriesInstanceUID = generate_uid()
-    
-    Rts.StudyID = Dicoms[0].StudyID
-    Rts.FrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
-    Rts.PositionReferenceIndicator = Dicoms[0].PositionReferenceIndicator
-    Rts.StructureSetLabel += AddTxtToSSLabel
-    
-    # Modify StructureSetDate and StructureSetTime to the present:
     NewDate = time.strftime("%Y%m%d", time.gmtime())
     NewTime = time.strftime("%H%M%S", time.gmtime())
     
-    Rts.StructureSetDate = NewDate
-    Rts.StructureSetTime = NewTime
+    """ If TrgRtsFpath != None, some tags will not need to be replaced.
+    If TrgRtsFpath = None, use the corresponding values in the first Target 
+    DICOM. """
     
-    
-    Rts.ReferencedFrameOfReferenceSequence[0]\
-       .FrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
-      
-    Rts.ReferencedFrameOfReferenceSequence[0]\
-       .RTReferencedStudySequence[0]\
-       .ReferencedSOPInstanceUID = Dicoms[0].StudyInstanceUID
-    
-    Rts.ReferencedFrameOfReferenceSequence[0]\
-       .RTReferencedStudySequence[0]\
-       .RTReferencedSeriesSequence[0]\
-       .SeriesInstanceUID = Dicoms[0].SeriesInstanceUID
+    if TrgRtsFpath == None:
+        NewTrgRts.StudyDate = TrgDicoms[0].StudyDate
+        NewTrgRts.StudyTime = TrgDicoms[0].StudyTime
+        NewTrgRts.Manufacturer = TrgDicoms[0].Manufacturer
+        NewTrgRts.ManufacturerModelName = TrgDicoms[0].ManufacturerModelName
+        #NewTrgRts.SeriesDate = Dicoms[0].SeriesDate
+        NewTrgRts.PatientName = TrgDicoms[0].PatientName
+        NewTrgRts.PatientID = TrgDicoms[0].PatientID
+        NewTrgRts.PatientBirthDate = TrgDicoms[0].PatientBirthDate
+        NewTrgRts.PatientSex = TrgDicoms[0].PatientSex
+        NewTrgRts.StudyInstanceUID = TrgDicoms[0].StudyInstanceUID
+        NewTrgRts.StudyID = TrgDicoms[0].StudyID
+        NewTrgRts.SeriesNumber = TrgDicoms[0].SeriesNumber
+        NewTrgRts.FrameOfReferenceUID = TrgDicoms[0].FrameOfReferenceUID
+        NewTrgRts.PositionReferenceIndicator = TrgDicoms[0].PositionReferenceIndicator
+        
+        NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                 .FrameOfReferenceUID = TrgDicoms[0].FrameOfReferenceUID
+          
+        NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                 .RTReferencedStudySequence[0]\
+                 .ReferencedSOPInstanceUID = TrgDicoms[0].StudyInstanceUID
+        
+        NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                 .RTReferencedStudySequence[0]\
+                 .RTReferencedSeriesSequence[0]\
+                 .SeriesInstanceUID = TrgDicoms[0].SeriesInstanceUID
        
 
-    
+    NewTrgRts.StructureSetLabel += AddTxtToSSLabel
+    """ Modify StructureSetDate and StructureSetTime to the present: """
+    NewTrgRts.StructureSetDate = NewDate
+    NewTrgRts.StructureSetTime = NewTime
+        
+        
     # Start timing:
     #times = []
     #times.append(time.time())
     
     """ Modify ContourImageSequence. """
     
-    # Loop through each index in UniqueC2Sinds:
-    for i in range(len(UniqueC2Sinds)):
-        # The DICOM slice number:
-        s = UniqueC2Sinds[i]
+    """ Loop through each index in UniqueC2Sinds: """
+    for i in range(len(UniqueTrgC2Sinds)):
+        """ The DICOM slice number: """
+        s = UniqueTrgC2Sinds[i]
         
         #print(f'\nUniqueC2Sinds[{i}] = {UniqueC2Sinds[i]}')
         #print(f'SOP UID is {Dicoms[s].SOPInstanceUID}')
         
-        # The ContourImageSequence:
-        CIS = deepcopy(Rts.ReferencedFrameOfReferenceSequence[0]\
-                          .RTReferencedStudySequence[0]\
-                          .RTReferencedSeriesSequence[0]\
-                          .ContourImageSequence)
-        
-        # The number of ContourImageSequences:
-        N = len(CIS)
+        N = len(NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                         .RTReferencedStudySequence[0]\
+                         .RTReferencedSeriesSequence[0]\
+                         .ContourImageSequence)
         
         if i > N - 1:
             """ Increase the sequence by one. """
-            LastItem = deepcopy(CIS[-1])
+            #NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+            #         .RTReferencedStudySequence[0]\
+            #         .RTReferencedSeriesSequence[0]\
+            #         .ContourImageSequence.append(NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+            #                                               .RTReferencedStudySequence[0]\
+            #                                               .RTReferencedSeriesSequence[0]\
+            #                                               .ContourImageSequence[-1])
+                     
+            LastItem = deepcopy(NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                                         .RTReferencedStudySequence[0]\
+                                         .RTReferencedSeriesSequence[0]\
+                                         .ContourImageSequence[-1])
             
-            Rts.ReferencedFrameOfReferenceSequence[0]\
-               .RTReferencedStudySequence[0]\
-               .RTReferencedSeriesSequence[0]\
-               .ContourImageSequence.append(LastItem)
+            NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                     .RTReferencedStudySequence[0]\
+                     .RTReferencedSeriesSequence[0]\
+                     .ContourImageSequence.append(LastItem)
         
-        # Update the sequence:
-        Rts.ReferencedFrameOfReferenceSequence[0]\
-           .RTReferencedStudySequence[0]\
-           .RTReferencedSeriesSequence[0]\
-           .ContourImageSequence[i]\
-           .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
+        """ Update the sequence: """
+        NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                 .RTReferencedStudySequence[0]\
+                 .RTReferencedSeriesSequence[0]\
+                 .ContourImageSequence[i]\
+                 .ReferencedSOPClassUID = TrgDicoms[s].SOPClassUID
            
-        Rts.ReferencedFrameOfReferenceSequence[0]\
-           .RTReferencedStudySequence[0]\
-           .RTReferencedSeriesSequence[0]\
-           .ContourImageSequence[i]\
-           .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
+        NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                 .RTReferencedStudySequence[0]\
+                 .RTReferencedSeriesSequence[0]\
+                 .ContourImageSequence[i]\
+                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
            
     
-    # Check if there are more sequences in ContourImageSequence than required:
-    N = len(deepcopy(Rts.ReferencedFrameOfReferenceSequence[0]\
-                        .RTReferencedStudySequence[0]\
-                        .RTReferencedSeriesSequence[0]\
-                        .ContourImageSequence))
+    """ Check if there are more sequences in ContourImageSequence than 
+    required: """
+    N = len(NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                     .RTReferencedStudySequence[0]\
+                     .RTReferencedSeriesSequence[0]\
+                     .ContourImageSequence)
     
-    if N > len(UniqueC2Sinds):
-        for i in range(N - len(UniqueC2Sinds)):
-            # Remove the last sequence:
-            Rts.ReferencedFrameOfReferenceSequence[0]\
-               .RTReferencedStudySequence[0]\
-               .RTReferencedSeriesSequence[0]\
-               .ContourImageSequence.pop()
+    if N > len(UniqueTrgC2Sinds):
+        for i in range(N - len(UniqueTrgC2Sinds)):
+            """ Remove the last sequence: """
+            NewTrgRts.ReferencedFrameOfReferenceSequence[0]\
+                     .RTReferencedStudySequence[0]\
+                     .RTReferencedSeriesSequence[0]\
+                     .ContourImageSequence.pop()
     
             
     
@@ -2175,40 +2044,41 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     
     """ Modify StructureSetROISequence. """
     
-    # Initialise the number of ROIs with non-zero C2Sinds:
+    """ Initialise the number of ROIs with non-zero TrgC2Sinds: """
     R = 0
     
-    # Loop through each C2SindsByRoi:
-    for r in range(len(C2SindsByRoi)):
-        # The number of contours in this ROI:
-        C = len(C2SindsByRoi[r])
+    """ Loop through each TrgC2SindsByRoi: """
+    for r in range(len(TrgC2SindsByRoi)):
+        """ The number of contours in this ROI: """
+        C = len(TrgC2SindsByRoi[r])
         
         if C == 0:
-            # There are no contours for this ROI, so pop this sequence:
-            Rts.StructureSetROISequence.pop(r)
+            """ There are no contours for this ROI, so pop this sequence: """
+            NewTrgRts.StructureSetROISequence.pop(r)
         else:
             R += 1
     
     
-    # Modify the ROINumbers, ReferencedFrameOfReferenceUIDs and ROINames:
-    for s in range(len(Rts.StructureSetROISequence)):
-        Rts.StructureSetROISequence[s].ROINumber = f"{s+1}"
+    """ Modify the ROINumbers, ReferencedFrameOfReferenceUIDs and ROINames: """
+    for s in range(len(NewTrgRts.StructureSetROISequence)):
+        NewTrgRts.StructureSetROISequence[s].ROINumber = f"{s+1}"
         
-        Rts.StructureSetROISequence[s]\
-           .ReferencedFrameOfReferenceUID = Dicoms[0].FrameOfReferenceUID
+        NewTrgRts.StructureSetROISequence[s]\
+                 .ReferencedFrameOfReferenceUID = TrgDicoms[0].FrameOfReferenceUID
            
-        Rts.StructureSetROISequence[s]\
-           .ROIName = Rts.StructureSetROISequence[s].ROIName + AddTxtToSSLabel
+        NewTrgRts.StructureSetROISequence[s]\
+                 .ROIName = NewTrgRts.StructureSetROISequence[s]\
+                                     .ROIName + AddTxtToSSLabel
     
     
-    # Check if there are more sequences in StructureSetROISequence than 
-    # required:
-    N = len(deepcopy(Rts.StructureSetROISequence))
+    """ Check if there are more sequences in StructureSetROISequence than 
+    required: """
+    N = len(NewTrgRts.StructureSetROISequence)
     
-    if N > len(C2SindsByRoi):
-        for i in range(N - len(C2SindsByRoi)):
-            # Remove the last sequence:
-            Rts.StructureSetROISequence.pop()
+    if N > len(TrgC2SindsByRoi):
+        for i in range(N - len(TrgC2SindsByRoi)):
+            """ Remove the last sequence: """
+            NewTrgRts.StructureSetROISequence.pop()
                
     #times.append(time.time())
     #Dtime = round(times[-1] - times[-2], 1)
@@ -2220,77 +2090,111 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     Modify ROIContourSequence. 
     """
     
-    #print(f'\nC2SindsByRoi = {C2SindsByRoi}')
+    #print(f'\nTrgC2SindsByRoi = {TrgC2SindsByRoi}')
     
-    # Loop through each C2SindsByRoi:
-    for r in range(len(C2SindsByRoi)):
-        # The ContourSequence:
-        CS = deepcopy(Rts.ROIContourSequence[r].ContourSequence)
+    
+    """ Loop through each ROI in TrgC2SindsByRoi: """
+    for r in range(len(TrgC2SindsByRoi)):
         
-        # The number of ContourSequences:
-        N = len(CS)
+        n = 0 # total contour counter for this ROI
         
-        # Loop through each index in C2SindsByRoi[r]:
-        for i in range(len(C2SindsByRoi[r])):
-            # The DICOM slice number:
-            s = C2SindsByRoi[r][i]
         
-            if i > N - 1:
+        #""" The number of ContourSequences: """
+        #N = len(NewTrgRts.ROIContourSequence[r].ContourSequence)
+        
+        """ Loop through each contour in TrgC2SindsByRoi[r]: """
+        for c in range(len(TrgC2SindsByRoi[r])):
+            #print(f'\n\n\nn = {n}')
+            
+            """ The DICOM slice number: """
+            s = TrgC2SindsByRoi[r][c]
+            
+            """ The number of ContourSequences: """
+            N = len(NewTrgRts.ROIContourSequence[r].ContourSequence)
+        
+            if n > N - 1:
                 """ Increase the sequence by one. """
-                LastItem = deepcopy(CS[-1])
+                #NewTrgRts.ROIContourSequence[r]\
+                #         .ContourSequence.append(NewTrgRts.ROIContourSequence[r]\
+                #                                          .ContourSequence[-1])
+                         
+                LastItem = deepcopy(NewTrgRts.ROIContourSequence[r]\
+                                             .ContourSequence[-1])
                 
-                Rts.ROIContourSequence[r]\
-                   .ContourSequence.append(LastItem)
+                NewTrgRts.ROIContourSequence[r]\
+                         .ContourSequence.append(LastItem)
                    
         
             #print(f'\nRts.ROIContourSequence[{r}].ContourSequence[{i}].ContourImageSequence[0].ReferencedSOPInstanceUID =',
             #      f'{Rts.ROIContourSequence[r].ContourSequence[i].ContourImageSequence[0].ReferencedSOPInstanceUID}')
             #print(f'\nDicoms[{s}].SOPInstanceUID = {Dicoms[s].SOPInstanceUID}')
             
-            # Update the sequence:
-            Rts.ROIContourSequence[r]\
-               .ContourSequence[i]\
-               .ContourImageSequence[0]\
-               .ReferencedSOPClassUID = Dicoms[s].SOPClassUID
+            """ Update the sequence: """
+            NewTrgRts.ROIContourSequence[r]\
+                     .ContourSequence[n]\
+                     .ContourImageSequence[0]\
+                     .ReferencedSOPClassUID = TrgDicoms[s].SOPClassUID
                
-            Rts.ROIContourSequence[r]\
-               .ContourSequence[i]\
-               .ContourImageSequence[0]\
-               .ReferencedSOPInstanceUID = Dicoms[s].SOPInstanceUID
+            NewTrgRts.ROIContourSequence[r]\
+                     .ContourSequence[n]\
+                     .ContourImageSequence[0]\
+                     .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
             
-            Rts.ROIContourSequence[r]\
-               .ContourSequence[i]\
-               .NumberOfContourPoints = f"{len(PtsByCntByRoi[r][i])}"
-               
-            Rts.ROIContourSequence[r]\
-               .ContourSequence[i]\
-               .ContourNumber = f"{i+1}"
-               
-            Rts.ROIContourSequence[r]\
-               .ContourSequence[i]\
-               .ContourData = CntDataByCntByRoi[r][i]
+            NewTrgRts.ROIContourSequence[r]\
+                     .ContourSequence[n]\
+                     .NumberOfContourPoints = f"{len(TrgPtsByCntByRoi[r][c])}"
+             
+            #print(f'\nn = {n}')
             
-            Rts.ROIContourSequence[r]\
-               .ReferencedROINumber = f"{r+1}"
+            NewTrgRts.ROIContourSequence[r]\
+                     .ContourSequence[n]\
+                     .ContourNumber = f"{n+1}"
+                     
+            #print(f'NewTrgRts.ROIContourSequence[{r}].ContourSequence[{n}].ContourNumber =',
+            #      f'{NewTrgRts.ROIContourSequence[r].ContourSequence[n].ContourNumber}')
+               
+            NewTrgRts.ROIContourSequence[r]\
+                     .ContourSequence[n]\
+                     .ContourData = TrgCntDataByCntByRoi[r][c]
+            
+            NewTrgRts.ROIContourSequence[r]\
+                     .ReferencedROINumber = f"{r+1}"
+            
+            n += 1 # increment the total contour counter
         
         
     
-        # Check if there are more sequences in ContourSequence than required:
-        N = len(deepcopy(Rts.ROIContourSequence[r].ContourSequence))
+        """ Check if there are more sequences in ContourSequence than 
+        required: """
+        N = len(NewTrgRts.ROIContourSequence[r].ContourSequence)
         
-        if N > len(C2SindsByRoi[r]):
-            for i in range(N - len(C2SindsByRoi[r])):
-                # Remove the last sequence:
-                Rts.ROIContourSequence[r].ContourSequence.pop()
+        if N > len(TrgC2SindsByRoi[r]):
+            print(f'There are {N} sequences in ROIContourSequence[{r}].ContourSequence',
+                  f'but only {len(TrgC2SindsByRoi[r])} contours in this ROI.')
+            for i in range(N - len(TrgC2SindsByRoi[r])):
+                """ Remove the last sequence: """
+                NewTrgRts.ROIContourSequence[r].ContourSequence.pop()
     
-    # Check if there are more sequences in ROIContourSequence than required:
-    N = len(deepcopy(Rts.ROIContourSequence))
     
-    if N > len(C2SindsByRoi):
-        for i in range(N - len(C2SindsByRoi)):
-            # Remove the last sequence:
-            Rts.ROIContourSequence.pop()
-            
+    #print('\nCheck ContourNumbers:')
+    #for r in range(len(NewTrgRts.ROIContourSequence)):
+    #    for n in range(len(NewTrgRts.ROIContourSequence[r].ContourSequence)):
+    #        print(f'\nn = {n}')
+    #                 
+    #        print(f'NewTrgRts.ROIContourSequence[{r}].ContourSequence[{n}].ContourNumber =',
+    #              f'{NewTrgRts.ROIContourSequence[r].ContourSequence[n].ContourNumber}')
+    
+    """ Check if there are more sequences in ROIContourSequence than 
+    required: """
+    N = len(NewTrgRts.ROIContourSequence)
+    
+    if N > len(TrgC2SindsByRoi):
+        for i in range(N - len(TrgC2SindsByRoi)):
+            """ Remove the last sequence: """
+            NewTrgRts.ROIContourSequence.pop()
+        
+        
+    
     #times.append(time.time())
     #Dtime = round(times[-1] - times[-2], 1)
     #if True:#LogToConsole:
@@ -2302,36 +2206,36 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     Modify RTROIObservationsSequence. 
     """
     
-    # Initialise the number of ROIs with non-zero C2Sinds:
+    """ Initialise the number of ROIs with non-zero TrgC2Sinds: """
     R = 0
     
-    # Loop through each C2SindsByRoi:
-    for r in range(len(C2SindsByRoi)):
-        # The number of contours in this ROI:
-        C = len(C2SindsByRoi[r])
+    """ Loop through each TrgC2SindsByRoi: """
+    for r in range(len(TrgC2SindsByRoi)):
+        """ The number of contours in this ROI: """
+        C = len(TrgC2SindsByRoi[r])
         
         if C == 0:
-            # There are no contours for this ROI, so pop this sequence:
-            Rts.RTROIObservationsSequence.pop(r)
+            """ There are no contours for this ROI, so pop this sequence: """
+            NewTrgRts.RTROIObservationsSequence.pop(r)
         else:
             R += 1
     
     
-    # Modify the ObservationNumbers and ReferencedROINumbers:
-    for s in range(len(Rts.RTROIObservationsSequence)):
-        Rts.RTROIObservationsSequence[s].ObservationNumber = f"{s+1}"
+    """ Modify the ObservationNumbers and ReferencedROINumbers: """
+    for s in range(len(NewTrgRts.RTROIObservationsSequence)):
+        NewTrgRts.RTROIObservationsSequence[s].ObservationNumber = f"{s+1}"
         
-        Rts.RTROIObservationsSequence[s].ReferencedROINumber = f"{s+1}"
+        NewTrgRts.RTROIObservationsSequence[s].ReferencedROINumber = f"{s+1}"
            
     
-    # Check if there are more sequences in RTROIObservationsSequence than 
-    # required:
-    N = len(deepcopy(Rts.RTROIObservationsSequence))
+    """ Check if there are more sequences in RTROIObservationsSequence than 
+    required: """
+    N = len(NewTrgRts.RTROIObservationsSequence)
     
-    if N > len(C2SindsByRoi):
-        for i in range(N - len(C2SindsByRoi)):
-            # Remove the last sequence:
-            Rts.RTROIObservationsSequence.pop()
+    if N > len(TrgC2SindsByRoi):
+        for i in range(N - len(TrgC2SindsByRoi)):
+            """ Remove the last sequence: """
+            NewTrgRts.RTROIObservationsSequence.pop()
             
     #times.append(time.time())
     #Dtime = round(times[-1] - times[-2], 1)
@@ -2342,7 +2246,7 @@ def CreateRts(SrcRts, CntDataByCntByRoi, PtsByCntByRoi, C2SindsByRoi,
     if LogToConsole:
         print('-'*120)
     
-    return Rts
+    return NewTrgRts
 
 
 
@@ -2377,6 +2281,24 @@ def ErrorCheckRts(Rts, DicomDir, LogToConsole=False):
     
     Nerrors : integer
         The number of errors found.
+    
+    
+    Notes:
+    *****
+    
+    19/02:
+        After avoiding the use of deepcopy to increase sequences I've had to
+        re-instate them since the tag values were being duplicated despite
+        calls to modify them.  For Test RR3, creating the new RTS with 45 
+        contours on 45 slices previously took 2 s to execute without using 
+        deepcopy.  Using deepcopy it takes 11 s.
+        
+        This has also lengthened the time it takes to error check the RTS. The
+        same RTS object formerly took 9 s to error check.  Now it takes 31 s.
+        It's not clear why error checking should take longer.
+        
+        Test RR4 previously took 1 s to create the RTS and 5 s to error check
+        it.  Now it takes 115 s and 343 s.
     """        
     
     from copy import deepcopy
@@ -2765,6 +2687,8 @@ def ErrorCheckRts(Rts, DicomDir, LogToConsole=False):
     
     ContourNums = [int(CS[i].ContourNumber) for i in range(len(CS))]
     
+    #print(f'\n\n\nContourNums = {ContourNums}')
+    
     # Determine whether the contour numbers match the expected contour numbers:
     IsMatch = [ContourNums[i] == ExpectedNums[i] for i in range(len(CS))]
     #IsMatch = [ContourNums[i] == i+1 for i in range(len(CS))]
@@ -2778,8 +2702,8 @@ def ErrorCheckRts(Rts, DicomDir, LogToConsole=False):
             en = ExpectedNums[Inds[i]]
             
             msg = f'ERROR:  ContourNumber {i+1} is {cn} but is expected to be'\
-                  + f'{en}.\n'
-                  
+                  + f' {en}.\n'
+            LogList.append(msg)      
             Nerrors = Nerrors + 1
     else:
         msg = f'INFO:  The ContourNumbers are as expected.\n'
@@ -2911,7 +2835,7 @@ def ErrorCheckRts(Rts, DicomDir, LogToConsole=False):
     #    print(msg)
     
     
-    print(f'There were {Nerrors} errors found in the RTS.\n')
+    #print(f'There were {Nerrors} errors found in the RTS.\n')
     
     if LogToConsole:
         print('-'*120)
@@ -2963,118 +2887,6 @@ def GetIndsOfRefSOPsFromCSToCIS(Rts):
     return Inds
 
 
-
-
-
-
-
-def GetRtsDataFromListOfRtss_OLD(ListOfRtss, ListOfDicomDirs, SearchString='', 
-                              LogToConsole=False):
-    """ 
-    Note:
-    
-    ListOfRtss is a list (which could be of length 1) of RTS (Pydicom) objects.
-    
-    ListOfDicomDirs is a list (which could be of length 1) of strings 
-    containing the directory containing DICOMs that correspond to each RTS.
-    """
-    
-    #import importlib
-    #import DicomTools
-    #importlib.reload(DicomTools)
-    
-    from DicomTools import GetRoiNum
-    from DicomTools import GetDicomFpaths
-    from ImageTools import GetImageAttributes
-    
-    ListOfPtsByCnt = []
-    ListOfC2Sinds = []
-    #ListOfPtsByCntBySlice = []
-    ListOfRoiNums = []
-    ListOfDcmFpaths = []
-    ListOfOrigins = []
-    ListOfDirections = []
-    ListOfSpacings = []
-    
-    for i in range(len(ListOfRtss)):
-        if LogToConsole:
-            print(f'\nListOfRtss[{i}]:')
-        
-        """
-        11/12/20:  
-            There should only be one ROI so perhaps this should be checked
-            and raise exception if the number of ROIs is greater than one.
-            And if not, RoiNum will always be = 0 (no need to GetRoiNum).
-        """
-        
-        if ListOfRtss[i]:
-            RoiNum = GetRoiNum(ListOfRtss[i], SearchString)
-            
-            PtsByCnt, C2Sinds = GetPtsByCntForRoi(ListOfRtss[i], 
-                                                  ListOfDicomDirs[i], 
-                                                  SearchString,
-                                                  LogToConsole)
-            
-            #PtsByCntBySlice = GetPtsByCntBySliceNum(ListOfRtss[i], 
-            #                                        ListOfDicomDirs[i], 
-            #                                        SearchString,
-            #                                        LogToConsole)
-            
-            if LogToConsole:      
-                print(f'\nlen(PtsByCnt) in "{SearchString}" = {len(PtsByCnt)}')
-                print(f'C2Sinds = {C2Sinds}')
-                [print(f'len(PtsByCnt{i}) = {len(PtsByCnt[i])}') for i in range(len(PtsByCnt))]
-                #print(f'\nlen(PtsByCntBySlice) in "{SearchString}" =',
-                #      f'{len(PtsByCntBySlice)}')
-                #[print(f'len(PtsByCntBySlice{i}) = {len(PtsByCntBySlice[i])}') for i in range(len(PtsByCntBySlice))]
-            
-        else:
-            RoiNum = None
-            PtsByCnt = None
-            C2Sinds = None
-            #PtsByCntBySlice = None
-            
-            if LogToConsole:      
-                print(f'No contours for this dataset')
-        
-        
-        ListOfRoiNums.append(RoiNum)
-        
-        DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
-        
-        Size, Spacings, ST, IPPs, Dirs,\
-        ListOfWarnings = GetImageAttributes(ListOfDicomDirs[i])
-        
-        #ListOfPtsByCntBySlice.append(PtsByCntBySlice)
-        ListOfPtsByCnt.append(PtsByCnt)
-        ListOfC2Sinds.append(C2Sinds)
-        ListOfDcmFpaths.append(DcmFpaths)
-        ListOfOrigins.append(IPPs[0])
-        ListOfDirections.append(Dirs)
-        ListOfSpacings.append(Spacings)
-        
-        if LogToConsole:      
-            #print(f'len(Contours) in "{SearchString}" = {len(Contours)}')
-            print(f'\nlen(ListOfPtsByCnt) = {len(ListOfPtsByCnt)}')
-            #print(f'C2Sinds = {C2Sinds}')
-            #[print(f'len(Contours{i}) = {len(Contours[i])}') for i in range(len(Contours))]
-            #print(f'\nlen(ListOfPtsByCntBySlice) = {len(ListOfPtsByCntBySlice)}')
-        
-        
-        #SOPuids = GetDicomSOPuids(ListOfDicomDirs[i])
-        
-        #CStoSliceIndsByRoi = GetCStoSliceIndsByRoi(ListOfRtss[i], SOPuids)
-        
-        #ListOfC2Sinds.append(CStoSliceIndsByRoi[RoiNum])
-        
-        #if LogToConsole:
-        #    print(f'ListOfC2Sinds[{i}] = {ListOfC2Sinds[i]}')
-    
-            
-    #return ListOfPtsByCntBySlice, ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
-    #       ListOfDcmFpaths, ListOfOrigins, ListOfDirections, ListOfSpacings
-    return ListOfPtsByCnt, ListOfC2Sinds, ListOfRoiNums,\
-           ListOfDcmFpaths, ListOfOrigins, ListOfDirections, ListOfSpacings
 
 
 

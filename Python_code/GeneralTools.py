@@ -1244,8 +1244,8 @@ def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
         print('\n\n', '-'*120)
         print(f'Results of ShiftPtsByCntByRoi():')
         
-    # Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
-    # TrgImage in the Target image domain:
+    """ Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
+    TrgImage in the Target image domain: """
     PixShift = GetPixelShiftBetweenSlices(Image0=SrcImage, 
                                           SliceNum0=SrcSliceNum, 
                                           Image1=TrgImage, 
@@ -1284,22 +1284,26 @@ def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
             for c in range(len(PtsByCntByRoi[r])):
                 Pts = PtsByCntByRoi[r][c]
                 
-                # Inds are the list of relationship-preserving indices that
-                # correspond to Pts:
+                """ Inds are the list of relationship-preserving indices that
+                correspond to Pts: """
                 Inds = Points2Indices(Points=Pts, RefIm=TrgImage, 
                                       Rounding=False)
                 
-                # Apply the required pixel shifts:
-                Inds = [Inds[i] + PixShift[i] for i in range(len(Inds))]
+                #print(f'\n\nPixShift = {PixShift}, \nInds = {Inds}')
+                
+                """ Apply the required pixel shifts: """
+                Inds = [Inds[i] + PixShift[i] for i in range(len(PixShift))]
                 
                 #IndsByCnt.append(inds)
+                #print(f'\n\ntype(Inds) = {type(Inds)}')
+                #print(f'\n\ntype(Inds[0]) = {type(Inds[0])}')
                 
-                # Convert back to physical points:
+                """ Convert back to physical points: """
                 Pts = Indices2Points(Inds, RefIm=TrgImage)
                 
                 NewPtsByCnt.append(Pts)
                 
-                # Shift the contour-to-slice indices by PixShift[2]:
+                """ Shift the contour-to-slice indices by PixShift[2]: """
                 #C2SindsByRoi[r][c] += PixShift[2]
                 NewC2Sinds.append(C2SindsByRoi[r][c] + PixShift[2])
         
@@ -1759,7 +1763,7 @@ def SliceNoFromFpath(Fpath, SearchString, Separator='_'):
 
 
 
-def DataTypeOfElementsInList(Lst, Unique=True):
+def GetListOfDataTypes(ListOfItems, Unique=True):
     """
     Return a list of the data type of the elements in the list.  If the input
     Unique is True or omitted, the set of data types will be returned.  Hence
@@ -1768,7 +1772,7 @@ def DataTypeOfElementsInList(Lst, Unique=True):
     Inputs:
     *******
     
-    Lst : list of items
+    ListOfItems : list of items
         A list of items (e.g. integers, floats, strings, etc.).
         
     Unique : boolean (optional; True by default)
@@ -1780,10 +1784,10 @@ def DataTypeOfElementsInList(Lst, Unique=True):
     *******
         
     Dtypes : list of data types
-        A list of the data type of each item in Lst.
+        A list of the data type of each item in ListOfItems.
     """
     
-    Dtypes = [type(item) for item in Lst]
+    Dtypes = [type(item) for item in ListOfItems]
     
     if Unique:
         Dtypes = list(set(Dtypes))
@@ -2022,110 +2026,6 @@ def SumOfSquaresOfMatrix(Matrix):
     
     return RSS
 
-
-
-
-
-
-
-def IsMatrixOrthogonal_OLD(Matrix):
-    """
-    Determine if a matrix is orthogonal.
-    
-    Inputs:
-    ******
-    
-    Matrix : Numpy array of square shape
-        A Numpy matrix of square shape.
-        
-        
-    Outputs:
-    *******
-    
-    IsOrthogonal : boolean
-        True if Matrix is orthogonal, False otherwise.
-        
-        
-    Notes:
-    -----
-    
-    The following tests for orthogonality of a matrix M: 
-        
-        M is orthogonal if M*M.T = M.T*M, 
-        i.e. if np.dot(M, M.T) - np.dot(M.T, M) = 0
-    
-    
-    
-    The following tests for orthonomality of a matrix M: 
-        
-        M is orthonormal if its determinant (np.linalg.det(M)) = +/- 1.
-        
-        M is orthonormal if M*M.T = I, where I is the identity matrix, 
-        i.e. if np.dot(M, M.T) - np.identity(M.shape[0]) = 0
-        
-        M is orthonormal if M.T = M^-1, 
-        i.e. if M.T - np.linalg.inv(M) = 0
-        
-        
-        
-    The following test for orthonormality/orthogonality doesn't provide the 
-    expected result for either an orthogonal or orthonormal matrix:
-        
-        M is orthogonal if M.T x M^-1 = I, where I is the identity matrix,
-        i.e. if np.cross(M.T, np.linalg.inv(M)) - np.identity(M.shape[0]) = 0
-    """
-    
-    import numpy as np
-    
-    M = Matrix
-    
-    #shape = M.shape
-    
-    if len(M.shape) != 2:
-        msg = f'The matrix has {len(M.shape)} dimensions. It must have 2.'
-        
-        raise Exception(msg)
-        
-    if M.shape[0] != M.shape[1]:
-        msg = f'The matrix has shape {M.shape}. It must be a square matrix.'
-        
-        raise Exception(msg)
-        
-    
-    Det = np.linalg.det(M)
-    
-    DotProdResult_1 =  np.dot(M, M.T) - np.identity(M.shape[0])
-    
-    DotProdResult_2 =  np.dot(M, M.T) - np.dot(M.T, M)
-    
-    DetInvResult = M.T - np.linalg.inv(M)
-    
-    CrossProdResult = np.cross(M.T, np.linalg.inv(M)) - np.identity(M.shape[0])
-    
-    
-    IsDet1 = AreItemsEqualToWithinEpsilon(abs(Det), 1, epsilon=1e-06)
-    
-    SSEofDPR_1 = SumOfSquaresOfMatrix(DotProdResult_1)
-    IsDPR0_1 = AreItemsEqualToWithinEpsilon(SSEofDPR_1, 0, epsilon=1e-06)
-    
-    SSEofDPR_2 = SumOfSquaresOfMatrix(DotProdResult_2)
-    IsDPR0_2 = AreItemsEqualToWithinEpsilon(SSEofDPR_2, 0, epsilon=1e-06)
-    
-    SSEofDIR = SumOfSquaresOfMatrix(DetInvResult)
-    IsDIR0 = AreItemsEqualToWithinEpsilon(SSEofDIR, 0, epsilon=1e-06)
-    
-    SSEofCPR = SumOfSquaresOfMatrix(CrossProdResult)
-    IsCPR0 = AreItemsEqualToWithinEpsilon(SSEofCPR, 0, epsilon=1e-06)
-    
-    
-    print(f'\nThe determinant of M = {Det} (must be +/- 1 if M is orthogonal).')
-    print(f'\nM*M.T - I = {SSEofDPR_1} (must be 0 if M is orthogonal).')
-    print(f'\nM*M.T - M.T*M = {SSEofDPR_2} (must be 0 if M is orthogonal).')
-    print(f'\nM.T - M^-1 = {SSEofDIR} (must be 0 if M is orthogonal).')
-    print(f'\nM.T x M^-1 - I = {SSEofCPR} (must be 0 if M is orthogonal).')
-        
-        
-    return IsDPR0_1
 
 
 
@@ -2496,3 +2396,120 @@ def DisplayAttributesOfAllData(Keyword='Dcm', RemoveFromKeys='_DcmDir',
     AttDf = DisplayAttributesDict(AttDict)
     
     return AttDf
+
+
+
+def ExportDictionaryToJson(Dictionary, FileName, ExportDir=''):
+    """
+    Export a dictionary to a JSON file.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+        
+    FileName : string
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.json' extension it will be added automatically.
+    
+    ExportDir : string (optional; empty by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    """
+    
+    import json
+    import os
+    
+    if not '.json' in FileName:
+        FileName += '.json'
+    
+    if ExportDir == '':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            os.mkdir(ExportDir)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    with open(FilePath, 'w') as JsonFile:
+        json.dump(Dictionary, JsonFile)
+    
+    return
+
+
+
+
+def ImportDictionaryFromJson(FileName):
+    """
+    Import a dictionary from a JSON file from the current working directory.
+    
+    Inputs:
+    ******
+    FileName : string
+        The file name of the JSON file (which must be in the current working 
+        directory).  FileName does not need to include the .json extension.
+        
+        
+    Outputs:
+    *******
+        
+    Dictionary : dictionary
+    """
+    
+    import json
+    
+    if not '.json' in FileName:
+        FileName += '.json'
+    
+    with open(FileName, 'r') as JsonFile:
+        Dictionary = json.load(JsonFile)
+    
+    return Dictionary
+
+
+
+
+
+def ExportListToTxt(InList, FileName, ExportDir=''):
+    """
+    Export a list to a txt file.
+    
+    Inputs:
+    ******
+    
+    InList : list
+        The list to be exported.
+        
+    FileName : string
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.txt' extension it will be added automatically.
+    
+    ExportDir : string (optional; empty by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    """
+    
+    import os
+    
+    if not '.txt' in FileName:
+        FileName += '.txt'
+    
+    if ExportDir == '':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            os.mkdir(ExportDir)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    with open(FilePath, 'w') as f:
+        for line in InList:
+            f.write(line)
+    
+    return
+
+
+

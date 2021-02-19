@@ -162,9 +162,10 @@ def Index2Point(Index, RefIm):
         [[x0, y0, z0], [x1, y1, z1], ...].
     """
     
-    from GeneralTools import DataTypeOfElementsInList
+    import numpy
+    from GeneralTools import GetListOfDataTypes
     
-    Dtypes = DataTypeOfElementsInList(Index)
+    Dtypes = GetListOfDataTypes(Index)
     
     if len(Dtypes) == 1:
         Dtype = Dtypes[0]
@@ -175,17 +176,52 @@ def Index2Point(Index, RefIm):
         
         elif Dtype == float:
             Point = RefIm.TransformContinuousIndexToPhysicalPoint(Index)
+        
+        elif Dtype in [numpy.ndarray, numpy.float64]:
+            """ Convert from numpy array to list: """
+            Index = Index.tolist()
+            
+            Dtypes = GetListOfDataTypes(Index)
+            
+            if len(Dtypes) == 1:
+                Dtype = Dtypes[0]
+                
+                """All items in Index are of a common data type."""
+                if Dtype == int:
+                    Point = RefIm.TransformIndexToPhysicalPoint(Index)
+                
+                elif Dtype == float:
+                    Point = RefIm.TransformContinuousIndexToPhysicalPoint(Index)
+                
+                else:
+                    msg = f"The data type of Index is {Dtype}. It must be "\
+                          + "'int', 'float', 'numpy.ndarray' or 'numpy.float64'."
+            
+                    raise Exception(msg)
+                    
+            elif len(Dtypes) == 2 and int in Dtypes and float in Dtypes:
+                """Allow for the possibility of a mixture of integers and 
+                floats."""
+                
+                """ Convert integers to float: """
+                Index = [float(item) for item in Index]
+                
+                Point = RefIm.TransformContinuousIndexToPhysicalPoint(Index)
+                
+            else:
+                msg = f"The data type of Index is {Dtypes}. It must be 'int',"\
+                      + " 'float' or 'numpy.ndarray'."
             
         else:
-            msg = f"The data type of Index is {Dtype}. It must be either "\
-                  + "'int' or 'float'."
+            msg = f"The data type of Index is {Dtypes}. It must be 'int',"\
+                  + " 'float', 'numpy.ndarray' or 'numpy.float64'."
             
             raise Exception(msg)
             
     elif len(Dtypes) == 2 and int in Dtypes and float in Dtypes:
         """Allow for the possibility of a mixture of integers and floats."""
         
-        # Convert integers to float:
+        """ Convert integers to float: """
         Index = [float(item) for item in Index]
         
         Point = RefIm.TransformContinuousIndexToPhysicalPoint(Index)
@@ -485,71 +521,6 @@ def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
         print('-'*120)
     
     return PixArr
-
-
-
-
-
-
-def PtsByCntByRoi2PixArrByRoi_OLD(PtsByCntByRoi, RefIm, LogToConsole=False):
-    """
-    Convert RTS data (e.g. from GetRtsDataOfInterest()) to a list of pixel
-    arrays grouped by ROI.
-    
-    Inputs:
-    ******
-    
-    PtsByCntByRoi : list of list of a list of a list of floats
-        List (for each ROI) of a list (for all contours) of a list (for each
-        point) of a list (for each dimension) of coordinates to be copied from 
-        Rts.
-    
-    RefIm : SimpleITK image
-        The 3D image that relates to the RTS data in PtsByCntByRoi.
-        
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-                       
-                            
-    Outputs:
-    *******
-    
-    PixArrByRoi : list of Numpy data arrays
-        A list (for each ROI) of 3D pixel arrays.
-    """
-    
-    PixArrByRoi = []
-    
-    # Convert points-by-contour-by-ROI to indices-by-contour-by-ROI:
-    IndsByCntByRoi = []
-    
-    R = len(PtsByCntByRoi)
-    
-    for r in range(R):
-        IndsByCnt = []
-        
-        if PtsByCntByRoi[r]:
-            for Pts in PtsByCntByRoi[r]:
-                Inds = Points2Indices(Pts, RefIm)
-                    
-                IndsByCnt.append(Inds)
-            
-        IndsByCntByRoi.append(IndsByCnt)
-        
-        # Convert IndsByCnt to PixArr:
-        PixArr = IndsByContour2PixArr(IndsByCnt, RefIm)
-        
-        PixArrByRoi.append(PixArr)
-        
-    
-    if LogToConsole:
-        print('\n\n', '-'*120)
-        print('Results from PtsByCntByRoi2PixArrByRoi():')
-        shapes = [PixArrByRoi[r].shape for r in range(R)]
-        print(f'   PixArrByRoi.shape = {shapes}')
-        print('-'*120)
-    
-    return PixArrByRoi
 
 
 
@@ -1028,93 +999,6 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
 
 
 
-def PixArr2PtsByContour_OLD(PixArr, F2Sinds, DicomDir, Thresh=0.5):
-    """
-    04/02/21:
-        This was modified (see PixArr2PtsByCnt()) since the function below 
-        creates a list for each object in any given frame.  The revised 
-        function treats each object as a separate contour, rather than nesting
-        the contours.
-        
-    Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
-    each point) of a list (for each dimension) of physical coordinates.
- 
-    Inputs:
-    ******
-    
-    PixArr : Numpy array
-        A FxRxC (frames x rows x cols) Numpy array containing F RxC masks in 
-        PixArr.
-    
-    F2Sinds : List of list of integers
-        A list (for each frame) of the slice numbers that correspond to each 
-        frame in PixArr.  This is equivalent to a list of Per-Frame Functional 
-        Groups Sequence-to-slice inds (PFFGStoSliceInds). 
-    
-    DicomDir : string
-        Directory containing the DICOMs that relate to PixArr.
-        
-    Thresh : float (optional; 0.5 by default)
-        Threshold value used to binarise the labels in PixArr.
- 
-    
-    Outputs:
-    *******
-    
-    PtsByObjByFrame : list of a list of a list of floats
-        A list (for each frame) of a list (for each object, i.e. contour) of a 
-        list (for each dimension) of the physical coordinates that define the 
-        mask in each frame in PixArr.
-        
-    CntDataByObjByFrame : list of a list of a list of strings
-        A list (for each frame) of a list (for each object, i.e. contour) of a 
-        flattened list of [x, y, z] physical coordinates that define the mask 
-        in each frame in PixArr as strings (format of ContourData tag in RTS).
-    """
-    
-    #from ImageTools import GetImageAttributes
-    from ImageTools import ImportImage
-    
-    RefIm = ImportImage(DicomDir)
-    
-    # Convert the pixel array to a list of indices-by-object-by-frame:
-    IndsByObjByFrame = PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5)
-    
-    #Size, Spacings, ST, IPPs, Dirs,\
-    #ListOfWarnings = GetImageAttributes(DicomDir, Package='pydicom')
-    
-    PtsByObjByFrame = []
-    CntDataByObjByFrame = []
-    
-    for f in range(len(IndsByObjByFrame)):
-        PtsByObj = []
-        CntDataByObj = []
-    
-        for o in range(len(IndsByObjByFrame[f])):
-            Pts = Indices2Points(Indices=IndsByObjByFrame[f][o], 
-                                 RefIm=RefIm)
-            
-            PtsByObj.append(Pts)
-            
-            CntDataByObj.append(Points2ContourData(Points=Pts))
-        
-        PtsByObjByFrame.append(PtsByObj)
-        CntDataByObjByFrame.append(CntDataByObj)
-    
-    
-    #print(f'\n\n\nlen(PtsByCnt) = {len(PtsByCnt)}')
-    #print(f'\nlen(CntDataByCnt) = {len(CntDataByCnt)}')
-    #print(f'\nPtsByCnt = {PtsByCnt}')
-    #print(f'\nCntDataByCnt = {CntDataByCnt}')
- 
-    return PtsByObjByFrame, CntDataByObjByFrame
-
-
-
-
-
-
-
 
 def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
                               LogToConsole=False):
@@ -1536,8 +1420,6 @@ def ConvertImagePixelType(Image, NewPixelType):
     Image = Caster.Execute(Image)
     
     return Image
-
-
 
 
 
