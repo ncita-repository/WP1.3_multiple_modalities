@@ -6,21 +6,6 @@ Created on Wed Nov 11 11:57:05 2020
 """
 
 
-# Import packages:
-#from copy import deepcopy
-#import numpy as np
-#import matplotlib.pyplot as plt
-
-##import importlib
-##import DicomTools
-##importlib.reload(DicomTools)
-
-#from DicomTools import GetDicomSOPuids
-
-#from SegTools import GetPFFGStoSliceInds
-
-
-
 """
 ******************************************************************************
 ******************************************************************************

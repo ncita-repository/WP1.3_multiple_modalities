@@ -1011,6 +1011,25 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_5'
         
+    elif TestNum == 'RD6':
+        """ Rts Direct copy test 6 - Direct copy analogue of RR2 """
+        
+        SrcDcmKey = 'Ses4_Ser13_DcmDir'
+        SrcRoiKey = 'Ses4_Ser13_NasalCavity_RtsFpath'
+        
+        TrgDcmKey = 'Ses4_Ser10_DcmDir'
+        TrgRoiKey = None
+        
+        # Inputs required for this test:
+        FromRoiLabel = 'Nasal cavity'
+        FromSliceNum = 18 
+        ToSliceNum = 21
+        
+        SrcLabel = 'Ses4_Ser13'
+        TrgLabel = 'Ses4_Ser10'
+        
+        # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
+        TxtToAddToRoiLabel = ' 10'
         
     
     """ Segmentations """
@@ -2095,10 +2114,13 @@ COPY A CONTOUR
 
 def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgRtsFpath=None, ToSliceNum=None, 
-            Interpolation='BlurThenLinear', Variance=(1,1,1), 
-            ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, AddTxtToRoiLabel='', LogToConsole=False,
-            ListOfTimings=[]):
+            ResInterp='BlurThenLinear', PreResVariance=(1,1,1), #PostResThresh=0.75, 
+            ForceReg=False, Tx='affine', TxMaxNumOfIters='512',
+            TxInterp='NearestNeighbor', 
+            ApplyPostTxBlur=True, PostTxVariance=(2,2,2), 
+            ApplyPostTxBinarise=True, #ThreshPostTx=0.05, 
+            AddTxtToRoiLabel='', LogToConsole=False,
+            DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
     Note 01/02/2021:
         This function will, depending on the inputs, copy either:
@@ -2148,40 +2170,65 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         since the slice location(s) where the contour(s) will be copied to will
         not depend on user input.
     
-    Interpolation : string
-        The type of interpolation to be used if the Source labelmap image(s)
-        is/are to be resampled to the Target grid.  Acceptable inputs are:
-        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour')
+    ResInterp : string
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    Variance : tuple of floats (optional; (1, 1, 1) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken for 
-        resampling of the Source labelmap image(s).
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
         
-    ThreshPreRes : float (optional; 0.75 by default)
-        The threshold level used to perform binary thresholding prior to 
-        resampling. Example use is on a labelmap image if a Gaussian blurring 
-        + linearly resampling approach is taken to combat aliasing effects.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to perform binary thresholding following
+    #    resampling using a non-label (e.g. linear) interpolator. Example use is 
+    #    on a labelmap image if a Gaussian blurring + linearly resampling 
+    #    approach is taken to combat aliasing effects.
     
-    ThreshPostTx : float (optional; 0.05 by default)
-        The threshold level used to perform binary thresholding after 
-        registration transformation.  
-    
-    Tx : string (optional; 'affine' by default)
-        Denotes type of transformation to use for registration.  Acceptable 
-        values include:
-        - 'rigid'
-        - 'affine'
-        - 'bspline' (i.e. deformable)
-        
-    ForceRegistration : boolean (optional; False by default)
+    ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
+    
+    Tx : string (optional; 'affine' by default)
+        The transformation to used for image registration (if applicable).  
+        Acceptable values are:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+    
+    TxMaxNumOfIters : string (optional; '512' by default)
+        If 'default', the maximum number of iterations used for the optimiser
+        during image registration (if applicable) will be the pre-set default
+        in the parameter map for Tx. If != 'default' it must be a string 
+        representation of an integer.
+        
+    TxInterp : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
+    ApplyPostTxBinarise : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
+        
+    #ThreshPostTx : float (optional; 0.05 by default)
+    #    The threshold level used to perform binary thresholding after 
+    #    registration transformation.  
     
     AddTxtToRoiLabel : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target RTS.
@@ -2189,6 +2236,12 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
     
+    DictOfInputs : dictionary (optional; empty by default)
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings (optional; empty by default)
+        A list containing the inputs that were called to CopyRoi().
+        
     LogOfTimings : list of strings (optional; empty by default)
         A list of the time to execute certain tasks during the calling of 
         CopyRts().
@@ -2200,6 +2253,12 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     TrgRts : Pydicom object
         The new (if making a Relationship-preserving copy) or modified (if
         making a Direct copy) Target RTS object.
+    
+    DictOfInputs : dictionary
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings
+        A list containing the inputs that were called to CopyRoi().
         
     ListOfTimings : list of strings
         A list (for each message) of timings for individual operations.
@@ -2622,9 +2681,9 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                    F2SindsByRoi=SrcF2SindsByRoi,
                                                    SrcImage=SrcIm, 
                                                    TrgImage=TrgIm,
-                                                   Interpolation=Interpolation,
-                                                   Variance=Variance,
-                                                   ThreshLevel=ThreshPreRes,
+                                                   Interpolation=ResInterp,
+                                                   PreResVariance=PreResVariance,
+                                                   #PostResThresh=PostResThresh,
                                                    LogToConsole=LogToConsole)
         
         times.append(time.time())
@@ -2632,16 +2691,62 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
         ListOfTimings.append(msg)
         print(f'*{msg}')
+        
+        
+        """ Get the interpolation that was used (the actual interpolation used 
+        might have been different from the interpolation set) and the threshold
+        used to re-binarise the resampled labelmap image (if applicable): """
+        
+        #print(f'\n\n\nMetadata keys in ResSrcLabmapImByRoi[0]:',
+        #      ResSrcLabmapImByRoi[0].GetMetaDataKeys())
+        
+        for i in range(len(ResSrcLabmapImByRoi)):
+            Interp = ResSrcLabmapImByRoi[i].GetMetaData("ResInterpUsed")
+            
+            ListOfInputs.append(f'ResInterpUsedForRoi{i} = {Interp}')
+            DictOfInputs[f'ResInterpUsedForRoi{i}'] = Interp
+            
+            if Interp == 'BlurThenLinear':
+                Thresh = ResSrcLabmapImByRoi[i].GetMetaData("PostResThreshUsed")
+                
+                ListOfInputs.append(f'PostResThreshUsedForRoi{i} = {Thresh}')
+                DictOfInputs[f'PostResThreshUsedForRoi{i}'] = Thresh
     
+        
         
     if UseCaseToApply in ['5a', '5b']:
         """ Direct or relationship-preserving copying with registration
         transformation. """
         
+        from ImageTools import RegisterImages
         from ImageTools import TransformLabmapImByRoi
-    
-        """ Transform SrcLabmapImByRoi using the transformation that registers
-        SrcIm to TrgIm. 
+        
+        if not Tx in ['rigid', 'affine', 'bspline']:
+            msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
+                  + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
+            
+            raise Exception(msg)
+        
+        if LogToConsole == False:
+            print(f'Performing image registration using {Tx} transform...\n')
+        
+        times.append(time.time())
+        
+        """ Register SrcIm to TrgIm. """
+        RegIm, RegImFilt = RegisterImages(FixIm=TrgIm, MovIm=SrcIm, Tx=Tx,
+                                          MaxNumOfIters=TxMaxNumOfIters, 
+                                          LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to register the Source image to the Target '\
+              + f'image using {Tx} transform.\n'
+        ListOfTimings.append(msg)
+        if LogToConsole == False:
+            print(f'*{msg}')
+        
+        
+        """ Transform SrcLabmapImByRoi using the registration transformation. 
         
         Note:
             Even though the data is being transformed the prefix 'Res' will be
@@ -2651,17 +2756,27 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
         ResSrcF2SindsByRoi = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
                                                     F2SindsByRoi=SrcF2SindsByRoi,
-                                                    FixImage=TrgIm, MovImage=SrcIm, 
-                                                    Tx=Tx, ThreshLevel=ThreshPostTx,
+                                                    RegImFilt=RegImFilt,
+                                                    Interpolation=TxInterp,
+                                                    ApplyPostTxBlur=ApplyPostTxBlur,
+                                                    PostTxVariance=PostTxVariance,
+                                                    ApplyPostTxBinarise=ApplyPostTxBinarise,
+                                                    #ThreshPostTx=ThreshPostTx,
                                                     LogToConsole=LogToConsole)
-        
-        
-        
         
         #times.append(time.time())
         #Dtime = round(times[-1] - times[-2], 1)
         #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
         #      'from the registration transformation.')
+        
+        """ Get the threshold used to re-binarise the transformed labelmap 
+        image: """
+        for i in range(len(ResSrcLabmapImByRoi)):
+            Thresh = ResSrcLabmapImByRoi[i].GetMetaData("PostTxThreshUsed")
+            
+            ListOfInputs.append(f'PostTxThreshUsedForRoi{i} = {Thresh}')
+            DictOfInputs[f'PostTxThreshUsedForRoi{i}'] = Thresh
+        
         
     
     if UseCaseToApply in ['3a', '4a', '5a']:
@@ -2781,11 +2896,11 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             #print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
             #      f'{ResFromSliceNum}')
             #print(f'ToSliceNum = {ToSliceNum}')
-            print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+            print(f'FromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
                   f'{ResFromSliceNum} following resampling/transformation -->',
-                  f'ToSliceNum = {ToSliceNum} for direct copy')
-            print('\nResSrcF2SindsByRoi prior to shifting of out-of-plane',
-                  f'elements: {ResSrcF2SindsByRoi}')
+                  f'ToSliceNum = {ToSliceNum} for direct copy\n')
+            print('ResSrcF2SindsByRoi prior to shifting of out-of-plane',
+                  f'elements: {ResSrcF2SindsByRoi}\n')
         
         ResSrcPixArrByRoi,\
         ResSrcF2SindsByRoi = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi, 
@@ -2807,13 +2922,13 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                                                       Fractional=False,
                                                       LogToConsole=LogToConsole)
         
-        if True:#LogToConsole:
-            print(f'\nAfter running ShiftFramesInPixArrBySeg():')
+        if LogToConsole:
+            print(f'After running ShiftFramesInPixArrBySeg():')
             print(f'ResSrcF2SindsByRoi = {ResSrcF2SindsByRoi}')
             print(f'len(ResSrcPixArrByRoi) = {len(ResSrcPixArrByRoi)}')
             for r in range(len(ResSrcPixArrByRoi)):
                 print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
-                print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
+                print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}\n')
     
     if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
         """ Direct or relationship-preserving copying with resampling or
@@ -2857,7 +2972,7 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         
         if LogToConsole:
             #print('\n\n', '-'*120)
-            print(f'\n\nAfter converting ResPixArrToCopy to ContourData and',
+            print(f'After converting ResPixArrToCopy to ContourData and',
                   f'points, ResSrcC2SindsByRoi =')
             PrintIndsByRoi(ResSrcC2SindsByRoi)
             print('')
@@ -2903,7 +3018,7 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     print(f'*{msg}')
     
     if LogToConsole:
-        print(f'\n\n\nPrior to running CreateRts():')
+        print(f'Prior to running CreateRts():')
         print(f'TrgC2SindsByRoi = {TrgC2SindsByRoi}')
         for r in range(len(TrgPtsByCntByRoi)):
             C = len(TrgPtsByCntByRoi[r])
@@ -2911,9 +3026,13 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
             for c in range(len(TrgPtsByCntByRoi[r])):
                 P = len(TrgPtsByCntByRoi[r][c])
                 print(f'      There are {P} pts in the {c}^th contour')
+        print('')
     
     
     """ Create the Target RTS. """
+    
+    print('*Creating new Target RTS object...\n')
+    
     TrgRts = CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi,
                        TrgPtsByCntByRoi, TrgC2SindsByRoi, TrgDcmDir,
                        AddTxtToRoiLabel, LogToConsole)
@@ -2928,7 +3047,7 @@ def CopyRts(SrcRtsFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         print('\nEnd of CopyRts().')
         print('-'*120)
         
-    return TrgRts, ListOfTimings
+    return TrgRts, DictOfInputs, ListOfInputs, ListOfTimings
     #return TrgRts, TrgPtsByCntByRoi, TrgC2SindsByRoi, ListOfTimings
 
 
@@ -2946,10 +3065,13 @@ COPY A SEGMENTATION
 
 def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgSegFpath=None, ToSliceNum=None, 
-            Interpolation='BlurThenLinear', Variance=(1,1,1), 
-            ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, AddTxtToSegLabel='', LogToConsole=False,
-            ListOfTimings=[]):
+            ResInterp='BlurThenLinear', PreResVariance=(1,1,1), #PostResThresh=0.75, 
+            ForceReg=False, Tx='affine', TxMaxNumOfIters='512',
+            TxInterp='NearestNeighbor', 
+            ApplyPostTxBlur=True, PostTxVariance=(2,2,2), 
+            ApplyPostTxBinarise=True, #ThreshPostTx=0.05, 
+            AddTxtToSegLabel='', LogToConsole=False, 
+            DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
     Note 09/02/2021:
         This function will, depending on the inputs, copy either:
@@ -2999,46 +3121,77 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         since the slice location(s) where the segmentation(s) will be copied to 
         will not depend on user input.
         
-    Interpolation : string
-        The type of interpolation to be used if the Source labelmap image(s)
-        is/are to be resampled to the Target grid.  Acceptable inputs are:
-        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour')
+    ResInterp : string
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    Variance : tuple of floats (optional; (1, 1, 1) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken for 
-        resampling of the Source labelmap image(s).
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
         
-    ThreshPreRes : float (optional; 0.75 by default)
-        The threshold level used to perform binary thresholding prior to 
-        resampling. Example use is on a labelmap image if a Gaussian blurring 
-        + linearly resampling approach is taken to combat aliasing effects.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to perform binary thresholding following 
+    #    resampling if a non-label (e.g. linear) interpolator is used. Example 
+    #    use is on a labelmap image if a Gaussian blurring + linearly resampling 
+    #    approach is taken to combat aliasing effects.
     
-    ThreshPostTx : float (optional; 0.05 by default)
-        The threshold level used to perform binary thresholding after 
-        registration transformation.
-    
+    ForceReg : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+        
     Tx : string (optional; 'affine' by default)
         Denotes type of transformation to use for registration.  Acceptable 
         values include:
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
+    
+    TxMaxNumOfIters : string (optional; '512' by default)
+        If 'default', the maximum number of iterations used for the optimiser
+        during image registration (if applicable) will be the pre-set default
+        in the parameter map for Tx. If != 'default' it must be a string 
+        representation of an integer.
         
-    ForceRegistration : boolean (optional; False by default)
-        If True the Source image will be registered to the Target image, and 
-        the Source labelmap will be transformed to the Target image grid
-        accordingly.  
+    TxInterp : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+    
+    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
         
+    ApplyPostTxBinarise : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
+        
+    #ThreshPostTx : float (optional; 0.05 by default)
+    #    The threshold level used to perform binary thresholding after 
+    #    registration transformation.
+    
     AddTxtToRoiLabel : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target SEG.
         
     LogToConsole : boolean (default False)
         Denotes whether some results will be logged to the console.
+    
+    DictOfInputs : dictionary (optional; empty by default)
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings (optional; empty by default)
+        A list containing the inputs that were called to CopyRoi().
     
     ListOfTimings : list of strings
         A list of the time to execute certain tasks during the calling of 
@@ -3052,7 +3205,13 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         The new (if making a Relationship-preserving copy) or modified (if
         making a Direct copy) Target SEG object.
       
-    TimingMsgs : list of strings
+    DictOfInputs : dictionary
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings
+        A list containing the inputs that were called to CopyRoi().
+        
+    ListOfTimings : list of strings
         A list (for each message) of timings for individual operations.
         
         
@@ -3332,7 +3491,7 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         
         #import numpy as np
         #from ImageTools import GaussianBlurImage, BinaryThresholdImage 
-        from ImageTools import ResampleLabmapImByRoi#, GetImageInfo
+        #from ImageTools import ResampleLabmapImByRoi#, GetImageInfo
         #from ConversionTools import ConvertImagePixelType
         #from ConversionTools import PixArr2Image, Image2PixArr
         from ConversionTools import PixArrByRoi2LabmapImByRoi
@@ -3357,6 +3516,8 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     if UseCaseToApply in ['3a', '3b', '4a', '4b']:
         """ Direct or relationship-preserving copy with resampling. """
         
+        from ImageTools import ResampleLabmapImByRoi
+        
         
         """ Resample the source labelmaps. """
         
@@ -3369,9 +3530,9 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
                                                    F2SindsByRoi=SrcF2SindsBySeg,
                                                    SrcImage=SrcIm, 
                                                    TrgImage=TrgIm,
-                                                   Interpolation=Interpolation,
-                                                   Variance=Variance,
-                                                   ThreshLevel=ThreshPreRes,
+                                                   Interpolation=ResInterp,
+                                                   PreResVariance=PreResVariance,
+                                                   #PostResThresh=PostResThresh,
                                                    LogToConsole=LogToConsole)
         
         times.append(time.time())
@@ -3381,14 +3542,60 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         print(f'*{msg}')
         
         
+        """ Get the interpolation that was used (the actual interpolation used 
+        might have been different from the interpolation set) and the threshold
+        used to re-binarise the resampled labelmap image (if applicable): """
+        
+        #print(f'\n\n\nMetadata keys in ResSrcLabmapImBySeg[0]:',
+        #      ResSrcLabmapImBySeg[0].GetMetaDataKeys())
+        
+        for i in range(len(ResSrcLabmapImBySeg)):
+            Interp = ResSrcLabmapImBySeg[i].GetMetaData("ResInterpUsed")
+            
+            ListOfInputs.append(f'ResInterpUsedForSeg{i} = {Interp}')
+            DictOfInputs[f'ResInterpUsedForSeg{i}'] = Interp
+            
+            if Interp == 'BlurThenLinear':
+                Thresh = ResSrcLabmapImBySeg[i].GetMetaData("PostResThreshUsed")
+                
+                ListOfInputs.append(f'PostResThreshUsedForSeg{i} = {Thresh}')
+                DictOfInputs[f'PostResThreshUsedForSeg{i}'] = Thresh
+                
+        
+    
     if UseCaseToApply in ['5a', '5b']:
         """ Direct or relationship-preserving copying with registration
         transformation. """
         
+        from ImageTools import RegisterImages
         from ImageTools import TransformLabmapImByRoi
-    
-        """ Transform SrcLabmapImBySeg using the transformation that registers
-        SrcIm to TrgIm. 
+        
+        if not Tx in ['rigid', 'affine', 'bspline']:
+            msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
+                  + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
+            
+            raise Exception(msg)
+        
+        if LogToConsole == False:
+            print(f'Performing image registration using {Tx} transform...\n')
+        
+        times.append(time.time())
+        
+        """ Register SrcIm to TrgIm. """
+        RegIm, RegImFilt = RegisterImages(FixIm=TrgIm, MovIm=SrcIm, Tx=Tx,
+                                          MaxNumOfIters=TxMaxNumOfIters,
+                                          LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to register the Source image to the Target '\
+              + f'image using {Tx} transform.\n'
+        ListOfTimings.append(msg)
+        if LogToConsole == False:
+            print(f'*{msg}')
+        
+        
+        """ Transform SrcLabmapImBySeg using the registration transformation. 
         
         Note:
             Even though the data is being transformed the prefix 'Res' will be
@@ -3398,8 +3605,12 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         ResSrcLabmapImBySeg, ResSrcPixArrBySeg,\
         ResSrcF2SindsBySeg = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg,
                                                     F2SindsByRoi=SrcF2SindsBySeg,
-                                                    FixImage=TrgIm, MovImage=SrcIm, 
-                                                    Tx=Tx, ThreshLevel=ThreshPostTx, 
+                                                    RegImFilt=RegImFilt,
+                                                    Interpolation=TxInterp,
+                                                    ApplyPostTxBlur=ApplyPostTxBlur,
+                                                    PostTxVariance=(2,2,2),
+                                                    ApplyPostTxBinarise=ApplyPostTxBinarise,
+                                                    #ThreshPostTx=ThreshPostTx, 
                                                     LogToConsole=LogToConsole)
         
         #times.append(time.time())
@@ -3407,6 +3618,15 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
         #      'from the registration transformation.')
         
+        """ Get the threshold used to re-binarise the transformed labelmap 
+        image: """
+        for i in range(len(ResSrcLabmapImBySeg)):
+            Thresh = ResSrcLabmapImBySeg[i].GetMetaData("PostTxThreshUsed")
+            
+            ListOfInputs.append(f'PostTxThreshUsedForSeg{i} = {Thresh}')
+            DictOfInputs[f'PostTxThreshUsedForSeg{i}'] = Thresh
+              
+                
     
     if UseCaseToApply in ['3a', '4a', '5a']:
         """ Direct copy with resampling/registration and averaging of multi-
@@ -3511,11 +3731,11 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
             #print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
             #      f'{ResFromSliceNum}')
             #print(f'ToSliceNum = {ToSliceNum}')
-            print(f'\nFromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
+            print(f'FromSliceNum = {FromSliceNum} --> ResFromSliceNum =',
                   f'{ResFromSliceNum} following resampling/transformation -->',
                   f'ToSliceNum = {ToSliceNum} for direct copy')
             print('\nResSrcF2SindsBySeg prior to shifting of out-of-plane',
-                  f'elements: {ResSrcF2SindsBySeg}')
+                  f'elements: {ResSrcF2SindsBySeg}\n')
             
         ResSrcPixArrBySeg,\
         ResSrcF2SindsBySeg = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg, 
@@ -3532,12 +3752,13 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
                                                       LogToConsole=LogToConsole)
         
         if LogToConsole:
-            print(f'\nAfter running ShiftFramesInPixArrBySeg():')
+            print(f'After running ShiftFramesInPixArrBySeg():')
             print(f'ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}')
             print(f'len(ResSrcPixArrBySeg) = {len(ResSrcPixArrBySeg)}')
             for r in range(len(ResSrcPixArrBySeg)):
                 print(f'type(ResSrcPixArrBySeg[{r}]) = {type(ResSrcPixArrBySeg[r])}')
                 print(f'ResSrcPixArrBySeg[{r}].shape = {ResSrcPixArrBySeg[r].shape}')
+            print('')
                 
     
     if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
@@ -3583,6 +3804,8 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
     
     """ Create/overwrite the Target SEG. """
     
+    print('*Creating new Target SEG object...\n')
+    
     TrgSeg = CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, 
                        TrgF2SindsBySeg, TrgDcmDir, FromSegLabel,
                        AddTxtToSegLabel, LogToConsole)
@@ -3597,7 +3820,7 @@ def CopySeg(SrcSegFpath, FromSliceNum, FromSegLabel, SrcDcmDir, TrgDcmDir,
         print('\nEnd of CopySeg().')
         print('-'*120)
         
-    return TrgSeg, ListOfTimings
+    return TrgSeg, DictOfInputs, ListOfInputs, ListOfTimings
     #return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
 
 
@@ -3614,10 +3837,13 @@ COPY A CONTOUR / SEGMENTATION
 
 
 def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
-            TrgRoiFpath=None, ToSliceNum=None, Interpolation='BlurThenLinear',
-            Variance=(1,1,1), ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine',
-            ForceRegistration=False, TxtToAddToRoiLabel='', LogToConsole=False,
-            ExportLogFiles=False):
+            TrgRoiFpath=None, ToSliceNum=None, ResInterp='BlurThenLinear',
+            PreResVariance=(1,1,1), #PostResThresh=0.75, 
+            ForceReg=False, Tx='affine', TxMaxNumOfIters='512',
+            TxInterp='NearestNeighbor', 
+            ApplyPostTxBlur=True, PostTxVariance=(2,2,2), 
+            ApplyPostTxBinarise=True, #ThreshPostTx=0.05, 
+            TxtToAddToRoiLabel='', LogToConsole=False, ExportLogFiles=False):
     """
     
     Inputs:
@@ -3651,41 +3877,66 @@ def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
         segmentation is to be copied to (counting from 0).  This only applies 
         for Direct copies, hence the default value None.
         
-    Interpolation : string
-        The type of interpolation to be used if the Source labelmap image(s)
-        is/are to be resampled to the Target grid.  Acceptable inputs are:
-        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour')
+    ResInterp : string
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    Variance : tuple of floats (optional; (1, 1, 1) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken for 
-        resampling of the Source labelmap image(s).
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
         
-    ThreshPreRes : float (optional; 0.75 by default)
-        The threshold level used to perform binary thresholding prior to 
-        resampling. Example use is on a labelmap image if a Gaussian blurring 
-        + linearly resampling approach is taken to combat aliasing effects.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to perform binary thresholding following 
+    #    resampling using a non-label (e.g. linear) interpolator. Example use is 
+    #    on a labelmap image if a Gaussian blurring + linearly resampling 
+    #    approach is taken to combat aliasing effects.
     
-    ThreshPostTx : float (optional; 0.05 by default)
-        The threshold level used to perform binary thresholding after 
-        registration transformation.
-    
+    ForceReg : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+        
     Tx : string (optional; 'affine' by default)
         Denotes type of transformation to use for registration.  Acceptable 
         values include:
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
+    
+    TxMaxNumOfIters : string (optional; '512' by default)
+        If 'default', the maximum number of iterations used for the optimiser
+        during image registration (if applicable) will be the pre-set default
+        in the parameter map for Tx. If != 'default' it must be a string 
+        representation of an integer.
+    
+    TxInterp : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+    
+    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
         
-    ForceRegistration : boolean (optional; False by default)
-        If True the Source image will be registered to the Target image, and 
-        the Source labelmap will be transformed to the Target image grid
-        accordingly.  
+    ApplyPostTxBinarise : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
         
+    #ThreshPostTx : float (optional; 0.05 by default)
+    #    The threshold level used to perform binary thresholding after 
+    #    registration transformation.
+    
     TxtToAddToRoiLabel : string (optional, '' by default)
         String of text to pass to CreateRts()/CreateSeg(). The string will be
         appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
@@ -3742,12 +3993,17 @@ def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                     f'TrgDcmDir = {TrgDcmDir}\n',
                     f'TrgRoiFpath = {TrgRoiFpath}\n',
                     f'ToSliceNum = {ToSliceNum}\n',
-                    f'Interpolation = {Interpolation}\n',
-                    f'Variance = {Variance}\n',
-                    f'ThreshPreRes = {ThreshPreRes}\n',
-                    f'ThreshPostTx = {ThreshPostTx}\n',
+                    f'ResInterpSet = {ResInterp}\n',
+                    f'PreResVariance = {PreResVariance}\n',
+                    #f'PostResThresh = {PostResThresh}\n',
+                    f'ForceReg = {ForceReg}\n',
                     f'Tx = {Tx}\n',
-                    f'ForceRegistration = {ForceRegistration}\n',
+                    f'TxMaxNumOfIters = {TxMaxNumOfIters}\n',
+                    f'TxInterp = {TxInterp}\n',
+                    f'ApplyPostTxBlur = {ApplyPostTxBlur}\n',
+                    f'PostTxVariance = {PostTxVariance}\n',
+                    f'ApplyPostTxBinarise = {ApplyPostTxBinarise}\n',
+                    #f'ThreshPostTx = {ThreshPostTx}\n',
                     f'TxtToAddToRoiLabel = {TxtToAddToRoiLabel}\n',
                     f'LogToConsole = {LogToConsole}']
     
@@ -3759,12 +4015,17 @@ def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
                     'TrgDcmDir' : TrgDcmDir,
                     'TrgRoiFpath' : TrgRoiFpath,
                     'ToSliceNum' : ToSliceNum,
-                    'Interpolation' : Interpolation,
-                    'Variance' : Variance,
-                    'ThreshPreRes' : ThreshPreRes,
-                    'ThreshPostTx' : ThreshPostTx,
+                    'ResInterpSet' : ResInterp,
+                    'PreResVariance' : PreResVariance,
+                    #'PostResThresh' : PostResThresh,
+                    'ForceReg' : ForceReg,
                     'Tx' : Tx,
-                    'ForceRegistration' : ForceRegistration,
+                    'TxMaxNumOfIters' : TxMaxNumOfIters,
+                    'TxInterp' : TxInterp,
+                    'ApplyPostTxBlur' : ApplyPostTxBlur,
+                    'PostTxVariance' : PostTxVariance,
+                    'ApplyPostTxBinarise' : ApplyPostTxBinarise,
+                    #'ThreshPostTx' : ThreshPostTx,
                     'TxtToAddToRoiLabel' : TxtToAddToRoiLabel,
                     'LogToConsole' : LogToConsole}
     
@@ -3792,7 +4053,7 @@ def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     """ Determine which Use Case to apply. """
     UseCaseThatApplies,\
     UseCaseToApply = WhichUseCase(FromSliceNum, FromRoiLabel, ToSliceNum, 
-                                  SrcDcmDir, TrgDcmDir, ForceRegistration,
+                                  SrcDcmDir, TrgDcmDir, ForceReg,
                                   LogToConsole=True)
     
     times.append(time.time())
@@ -3812,20 +4073,26 @@ def CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir,
     Modality = dcmread(SrcRoiFpath).Modality
     
     if Modality == 'RTSTRUCT':        
-        TrgRoi, ListOfTimings\
+        TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyRts(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, 
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, ToSliceNum, 
-                  Interpolation, Variance, ThreshPreRes, ThreshPostTx, Tx,
-                  ForceRegistration, TxtToAddToRoiLabel, LogToConsole,
-                  ListOfTimings)
+                  ResInterp, PreResVariance, #PostResThresh, 
+                  ForceReg, Tx, TxMaxNumOfIters, TxInterp, 
+                  ApplyPostTxBlur, PostTxVariance, 
+                  ApplyPostTxBinarise, #ThreshPostTx,   
+                  TxtToAddToRoiLabel, LogToConsole,
+                  DictOfInputs, ListOfInputs, ListOfTimings)
     
     elif Modality == 'SEG':
-        TrgRoi, ListOfTimings\
+        TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopySeg(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir,
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, ToSliceNum, 
-                  Interpolation, Variance, ThreshPreRes, ThreshPostTx, Tx,
-                  ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
-                  ListOfTimings)
+                  ResInterp, PreResVariance, #PostResThresh, 
+                  ForceReg, Tx, TxMaxNumOfIters, TxInterp, 
+                  ApplyPostTxBlur, PostTxVariance,
+                  ApplyPostTxBinarise, #ThreshPostTx,   
+                  TxtToAddToRoiLabel, LogToConsole, 
+                  DictOfInputs, ListOfInputs, ListOfTimings)
         
     else:
         msg = f'The Source modality ({Modality}) must be "RTS" or "SEG".'
@@ -4067,10 +4334,13 @@ RUN COPYROI()
 
 
 def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='', 
-               Interpolation='BlurThenLinear', Variance=(1,1,1), 
-               ThreshPreRes=0.75, ThreshPostTx=0.05, Tx='affine', 
-               ForceRegistration=False, ExportRoi=True, PlotResults=False, 
-               PlotAllSlices=False, ExportPlot=False, ExportLogFiles=True):
+               ResInterp='BlurThenLinear', PreResVariance=(1,1,1), #PostResThresh=0.75, 
+               ForceReg=False, Tx='affine', TxMaxNumOfIters='512',
+               TxInterp='NearestNeighbor', 
+               ApplyPostTxBlur=True, PostTxVariance=(2,2,2), 
+               ApplyPostTxBinarise=True, #ThreshPostTx=0.05, 
+               ExportRoi=True, PlotResults=False, PlotAllSlices=False, 
+               ExportPlot=False, ExportLogFiles=True):
     """
     
     Inputs:
@@ -4082,37 +4352,39 @@ def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='',
         a list of comma-separated strings (e.g. ['SR1', 'SR2', 'SR3']). To 
         run a single test a single-itemed list must be provided (e.g. ['RD4']).
     
+    LogToConsole : boolean (optional; False by default)
+        If True, intermediate results will be logged to the console during the
+        running of CopyRoi().
+    
     TxtToAddToRoiLabel : string (optional, '' by default)
         String of text to pass to CreateRts()/CreateSeg(). The string will be
         appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
         the filename of the exported (new) Target RTS/SEG.
     
-    LogToConsole : boolean (optional; False by default)
-        If True, intermediate results will be logged to the console during the
-        running of CopyRoi().
-    
-    Interpolation : string (optional; 'BlurThenLinear' by default)
-        The type of interpolation to be used if the Source labelmap image(s)
-        is/are to be resampled to the Target grid.  Acceptable inputs are:
-        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour')
+    ResInterp : string
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    Variance : tuple of floats (optional; (1, 1, 1) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken for 
-        resampling of the Source labelmap image(s).
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
         
-    ThreshPreRes : float (optional; 0.75 by default)
-        The threshold level used to perform binary thresholding prior to 
-        resampling. Example use is on a labelmap image if a Gaussian blurring 
-        + linearly resampling approach is taken to combat aliasing effects.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to perform binary thresholding following 
+    #    resampling using a non-label (e.g. linear) interpolator. Example use is 
+    #    on a labelmap image if a Gaussian blurring + linearly resampling 
+    #    approach is taken to combat aliasing effects.
     
-    ThreshPostTx : float (optional; 0.05 by default)
-        The threshold level used to perform binary thresholding after 
-        registration transformation.
+    ForceReg : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
     
     Tx : string (optional; 'affine' by default)
         Denotes type of transformation to use for registration.  Acceptable 
@@ -4120,11 +4392,34 @@ def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='',
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
+    
+    TxMaxNumOfIters : string (optional; '512' by default)
+        If 'default', the maximum number of iterations used for the optimiser
+        during image registration (if applicable) will be the pre-set default
+        in the parameter map for Tx. If != 'default' it must be a string 
+        representation of an integer.
+     
+    TxInterp : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+    
+    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
         
-    ForceRegistration : boolean (optional; False by default)
-        If True the Source image will be registered to the Target image, and 
-        the Source labelmap will be transformed to the Target image grid
-        accordingly.  
+    ApplyPostTxBinarise : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
+        
+    #ThreshPostTx : float (optional; 0.05 by default)
+    #    The threshold level used to perform binary thresholding after 
+    #    registration transformation.
     
     ExportRoi : boolean (optional; True by default)
         If True, the new Target RTS/SEG will be exported to a directory called
@@ -4222,20 +4517,13 @@ def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='',
         
         """ Copy Contours/Segmentations """
         
-        if SrcModality == 'RTSTRUCT':
-            NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
-            = CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, 
-                      TrgDcmDir, TrgRoiFpath, ToSliceNum, Interpolation, 
-                      Variance, ThreshPreRes, ThreshPostTx, Tx,
-                      ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
-                      False)
-        else:
-            NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
-            = CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir,  
-                      TrgDcmDir, TrgRoiFpath, ToSliceNum, Interpolation,  
-                      Variance, ThreshPreRes, ThreshPostTx, Tx, 
-                      ForceRegistration, TxtToAddToRoiLabel, LogToConsole, 
-                      False)
+        NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
+        = CopyRoi(SrcRoiFpath, FromSliceNum, FromRoiLabel, SrcDcmDir, TrgDcmDir, 
+                  TrgRoiFpath, ToSliceNum, ResInterp, PreResVariance, #PostResThresh, 
+                  ForceReg, Tx, TxMaxNumOfIters, TxInterp, 
+                  ApplyPostTxBlur, PostTxVariance,
+                  ApplyPostTxBinarise, #ThreshPostTx, 
+                  TxtToAddToRoiLabel, LogToConsole, ExportLogFiles=False)
         
         
         if ExportLogFiles:
@@ -4300,14 +4588,36 @@ def RunCopyRoi(TestNums, LogToConsole=False, TxtToAddToRoiLabel='',
             UseCaseThatApplies = DictOfInputs['UseCaseThatApplies']
             UseCaseToApply = DictOfInputs['UseCaseToApply']
             
-            if ForceRegistration and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
-                TxtToAddToFname += f'_ForcedRegistration_{Tx}'
+            if ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+                TxtToAddToFname += f'_ForcedReg_{Tx}'
                 
-            if not ForceRegistration and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
-                TxtToAddToFname += f'_{Interpolation}'
+            if not ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+                #TxtToAddToFname += f'_{ResInterp}'
+                
+                """ The actual interpolation used for resampling might not be
+                ResInterp. """
+                DiffInterpByRoi = []
+                
+                for key, val in DictOfInputs.items():
+                    if 'ResInterpUsedFor' in key and not ResInterp in key:
+                        DiffInterpByRoi.append(val)
+                
+                """ If DiffInterpByRoi is not empty, use the first item. """
+                if DiffInterpByRoi:
+                    TxtToAddToFname += f'_{DiffInterpByRoi[0]}'
+                else:
+                    if ResInterp == 'NearestNeighbor':
+                        TxtToAddToFname += '_NN'
+                    else:
+                        TxtToAddToFname += f'_{ResInterp}'
+                
+                
                 
             if UseCaseToApply in ['5a', '5b']:
-                TxtToAddToFname += f'_{Tx}'
+                if TxInterp == 'NearestNeighbor':
+                    TxtToAddToFname += '_NN'
+                else:
+                    TxtToAddToFname += f'_{TxInterp}'
             
             if NewTrgRoi.Modality == 'RTSTRUCT':
                 NewTrgRoiFpath = ExportTrgRoi(NewTrgRoi, SrcRoiFpath, RtsExportDir, 

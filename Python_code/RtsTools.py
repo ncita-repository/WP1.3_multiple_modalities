@@ -7,20 +7,6 @@ Created on Wed Nov 11 11:55:17 2020
 
 
 
-
-# Import packages and functions:
-#import os
-#import time
-#from copy import deepcopy
-#from pydicom import dcmread
-#from pydicom.uid import generate_uid
-#from DicomTools import GetRoiLabels
-#from DicomTools import GetDicomSOPuids
-#from ImageTools import GetImageAttributes
-#from ConversionTools import Point2Index
-#from ConversionTools import Indices2Mask
-
-
 """
 ******************************************************************************
 ******************************************************************************
@@ -2169,8 +2155,8 @@ def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi,
         N = len(NewTrgRts.ROIContourSequence[r].ContourSequence)
         
         if N > len(TrgC2SindsByRoi[r]):
-            print(f'There are {N} sequences in ROIContourSequence[{r}].ContourSequence',
-                  f'but only {len(TrgC2SindsByRoi[r])} contours in this ROI.')
+            #print(f'There are {N} sequences in ROIContourSequence[{r}].ContourSequence',
+            #      f'but only {len(TrgC2SindsByRoi[r])} contours in this ROI.')
             for i in range(N - len(TrgC2SindsByRoi[r])):
                 """ Remove the last sequence: """
                 NewTrgRts.ROIContourSequence[r].ContourSequence.pop()

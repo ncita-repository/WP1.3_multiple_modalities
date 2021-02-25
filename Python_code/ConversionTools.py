@@ -9,35 +9,6 @@ Created on Thu Nov 12 12:38:31 2020
 
 
 
-# Import packages and functions:
-#import numpy as np
-#import SimpleITK as sitk
-#from pydicom import dcmread
-#from itertools import product
-#from scipy.sparse import lil_matrix, issparse
-#from skimage.measure import find_contours
-#from shapely.geometry import MultiPolygon, Polygon, Point
-##from warnings import warn
-
-#from GeneralTools import UnpackPoints
-#from GeneralTools import UniqueItems
-
-##from DicomTools import ImportDicoms
-#from DicomTools import GetDicomSOPuids
-
-#from ImageTools import GetImageAttributes
-##from ImageTools import InitialiseImage
-##from ImageTools import AddImages
-
-##from RtsTools import GetCIStoSliceInds
-#from RtsTools import GetCStoSliceInds
-
-##from SegTools import GetPFFGStoSliceInds
-
-
-
-
-
 """
 ******************************************************************************
 ******************************************************************************
@@ -823,15 +794,15 @@ def PixArr2ImagesBySeg(PixArr, F2SindsBySeg, FrameNumsBySeg, RefIm):
 
 
 
-def Image2PixArr(LabmapIm, Non0FrameInds=None):
+def Image2PixArr(Image, Non0FrameInds=None):
     """
     Convert a 3D SimpleITK image to a 3D SEG pixel array.  
     
     Inputs:
     ******
     
-    LabelmapIm : SimpleITK image
-        A zero-padded version of PixelData.
+    Image : SimpleITK image
+        A image (e.g. labelmap).
         
     Non0FrameInds : List of integers (optional; None by default)  
         Use PerFrameFunctionalGroupsSequence-to-slice indices 
@@ -843,10 +814,10 @@ def Image2PixArr(LabmapIm, Non0FrameInds=None):
     *******
         
     PixArr : Numpy array
-        The non-zero frames in LabmapIm as a Numpy array.
+        The non-zero frames in Image as a Numpy array.
                            
     Non0FrameInds : List of integers
-        List of the indices of non-zero frames in LabelmapIm.  This should be
+        List of the indices of non-zero frames in Image.  This should be
         equivalent to the PerFrameFunctionalGroupsSequence-to-slice 
         indices (PFFGStoSliceInds).
     """
@@ -854,34 +825,88 @@ def Image2PixArr(LabmapIm, Non0FrameInds=None):
     import SimpleITK as sitk
     import numpy as np
     
-    # Convert from SimpleITK image to a Numpy array:
-    Nda = sitk.GetArrayFromImage(LabmapIm)
+    """ Convert from SimpleITK image to a Numpy data array: """
+    Nda = sitk.GetArrayFromImage(Image)
     
-    if not Non0FrameInds:
+    if Non0FrameInds == None:
         Non0FrameInds = []
         
         #print('')
         
-        # Loop through all frames in Nda and get the sum of all pixels:
+        """ Loop through all frames in Nda and get the sum of all pixels: """
         for i in range(Nda.shape[0]):
             Sum = np.amax(Nda[i])
             
             #print(f'i = {i}, Sum = {Sum}')
             
             if Sum:
-                # This is a non-zero frame:
+                """ This is a non-zero frame: """
                 Non0FrameInds.append(i)
     
-    # Initialise PixArr:
+    """ Initialise PixArr: """
     PixArr = np.zeros((len(Non0FrameInds), Nda.shape[1], Nda.shape[2]))
         
-    # Use Non0FrameInds to index the non-zero frames in Nda:
+    """ Use Non0FrameInds to index the non-zero frames in Nda: """
     for i in range(len(Non0FrameInds)):
         PixArr[i] = Nda[Non0FrameInds[i]]
         
     
     return PixArr, Non0FrameInds
         
+
+
+
+
+
+
+def ImageBySeg2PixArrBySeg(ImageBySeg, Non0FrameIndsBySeg=None):
+    """
+    Convert a list of 3D SimpleITK images to a list of 3D SEG pixel arrays.  
+    
+    Inputs:
+    ******
+    
+    ImageBySeg : List of SimpleITK images
+        A list (e.g. for each segment) of images (e.g. labelmap).
+        
+    Non0FrameIndsBySeg : List of a list of integers (optional; None by default)  
+        A list (for each segment) of a list of the indices of all non-zero
+        frames in each image. If this input is not specified it will be
+        determined.
+        
+        
+    Outputs:
+    *******
+        
+    PixArrBySeg : List of Numpy arrays
+        A list (for each segment) of the non-zero frames in each image in
+        ImagebySeg.
+                           
+    Non0FrameIndsBySeg : List of a list of integers
+        List (for each segment) of a list (for each frame) of the indices of 
+        non-zero frames in each image in ImageBySeg.
+    """
+    
+    import SimpleITK as sitk
+    import numpy as np
+    
+    PixArrBySeg = []
+    Non0FrameIndsBySeg = []
+    
+    for i in range(len(ImageBySeg)):
+        if Non0FrameInds == None:
+            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i])
+        else:
+            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i], Non0FrameInds)
+            
+        PixArrBySeg.append(PixArr)
+        
+        Non0FrameIndsBySeg.append(Non0FrameInds)
+    
+    
+    return PixArrBySeg, Non0FrameIndsBySeg
+        
+
 
 
 

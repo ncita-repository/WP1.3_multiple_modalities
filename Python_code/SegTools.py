@@ -7,20 +7,6 @@ Created on Wed Nov 11 11:54:12 2020
 
 
 
-
-# Import packages and functions:
-#import os
-#import time
-#from copy import deepcopy
-#import pydicom
-#from pydicom.pixel_data_handlers.numpy_handler import pack_bits
-#from pydicom.uid import generate_uid
-#import numpy as np
-#import SimpleITK as sitk
-
-
-
-
 """
 ******************************************************************************
 ******************************************************************************

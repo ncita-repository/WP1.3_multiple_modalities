@@ -7,20 +7,6 @@ Created on Thu Oct 15 10:44:06 2020
 
 
 
-# Import packages:
-#import os
-#from pydicom import read_file
-#import numpy as np
-#from natsort import natsorted
-
-##import importlib
-##import ImageTools
-##importlib.reload(ImageTools)
-
-#from ImageTools import GetImageAttributes
-
-
-
 """
 ******************************************************************************
 ******************************************************************************

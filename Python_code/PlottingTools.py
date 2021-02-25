@@ -2490,12 +2490,6 @@ def GetPixArrsFromListOfImages(ListOfImages, ListOfDicomDirs,
         
         ListOfDcmFpaths.append(DcmFpaths)
         
-        """
-        11/12/20:  
-            There should only be one segment so perhaps this should be checked
-            and raise exception if the number of segments is greater than one.
-            And if not, SegNum will always be = 0 (no need to GetRoiNum).
-        """
         
         if ListOfImages[i]:
             PixArr, F2Sinds = Image2PixArr(ListOfImages[i])
@@ -2774,6 +2768,69 @@ def PlotSitkImage(Image, Colormap='grayscale', dpi=80, LogToConsole=False):
 
 
 def PlotImageAndLabmapIm(DicomIm, LabmapIm, dpi=80, LogToConsole=False):
+    """ 
+     
+    """
+    
+    import matplotlib.pyplot as plt
+    from ConversionTools import Image2PixArr
+    
+    DcmPixArr, DcmF2Sinds = Image2PixArr(DicomIm)
+    DcmF, DcmR, DcmC = DcmPixArr.shape
+    
+    LmapPixArr, LmapF2Sinds = Image2PixArr(LabmapIm)
+    LmapF, LmapR, LmapC = LmapPixArr.shape
+    
+    print(f'\nDcmPixArr.shape = {DcmPixArr.shape}')
+    print(f'DcmF2Sinds = {DcmF2Sinds}')
+    
+    print(f'\nLmapPixArr.shape = {LmapPixArr.shape}')
+    print(f'LmapF2Sinds = {LmapF2Sinds}')
+    
+    #if Colormap == 'color':
+    #    cmap = plt.cm.nipy_spectral
+    #else:
+    #    cmap = plt.cm.Greys_r
+    
+    # Colormap for labelmaps:
+    Cmap = plt.cm.nipy_spectral
+    #Cmap = plt.cm.hsv
+    #Cmap = plt.cm.gist_rainbow
+    
+    # Set the transparency of labelmaps to be overlaid over DICOMs:
+    #alpha = 0.2
+    alpha = 0.5
+    
+    # Set the number of subplot rows and columns:
+    Ncols = 1
+    Nrows = LmapF
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+        
+    n = 1 # initialised sub-plot number
+    
+    for f in range(LmapF):
+        ax = plt.subplot(Nrows, Ncols, n)
+        
+        # The DICOM slice number:
+        s = LmapF2Sinds[f]
+        
+        #ax.imshow(DcmPixArr[s], cmap=plt.cm.Greys_r)
+        ax.imshow(DcmPixArr[s], cmap=plt.cm.Greys_r, alpha=alpha)
+        
+        ax.imshow(LmapPixArr[f], cmap=Cmap, alpha=alpha)
+                
+        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+        ax.set_title(f'Frame = {f}, Slice {s}')
+                
+        n += 1 # increment sub-plot number
+        
+    return
+
+
+
+
+def PlotImageAndLabmapImBySeg_NOT_COMPLETE(DicomIm, LabmapImBySeg, dpi=80, LogToConsole=False):
     """ 
      
     """
@@ -3195,4 +3252,184 @@ def PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle=''):
             
             n += 1 # increment sub-plot number
         
+    return
+
+
+
+
+
+def PlotLabmapImBySeg(LabmapImBySeg, F2SindsBySeg, PlotTitle=''):
+    """ LabmapImBySeg can either be a list of labelmap images (as the variable 
+    name suggests), or a single labelmap image, and F2SindsBySeg can either be 
+    a list (for each segment) of a list (for each frame) of frame-to-slice 
+    indices, or it can be a list (for each frame) of frame-to-slice indices.
+    """
+    
+    from ConversionTools import ImageBySeg2PixArrBySeg
+    
+    PixArrBySeg, F2SindsBySeg = ImageBySeg2PixArrBySeg(LabmapImBySeg, 
+                                                       F2SindsBySeg)
+    
+    PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle)
+        
+    return
+
+
+
+
+
+
+def overlay(img1, img2, title=None, interpolation=None, sizeThreshold=128):
+    """
+    Description
+    -----------
+    Displays an overlay of two 2D images using matplotlib.pyplot.imshow().
+    
+    Source:
+    ******
+    https://github.com/SuperElastix/SimpleElastix/issues/79
+
+    Args
+    ----
+    img1 : np.array or sitk.Image
+        image to be displayed
+    img2 : np.array or sitk.Image
+        image to be displayed
+
+    Optional
+    --------
+    title : string
+        string used as image title
+        (default None)
+    interpolation : string
+        desired option for interpolation among matplotlib.pyplot.imshow options
+        (default nearest)
+    sizeThreshold : integer
+        size under which interpolation is automatically set to 'nearest' if all
+        dimensions of img1 and img2 are below
+        (default 128)
+    """
+    # Check for type of images and convert to np.array
+    if isinstance(img1, sitk.Image):
+        img1 = sitk.GetArrayFromImage(img1)
+    if isinstance(img2, sitk.Image):
+        img2 = sitk.GetArrayFromImage(img2)
+    if type(img1) is not type(img2) is not np.ndarray:
+        raise NotImplementedError('Please provide images as np.array or '
+                                  'sitk.Image.')
+    # Check for size of images
+    if not img1.ndim == img2.ndim == 2:
+        raise NotImplementedError('Only supports 2D images.')
+
+    if interpolation:
+        plt.imshow(img1, cmap='summer', interpolation=interpolation)
+        plt.imshow(img2, cmap='autumn', alpha=0.5, interpolation=interpolation)
+    elif max(max(img1.shape), max(img2.shape)) > sizeThreshold:
+        plt.imshow(img1, cmap='summer')
+        plt.imshow(img2, cmap='autumn', alpha=0.5)
+    else:
+        plt.imshow(img1, cmap='summer', interpolation='nearest')
+        plt.imshow(img2, cmap='autumn', alpha=0.5, interpolation='nearest')
+    plt.title(title)
+    plt.axis('off')
+    plt.show()
+    
+    return
+
+
+
+
+""" The next few functions from here:
+https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
+"""
+
+def PlotFixMovImages(FixInd, MovInd, FixPixArr, MovPixArr,
+                     FixTitle='Fixed image', MovTitle='Moving image'):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    import matplotlib.pyplot as plt
+    
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1, 2, figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(FixPixArr[FixInd,:,:], cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1, 2, 2)
+    plt.imshow(MovPixArr[MovInd,:,:], cmap=plt.cm.Greys_r);
+    plt.title(MovTitle)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return
+
+
+def PlotBlendedImage(Ind, alpha, FixIm, ResIm, PlotTitle='Blended image'):
+    """ Callback invoked by the IPython interact method for scrolling and 
+    modifying the alpha blending of an image stack of two images that 
+    occupy the same physical space. """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    plt.subplots(1, 1, figsize=(6,5))
+    
+    BlendedIm = (1.0 - alpha)*FixIm[:,:,Ind] + alpha*ResIm[:,:,Ind] 
+    plt.imshow(sitk.GetArrayViewFromImage(BlendedIm), cmap=plt.cm.Greys_r);
+    plt.title(PlotTitle)
+    plt.axis('off')
+    plt.show()
+    
+    return
+
+
+def StartPlot():
+    """ Callback invoked when the StartEvent happens, sets up our new data. """
+    global metric_values, multires_iterations
+    
+    metric_values = []
+    multires_iterations = []
+    
+    return
+
+
+def EndPlot():
+    """ Callback invoked when the EndEvent happens, do cleanup of data and 
+    figure. """
+    
+    global metric_values, multires_iterations
+    import matplotlib.pyplot as plt
+    
+    del metric_values
+    del multires_iterations
+    # Close figure, we don't want to get a duplicate of the plot latter on.
+    plt.close()
+    
+    return
+
+
+def PlotValues(RegMethod):
+    """ Callback invoked when the IterationEvent happens, update our data 
+    and display new figure. """
+    
+    global metric_values, multires_iterations
+    import matplotlib.pyplot as plt
+    from IPython.display import clear_output
+    
+    metric_values.append(RegMethod.GetMetricValue())                                       
+    # Clear the output area (wait=True, to reduce flickering), and plot current data
+    clear_output(wait=True)
+    # Plot the similarity metric values
+    plt.plot(metric_values, 'r')
+    plt.plot(multires_iterations, [metric_values[index] for index in multires_iterations], 'b*')
+    plt.xlabel('Iteration Number',fontsize=12)
+    plt.ylabel('Metric Value',fontsize=12)
+    plt.show()
+    
     return

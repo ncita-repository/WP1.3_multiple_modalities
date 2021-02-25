@@ -7,25 +7,6 @@ Created on Wed Nov 11 11:56:14 2020
 
 
 
-# Import packages and functions:
-#import os
-#import SimpleITK as sitk
-#import numpy as np
-#import time
-
-##import importlib
-##import GeneralTools
-##importlib.reload(GeneralTools)
-##import DicomTools
-##importlib.reload(DicomTools)
-
-#from GeneralTools import ItemsUniqueToWithin
-#from DicomTools import ImportDicoms
-
-
-
-
-
 """
 ******************************************************************************
 ******************************************************************************
@@ -426,7 +407,7 @@ def GetImageInfo(Image, LogToConsole=False):
     #importlib.reload(GeneralTools)
     from GeneralTools import UniqueItems
     
-    PixArr, F2Sinds = Image2PixArr(LabmapIm=Image)
+    PixArr, F2Sinds = Image2PixArr(Image)
     
     #print(f'\nPixArr.shape = {PixArr.shape}')
     #print(f'F2Sinds = {F2Sinds}')
@@ -473,7 +454,7 @@ def GetImageInfo(Image, LogToConsole=False):
             Freq, Bins = np.histogram(Vals, bins=10, range=[MinVal, MaxVal])
             for b, f in zip(Bins[1:], Freq):
                 #print(round(b, 1), ' '.join(np.repeat('*', f)))
-                print(f'      {round(b, 2)} : {f}')
+                print(f'      {round(b, 2)} - {f}')
             
             print('\n      Distribution of values near 0:')
             Vals = PixArr.flatten()
@@ -483,7 +464,7 @@ def GetImageInfo(Image, LogToConsole=False):
             Freq, Bins = np.histogram(Vals, bins=10, range=[MinVal, MaxVal])
             for b, f in zip(Bins[1:], Freq):
                 #print(round(b, 1), ' '.join(np.repeat('*', f)))
-                print(f'      {round(b, 2)} : {f}')
+                print(f'      {round(b, 2)} - {f}')
             
             
         elif UniqueVals == None:
@@ -869,9 +850,91 @@ def SumAllLabmapIms(LabmapIms):
     return LMImsSumNpa
 
 
+
+
+
+
+
+
+def FindSuitableThresh(BinaryPixArr, NonBinaryPixArr, LogToConsole=False):
+    """
+    Find a suitable threshold level to binary threshold a 3D SimpleITK image 
+    such that the distribution of zeros and ones that would follow from binary
+    thresholding would be similar to the distribution of zeros and ones prior
+    to the operation that led to a non-binary image.
     
-
-
+    Inputs:
+    ******
+    
+    BinaryPixArr : Numpy array 
+        The binary pixel array (e.g. prior to any operation that converts its 
+        data type to float).
+        
+    NonBinaryPixArr : Numpy array
+        The non-binary pixel array that evolved from BinaryPixArr (i.e. through 
+        some operation that converted the data type to float).
+      
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    Thresh : float
+        A threshold level that when applied to NonBinaryPixArr should result in 
+        a similar distribution of zeros and ones as in BinaryPixArr.
+    """
+    
+    import numpy as np
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of FindSuitableThresh():')
+        
+    NumOfOnes_B = np.count_nonzero(BinaryPixArr)
+            
+    Vals_NB = NonBinaryPixArr.flatten()
+    MinVal = min(Vals_NB)
+    MaxVal = max(Vals_NB)
+    
+    Freq, Bins = np.histogram(Vals_NB, bins=1000, range=[MinVal, MaxVal])
+    
+    if False:#LogToConsole:
+        for b, f in zip(Bins[1:], Freq):
+            print(f'      {round(b, 8)} - {f}')
+    
+    
+    """ The cumulative sum of the frequencies in reverse order: """
+    CumSumFreq = np.cumsum(np.flip(Freq))
+    
+    AbsDiffs = np.abs(CumSumFreq - NumOfOnes_B)
+    
+    RevInd = np.where(AbsDiffs == np.min(AbsDiffs))[0][0]
+    
+    Ind = len(CumSumFreq) - RevInd - 1
+    
+    Thresh = Bins[Ind]
+    
+    if LogToConsole:
+        print(f'\nTarget number of ones = {NumOfOnes_B}')
+        print(f'\nCumSumFreq[0:RevInd+5] = {CumSumFreq[:RevInd+5]}')
+        print(f'\nAbsDiffs[0:RevInd+5] = {AbsDiffs[:RevInd+5]}')
+        print(f'\nInd = {Ind}')
+        print(f'Bins[{Ind}] = {Bins[Ind]}')
+    
+    BinarisedPixArr = (NonBinaryPixArr > Thresh).astype(np.int_)
+    
+    NumOfOnes_BNB = np.count_nonzero(BinarisedPixArr)
+    
+    if LogToConsole:
+        print(f'There are {NumOfOnes_B} ones in the binary pixel array. ',
+              f'\nThresholding the non-binary pixel array at {round(Thresh,3)}',
+              f'would result in {NumOfOnes_BNB} ones (difference of',
+              f'{abs(NumOfOnes_BNB - NumOfOnes_B)}).')
+        print('-'*120)
+    
+    return Thresh
 
 
 
@@ -1196,7 +1259,8 @@ def ResampleImage(Image, RefImage, Interpolation, LogToConsole=False):
 
 
 def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation, 
-                     Variance, ThreshLevel, LogToConsole=False):
+                     PreResVariance, #PostResThresh, 
+                     LogToConsole=False):
     """
     Resample a 3D SimpleITK image representing a binary labelmap using
     either a NearestNeighbor or LabelGaussian interpolator, or by Gaussian
@@ -1229,15 +1293,15 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
         
-    Variance : tuple of floats (optional; (1.0, 1.0, 1.0) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken.
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        labelmap image is to be Gaussian blurred prior to resampling.
         
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if a Gaussian blurring + linearly resampling approach is
-        taken.  The threshold value will be ThreshLevel*M, where M is the 
-        maximum intensity value of the image.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to binarise the labelmap image following 
+    #    resampling using a non-label (e.g. linear) interpolator. Example use is
+    #    on an image if Gaussian blurring + linearly resampling approach is
+    #    taken.  
         
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -1313,12 +1377,15 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
               + '\'BlurThenLinear\'.'
         
         raise Exception(msg)
-        
+    
+    
+    """ Store the interpolation set as metadata: """
+    LabmapIm.SetMetaData("ResInterpSet", Interpolation)
     
     if Interpolation in ['NearestNeighbor', 'LabelGaussian']:
         if LogToConsole:
-            print('   Attempting to resampling LabmapIm using the',
-                  f'{Interpolation} labelmap interpolator...')
+            print('Attempting to resampling LabmapIm using the',
+                  f'{Interpolation} labelmap interpolator...\n')
             
         """ Attempt to resample LabmapIm to the Target image's grid using the
         chosen labelmap interpolator. """
@@ -1326,11 +1393,14 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
                                     Interpolation=Interpolation)
         
         if LogToConsole:
-            print('\n   Image info for ResLabmapIm after resampling using',
-                  f' {Interpolation} interpolator:')
+            print('Image info for ResLabmapIm after resampling using',
+                  f'{Interpolation} interpolator:')
         
         PixID, PixIDTypeAsStr, UniqueVals,\
         ResF2Sinds = GetImageInfo(ResLabmapIm, LogToConsole)
+        
+        if LogToConsole:
+            print('')
         
         #print(f'\n   ResF2Sinds = {ResF2Sinds}')
         
@@ -1345,8 +1415,10 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
             is acceptable. """
         
         if ResF2Sinds == []:
-            print(f'   F2Sinds = {F2Sinds} \nbut ResF2Sinds = {ResF2Sinds}.',
-                  f'Try using the \'BlurThenLinear\' approach.')
+            print(f'There are {len(F2Sinds)} non-empty masks in the input',
+                  f'labelmap image but {len(ResF2Sinds)} non-empty frames in',
+                  f'the resampled labelmap image using {Interpolation}.',
+                  f'Try using the \'BlurThenLinear\' approach.\n')
             
             Interpolation = 'BlurThenLinear'
 
@@ -1354,9 +1426,14 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
     
     if Interpolation == 'BlurThenLinear':
         if LogToConsole:
-            print(f'   Resampling LabmapIm by applying Gaussian blur,',
+            print(f'\nResampling LabmapIm by applying Gaussian blur,',
                   'resampling using a linear interpolator, then binary',
                   'thresholding...')
+        
+        
+        """ The binary pixel array: """
+        PixArr_B, F2Sinds = Image2PixArr(LabmapIm)
+            
         
         """ Convert LabmapIm from 32-bit unsigned integer to float.
         Note:  Result of resampling results in empty labelmap unless
@@ -1365,7 +1442,7 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
                                          NewPixelType='sitkFloat32')
         
         if LogToConsole:
-            print('\n   Image info for LabmapIm after converting to float:')
+            print('\nImage info for LabmapIm after converting to float:')
             
             PixID, PixIDTypeAsStr, UniqueVals,\
             F2Sinds = GetImageInfo(LabmapIm, LogToConsole)
@@ -1387,10 +1464,10 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
         """
         
         if LogToConsole:
-            print(f'\n   SpacingsRatio = {SpacingsRatio}')
+            print(f'\nSpacingsRatio = {SpacingsRatio}')
               
         """ Gaussian blur the image. """
-        LabmapIm = GaussianBlurImage(Im=LabmapIm, Variance=Variance)
+        LabmapIm = GaussianBlurImage(Im=LabmapIm, Variance=PreResVariance)
         
         # Use the RecursiveGaussian image filter:
         #ResLabmapIm = RecursiveGaussianBlurImage(ResLabmapIm, 
@@ -1398,70 +1475,102 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
         #                                         Direction=2)
         
         if LogToConsole:
-            print(f'\n   Image info for LabmapIm after applying Gaussian blur:')
+            print(f'\nImage info for LabmapIm after applying Gaussian blur:')
             
             PixID, PixIDTypeAsStr, UniqueVals,\
             F2Sinds = GetImageInfo(LabmapIm, LogToConsole)
         
         if LogToConsole:
-            print('\n   LabmapIm prior to resampling:')
-            print(f'      LabmapIm.GetSize() = {LabmapIm.GetSize()}')
-            print(f'      LabmapIm.GetSpacing() = {LabmapIm.GetSpacing()}')
-            print(f'      TrgImage.GetSize() = {TrgImage.GetSize()}')
-            print(f'      TrgImage.GetSpacing() = {TrgImage.GetSpacing()}')
+            print('\nLabmapIm prior to resampling:')
+            print(f'   LabmapIm.GetSize() = {LabmapIm.GetSize()}')
+            print(f'   LabmapIm.GetSpacing() = {LabmapIm.GetSpacing()}')
+            print(f'   TrgImage.GetSize() = {TrgImage.GetSize()}')
+            print(f'   TrgImage.GetSpacing() = {TrgImage.GetSpacing()}')
             
         """ Linearly resample LabmapIm to the Target image's grid. """
         ResLabmapIm = ResampleImage(Image=LabmapIm, RefImage=TrgImage, 
                                     Interpolation='Linear')
         
         if LogToConsole:
-            print('\n   Image info for ResLabmapIm after resampling using a',
+            print('\nImage info for ResLabmapIm after resampling using a',
                   'linear interpolator:')
             
         PixID, PixIDTypeAsStr, UniqueVals,\
         F2Sinds = GetImageInfo(ResLabmapIm, LogToConsole)
         
         
+        """ The non-binary pixel array following blur + linear resampling: """
+        PixArr_NB, F2Sinds = Image2PixArr(ResLabmapIm)
+            
+        """Find suitable threshold value that approximately preserves the
+        number of pre-blurred + linear resampled truth values: """
+        Thresh = FindSuitableThresh(BinaryPixArr=PixArr_B, 
+                                    NonBinaryPixArr=PixArr_NB,
+                                    LogToConsole=LogToConsole)
+        
         """ Binary threshold the image. """
         #ThreshValue = ThreshLevel*max(UniqueVals)
-        ThreshValue = ThreshLevel
+        #ThreshValue = ThreshLevel
         
         ResLabmapIm = BinaryThresholdImage(Im=ResLabmapIm, 
-                                           Thresh=ThreshValue)
+                                           #Thresh=PostResThresh)
+                                           Thresh=Thresh) 
         
         if LogToConsole:
-            print('\n   Image info for ResLabmapIm after binary thresholding',
-                  f'at {ThreshValue}:')
+            print('\nImage info for ResLabmapIm after binary thresholding',
+                  #f'at {PostResThresh}:')
+                  f'at {Thresh}:')
         
         PixID, PixIDTypeAsStr, UniqueVals,\
         F2Sinds = GetImageInfo(ResLabmapIm, LogToConsole)
 
-    
+        
     
     """ Ensure that ResLabmapIm is a 32-bit unsigned integer (PixID = 5). """
     if PixID != 5: 
         if LogToConsole:
-            print(f'\n   ResLabmapIm has PixelID = {PixID} ({PixIDTypeAsStr})).')
+            print(f'\nResLabmapIm has PixelID = {PixID} ({PixIDTypeAsStr})).')
         
         """ Convert ResLabmapIm from float to 32-bit unsigned integer. """
         ResLabmapIm = ConvertImagePixelType(Image=ResLabmapIm, 
                                             NewPixelType='sitkUInt32')
         
         if LogToConsole:
-            print('\n   Image info for ResLabmapIm after converting to 32-bit',
+            print('\nImage info for ResLabmapIm after converting to 32-bit',
                   'unsigned int:')
+            
+        #print(f'\nThe metadata keys are:', ResLabmapIm.GetMetaDataKeys())
             
         PixID, PixIDTypeAsStr, UniqueVals,\
         F2Sinds = GetImageInfo(ResLabmapIm, LogToConsole)
     
     
     """ Convert ResLabmapIm to a pixel array. """
-    ResPixArr, ResF2Sinds = Image2PixArr(LabmapIm=ResLabmapIm)
+    ResPixArr, ResF2Sinds = Image2PixArr(ResLabmapIm)
+    
+    
+    """ Store the interpolation used as metadata (which may be the same or 
+    different from the interpolation set): """
+    ResLabmapIm.SetMetaData("ResInterpUsed", Interpolation)
     
     if LogToConsole:
-        print('\n  After converting ResLabmapIm to a pixel array:')
-        print(f'   ResPixArr.shape = {ResPixArr.shape}')
-        print(f'   ResF2Sinds = {ResF2Sinds}')
+        print(f'\nThe key "ResInterpUsed" with value "{Interpolation}" was',
+              'added to the metadata of ResLabmapIm. \nThe metadata keys are:',
+              ResLabmapIm.GetMetaDataKeys())
+    
+    if Interpolation == 'BlurThenLinear':
+        """ Store the threshold used as metadata: """
+        ResLabmapIm.SetMetaData("PostResThreshUsed", f"{Thresh}")
+        
+        if LogToConsole:
+            print(f'\nThe key "PostResThreshUsed" with value "{Thresh}" was',
+                  'added to the metadata of ResLabmapIm. \nThe metadata keys:',
+                  ResLabmapIm.GetMetaDataKeys())
+            
+    if LogToConsole:
+        print('\nAfter converting ResLabmapIm to a pixel array:')
+        print(f'ResPixArr.shape = {ResPixArr.shape}')
+        print(f'ResF2Sinds = {ResF2Sinds}')
         print('-'*120)
         
     return ResLabmapIm, ResPixArr, ResF2Sinds
@@ -1474,7 +1583,7 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
 
 
 def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage, 
-                          Interpolation, Variance, ThreshLevel,
+                          Interpolation, PreResVariance, #PostResThresh,
                           LogToConsole=False):
     """
     Resample a list 3D SimpleITK images representing binary labelmaps using
@@ -1510,15 +1619,16 @@ def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage,
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
         
-    Variance : tuple of floats (optional; (1.0, 1.0, 1.0) by default)
-        A tuple (for each dimension) of the variance to be applied if a 
-        Gaussian blurring + linearly resampling approach is taken.
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
         
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if a Gaussian blurring + linearly resampling approach is
-        taken.  The threshold value will be ThreshLevel*M, where M is the 
-        maximum intensity value of the image.
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to binarise the labelmap image following 
+    #    resampling using a non-label (e.g. linear) interpolator. Example use is
+    #    on an image if Gaussian blurring + linearly resampling approach is
+    #    taken.  
         
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -1554,7 +1664,8 @@ def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage,
         ResLabmapIm, ResPixArr,\
         ResF2Sinds = ResampleLabmapIm(LabmapImByRoi[r], F2SindsByRoi[r], 
                                       SrcImage, TrgImage, Interpolation, 
-                                      Variance, ThreshLevel, LogToConsole)
+                                      PreResVariance, #PostResThresh, 
+                                      LogToConsole)
         
         ResLabmapImByRoi.append(ResLabmapIm)
         ResPixArrByRoi.append(ResPixArr)
@@ -1571,7 +1682,175 @@ def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage,
 
 
 
-def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
+
+
+def RegisterImages_OLD(FixIm, MovIm, Tx='bspline', MaxNumOfIters=512,
+                   LogToConsole=False):
+    """
+    Register two 3D SimpleITK images using SimpleElastix.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+        
+    Tx : string (optional; 'bspline' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+    
+    MaxNumOfIters : integer
+        The maximum number of iterations to be used during optimisation.
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    RegImFilt : Elastix image filter
+        Elastix image registration transformation filter used to register/
+        transform MovIm to FixIm.
+    """
+    
+    import SimpleITK as sitk
+    import time
+    
+    if not Tx in ['rigid', 'affine', 'bspline']:
+        msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
+              + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
+        
+        raise Exception(msg)
+        
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    """ Initiate RegImFilt: """
+    RegImFilt = sitk.ElastixImageFilter()
+    RegImFilt.LogToConsoleOn() # <-- no output in Jupyter
+    #RegImFilt.LogToConsoleOff() 
+    RegImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+    
+    """ Define the fixed and moving images: """
+    RegImFilt.SetFixedImage(FixIm)
+    RegImFilt.SetMovingImage(MovIm)
+    
+    """ Get the default parameter map template for the chosen transformation: """
+    #RegImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
+    #ParamMap = sitk.GetDefaultParameterMap('affine')
+    #ParamMap = sitk.GetDefaultParameterMap(Tx)
+    
+    if Tx == 'bspline':
+        """ First register using an affine transformation: """
+        ParamMap = sitk.GetDefaultParameterMap('affine')
+    else:
+        ParamMap = sitk.GetDefaultParameterMap(Tx)
+        
+    
+    """ Re-assign some parameters: """
+    ParamMap['AutomaticTransformInitialization'] = ['true']
+    ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+    ParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+    ParamMap['WriteIterationInfo'] = ['true']
+    #ParamMap['MaximumNumberOfIterations'] = ['512']
+    ParamMap['MaximumNumberOfIterations'] = [str(MaxNumOfIters)]
+    ParamMap['UseDirectionCosines'] = ['true']
+    
+    """ 29/05: Trying this instead of trying to change it for Transformix """
+    #ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+    
+    """ 13/02/21 Try https://github.com/SuperElastix/SimpleElastix/issues/70 """
+    #ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
+    
+    
+    if Tx == 'bspline':
+        """ 22/02/21 Try parameters in Appendix A in "Multimodal image 
+        registration by edge attraction and regularization using a B-spline 
+        grid" by Klein et al 2011; and from the SimpleElastix docs:
+        https://simpleelastix.readthedocs.io/ParameterMaps.html """
+        
+        #ParamMap['MaximumNumberOfIterations'] = ['250']
+        #ParamMap['MaximumNumberOfIterations'] = ['512']
+        ParamMap['MaximumNumberOfIterations'] = [str(MaxNumOfIters)]
+        #ParamMap['FinalGridSpacingInPhysicalUnits'] = ['20']
+        #ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
+        ParamMap['Registration'] = ['MultiResolutionRegistration']
+        ParamMap['Optimizer'] = ['AdaptiveStochasticGradientDescent']
+        ParamMap['Transform'] = ['BSplineTransform']
+        ParamMap['FixedImagePyramid'] = ['FixedRecursiveImagePyramid']
+        ParamMap['MovingImagePyramid'] = ['MovingRecursiveImagePyramid']
+        ParamMap['NumberOfResolutions'] = ['4']
+        ParamMap['Metric'] = ['AdvancedMattesMutualInformation']
+        ParamMap['NumberOfHistogramBins'] = ['32']
+        ParamMap['NumberOfSpatialSamples'] = ['2048']
+        ParamMap['NewSamplesEveryIteration'] = ['true']
+        ParamMap['ImageSampler'] = ['RandomCoordinate']
+        ParamMap['Interpolator'] = ['BSplineInterpolator']
+        ParamMap['BSplineInterpolatorOrder'] = ['1']
+        ParamMap['FinalBSplineInterpolatorOrder'] = ['3']
+        ParamMap['Resampler'] = ['DefaultResampler']
+        ParamMap['DefaultPixelValue'] = ['0']
+        ParamMap['FixedInternalImagePixelType'] = ['float']
+        ParamMap['UseDirectionCosines'] = ['true']
+        ParamMap['MovingInternalImagePixelType'] = ['float']
+        ParamMap['HowToCombineTransforms'] = ['Compose']
+    
+    
+    # Print the parameters:
+    #for keys,values in ElastixParamMap.items():
+    #    print(keys, '=', values)
+        
+    """ Set the parameter map: """
+    RegImFilt.SetParameterMap(ParamMap)
+    
+    if LogToConsole:
+        print(f'Performing image registration using {Tx} transform...\n')
+        
+    #RegImFilt.AddCommand(sitk.sitkProgressEvent, 
+    #                     lambda: print("\rProgress: {0:03.1f}%...".format(100*RegImFilt.GetProgress()),end=''))
+    # 'ElastixImageFilter' object has no attribute 'AddCommand'
+    
+    """ Register the 3D images: """
+    RegImFilt.Execute()
+    
+    """ Get the registered image: """
+    RegIm = RegImFilt.GetResultImage()
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to perform image registration.\n')
+        #print('\n', RegImFilt.GetTransform()) # 'ElastixImageFilter' object has 
+        ## no attribute 'GetTransform'
+        #print('\n', RegImFilt.PrintParameterMap()) # <SimpleITK.SimpleITK.ElastixImageFilter; 
+        # proxy of <Swig Object of type 'itk::simple::ElastixImageFilter::Self *' 
+        # at 0x00000220072E8B70> >
+    
+    
+    return RegIm, RegImFilt
+    #return RegIm, RegImFilt, ParamMap
+    
+    
+    
+    
+    
+
+
+
+
+def RegisterImages(FixIm, MovIm, Tx='affine', MaxNumOfIters='default',
+                   LogToConsole=False):
     """
     Register two 3D SimpleITK images using SimpleElastix.
     
@@ -1590,6 +1869,11 @@ def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
+    
+    MaxNumOfIters : string (optional; 'default' by default)
+        If 'default', the maximum number of iterations used during optimisation
+        will be whatever is set by default in the parameter map of choice.  
+        If != 'default' it must be a string representation of an integer.
         
     LogToConsole : boolean (optional; False by default)
         Denotes whether intermediate results will be logged to the console.
@@ -1601,8 +1885,24 @@ def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
     RegIm : SimpleITK image
         The 3D registered image.
         
-    RegImFilt : SimpleITK image filter
-        Elastix image transformation filter used to transform MovIm to FixIm.
+    RegImFilt : Elastix image filter
+        Elastix image registration transformation filter used to register/
+        transform MovIm to FixIm.
+        
+        
+    Notes:
+    *****
+    
+    29/05/20: Trying this instead of trying to change it for Transformix
+    ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+    
+    13/02/21 Try https://github.com/SuperElastix/SimpleElastix/issues/70
+    ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
+    
+    22/02/21 Try parameters in Appendix A in "Multimodal image registration by 
+    edge attraction and regularization using a B-spline grid" by Klein et al 
+    2011; and from the SimpleElastix docs:
+    https://simpleelastix.readthedocs.io/ParameterMaps.html
     """
     
     import SimpleITK as sitk
@@ -1614,61 +1914,87 @@ def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
         
         raise Exception(msg)
         
-    # Start timing:
-    times = []
-    times.append(time.time())
     
-    # Initiate RegImFilt:
+    """ Initiate RegImFilt: """
     RegImFilt = sitk.ElastixImageFilter()
-    #RegImFilt.LogToConsoleOn() # <-- no output in Jupyter
-    RegImFilt.LogToConsoleOff() 
-    RegImFilt.LogToFileOn() # <-- output's elastix.log ONLY ONCE per kernel in Jupyter
+    if LogToConsole:
+        RegImFilt.LogToConsoleOn() # no output in Jupyter
+    else:
+        RegImFilt.LogToConsoleOff() 
+    RegImFilt.LogToFileOn() # output's elastix.log ONLY ONCE per kernel in Jupyter
     
-    # Define the fixed and moving images:
     RegImFilt.SetFixedImage(FixIm)
     RegImFilt.SetMovingImage(MovIm)
     
-    # Get the default parameter map template for the chosen transformation:
+    """ Get the default parameter map for the chosen transformation: """
     #RegImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
     #ParamMap = sitk.GetDefaultParameterMap('affine')
     ParamMap = sitk.GetDefaultParameterMap(Tx)
+        
     
-    # Re-assign some parameters:
+    """ Add/modify parameters: """
     ParamMap['AutomaticTransformInitialization'] = ['true']
     ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
-    ParamMap['WriteIterationInfo'] = ['true']
-    ParamMap['MaximumNumberOfIterations'] = ['512']
+    ParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+    #ParamMap['DefaultPixelValue'] = ['0']
+    ParamMap['BSplineInterpolatorOrder'] = ['1']
+    #ParamMap['FinalBSplineInterpolatorOrder'] = ['3'] # default for affine and bspline
+    #ParamMap['FixedImagePyramid'] = ['FixedSmoothingImagePyramid'] # default for affine and bspline
+    #ParamMap['MovingImagePyramid'] = ['MovingSmoothingImagePyramid'] # default for affine and bspline
+    #ParamMap['FixedImagePyramid'] = ['FixedRecursiveImagePyramid']
+    #ParamMap['MovingImagePyramid'] = ['MovingRecursiveImagePyramid']
+    ParamMap['FixedInternalImagePixelType'] = ['float']
+    ParamMap['MovingInternalImagePixelType'] = ['float']
+    ParamMap['HowToCombineTransforms'] = ['Compose']
+    #ParamMap['ImageSampler'] = ['RandomCoordinate'] # default for affine and bspline
+    #ParamMap['Interpolator'] = ['LinearInterpolator'] # default for affine
+    #ParamMap['Interpolator'] = ['BSplineInterpolator'] # default for bspline
+    #ParamMap['MaximumNumberOfIterations'] = ['256'] # default for affine
+    #ParamMap['MaximumNumberOfIterations'] = ['512'] # default for bspline
+    if MaxNumOfIters != 'default':
+        ParamMap['MaximumNumberOfIterations'] = [MaxNumOfIters]
+    #ParamMap['Metric'] = ['AdvancedMattesMutualInformation'] # default for affine
+    #ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+    #        'TransformBendingEnergyPenalty'] # default for bspline
+    #ParamMap['NewSamplesEveryIteration'] = ['true'] # default for bspline
+    ParamMap['NumberOfHistogramBins'] = ['32']
+    #ParamMap['NumberOfResolutions'] = ['4'] # default for affine and bspline
+    #ParamMap['NumberOfSpatialSamples'] = ['2048'] # default for affine and bspline
+    #ParamMap['Optimizer'] = ['AdaptiveStochasticGradientDescent'] # default for affine and bspline
+    #ParamMap['Registration'] = ['MultiResolutionRegistration'] # default for affine
+    #ParamMap['Registration'] = ['MultiMetricResolutionRegistration'] # default for bspline
+    #ParamMap['Resampler'] = ['DefaultResampler'] # default for affine and bspline
+    #ParamMap['Transform'] = ['AffineTransform'] # default for affine
+    #ParamMap['Transform'] = ['BSplineTransform'] # default for bspline
     ParamMap['UseDirectionCosines'] = ['true']
-    """ 29/05: Trying this instead of trying to change it for Transformix """
-    #ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+    ParamMap['WriteIterationInfo'] = ['true']
     
-    """ 13/02/21 Try https://github.com/SuperElastix/SimpleElastix/issues/70 """
-    #ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
     
     # Print the parameters:
-    #for keys,values in ElastixParamMap.items():
+    #for keys,values in ParamMap.items():
     #    print(keys, '=', values)
         
-    # Set the parameter map:
+    """ Set the parameter map: """
     RegImFilt.SetParameterMap(ParamMap)
     
     if LogToConsole:
-        print('\nPerforming registration...')
+        print(f'Performing image registration using {Tx} transform...\n')
         
-    #RegImFilt.AddCommand(sitk.sitkProgressEvent, 
-    #                     lambda: print("\rProgress: {0:03.1f}%...".format(100*RegImFilt.GetProgress()),end=''))
-    # 'ElastixImageFilter' object has no attribute 'AddCommand'
     
-    # Register the 3D images:
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    """ Register the 3D images: """
     RegImFilt.Execute()
     
-    # Get the registered image:
+    """ Get the registered image: """
     RegIm = RegImFilt.GetResultImage()
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if LogToConsole:
-        print(f'\n*Took {Dtime} s to register the 3D image stacks.')
+        print(f'*Took {Dtime} s to perform image registration.\n')
         #print('\n', RegImFilt.GetTransform()) # 'ElastixImageFilter' object has 
         ## no attribute 'GetTransform'
         #print('\n', RegImFilt.PrintParameterMap()) # <SimpleITK.SimpleITK.ElastixImageFilter; 
@@ -1684,9 +2010,14 @@ def RegisterImages(FixIm, MovIm, Tx='affine', LogToConsole=False):
 
 
 
-def TransformImage(Im, RegImFilt, Interpolation='Default'):
+
+
+
+def TransformImage(Im, RegImFilt, Interpolation='NearestNeighbor',
+                   LogToConsole=False):
     """
-    Transform a 3D SimpleITK image using SimpleElastix.
+    Transform a 3D SimpleITK image using the registration transformation filter
+    in SimpleElastix.
     
     Inputs:
     ******
@@ -1697,14 +2028,16 @@ def TransformImage(Im, RegImFilt, Interpolation='Default'):
     RegImFilt : SimpleITK image filter
         Elastix image transformation filter used to perform image registration.
         
-    Interpolation : string (optional; 'Default' by default)
-        The interpolator to be used for resampling.  At present the only two
-        accepatable values are:
-        - 'Default' (or 'default') which leaves unchanged whatever interpolator
-        has been set in RegImFilt
-        - 'NearestNeighbor' (or 'NearestNeighbour' or 'nearestneighbor' or 
-        'nearestneighbour')
-        
+    Interpolation : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for resampling when transforming the input
+        labelmap image(s).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+    
         
     Outputs:
     *******
@@ -1721,7 +2054,10 @@ def TransformImage(Im, RegImFilt, Interpolation='Default'):
     
     import SimpleITK as sitk
             
-            
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print(f'Results of TransformImage():')
+        
     # Initiate TransformixImageFilter:
     TxImFilt = sitk.TransformixImageFilter()
     #TxImFilt.LogToConsoleOn() # <-- no output in Jupyter
@@ -1732,31 +2068,40 @@ def TransformImage(Im, RegImFilt, Interpolation='Default'):
     
     # Get the transform parameter map. Start by getting the transfer parameter 
     # mapused for the registration (= ElastixParamMap):
-    #TxParamMap = RegImFilt.GetParameterMap() 
+    TxParamMap = RegImFilt.GetParameterMap()
     
     # Set the parameter map:
     #TxImFilt.SetTransformParameterMap(RegImFilt.GetTransformParameterMap())
+    
+    """ Get the parameter map that was used for image registration: """
     TxMap = RegImFilt.GetTransformParameterMap()
     
-    #print(f'\nTxMap[0]["ResampleInterpolator"] = {TxMap[0]["ResampleInterpolator"]}')
+    if LogToConsole:
+        print(f'TxParamMap[0]["Interpolator"] = {TxParamMap[0]["Interpolator"]}\n')
+        print(f'TxMap[0]["ResampleInterpolator"] = {TxMap[0]["ResampleInterpolator"]}\n')
+    
     
     if Interpolation == 'NearestNeighbor':
         interp = TxMap[0]["ResampleInterpolator"]
         
         TxMap[0]["ResampleInterpolator"] = ["FinalNearestNeighborInterpolator"]
         
-        print(f'\nThe resample interpolator has been changed from {interp} to',
-              '\'FinalNearestNeighborInterpolator\'')
+        if LogToConsole:
+            print(f'The resample interpolator has been changed from {interp}',
+                  'to \'FinalNearestNeighborInterpolator\'\n')
         
     TxImFilt.SetTransformParameterMap(TxMap)
     
     # Set up for computing deformation field:
     #TxImFilt.ComputeDeformationFieldOn()
     
-    # Transform Im:
+    """ Transform Im: """
     TxImFilt.Execute()
     
     TxIm = TxImFilt.GetResultImage()
+    
+    if LogToConsole:
+        print('-'*120)
     
     return TxIm
 
@@ -1765,124 +2110,14 @@ def TransformImage(Im, RegImFilt, Interpolation='Default'):
 
 
 
-def TransformLabmapIm_NOT_COMPLETE(LabmapIm, RegImFilt, FixImage=None, MovImage=None, 
-                      LogToConsole=False):
-    """
-    Resample a 3D SimpleITK image representing a labelmap. A 
-    NearestNeighbor interpolation will be applied initially.  If aliasing 
-    effects result in a empty labelmap, the labelmap will be Gaussian blurred,
-    linearly resampled and binary thresholded.  See Notes for more info.
-    
-    Inputs:
-    ******                      
-        
-    LabmapIm : SimpleITK images
-        The 3D labelmap image to be transformed. The labelmap shares the same 
-        image attributes as MovImage.
-    
-    RegImFilt : SimpleITK image filter
-        Elastix image transformation filter used to perform image registration.
-    
-    FixImage : SimpleITK image (optional; None by default)
-        The 3D image that MovImage will be registered to (e.g. SrcImage).
-    
-    MovImage : SimpleITK image (optional; None by default)
-        The 3D image that will be registered to FixImage (e.g. TrgImage).
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether some results will be logged to the console.
-        
-    
-    Outputs:
-    *******
-    
-    TxLabmapIm : SimpleITK images
-        LabmapIm transformed to the FixImage grid space.
-        
-    TxPixArr : Numpy arrays
-        The pixel array (converted from TxLabmapIm).
-    
-    TxF2Sinds : list of integers
-        The list (for each frame) of the frame-to-slice indices in TxPixArr.
-    """
-    
-    import time
-    from ConversionTools import Image2PixArr
-    from GeneralTools import UniqueItems
-    
-    if LogToConsole:
-        print('\n\n', '-'*120)
-        print(f'Results of TransformLabmapIm():')
-        
-    
-    """ Start timing. """
-    times = []
-    times.append(time.time())
-    
-    print('\n*Performing registration...')
-    
-    """ Register the images using an affine transformation. """
-    RegIm, RegImFilt = RegisterImages(FixIm=FixImage, MovIm=MovImage, 
-                                      Tx='affine', LogToConsole=False)
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'\n*Took {Dtime} s to register the 3D image stacks.')
-    
-        
-    """ Transform LabmapImByRoi to the Target image's grid to get the resampled
-    pixel array. """
-    TxLabmapImByRoi = []
-    TxPixArrByRoi = []
-    TxF2SindsByRoi = [] 
-    
-    for r in range(len(LabmapImByRoi)):
-        """ Transform SrcLabmapIm using RegImFilt. """
-        TxLabmapIm = TransformImage(Im=LabmapImByRoi[r], RegImFilt=RegImFilt,
-                                    Interpolation='Nearestneighbor')
-        
-        TxLabmapImByRoi.append(TxLabmapIm)
-        
-        """ Convert TxLabmapIm to a pixel array. """
-        TxPixArr, TxC2Sinds = Image2PixArr(LabmapIm=TxLabmapIm)
-        
-        TxPixArrByRoi.append(TxPixArr)
-        TxF2SindsByRoi.append(TxC2Sinds)
-            
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
-        
-        #TxF2SindsByRoi.append(F2Sinds)
-        
-        
-        if LogToConsole:
-            unique = UniqueItems(Items=TxPixArr, IgnoreZero=False)
-            print(f'\nThere are {len(unique)} unique items in TxPixArr',
-                  f'after transforming LabmapImByRoi[{r}]')
-            
-            F = TxPixArr.shape[0]
-            
-            print(f'\nThe segmentation has been registered to {F} frames/',
-                  f'contours: {TxC2Sinds}.')
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'\n*Took {Dtime} s to transform the 3D labelmap images using the',
-          'image registration transformation.')
-    
-    if LogToConsole:
-        print('-'*120)
-        
-    return TxLabmapImByRoi, TxPixArrByRoi, TxF2SindsByRoi
 
 
 
-
-
-
-
-def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage, 
-                           Tx='affine', ThreshLevel=0.75, LogToConsole=False):
+def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt, 
+                           Interpolation='NearestNeighbor', 
+                           ApplyPostTxBlur=True, PostTxVariance=(2,2,2),
+                           ApplyPostTxBinarise=True, #ThreshPostTx=0.75, 
+                           LogToConsole=False):
     """
     Resample a list 3D SimpleITK images representing labelmaps. A 
     NearestNeighbor interpolation will be applied initially.  If aliasing 
@@ -1899,25 +2134,32 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
     F2SindsByRoi : list of a list of integers
         The list (for each ROI) of a list (for each frame) of the frame-to-slice 
         indices of each labelmap image in LabmapImByRoi.
+    
+    RegImFilt : SimpleITK image filter
+        Elastix image registration transformation filter used to register/
+        transform MovIm to FixIm.
+    
+    Interpolation : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for resampling when transforming the input
+        labelmap image(s).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
         
-    FixImage : SimpleITK image
-        The 3D image that MovImage will be registered to (e.g. SrcImage).
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image(s) will be Gaussian blurred.
     
-    MovImage : SimpleITK image
-        The 3D image that will be registered to FixImage (e.g. TrgImage).
+    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
+    ApplyPostTxBinarise : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image(s) will be binary thresholded.
     
-    Tx : string (optional; 'affine' by default)
-        Denotes type of transformation to use for registration.  Acceptable 
-        values include:
-        - 'rigid'
-        - 'affine'
-        - 'bspline' (i.e. deformable)
-    
-    ThreshLevel : float (optional; 0.75 by default)
-        The proportion of the maximum value used to perform binary thresholding
-        on an image if a Gaussian blurring + linearly resampling approach is
-        taken.  The threshold value will be ThreshLevel*M, where M is the 
-        maximum intensity value of the image.
+    #ThreshPostTx : float (optional; 0.75 by default)
+    #    The threshold level used to binarise the labelmap image following 
+    #    transformation (or following transformation and Gaussian blurring).
     
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
@@ -1937,36 +2179,31 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
     TxF2SindsByRoi : list of a list of integers
         The list (for each ROI) of a list (for each frame) of the
         frame-to-slice indices in TxPixArrByRoi.
+    
+    
+    Notes:
+    *****
+    
+    If the transformed binary labelmap image is blurred, the resulting labelmap
+    image will be non-binary, so will need to be binarised. The threshold used
+    will be determined such that the resulting (re-) binarised image will have
+    a similar number of truth values (ones) as the pre-transformed (binary)
+    one.
     """
     
     import time
+    #import SimpleITK as sitk
     from ConversionTools import Image2PixArr, ConvertImagePixelType
     from GeneralTools import UniqueItems
     
     if LogToConsole:
         print('\n\n', '-'*120)
         print(f'Results of TransformLabmapImByRoi():')
-        
-    if not Tx in ['rigid', 'affine', 'bspline']:
-        msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
-              + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
-        
-        raise Exception(msg)
     
             
     """ Start timing. """
     times = []
     times.append(time.time())
-    
-    print('\n*Performing registration...')
-    
-    """ Register the images. """
-    RegIm, RegImFilt = RegisterImages(FixIm=FixImage, MovIm=MovImage, 
-                                      Tx=Tx, LogToConsole=False)
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'\n*Took {Dtime} s to register the 3D image stacks.')
     
         
     """ Transform LabmapImByRoi to the Target image's grid to get the resampled
@@ -1987,51 +2224,80 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
             
         """ Transform LabmapIm using RegImFilt. """
         TxLabmapIm = TransformImage(Im=LabmapIm, RegImFilt=RegImFilt,
-                                    Interpolation='Nearestneighbor')
+                                    Interpolation=Interpolation,
+                                    LogToConsole=LogToConsole)
         
         
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
-        print(f'\n*Took {Dtime} s to transform the {r}^th labelmap image',
-              'using the image registration transformation.')
+        print(f'*Took {Dtime} s to transform the {r}^th labelmap image',
+              'using the image registration transformation.\n')
         
         if LogToConsole:
             print(f'\n   Image info for LabmapIm after transformation:')
             
-        PixID, PixIDTypeAsStr, UniqueVals,\
+        PixID, PixIDTypeAsStr, UniqueValsPostTx,\
         F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
         
         
-        """ Gaussian blur TxLabmapIm (new 14/02/21) to reduce noise that makes
-        selection of an appropriate threshold for binarisation (below) very
-        difficult. """
-        TxLabmapIm = GaussianBlurImage(TxLabmapIm)
+        if ApplyPostTxBlur:
+            """ The binary pixel array: """
+            PixArr_B, F2Sinds = Image2PixArr(TxLabmapIm)
             
-        times.append(time.time())
-        Dtime = round(times[-1] - times[-2], 1)
-        print(f'\n*Took {Dtime} s to Gaussian blur the {r}^th labelmap image.\n')
-        
-        if LogToConsole:
-            print(f'\n   Image info for LabmapIm after Gaussian blur:')
+            """ Gaussian blur TxLabmapIm (new 14/02/21) to reduce noise that 
+            makes selection of an appropriate threshold for binarisation (below)
+            difficult. """
+            #TxLabmapIm = GaussianBlurImage(TxLabmapIm)
+            TxLabmapIm = GaussianBlurImage(TxLabmapIm, Variance=PostTxVariance)
+                
+            times.append(time.time())
+            Dtime = round(times[-1] - times[-2], 1)
+            print(f'*Took {Dtime} s to Gaussian blur the {r}^th labelmap image.\n')
             
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
+            if LogToConsole:
+                print(f'\n   Image info for LabmapIm after Gaussian blur:')
+                
+            PixID, PixIDTypeAsStr, UniqueValsPostBlur,\
+            F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
+            
+            """ The non-binary pixel array following transformation: """
+            PixArr_NB, F2Sinds = Image2PixArr(TxLabmapIm)
+            
         
         
-        """ Binary threshold TxLabmapIm. """
-        ThreshValue = ThreshLevel*max(UniqueVals)
-        ThreshValue = ThreshLevel
+            if ApplyPostTxBinarise:
+                """Find suitable threshold value that approximately preserves
+                the number of pre-transformed truth values: """
+                Thresh = FindSuitableThresh(BinaryPixArr=PixArr_B, 
+                                            NonBinaryPixArr=PixArr_NB,
+                                            LogToConsole=LogToConsole)
+                
+                
+                """ Binary threshold TxLabmapIm. """
+                #ThreshValue = ThreshLevel*max(UniqueVals)
+                #ThreshValue = ThreshLevel                
+                
+                TxLabmapIm = BinaryThresholdImage(Im=TxLabmapIm, 
+                                                  #Thresh=ThreshPostTx)
+                                                  Thresh=Thresh)
+                
+                if LogToConsole:
+                    print('\n   Image info for TxLabmapIm after binary',
+                          #f'thresholding at {ThreshPostTx}:')
+                          f'thresholding at {Thresh}:')
+                
+                PixID, PixIDTypeAsStr, UniqueVals,\
+                F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
+                
+                if LogToConsole:
+                    print(f'\n   Image info for LabmapIm after binary',
+                          'thresholding:')
+                    
+                PixID, PixIDTypeAsStr, UniqueVals,\
+                F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
+                
         
-        TxLabmapIm = BinaryThresholdImage(Im=TxLabmapIm, 
-                                          Thresh=ThreshValue)
-        
-        if LogToConsole:
-            print('\n   Image info for TxLabmapIm after binary thresholding',
-                  f'at {ThreshValue}:')
-        
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
         
         """ Ensure TxLabmapIm is a 32-bit unsigned integer (PixID = 5). """
         if PixID != 5: 
@@ -2051,11 +2317,21 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
             F2Sinds = GetImageInfo(TxLabmapIm, LogToConsole)
         
         
+        
+        if ApplyPostTxBlur and ApplyPostTxBinarise:
+            """ Store the threshold used as metadata: """
+            TxLabmapIm.SetMetaData("PostTxThreshUsed", f"{Thresh}")
+            
+            if LogToConsole:
+                print(f'\nThe key "PostTxThreshUsed" with value "{Thresh}"',
+                      'was added to the metadata of TxLabmapIm.')
+            
+        
         TxLabmapImByRoi.append(TxLabmapIm)
         
-    
+        
         """ Convert TxLabmapIm to a pixel array. """
-        TxPixArr, TxF2Sinds = Image2PixArr(LabmapIm=TxLabmapIm)
+        TxPixArr, TxF2Sinds = Image2PixArr(TxLabmapIm)
         
         TxPixArrByRoi.append(TxPixArr)
         TxF2SindsByRoi.append(TxF2Sinds)
@@ -2090,3 +2366,250 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, FixImage, MovImage,
         print('-'*120)
         
     return TxLabmapImByRoi, TxPixArrByRoi, TxF2SindsByRoi
+
+
+
+
+
+
+
+
+
+
+
+
+def RegisterImagesSitk(FixIm, MovIm, Tx='bspline', LogToConsole=False):
+    """
+    WARNING:  This is incomplete.
+    
+    Register two 3D SimpleITK images using SimpleITK.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+        
+    Tx : string (optional; 'bspline' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    RegMethod : SimpleITK registration method
+        SimpleITK image registration method used to register/transform MovIm to
+        FixIm.
+        
+    
+    Notes:
+    *****
+    
+    https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
+    
+    https://simpleitk.readthedocs.io/en/master/link_ImageRegistrationMethodBSpline3_docs.html
+    """
+    
+    import SimpleITK as sitk
+    import time
+    
+    import matplotlib.pyplot as plt
+    from ipywidgets import interact, fixed
+    from IPython.display import clear_output
+    
+    
+    def PlotFixMovImages(FixInd, MovInd, FixPixArr, MovPixArr):
+        """ Callback invoked by the interact IPython method for scrolling 
+        through the image stacks of the two images (moving and fixed). """
+        
+        # Create a figure with two subplots and the specified size.
+        plt.subplots(1, 2, figsize=(10,8))
+        
+        # Draw the fixed image in the first subplot.
+        plt.subplot(1, 2, 1)
+        plt.imshow(FixPixArr[FixInd,:,:], cmap=plt.cm.Greys_r);
+        plt.title('Fixed image')
+        plt.axis('off')
+        
+        # Draw the moving image in the second subplot.
+        plt.subplot(1, 2, 2)
+        plt.imshow(MovPixArr[MovInd,:,:], cmap=plt.cm.Greys_r);
+        plt.title('Moving image')
+        plt.axis('off')
+        
+        plt.show()
+    
+    
+    def PlotBlendedImage(Ind, alpha, FixIm, ResIm):
+        """ Callback invoked by the IPython interact method for scrolling and 
+        modifying the alpha blending of an image stack of two images that 
+        occupy the same physical space. """
+        BlendedIm = (1.0 - alpha)*FixIm[:,:,Ind] + alpha*ResIm[:,:,Ind] 
+        plt.imshow(sitk.GetArrayViewFromImage(BlendedIm), cmap=plt.cm.Greys_r);
+        plt.axis('off')
+        plt.show()
+    
+    
+    def StartPlot():
+        """ Callback invoked when the StartEvent happens, sets up our new data. """
+        global metric_values, multires_iterations
+        
+        metric_values = []
+        multires_iterations = []
+    
+    
+    def EndPlot():
+        """ Callback invoked when the EndEvent happens, do cleanup of data and 
+        figure. """
+        global metric_values, multires_iterations
+        
+        del metric_values
+        del multires_iterations
+        # Close figure, we don't want to get a duplicate of the plot latter on.
+        plt.close()
+    
+    
+    def PlotValues(RegMethod):
+        """ Callback invoked when the IterationEvent happens, update our data 
+        and display new figure. """
+        global metric_values, multires_iterations
+        
+        metric_values.append(RegMethod.GetMetricValue())                                       
+        # Clear the output area (wait=True, to reduce flickering), and plot current data
+        clear_output(wait=True)
+        # Plot the similarity metric values
+        plt.plot(metric_values, 'r')
+        plt.plot(multires_iterations, [metric_values[index] for index in multires_iterations], 'b*')
+        plt.xlabel('Iteration Number',fontsize=12)
+        plt.ylabel('Metric Value',fontsize=12)
+        plt.show()
+        
+     
+    def UpdateMultiresIterations():
+        """ Callback invoked when the sitkMultiResolutionIterationEvent happens, 
+        update the index into the metric_values list. """
+        global metric_values, multires_iterations
+        multires_iterations.append(len(metric_values))
+    
+    
+    if not Tx in ['rigid', 'affine', 'bspline']:
+        msg = f'The chosen transformation (Tx), {Tx}, is not one of the '\
+              + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
+        
+        raise Exception(msg)
+        
+    
+    
+    if False:
+        interact(PlotFixMovImages, 
+                 FixInd=(0,FixIm.GetSize()[2]-1), 
+                 MovInd=(0,MovIm.GetSize()[2]-1), 
+                 FixPixArr=fixed(sitk.GetArrayViewFromImage(FixIm)), 
+                 MovPixArr=fixed(sitk.GetArrayViewFromImage(MovIm)));
+    
+             
+    
+    if Tx == 'rigid':
+        sitkTx = sitk.Euler3DTransform()
+    elif Tx == 'affine':
+        sitkTx = sitk.AffineTransform(FixIm.GetDimension())
+    elif Tx == 'bspline':
+        sitkTx = sitk.BSplineTransform(FixIm.GetDimension())
+    
+    """ Initial alignment. """
+    if Tx in ['rigid', 'affine']:
+        InitialTx = sitk.CenteredTransformInitializer(FixIm, MovIm,
+                                                      #sitk.Euler3DTransform(),
+                                                      #sitk.AffineTransform(FixIm.GetDimension()),
+                                                      sitkTx,
+                                                      sitk.CenteredTransformInitializerFilter.GEOMETRY)
+    elif Tx == 'bspline':
+        TxDomainMeshSize = [2] * FixIm.GetDimension()
+        
+        InitialTx = sitk.BSplineTransformInitializer(FixIm, TxDomainMeshSize)
+    
+    
+    
+    ResMovIm = sitk.Resample(MovIm, FixIm, InitialTx, sitk.sitkLinear, 0.0, 
+                             MovIm.GetPixelID())
+    
+    
+    if False:
+        interact(PlotBlendedImage, Ind=(0,FixIm.GetSize()[2]-1), 
+                 alpha=(0.0,1.0,0.05), FixIm=fixed(FixIm), ResIm=fixed(ResMovIm));
+    
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    """ Registration. """
+    RegMethod = sitk.ImageRegistrationMethod()
+
+    # Similarity metric settings.
+    RegMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
+    RegMethod.SetMetricSamplingStrategy(RegMethod.RANDOM)
+    RegMethod.SetMetricSamplingPercentage(0.01)
+    
+    RegMethod.SetInterpolator(sitk.sitkLinear)
+    
+    # Optimizer settings.
+    RegMethod.SetOptimizerAsGradientDescent(learningRate=1.0, 
+                                            numberOfIterations=100, 
+                                            convergenceMinimumValue=1e-6, 
+                                            convergenceWindowSize=10)
+    RegMethod.SetOptimizerScalesFromPhysicalShift()
+    
+    # Setup for the multi-resolution framework.            
+    RegMethod.SetShrinkFactorsPerLevel(shrinkFactors = [4,2,1])
+    RegMethod.SetSmoothingSigmasPerLevel(smoothingSigmas=[2,1,0])
+    RegMethod.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+    
+    # Don't optimize in-place, we would possibly like to run this cell multiple 
+    # times.
+    RegMethod.SetInitialTransform(InitialTx, inPlace=False)
+    
+    # Connect all of the observers so that we can perform plotting during 
+    # registration.
+    RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+    RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+    RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, UpdateMultiresIterations) 
+    RegMethod.AddCommand(sitk.sitkIterationEvent, lambda: PlotValues(RegMethod))
+    
+    FinalTx = RegMethod.Execute(sitk.Cast(FixIm, sitk.sitkFloat32), 
+                                          sitk.Cast(MovIm, sitk.sitkFloat32))
+    
+    
+    """ Post registration analysis. """
+    print(f'Final metric value: {RegMethod.GetMetricValue()}')
+    print('Optimizer\'s stopping condition,',
+          f'{RegMethod.GetOptimizerStopConditionDescription()}')
+    
+    RegIm = sitk.Resample(MovIm, FixIm, FinalTx, sitk.sitkLinear, 0.0, 
+                          MovIm.GetPixelID())
+    
+    if False:
+        interact(PlotBlendedImage, Ind=(0,FixIm.GetSize()[2] - 1), 
+                 alpha=(0.0,1.0,0.05), FixIm=fixed(FixIm), ResIm=fixed(RegIm));
+
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if True:#LogToConsole:
+        print(f'*Took {Dtime} s to perform image registration.\n')
+
+    
+    return ResMovIm, RegIm
