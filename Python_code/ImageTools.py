@@ -1259,7 +1259,7 @@ def ResampleImage(Image, RefImage, Interpolation, LogToConsole=False):
 
 
 def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation, 
-                     PreResVariance, #PostResThresh, 
+                     PreResVar, #PostResThresh, 
                      LogToConsole=False):
     """
     Resample a 3D SimpleITK image representing a binary labelmap using
@@ -1293,7 +1293,7 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
         
-    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior to resampling.
         
@@ -1467,7 +1467,7 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
             print(f'\nSpacingsRatio = {SpacingsRatio}')
               
         """ Gaussian blur the image. """
-        LabmapIm = GaussianBlurImage(Im=LabmapIm, Variance=PreResVariance)
+        LabmapIm = GaussianBlurImage(Im=LabmapIm, Variance=PreResVar)
         
         # Use the RecursiveGaussian image filter:
         #ResLabmapIm = RecursiveGaussianBlurImage(ResLabmapIm, 
@@ -1583,7 +1583,7 @@ def ResampleLabmapIm(LabmapIm, F2Sinds, SrcImage, TrgImage, Interpolation,
 
 
 def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage, 
-                          Interpolation, PreResVariance, #PostResThresh,
+                          Interpolation, PreResVar, #PostResThresh,
                           LogToConsole=False):
     """
     Resample a list 3D SimpleITK images representing binary labelmaps using
@@ -1619,7 +1619,7 @@ def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage,
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
         
-    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -1664,7 +1664,7 @@ def ResampleLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, SrcImage, TrgImage,
         ResLabmapIm, ResPixArr,\
         ResF2Sinds = ResampleLabmapIm(LabmapImByRoi[r], F2SindsByRoi[r], 
                                       SrcImage, TrgImage, Interpolation, 
-                                      PreResVariance, #PostResThresh, 
+                                      PreResVar, #PostResThresh, 
                                       LogToConsole)
         
         ResLabmapImByRoi.append(ResLabmapIm)
@@ -2115,8 +2115,8 @@ def TransformImage(Im, RegImFilt, Interpolation='NearestNeighbor',
 
 def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt, 
                            Interpolation='NearestNeighbor', 
-                           ApplyPostTxBlur=True, PostTxVariance=(2,2,2),
-                           ApplyPostTxBinarise=True, #ThreshPostTx=0.75, 
+                           ApplyPostTxBlur=True, PostTxVar=(2,2,2),
+                           ApplyPostTxBin=True, #ThreshPostTx=0.75, 
                            LogToConsole=False):
     """
     Resample a list 3D SimpleITK images representing labelmaps. A 
@@ -2149,11 +2149,11 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt,
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image(s) will be Gaussian blurred.
     
-    PostTxVariance : tuple of floats (optional; (2,2,2) by default)
+    PostTxVar : tuple of floats (optional; (2,2,2) by default)
         The variance along all dimensions if Gaussian blurring the post-
         tranformed labelmap image(s).
         
-    ApplyPostTxBinarise : boolean (optional; True by default)
+    ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image(s) will be binary thresholded.
     
@@ -2249,7 +2249,7 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt,
             makes selection of an appropriate threshold for binarisation (below)
             difficult. """
             #TxLabmapIm = GaussianBlurImage(TxLabmapIm)
-            TxLabmapIm = GaussianBlurImage(TxLabmapIm, Variance=PostTxVariance)
+            TxLabmapIm = GaussianBlurImage(TxLabmapIm, Variance=PostTxVar)
                 
             times.append(time.time())
             Dtime = round(times[-1] - times[-2], 1)
@@ -2266,7 +2266,7 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt,
             
         
         
-            if ApplyPostTxBinarise:
+            if ApplyPostTxBin:
                 """Find suitable threshold value that approximately preserves
                 the number of pre-transformed truth values: """
                 Thresh = FindSuitableThresh(BinaryPixArr=PixArr_B, 
@@ -2318,7 +2318,7 @@ def TransformLabmapImByRoi(LabmapImByRoi, F2SindsByRoi, RegImFilt,
         
         
         
-        if ApplyPostTxBlur and ApplyPostTxBinarise:
+        if ApplyPostTxBlur and ApplyPostTxBin:
             """ Store the threshold used as metadata: """
             TxLabmapIm.SetMetaData("PostTxThreshUsed", f"{Thresh}")
             

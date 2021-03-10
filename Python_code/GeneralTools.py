@@ -14,7 +14,7 @@ GENERAL UTILITY FUNCTIONS
 ******************************************************************************
 """
 
-
+    
 def ItemsUniqueToWithin(List, epsilon=1e-5):
     
     UniqueList = []
@@ -2384,7 +2384,7 @@ def DisplayAttributesOfAllData(Keyword='Dcm', RemoveFromKeys='_DcmDir',
 
 
 
-def ExportDictionaryToJson(Dictionary, FileName, ExportDir=''):
+def ExportDictionaryToJson(Dictionary, FileName, ExportDir='cwd'):
     """
     Export a dictionary to a JSON file.
     
@@ -2398,7 +2398,7 @@ def ExportDictionaryToJson(Dictionary, FileName, ExportDir=''):
         The file name to assign to the exported file. If FileName doesn't 
         include the '.json' extension it will be added automatically.
     
-    ExportDir : string (optional; empty by default)
+    ExportDir : string (optional; 'cwd' by default)
         If provided the directory to which the file will be exported to. If not
         provided the file will be exported to the current working directory.
         If the directory doesn't exist it will be created.
@@ -2406,15 +2406,17 @@ def ExportDictionaryToJson(Dictionary, FileName, ExportDir=''):
     
     import json
     import os
+    from pathlib import Path
     
     if not '.json' in FileName:
         FileName += '.json'
     
-    if ExportDir == '':
+    if ExportDir == 'cwd':
         FilePath = FileName
     else:
         if not os.path.isdir(ExportDir):
-            os.mkdir(ExportDir)
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
         
         FilePath = os.path.join(ExportDir, FileName)
     
@@ -2457,7 +2459,7 @@ def ImportDictionaryFromJson(FileName):
 
 
 
-def ExportListToTxt(InList, FileName, ExportDir=''):
+def ExportListToTxt(InList, FileName, ExportDir='cwd'):
     """
     Export a list to a txt file.
     
@@ -2471,22 +2473,24 @@ def ExportListToTxt(InList, FileName, ExportDir=''):
         The file name to assign to the exported file. If FileName doesn't 
         include the '.txt' extension it will be added automatically.
     
-    ExportDir : string (optional; empty by default)
+    ExportDir : string (optional; 'cwd' by default)
         If provided the directory to which the file will be exported to. If not
         provided the file will be exported to the current working directory.
         If the directory doesn't exist it will be created.
     """
     
     import os
+    from pathlib import Path
     
     if not '.txt' in FileName:
         FileName += '.txt'
     
-    if ExportDir == '':
+    if ExportDir == 'cwd':
         FilePath = FileName
     else:
         if not os.path.isdir(ExportDir):
-            os.mkdir(ExportDir)
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
         
         FilePath = os.path.join(ExportDir, FileName)
     
@@ -2495,6 +2499,3 @@ def ExportListToTxt(InList, FileName, ExportDir=''):
             f.write(line)
     
     return
-
-
-

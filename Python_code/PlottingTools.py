@@ -1192,6 +1192,7 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
     
     import matplotlib.pyplot as plt
     import os
+    from pathlib import Path
     import time
     #from copy import deepcopy
     from pydicom import dcmread
@@ -1312,15 +1313,16 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
                     
                 SliceTxt = f'Slice {SliceNum}'
                 
-                if AddTxt:
-                    plotTitle = PlotTitle \
-                                + f'\n' + SliceTxt + '\n'\
-                                + f'\n' + FrameTxt + '\n'\
-                                + AddTxt
-                else:
-                    plotTitle = PlotTitle \
-                                + f'\n' + SliceTxt + '\n'\
-                                + f'\n' + FrameTxt
+                #if AddTxt:
+                #    plotTitle = PlotTitle \
+                #                + f'\n' + SliceTxt + '\n'\
+                #                + f'\n' + FrameTxt + '\n'\
+                #                + AddTxt
+                #else:
+                #    plotTitle = PlotTitle \
+                #                + f'\n' + SliceTxt + '\n'\
+                #                + f'\n' + FrameTxt
+                plotTitle = f'{PlotTitle}\n\n{SliceTxt}\n{FrameTxt}'
                 
                 ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
                 ax.set_title(plotTitle)
@@ -1340,9 +1342,14 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         else:
             AddTxt = ''
             
-        ExportFname = CurrentDateTime + '_Segs_' + AddTxt + '.jpg'
+        #ExportFname = CurrentDateTime + '_Segs_' + AddTxt + '.jpg'
+        ExportFname = AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
         
         plt.savefig(ExportFpath, bbox_inches='tight')
         
@@ -1381,6 +1388,7 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
     
     import matplotlib.pyplot as plt
     import os
+    from pathlib import Path
     import time
     from copy import deepcopy
     from pydicom import dcmread
@@ -1502,12 +1510,12 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
                 
                 if AddTxt:
                     plotTitle = PlotTitle\
-                                + f'\n' + SliceTxt + '\n'\
+                                + f'\n\n' + SliceTxt + '\n'\
                                 + f'\n' + FrameTxt + '\n'\
                                 + AddTxt
                 else:
                     plotTitle = PlotTitle\
-                                + f'\n' + SliceTxt + '\n'\
+                                + f'\n\n' + SliceTxt + '\n'\
                                 + f'\n' + FrameTxt
                                 
                 ax.set_title(plotTitle)
@@ -1530,6 +1538,10 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         ExportFname = CurrentDateTime + '_PixArrs_' + AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
         
         plt.savefig(ExportFpath, bbox_inches='tight')
         
@@ -1791,6 +1803,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     
     import matplotlib.pyplot as plt
     import os
+    from pathlib import Path
     import time
     #from copy import deepcopy
     from pydicom import dcmread
@@ -1958,13 +1971,10 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                 #                + f'\n' + SliceTxt + '\n'\
                 #                + f'\n' + ContourTxt
                 
-                plotTitle = PlotTitle \
-                            + f'\n' + SliceTxt \
-                            + f'\n' + ContourTxt \
-                            + f'\n' + zPosTxt + '\n'
+                plotTitle = f'{PlotTitle}\n\n{SliceTxt}\n{ContourTxt}\n{zPosTxt}'
                 
-                if AddTxt:
-                    plotTitle += AddTxt
+                #if AddTxt:
+                #    plotTitle += AddTxt
                 
                 ax.set_xlabel('pixels'); ax.set_ylabel('pixels')
                 ax.set_title(plotTitle)
@@ -1984,9 +1994,14 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         else:
             AddTxt = ''
             
-        ExportFname = CurrentDateTime + '_Contours_' + AddTxt + '.jpg'
+        #ExportFname = CurrentDateTime + '_Contours_' + AddTxt + '.jpg'
+        ExportFname = AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
         
         plt.savefig(ExportFpath, bbox_inches='tight')
         
@@ -3433,3 +3448,8 @@ def PlotValues(RegMethod):
     plt.show()
     
     return
+
+
+
+
+

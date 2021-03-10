@@ -16,7 +16,7 @@ DICOM RTSTRUCT FUNCTIONS
 """
 
 
-def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir, 
+def GetRtsDataOfInterest(RtsFpath, SliceNum, RoiName, DicomDir, 
                          LogToConsole=False):
     """
     Get data of interest from an RTS.
@@ -27,15 +27,15 @@ def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir,
     RtsFpath : string
         Filepath of Source RTSTRUCT file.
         
-    FromSliceNum : integer or None
-        The slice indeces within the Source DICOM stack corresponding to the
+    SliceNum : integer or None
+        The slice indeces within the DICOM stack corresponding to the
         contour to be copied (applies for the case of direct copies of a single 
         contour). The index is zero-indexed.
-        If FromSliceNum = None, a relationship-preserving copy will be made.
+        If SliceNum = None, a relationship-preserving copy will be made.
         
-    FromRoiLabel : string
-        All or part of the Source ROI Name of the ROI containing the contour(s)
-        to be copied.
+    RoiName : string
+        All or part of the ROIName of the ROI containing the contour(s) to be
+        copied.
     
     DicomDir : string 
         Directory containing the corresponding DICOMs.
@@ -66,29 +66,28 @@ def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir,
         3. Copy all ROIs
         
     Which main case applies depends on the inputs:
-        FromSliceNum
-        FromRoiLabel
+        SliceNum
+        RoiName
     
-    If FromSliceNum != None (i.e. if a slice number is defined) a single 
-    contour will be copied from the ROI that matches FromRoiLabel 
-    (--> Main Use Case 1).  
+    If SliceNum != None (i.e. if a slice number is defined) a single contour
+    will be copied from the ROI that matches RoiName (--> Main Use Case 1).  
     
     Need to decide what to do if there are multiple ROIs and 
-    FromRoiLabel = None.  Possible outcomes:
+    RoiName = None.  Possible outcomes:
 
         - Raise exception with message "There are multiple ROIs so the ROI
         label must be provided"
         - Copy the contour to all ROIs that have a contour on slice 
-        FromSliceNum (* preferred option?)
+        SliceNum (* preferred option?)
         
-    If FromSliceNum = None but FromRoiLabel != None, all contours within the 
-    ROI given by FromRoiLabel will be copied (--> Main Use Case 2).  
+    If SliceNum = None but RoiName != None, all contours within the ROI given
+    by FromRoiName will be copied (--> Main Use Case 2).  
     
-    If FromSliceNum = None and FromRoiLabel = None, all contours within all
-    ROIs will be copied (--> Main Use Case 3).
+    If SliceNum = None and RoiName = None, all contours within all ROIs will be
+    copied (--> Main Use Case 3).
     
     
-    If FromSliceNum = None and FromRoiLabel = None, all ROIs will be copied.  
+    If SliceNum = None and RoiName = None, all ROIs will be copied.  
     If not, get the ROI number (zero-indexed) to be copied, and reduce 
     PtsByCntByRoi and C2SindsByRoi to the corresponding item.
     """
@@ -121,30 +120,31 @@ def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir,
     
     ReducedBySlice = False
             
-    if FromSliceNum:
+    if SliceNum:
         """ Limit data to those which belong to the chosen slice number. """
         
         PtsByCntByRoi = []
         C2SindsByRoi = []
     
         for r in range(Nrois):
-            # All points-by-contour and contour-to-slice indices for this ROI:
+            """ All points-by-contour and contour-to-slice indices for this 
+            ROI: """
             AllPtsByCnt = deepcopy(AllPtsByCntByRoi[r])
             AllC2Sinds = deepcopy(AllC2SindsByRoi[r])
                 
-            # Get the contour number(s) that relate to FromSliceNum:
-            FromCntNums = [i for i, e in enumerate(AllC2Sinds) if e==FromSliceNum]
+            """ Get the contour number(s) that relate to FromSliceNum: """
+            FromCntNums = [i for i, e in enumerate(AllC2Sinds) if e==SliceNum]
             
             #print(f'\nFromCntNums = {FromCntNums}')
             #print(f'AllC2Sinds = {AllC2Sinds}')
             
             if len(FromCntNums) != len(AllC2Sinds):
-                # Some contours will be rejected:
+                """ Some contours will be rejected. """
                 ReducedBySlice = True
             
                 if FromCntNums:
-                    # Keep only the indeces and points that relate to 
-                    # FromCntNums:
+                    """ Keep only the indeces and points that relate to 
+                    FromCntNums: """
                     PtsByCnt = [AllPtsByCnt[c] for c in FromCntNums]
                     C2Sinds = [AllC2Sinds[c] for c in FromCntNums]
                 else:
@@ -158,9 +158,9 @@ def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir,
                 
         
         if ReducedBySlice:
-            # Replace AllPtsByCntByRoi and AllC2SindsByRoi with PtsByCntByRoi  
-            # and C2SindsByRoi in case further restricting of data is required 
-            # below:
+            """ Replace AllPtsByCntByRoi and AllC2SindsByRoi with PtsByCntByRoi  
+            and C2SindsByRoi in case further restricting of data is required 
+            below: """
             AllPtsByCntByRoi = deepcopy(PtsByCntByRoi)
             AllC2SindsByRoi = deepcopy(C2SindsByRoi)
         #else:
@@ -168,44 +168,46 @@ def GetRtsDataOfInterest(RtsFpath, FromSliceNum, FromRoiLabel, DicomDir,
         
         if LogToConsole and ReducedBySlice:
             print('\n   After limiting data to those that relate to slice',
-                  f'number {FromSliceNum}, the C2SindsByRoi =')
+                  f'number {SliceNum}, the C2SindsByRoi =')
             PrintIndsByRoi(C2SindsByRoi)
     
     
     #ReducedByRoi = False
     
-    if FromRoiLabel:
+    if RoiName:
         """ Limit data to those which belong to the chosen ROI(s). """
         
         PtsByCntByRoi = []
         C2SindsByRoi = []
         
-        # Get the ROI number(s) whose name matches FromRoiLabel:
-        FromRoiNums = GetRoiNums(Roi=Rts, SearchString=FromRoiLabel)
+        """ Get the ROI number(s) whose name matches RoiName: """
+        RoiNums = GetRoiNums(Roi=Rts, SearchString=RoiName)
         
-        #print(f'\nFromRoiNums = {FromRoiNums}')
+        #print(f'\nRoiNums = {RoiNums}')
         #print(f'AllC2SindsByRoi = {AllC2SindsByRoi}')
         
-        if len(FromRoiNums) != len(AllC2SindsByRoi):
+        if len(RoiNums) != len(AllC2SindsByRoi):
             #ReducedByRoi = True
-        
-            # Get the names of all ROIs:
-            FromRoiNames = GetRoiLabels(Roi=Rts)
-        
-            # Limit the list of ROI names to those that belong to the chosen 
-            # ROIs(s):
-            FromRoiNames = [FromRoiNames[i] for i in FromRoiNums]
             
-            
-            PtsByCntByRoi = [AllPtsByCntByRoi[r] for r in FromRoiNums]
-            C2SindsByRoi = [AllC2SindsByRoi[r] for r in FromRoiNums]
+            PtsByCntByRoi = [AllPtsByCntByRoi[r] for r in RoiNums]
+            C2SindsByRoi = [AllC2SindsByRoi[r] for r in RoiNums]
             
             if LogToConsole:
+                """ Get the names of all ROIs: """
+                AllRoiNames = GetRoiLabels(Roi=Rts)
+            
+                """ Limit the list of ROI names to those that belong to the chosen 
+                ROIs(s): """
+                RoiNames = [AllRoiNames[i] for i in RoiNums]
+            
                 print('\n   After limiting data to those whose ROI name',
-                      f'matches {FromRoiNames}, the C2SindsByRoi =')
+                      f'matches {RoiNames}, the C2SindsByRoi =')
                 PrintIndsByRoi(C2SindsByRoi)
                 
         else:
+            PtsByCntByRoi = deepcopy(AllPtsByCntByRoi)
+            C2SindsByRoi = deepcopy(AllC2SindsByRoi)
+    else:
             PtsByCntByRoi = deepcopy(AllPtsByCntByRoi)
             C2SindsByRoi = deepcopy(AllC2SindsByRoi)
     
@@ -1731,7 +1733,7 @@ def GetMaskFromContoursForSliceNum(Rts, SliceNum, DicomDir, RefImage,
     *******
     
     Mask : Numpy data array
-        A 2D mask of the contour(s) specified by FromRoiLabel and FromSliceNum.
+        A 2D mask of the contour(s) specified by FromRoiName and FromSliceNum.
         
     
     Note:
@@ -1791,8 +1793,8 @@ def GetMaskFromContoursForSliceNum(Rts, SliceNum, DicomDir, RefImage,
 
 
 def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi, 
-              TrgC2SindsByRoi, TrgDicomDir, AddTxtToSSLabel='', 
-              LogToConsole=False):
+              TrgC2SindsByRoi, TrgDicomDir, #SrcRoiName, 
+              AddTxtToSSLabel='', LogToConsole=False):
     """
     Create an RTS object for the target dataset. 
     
@@ -1872,7 +1874,7 @@ def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi,
     from pydicom.uid import generate_uid
     import time
     from copy import deepcopy
-    from DicomTools import ImportDicoms
+    from DicomTools import ImportDicoms#, GetRoiNums, GetRoiLabels
     from GeneralTools import UniqueItems
     
     if LogToConsole:

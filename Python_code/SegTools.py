@@ -15,7 +15,7 @@ SEGMENT FUNCTIONS
 ******************************************************************************
 """      
 
-def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir, 
+def GetSegDataOfInterest(SegFpath, SliceNum, SegLabel, DicomDir, 
                          LogToConsole=False):
     """
     Get data of interest from a SEG.
@@ -26,15 +26,15 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
     SegFpath : string
         Filepath of the Source SEG file.
         
-    FromSliceNum : integer or None
-        The slice indeces within the Source DICOM stack corresponding to the
+    SliceNum : integer or None
+        The slice indeces within the DICOM stack corresponding to the
         segmentation to be copied (applies for the case of direct copies of a 
         single segmentation). The index is zero-indexed.
-        If FromSliceNum = None, a relationship-preserving copy will be made.
+        If SliceNum = None, a relationship-preserving copy will be made.
         
-    FromSegLabel : string
-        All or part of the Source segment Description of the segment containing 
-        the segmentation(s) to be copied.
+    SegLabel : string
+        All or part of the SegmentLabel of the segment containing the 
+        segmentation(s) to be copied.
     
     DicomDir : string 
         Directory containing the corresponding DICOMs.
@@ -65,28 +65,28 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
         3. Copy all segments
         
     Which main case applies depends on the inputs:
-        FromSliceNum
-        FromSegLabel
+        SliceNum
+        SegLabel
     
-    If FromSliceNum != None (i.e. if a slice number is defined) a single 
-    segmentation will be copied from the segment that matches FromSegLabel 
+    If SliceNum != None (i.e. if a slice number is defined) a single 
+    segmentation will be copied from the segment that matches SegLabel 
     (--> Main Use Case 1).  
     
     Need to decide what to do if there are multiple segments and 
-    FromSegLabel = None.  Possible outcomes:
+    SegLabel = None.  Possible outcomes:
 
         - Raise exception with message "There are multiple segments so the 
         description of the desired segment must be provided"
         - Copy the segmentation to all segments that have a segmentation on 
-        slice FromSliceNum (* preferred option?)
+        slice SliceNum (* preferred option?)
         
-    If FromSliceNum = None but FromSegLabel != None, all segmentations within 
-    the segment given by FromSegLabel will be copied (--> Main Use Case 2).  
+    If SliceNum = None but SegLabel != None, all segmentations within the
+    segment given by FromSegLabel will be copied (--> Main Use Case 2).  
     
-    If FromSliceNum = None and FromSegLabel = None, all segmentations within 
-    all segments will be copied (--> Main Use Case 3).
+    If SliceNum = None and SegLabel = None, all segmentations within all
+    segments will be copied (--> Main Use Case 3).
     
-    If FromSliceNum = None and FromSegLabel = None, all segments will be copied.  
+    If SliceNum = None and SegLabel = None, all segments will be copied.  
     If not, get the segment number (zero-indexed) to be copied, and reduce 
     PixArrBySeg and F2SindsBySeg to the corresponding item.
     """
@@ -101,8 +101,8 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
         
         print('\n\n', '-'*120)
         print('Results of GetSegDataOfInterest():')
-        print(f'   FromSegLabel = {FromSegLabel}')
-        print(f'   FromSliceNum = {FromSliceNum}')
+        print(f'   SegLabel = {SegLabel}')
+        print(f'   SliceNum = {SliceNum}')
     
     
     Seg = dcmread(SegFpath)
@@ -130,7 +130,7 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
     frame/slice number (FromSliceNum): """
     ReducedBySlice = False
             
-    if FromSliceNum:
+    if SliceNum:
         """ Limit data to those which belong to the chosen slice number. """
         
         PixArrBySeg = []
@@ -141,39 +141,39 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
             AllPixArr = deepcopy(AllPixArrBySeg[s])
             AllF2Sinds = deepcopy(AllF2SindsBySeg[s])
                 
-            """ Get the frame number(s) that relate to FromSliceNum: """
-            FromFrmNums = [i for i, x in enumerate(AllF2Sinds) if x==FromSliceNum]
+            """ Get the frame number(s) that relate to SliceNum: """
+            FrmNums = [i for i, x in enumerate(AllF2Sinds) if x==SliceNum]
             
             if LogToConsole:
                 print(f'\nAllF2Sinds = {AllF2Sinds}')
-                print(f'FromFrmNums = {FromFrmNums}')
+                print(f'FrmNums = {FrmNums}')
             
-            if len(FromFrmNums) != len(AllF2Sinds):
+            if len(FrmNums) != len(AllF2Sinds):
                 """ Some frames will be rejected: """
                 ReducedBySlice = True
                 
                 """ Initialise PixArr with the reduced number of frames 
-                matching len(FromFrmNums): """
-                PixArr = np.zeros((len(FromFrmNums), R, C), dtype='uint')
+                matching len(FrmNums): """
+                PixArr = np.zeros((len(FrmNums), R, C), dtype='uint')
                 F2Sinds = []
                 
-                if FromFrmNums:
+                if FrmNums:
                     """ Keep only the indeces and frames that relate to 
-                    FromFrmNums. """
-                    #PixArr = [AllPixArr[f] for f in FromFrmNums]
+                    FrmNums. """
+                    #PixArr = [AllPixArr[f] for f in FrmNums]
                     
-                    #""" Set PixArr to the first frame in FromFrmNums: """
+                    #""" Set PixArr to the first frame in FrmNums: """
                     #PixArr = AllPixArr[0]
                     #
-                    #if len(FromFrmNums) > 1:
+                    #if len(FrmNums) > 1:
                     #    """ Add additional frames: """
-                    #    for f in range(1, len(FromFrmNums)):
+                    #    for f in range(1, len(FrmNums)):
                     #        PixArr = np.vstack((PixArr, AllPixArr[f]))
                     
-                    for f in range(len(FromFrmNums)):
-                        PixArr[f] = AllPixArr[FromFrmNums[f]]
+                    for f in range(len(FrmNums)):
+                        PixArr[f] = AllPixArr[FrmNums[f]]
                         
-                        F2Sinds.append(AllF2Sinds[FromFrmNums[f]])
+                        F2Sinds.append(AllF2Sinds[FrmNums[f]])
                     
                     if LogToConsole:
                         print(f'F2Sinds = {F2Sinds}')
@@ -206,7 +206,7 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
         
         if LogToConsole and ReducedBySlice:
             print('\n   After limiting data to those that relate to slice',
-                  f'number {FromSliceNum}:')#, the F2SindsBySeg =')
+                  f'number {SliceNum}:')#, the F2SindsBySeg =')
             PrintIndsByRoi(F2SindsBySeg)
             print('   PixArrBySeg = ', PixArrBySeg)
             PrintPixArrShapeBySeg(PixArrBySeg)
@@ -214,65 +214,46 @@ def GetSegDataOfInterest(SegFpath, FromSliceNum, FromSegLabel, DicomDir,
     
     """ Initialise variable that indicates if the SEG data was reduced by
     chosen segment label (FromSegLabel): """
-    ReducedBySeg = False
+    #ReducedBySeg = False
     
-    if FromSegLabel:
+    if SegLabel:
         """ Limit data to those which belong to the chosen segment(s). """
         
         PixArrBySeg = []
         F2SindsBySeg = []
         
-        """ Get the segment number(s) whose name matches FromSegLabel: """
-        FromSegNums = GetRoiNums(Roi=Seg, SearchString=FromSegLabel)
+        """ Get the segment number(s) whose name matches SegLabel: """
+        SegNums = GetRoiNums(Roi=Seg, SearchString=SegLabel)
         
-        #print(f'\nFromSegNums = {FromSegNums}')
+        #print(f'\nSegNums = {SegNums}')
         #print(f'AllF2SindsBySeg = {AllF2SindsBySeg}')
         
-        """ 10/02:  Not sure about this if statement... """
-        #if len(FromSegNums) != len(AllF2SindsBySeg):
-        #    #ReducedBySeg = True
-        #
-        #    """ Get the names of all ROIs: """
-        #    FromSegNames = GetRoiLabels(Roi=Seg)
-        #
-        #    """ Limit the list of segment descriptions to those that belong to 
-        #    the chosen segment(s): """
-        #    FromSegNames = [FromSegNames[i] for i in FromSegNums]
-        #    
-        #    
-        #    PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
-        #    F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
-        #    
-        #    if LogToConsole:
-        #        print('\n   After limiting data to those whose segment name',
-        #              f'matches {FromSegNames}:')#, the F2SindsBySeg =')
-        #        PrintIndsByRoi(F2SindsBySeg)
-        #        PrintPixArrShapeBySeg(PixArrBySeg)
-        #        
-        #else:
-        #    PixArrBySeg = deepcopy(AllPixArrBySeg)
-        #    F2SindsBySeg = deepcopy(AllF2SindsBySeg)
+        if len(SegNums) != len(AllF2SindsBySeg):
+            #ReducedBySeg = True
+            
+            PixArrBySeg = [AllPixArrBySeg[s] for s in SegNums]
+            F2SindsBySeg = [AllF2SindsBySeg[s] for s in SegNums]
+            
+            if LogToConsole:
+                """ Get the names of all ROIs: """
+                SegNames = GetRoiLabels(Roi=Seg)
+            
+                """ Limit the list of segment descriptions to those that belong to 
+                the chosen segment(s): """
+                SegNames = [SegNames[i] for i in SegNums]
+            
+                print('\n   After limiting data to those whose segment name',
+                      f'matches {SegNames}:')#, the F2SindsBySeg =')
+                PrintIndsByRoi(F2SindsBySeg)
+                PrintPixArrShapeBySeg(PixArrBySeg)
+                
+        else:
+            PixArrBySeg = deepcopy(AllPixArrBySeg)
+            F2SindsBySeg = deepcopy(AllF2SindsBySeg)
         
-        
-    
-        """ Limit the list of segment descriptions to those that belong to 
-        the chosen segment(s): """
-        FromSegLabels = [SegLabels[i] for i in FromSegNums]
-        
-        #print(f'\n\nlen(FromSegNums) = {len(FromSegNums)}')
-        #print(f'len(AllPixArrBySeg) = {len(AllPixArrBySeg)}')
-        
-        PixArrBySeg = [AllPixArrBySeg[s] for s in FromSegNums]
-        F2SindsBySeg = [AllF2SindsBySeg[s] for s in FromSegNums]
-        
-        if len(F2SindsBySeg) != len(AllF2SindsBySeg):
-            ReducedBySeg = True
-        
-        if LogToConsole and ReducedBySeg:
-            print('\n   After limiting data to those whose segment name',
-                  f'matches {FromSegLabels}:')#, the F2SindsBySeg =')
-            PrintIndsByRoi(F2SindsBySeg)
-            PrintPixArrShapeBySeg(PixArrBySeg)
+    else:
+        PixArrBySeg = deepcopy(AllPixArrBySeg)
+        F2SindsBySeg = deepcopy(AllF2SindsBySeg)
     
     if LogToConsole:
         print('\n   Final outputs of GetSegDataOfInterest():')
@@ -1522,8 +1503,8 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
 
 
 
-def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg, 
-              TrgDicomDir, FromSegLabel, AddTxtToSegLabel='', 
+def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg, 
+              TrgF2SindsBySeg, TrgDicomDir, SrcSegLabel, AddTxtToSegLabel='', 
               LogToConsole=False):
     """
     Create an SEG object for the target dataset.
@@ -1540,6 +1521,9 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
         If TrgSegFpath != None, the Target SEG will be modified to create 
         NewTrgSeg.  If TrgSegFpath = None, the Source SEG will be used as a 
         template.
+        
+    TrgSegLabel : string or None
+        All or part of the SegmentLabel of the destination segment.
 
     TrgPixArrBySeg : list of Numpy arrays
         List (for each segment) of the pixel array containing the frames that
@@ -1553,7 +1537,7 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     TrgDicomDir : string
         Directory containing the Target DICOMs.
     
-    FromSegLabel : string
+    SrcSegLabel : string
         All or part of the Source SegmentLabel of the segment containing the 
         segmentations(s) that were copied.
     
@@ -1603,7 +1587,7 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     from copy import deepcopy
     import numpy as np
     from GeneralTools import FlattenList, UniqueItems
-    from DicomTools import ImportDicoms, GetRoiNums#, GetRoiLabels
+    from DicomTools import ImportDicoms, GetRoiNums, GetRoiLabels
     from ImageTools import GetImageAttributes
     from pydicom.pixel_data_handlers.numpy_handler import pack_bits
     
@@ -1621,6 +1605,8 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     else:
         NewTrgSeg = deepcopy(SrcSeg)
     
+    #print(f'\nTrgDicomDir = {TrgDicomDir}')
+    
     TrgDicoms = ImportDicoms(TrgDicomDir)
     
     Size, Spacings, ST, IPPs, Dirs,\
@@ -1636,8 +1622,14 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     
     #NumOfSegs = len(TrgF2SindsBySeg)
     
-    """ Get the list of SegmentNumber for the segments of interest in SrcSeg. """
-    SegNums = GetRoiNums(SrcSeg, FromSegLabel)
+    """ The list of segment labels in SrcSeg: """
+    AllSrcSegLabels = GetRoiLabels(SrcSeg)
+    
+    if SrcSegLabel:
+        """ The list of segment numbers for the segments of interest: """
+        SrcSegNums = GetRoiNums(SrcSeg, SrcSegLabel)
+    else:
+        SrcSegNums = list(range(len(AllSrcSegLabels)))
     
     UniqueTrgF2Sinds = UniqueItems(Items=TrgF2SindsBySeg, IgnoreZero=False, 
                                    MaintainOrder=True)
@@ -1645,7 +1637,7 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     FlattenedTrgF2Sinds = FlattenList(TrgF2SindsBySeg)
     
     if LogToConsole:
-        print(f'   SegNums = {SegNums}')
+        print(f'   SrcSegNums = {SrcSegNums}')
         print(f'   NumOfFramesBySeg = {NumOfFramesBySeg}')
         print(f'   NumOfFrames = {NumOfFrames}')
     
@@ -1791,9 +1783,9 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     
     """ Modify SegmentSequence. """
     
-    """ Loop through all SegNums. """
-    for s in range(len(SegNums)):
-        SegNum = SegNums[s]
+    """ Loop through all SrcSegNums. """
+    for s in range(len(SrcSegNums)):
+        SegNum = SrcSegNums[s]
         
         """ Replace the s^th SegmentSequence in NewTrgSeg with the SegNum^th 
         SegmentSequence in SrcSeg."""
@@ -1807,8 +1799,8 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgPixArrBySeg, TrgF2SindsBySeg,
     """ Check if there are more sequences in SegmentSequence than required. """
     N = len(NewTrgSeg.SegmentSequence)
     
-    if N > len(SegNums):
-        for i in range(N - len(SegNums)):
+    if N > len(SrcSegNums):
+        for i in range(N - len(SrcSegNums)):
             """ Remove the last sequence: """
             NewTrgSeg.SegmentSequence.pop()
     
