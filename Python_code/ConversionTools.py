@@ -555,9 +555,9 @@ def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
 
 
 
-def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
+def GetLabmapArrByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
     """
-    Get a list of 3D labelmap (SimpleITK) images - one per ROI.  
+    Get a list of 3D labelmap Numpy arrays - one per ROI.  
     
     Inputs:
     ******
@@ -569,8 +569,8 @@ def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
         Directory containing the corresponding DICOMs.
     
     C2SindsByRoi : list of a list of integers
-        List (for each ROI) of a list (for each contour) of slice numbers that 
-        correspond to each Referenced SOP instance UID in the Contour Sequence.
+        List (for each ROI) of a list (for each contour) of slice numbers  
+        that corresponds to each contour.
     
     RefIm : SimpleITK image
         The 3D image that PixArr relates to.
@@ -579,13 +579,13 @@ def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
     Outputs:
     *******
         
-    LabmapIms : List of SimpleITK images
-        A list of 3D zero-padded labelmap (SimpleITK) images - one per ROI.
+    LabmapArrByRoi : List of Numpy arrays
+        A list of 3D zero-padded labelmap Numpy arrays - one per contour.
     """
     
     from RtsTools import GetIndsByRoi
     
-    LabmapIms = []
+    LabmapArrByRoi = []
     
     IndsByRoi = GetIndsByRoi(Rts, DicomDir)
     
@@ -593,13 +593,13 @@ def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
         PixArr = IndsByContour2PixArr(IndsByContour=IndsByRoi[RoiNum], 
                                       RefImage=RefIm)
     
-        LabmapIm = PixArr2Labmap(PixArr=PixArr, 
-                                 NumOfSlices=RefIm.GetSize()[2], 
-                                 FrameToSliceInds=C2SindsByRoi[RoiNum])
+        LabmapArr = PixArr2LabmapArr(PixArr=PixArr, 
+                                     NumOfSlices=RefIm.GetSize()[2], 
+                                     FrameToSliceInds=C2SindsByRoi[RoiNum])
         
-        LabmapIms.append(LabmapIm)
+        LabmapArrByRoi.append(LabmapArr)
     
-    return LabmapIms
+    return LabmapArrByRoi
 
 
 
@@ -608,17 +608,13 @@ def GetLabmapImsByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
 
 
 
-def PixArr2Labmap(PixArr, NumOfSlices, F2Sinds):
+def PixArr2LabmapArr(PixArr, NumOfSlices, F2Sinds):
     """
-    Convert a 3D SEG pixel array to a 3D SEG labelmap.  The labelmap will 
+    Convert a 3D SEG pixel array to a 3D SEG labelmap array.  The array will 
     contain the 2D pixel arrays at the same frame position as the slice
     position of the corresponding DICOM series (with 2D zero masks in-between).
     
-    Note:
-        'Labmap' refers to a 3D pixel array that contains the non-empty frames
-        in PixArr, padded with empty frames so that the size of the labelmap
-        matches the size of the 3D DICOM image. This is not to be confused with 
-        'LabmapIm', which is the SimpleITK image representation of 'Labmap'.
+    
     
     Inputs:
     ******
@@ -640,41 +636,53 @@ def PixArr2Labmap(PixArr, NumOfSlices, F2Sinds):
     
     Labmap : Numpy array
         Zero-padded version of PixArr.
+    
+    
+    Notes:
+    *****
+    
+    'Labmap array' refers to a 3D pixel array that contains the non-empty 
+    frames in PixArr, padded with empty frames so that the size of the labelmap
+    array matches the size of the 3D DICOM image. This is not to be confused 
+    with 'Labmap image', which is the SimpleITK image representation of a 
+    labmap array.
     """
     
     import numpy as np
     
-    """ NumOfFrames is the number of non-zero frames that make up PixArr. """
     NumOfFrames, R, C = PixArr.shape
     
-    """ Initialise Labmap. """
+    """ Initialise LabmapArr: """
     #Labmap = np.zeros((NumOfSlices, R, C), dtype='bool')
     #Labmap = np.zeros((NumOfSlices, R, C), dtype='uint')
-    Labmap = np.zeros((NumOfSlices, R, C), dtype=PixArr.dtype)
+    LabmapArr = np.zeros((NumOfSlices, R, C), dtype=PixArr.dtype)
+    
+    """ Note: NumOfFrames is the number of non-zero frames that make up PixArr,
+    whereas NumOfSlices are the total frame count in 3D DICOM image. """
     
     #print(f'\nPixArr.shape = {PixArr.shape}')
     ##print(f'\n\nThe maximum value in PixArr is {PixArr.max()}')
     #print(f'FrameToSliceInds = {FrameToSliceInds}')
-    #print(f'Labmap.shape = {Labmap.shape}')
+    #print(f'LabmapArr.shape = {LabmapArr.shape}')
     
     if NumOfFrames:
-        """ Over-write all frames in Labmap with non-zero 2D masks from PixArr.
-        """
+        """ Over-write all frames in LabmapArr with non-zero 2D masks from 
+        PixArr.  """
         for i in range(len(F2Sinds)):
             """ The slice number for the i^th frame """
             s = F2Sinds[i]
             
             #print(f'Frame {i} corresponds to slice {s}')
             
-            #Labmap[s] = PixArr[i] # 13/02 This was over-writting frames for 
+            #LabmapArr[s] = PixArr[i] # 13/02 This was over-writting frames for 
             # pixel arrays containing more than one frame for the same slice!!!
             
-            Labmap[s] += PixArr[i]
+            LabmapArr[s] += PixArr[i]
         
     
-    #print(f'\n\nThe maximum value in Labmap is {Labmap.max()}')
+    #print(f'\n\nThe maximum value in LabmapArr is {LabmapArr.max()}')
     
-    return Labmap
+    return LabmapArr
 
 
 
