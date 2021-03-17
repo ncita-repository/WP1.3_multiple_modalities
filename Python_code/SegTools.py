@@ -30,11 +30,13 @@ def GetSegDataOfInterest(SegFpath, SliceNum, SegLabel, DicomDir,
         The slice indeces within the DICOM stack corresponding to the
         segmentation to be copied (applies for the case of direct copies of a 
         single segmentation). The index is zero-indexed.
-        If SliceNum = None, a relationship-preserving copy will be made.
+        If SliceNum = None, all segmentations attributed to all slices will be
+        parsed.
         
-    SegLabel : string
+    SegLabel : string or None
         All or part of the SegmentLabel of the segment containing the 
-        segmentation(s) to be copied.
+        segmentation(s) to be copied.  If SegLabel = None, all segments will be
+        parsed.
     
     DicomDir : string 
         Directory containing the corresponding DICOMs.

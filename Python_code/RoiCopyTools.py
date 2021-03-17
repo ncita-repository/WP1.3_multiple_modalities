@@ -509,11 +509,11 @@ COPY A CONTOUR / ROI / RTSTRUCT
 
 def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgRtsFpath=None, TrgRoiName=None, TrgSliceNum=None, 
-            ResInterp='BlurThenLinear', PreResVar=(1,1,1), #PostResThresh=0.75, 
-            ForceReg=False, Tx='affine', TxMaxIters='512',
-            TxInterp='NearestNeighbor', 
-            ApplyPostTxBlur=True, PostTxVar=(2,2,2), 
-            ApplyPostTxBin=True, #ThreshPostTx=0.05, 
+            ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
+            ApplyPostResBlur=False, PostResVariance=(1,1,1), 
+            ForceReg=False, Tx='affine', TxMaxIters='512', 
+            TxInterp='NearestNeighbor', ApplyPostTxBin=True,
+            ApplyPostTxBlur=True, PostTxVariance=(1,1,1),  
             TxtToAddToTrgRoiName='', LogToConsole=False,
             DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
@@ -577,7 +577,7 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVariance : tuple of floats (optional; (1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -588,6 +588,13 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     #    on a labelmap image if a Gaussian blurring + linearly resampling 
     #    approach is taken to combat aliasing effects.
     
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
+        
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
@@ -613,13 +620,6 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
     
-    ApplyPostTxBlur : boolean (optional; True by default)
-        If True, the post-transformed labelmap image will be Gaussian blurred.
-        
-    PostTxVar : tuple of floats (optional; (2,2,2) by default)
-        The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
-        
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
@@ -627,6 +627,13 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     #ThreshPostTx : float (optional; 0.05 by default)
     #    The threshold level used to perform binary thresholding after 
     #    registration transformation.  
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
     
     TxtToAddToTrgRoiName : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target RTS.
@@ -728,8 +735,8 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     
     
     """ Check the validity of the combination of inputs. """
-    CheckValidityOfInputs(SrcRts, SrcRoiName, SrcSliceNum, TrgRts, TrgSliceNum,
-                          LogToConsole)
+    CheckValidityOfInputs(SrcRts, SrcRoiName, SrcSliceNum, TrgRts, TrgRoiName,
+                          TrgSliceNum, LogToConsole)
     
     #""" Determine which Use Case to apply. """
     #UseCaseThatApplies,\
@@ -850,7 +857,7 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             
             """ Get the data of interest from the Target RTS. """
             TrgPtsByCntByRoi,\
-            TrgC2SindsByRoi = GetRtsDataOfInterest(TrgRtsFpath, SrcSliceNum,
+            TrgC2SindsByRoi = GetRtsDataOfInterest(TrgRtsFpath, TrgSliceNum,
                                                    #SrcRoiName, TrgDcmDir,
                                                    TrgRoiName, TrgDcmDir,
                                                    LogToConsole)
@@ -1082,16 +1089,17 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         #Interp = 'NearestNeighbor'
         #Interp = 'LabelGaussian'
         
-        ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
-        ResSrcF2SindsByRoi = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi, 
-                                                   #F2SindsByRoi=SrcC2SindsByRoi,
-                                                   F2SindsByRoi=SrcF2SindsByRoi,
-                                                   SrcImage=SrcIm, 
-                                                   TrgImage=TrgIm,
-                                                   Interpolation=ResInterp,
-                                                   PreResVar=PreResVar,
-                                                   #PostResThresh=PostResThresh,
-                                                   LogToConsole=LogToConsole)
+        ResSrcLabmapImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi\
+        = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi, 
+                                #F2SindsByRoi=SrcC2SindsByRoi,
+                                F2SindsByRoi=SrcF2SindsByRoi,
+                                SrcIm=SrcIm, 
+                                TrgIm=TrgIm,
+                                Interp=ResInterp,
+                                PreResVariance=PreResVariance,
+                                ApplyPostResBlur=ApplyPostResBlur,
+                                PostResVariance=PostResVariance,
+                                LogToConsole=LogToConsole)
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
@@ -1160,16 +1168,15 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             used since further operations below will need to be applied to
             either resampled or transformed data. """
         
-        ResSrcLabmapImByRoi, ResSrcPixArrByRoi,\
-        ResSrcF2SindsByRoi = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
-                                                    F2SindsByRoi=SrcF2SindsByRoi,
-                                                    RegImFilt=RegImFilt,
-                                                    Interpolation=TxInterp,
-                                                    ApplyPostTxBlur=ApplyPostTxBlur,
-                                                    PostTxVar=PostTxVar,
-                                                    ApplyPostTxBin=ApplyPostTxBin,
-                                                    #ThreshPostTx=ThreshPostTx,
-                                                    LogToConsole=LogToConsole)
+        ResSrcLabmapImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi\
+        = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImByRoi,
+                                 F2SindsByRoi=SrcF2SindsByRoi,
+                                 RegImFilt=RegImFilt,
+                                 Interp=TxInterp,
+                                 ApplyPostTxBlur=ApplyPostTxBlur,
+                                 PostTxVariance=PostTxVariance,
+                                 ApplyPostTxBin=ApplyPostTxBin,
+                                 LogToConsole=LogToConsole)
         
         #times.append(time.time())
         #Dtime = round(times[-1] - times[-2], 1)
@@ -1236,12 +1243,12 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
                 pixel array to a binary pixel array. """
                 BinaryThresh = 0.5
     
-                ResSrcPixArrByRoi,\
-                ResF2SindsByRoi = MeanFrameInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
-                                                         F2SindsBySeg=ResSrcF2SindsByRoi,
-                                                         MakeBinary=True, 
-                                                         BinaryThresh=BinaryThresh,
-                                                         LogToConsole=LogToConsole)
+                ResSrcPixArrByRoi, ResF2SindsByRoi\
+                = MeanFrameInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
+                                         F2SindsBySeg=ResSrcF2SindsByRoi,
+                                         MakeBinary=True, 
+                                         BinaryThresh=BinaryThresh,
+                                         LogToConsole=LogToConsole)
             
             else:
                 from GeneralTools import OrFrameOfPixArrBySeg
@@ -1253,10 +1260,10 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
                 #    print(f'type(ResSrcPixArrByRoi[{r}]) = {type(ResSrcPixArrByRoi[r])}')
                 #    print(f'ResSrcPixArrByRoi[{r}].shape = {ResSrcPixArrByRoi[r].shape}')
                     
-                ResSrcPixArrByRoi,\
-                ResF2SindsByRoi = OrFrameOfPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
-                                                       F2SindsBySeg=ResSrcF2SindsByRoi,
-                                                       LogToConsole=LogToConsole)
+                ResSrcPixArrByRoi, ResF2SindsByRoi\
+                = OrFrameOfPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi,
+                                       F2SindsBySeg=ResSrcF2SindsByRoi,
+                                       LogToConsole=LogToConsole)
                 
                 #print(f'\nAfter running OrPixArrByRoi():')
                 #print(f'ResSrcPixArrByRoi = {ResSrcPixArrByRoi}')
@@ -1309,25 +1316,25 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             print('ResSrcF2SindsByRoi prior to shifting of out-of-plane',
                   f'elements: {ResSrcF2SindsByRoi}\n')
         
-        ResSrcPixArrByRoi,\
-        ResSrcF2SindsByRoi = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi, 
-                                                      F2SindsBySeg=ResSrcF2SindsByRoi, 
-                                                      ##SrcImage=SrcIm, 
-                                                      ##SrcSliceNum=SrcSliceNum,
-                                                      ##TrgImage=TrgIm,
-                                                      #SrcImage=ResSrcLabmapImByRoi[0], 
-                                                      #SrcSliceNum=ResSrcSliceNum,
-                                                      #TrgImage=ResSrcLabmapImByRoi[0],
-                                                      SrcImage=TrgIm, 
-                                                      SrcSliceNum=ResSrcSliceNum,
-                                                      TrgImage=TrgIm,
-                                                      TrgSliceNum=TrgSliceNum, 
-                                                      RefImage=TrgIm,
-                                                      ShiftInX=False,
-                                                      ShiftInY=False,
-                                                      ShiftInZ=True,
-                                                      Fractional=False,
-                                                      LogToConsole=LogToConsole)
+        ResSrcPixArrByRoi, ResSrcF2SindsByRoi\
+        = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrByRoi, 
+                                   F2SindsBySeg=ResSrcF2SindsByRoi, 
+                                   ##SrcImage=SrcIm, 
+                                   ##SrcSliceNum=SrcSliceNum,
+                                   ##TrgImage=TrgIm,
+                                   #SrcImage=ResSrcLabmapImByRoi[0], 
+                                   #SrcSliceNum=ResSrcSliceNum,
+                                   #TrgImage=ResSrcLabmapImByRoi[0],
+                                   SrcImage=TrgIm, 
+                                   SrcSliceNum=ResSrcSliceNum,
+                                   TrgImage=TrgIm,
+                                   TrgSliceNum=TrgSliceNum, 
+                                   RefImage=TrgIm,
+                                   ShiftInX=False,
+                                   ShiftInY=False,
+                                   ShiftInZ=True,
+                                   Fractional=False,
+                                   LogToConsole=LogToConsole)
         
         if LogToConsole:
             print(f'After running ShiftFramesInPixArrBySeg():')
@@ -1354,12 +1361,12 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         
         """ Is Thresh = 0.5 below too high? """
             
-        ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi,\
-        ResSrcC2SindsByRoi = PixArrByRoi2PtsByCntByRoi(PixArrByRoi=ResSrcPixArrByRoi,
-                                                       F2SindsByRoi=ResSrcF2SindsByRoi,
-                                                       DicomDir=TrgDcmDir,
-                                                       Thresh=0.5,
-                                                       LogToConsole=LogToConsole)
+        ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi\
+        = PixArrByRoi2PtsByCntByRoi(PixArrByRoi=ResSrcPixArrByRoi,
+                                    F2SindsByRoi=ResSrcF2SindsByRoi,
+                                    DicomDir=TrgDcmDir,
+                                    Thresh=0.5,
+                                    LogToConsole=LogToConsole)
         
         #print(f'\nAfter running PixArrByRoi2PtsByCntByRoi():')
         #print(f'ResSrcC2SindsByRoi = {ResSrcC2SindsByRoi}')
@@ -1472,11 +1479,11 @@ COPY A SEGMENTATION / SEGMENT / SEG
 
 def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgSegFpath=None, TrgSegLabel=None, TrgSliceNum=None, 
-            ResInterp='BlurThenLinear', PreResVar=(1,1,1), #PostResThresh=0.75, 
+            ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
+            ApplyPostResBlur=False, PostResVariance=(1,1,1),
             ForceReg=False, Tx='affine', TxMaxIters='512',
-            TxInterp='NearestNeighbor', 
-            ApplyPostTxBlur=True, PostTxVar=(2,2,2), 
-            ApplyPostTxBin=True, #ThreshPostTx=0.05, 
+            TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
+            ApplyPostTxBlur=True, PostTxVariance=(1,1,1), 
             TxtToAddToSegLabel='', LogToConsole=False, 
             DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
@@ -1540,7 +1547,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVariance : tuple of floats (optional; (1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -1550,6 +1557,13 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     #    resampling if a non-label (e.g. linear) interpolator is used. Example 
     #    use is on a labelmap image if a Gaussian blurring + linearly resampling 
     #    approach is taken to combat aliasing effects.
+    
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
     
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
@@ -1575,13 +1589,6 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         - 'Default' which leaves unchanged whatever interpolator was used in
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
-    
-    ApplyPostTxBlur : boolean (optional; True by default)
-        If True, the post-transformed labelmap image will be Gaussian blurred.
-    
-    PostTxVar : tuple of floats (optional; (2,2,2) by default)
-        The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
         
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
@@ -1591,6 +1598,13 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     #    The threshold level used to perform binary thresholding after 
     #    registration transformation.
     
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
     TxtToAddToSegLabel : string (optional, '' by default)
         String of text to add to the segment label of the new Target SEG.
         
@@ -1684,8 +1698,8 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     
     
     """ Check the validity of the combination of inputs. """
-    CheckValidityOfInputs(SrcSeg, SrcSegLabel, SrcSliceNum, TrgSeg, TrgSliceNum,
-                          LogToConsole)
+    CheckValidityOfInputs(SrcSeg, SrcSegLabel, SrcSliceNum, TrgSeg, TrgSegLabel,
+                          TrgSliceNum, LogToConsole)
     
     #""" Determine which Use Case to apply. """
     #UseCaseThatApplies,\
@@ -1834,19 +1848,19 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         """ Shift the in-plane (x & y) and out-of-plane (z) components of the 
         indices in SrcPixArrBySeg to account for the shift from SrcSliceNum to
         TrgSliceNum. """
-        SrcPixArrBySeg,\
-        SrcF2SindsBySeg = ShiftFramesInPixArrBySeg(PixArrBySeg=SrcPixArrBySeg, 
-                                                   F2SindsBySeg=SrcF2SindsBySeg, 
-                                                   SrcImage=SrcIm, 
-                                                   SrcSliceNum=SrcSliceNum,
-                                                   TrgImage=TrgIm, 
-                                                   TrgSliceNum=TrgSliceNum, 
-                                                   RefImage=TrgIm,
-                                                   ShiftInX=True,
-                                                   ShiftInY=True,
-                                                   ShiftInZ=True,
-                                                   Fractional=False,
-                                                   LogToConsole=LogToConsole)
+        SrcPixArrBySeg, SrcF2SindsBySeg\
+        = ShiftFramesInPixArrBySeg(PixArrBySeg=SrcPixArrBySeg, 
+                                   F2SindsBySeg=SrcF2SindsBySeg, 
+                                   SrcImage=SrcIm, 
+                                   SrcSliceNum=SrcSliceNum,
+                                   TrgImage=TrgIm, 
+                                   TrgSliceNum=TrgSliceNum, 
+                                   RefImage=TrgIm,
+                                   ShiftInX=True,
+                                   ShiftInY=True,
+                                   ShiftInZ=True,
+                                   Fractional=False,
+                                   LogToConsole=LogToConsole)
         
         if LogToConsole:
                 print(f'\nShifted SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
@@ -1943,16 +1957,18 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         #Interp = 'NearestNeighbor'
         #Interp = 'LabelGaussian'
         
-        ResSrcLabmapImBySeg, ResSrcPixArrBySeg,\
-        ResSrcF2SindsBySeg = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg, 
-                                                   #F2SindsByRoi=SrcC2SindsByRoi,
-                                                   F2SindsByRoi=SrcF2SindsBySeg,
-                                                   SrcImage=SrcIm, 
-                                                   TrgImage=TrgIm,
-                                                   Interpolation=ResInterp,
-                                                   PreResVar=PreResVar,
-                                                   #PostResThresh=PostResThresh,
-                                                   LogToConsole=LogToConsole)
+        ResSrcLabmapImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        = ResampleLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg, 
+                                #F2SindsByRoi=SrcC2SindsByRoi,
+                                F2SindsByRoi=SrcF2SindsBySeg,
+                                SrcIm=SrcIm, 
+                                TrgIm=TrgIm,
+                                Interp=ResInterp,
+                                PreResVariance=PreResVariance,
+                                #PostResThresh=PostResThresh,
+                                ApplyPostResBlur=ApplyPostResBlur,
+                                PostResVariance=PostResVariance,
+                                LogToConsole=LogToConsole)
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
@@ -2021,16 +2037,16 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             used since further operations below will need to be applied to
             either resampled or transformed data. """
         
-        ResSrcLabmapImBySeg, ResSrcPixArrBySeg,\
-        ResSrcF2SindsBySeg = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg,
-                                                    F2SindsByRoi=SrcF2SindsBySeg,
-                                                    RegImFilt=RegImFilt,
-                                                    Interpolation=TxInterp,
-                                                    ApplyPostTxBlur=ApplyPostTxBlur,
-                                                    PostTxVar=(2,2,2),
-                                                    ApplyPostTxBin=ApplyPostTxBin,
-                                                    #ThreshPostTx=ThreshPostTx, 
-                                                    LogToConsole=LogToConsole)
+        ResSrcLabmapImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        = TransformLabmapImByRoi(LabmapImByRoi=SrcLabmapImBySeg,
+                                 F2SindsByRoi=SrcF2SindsBySeg,
+                                 RegImFilt=RegImFilt,
+                                 Interp=TxInterp,
+                                 ApplyPostTxBlur=ApplyPostTxBlur,
+                                 PostTxVariance=PostTxVariance,
+                                 ApplyPostTxBin=ApplyPostTxBin,
+                                 #ThreshPostTx=ThreshPostTx, 
+                                 LogToConsole=LogToConsole)
         
         #times.append(time.time())
         #Dtime = round(times[-1] - times[-2], 1)
@@ -2262,9 +2278,10 @@ def CreateListOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, SrcStudyLabel,
                        SrcSeriesLabel, SrcAsrMod, SrcAsrName, SrcRoiName,
                        SrcSliceNum, TrgStudyLabel, TrgSeriesLabel, TrgAsrMod, 
                        TrgAsrName, TrgRoiName, TrgSliceNum, TxtToAddToTrgAsrName, 
-                       LogToConsole, ExportLogFiles, ResInterp, PreResVar, 
-                       ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBlur, 
-                       PostTxVar, ApplyPostTxBin):
+                       LogToConsole, ExportLogFiles, ResInterp, PreResVariance, 
+                       ApplyPostResBlur, PostResVariance, ForceReg, Tx, 
+                       TxMaxIters, TxInterp, ApplyPostTxBin, ApplyPostTxBlur, 
+                       PostTxVariance):
     
     ListOfInputs = [f"RunDateTime: {RunDateTime}\n",
                     f"XnatUrl = {XnatUrl}\n",
@@ -2286,14 +2303,16 @@ def CreateListOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, SrcStudyLabel,
                     f"LogToConsole = {LogToConsole}",
                     f"ExportLogFiles = {ExportLogFiles}",
                     f"ResInterpSet = {ResInterp}\n",
-                    f"PreResVar = {PreResVar}\n",
+                    f"PreResVariance = {PreResVariance}\n",
+                    f"ApplyPostResBlur = {ApplyPostResBlur}\n",
+                    f"PostResVariance = {PostResVariance}\n",
                     f"ForceReg = {ForceReg}\n",
                     f"Tx = {Tx}\n",
                     f"TxMaxIters = {TxMaxIters}\n",
                     f"TxInterp = {TxInterp}\n",
+                    f"ApplyPostTxBin = {ApplyPostTxBin}\n",
                     f"ApplyPostTxBlur = {ApplyPostTxBlur}\n",
-                    f"PostTxVar = {PostTxVar}\n",
-                    f"ApplyPostTxBin = {ApplyPostTxBin}\n"
+                    f"PostTxVariance = {PostTxVariance}\n"
                     ]
     
     return ListOfInputs
@@ -2306,9 +2325,10 @@ def CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, SrcStudyLabel,
                        SrcSeriesLabel, SrcAsrMod, SrcAsrName, SrcRoiName,
                        SrcSliceNum, TrgStudyLabel, TrgSeriesLabel, TrgAsrMod, 
                        TrgAsrName, TrgRoiName, TrgSliceNum, TxtToAddToTrgAsrName, 
-                       LogToConsole, ExportLogFiles, ResInterp, PreResVar, 
-                       ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBlur, 
-                       PostTxVar, ApplyPostTxBin):
+                       LogToConsole, ExportLogFiles, ResInterp, PreResVariance, 
+                       ApplyPostResBlur, PostResVariance, ForceReg, Tx, 
+                       TxMaxIters, TxInterp, ApplyPostTxBin, ApplyPostTxBlur, 
+                       PostTxVariance):
     
     DictOfInputs = {'RunDateTime' : RunDateTime,
                     'XnatUrl' : XnatUrl,
@@ -2330,14 +2350,16 @@ def CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, SrcStudyLabel,
                     'LogToConsole' : LogToConsole,
                     'ExportLogFiles' : ExportLogFiles,
                     'ResInterpSet' : ResInterp,
-                    'PreResVar' : PreResVar,
+                    'PreResVariance' : PreResVariance,
+                    'ApplyPostResBlur' : ApplyPostResBlur,
+                    'PostResVariance' : PostResVariance,
                     'ForceReg' : ForceReg,
                     'Tx' : Tx,
                     'TxMaxIters' : TxMaxIters,
                     'TxInterp' : TxInterp,
+                    'ApplyPostTxBin' : ApplyPostTxBin,
                     'ApplyPostTxBlur' : ApplyPostTxBlur,
-                    'PostTxVar' : PostTxVar,
-                    'ApplyPostTxBin' : ApplyPostTxBin
+                    'PostTxVariance' : PostTxVariance
                     }
     
     return DictOfInputs
@@ -2357,9 +2379,11 @@ COPY A CONTOUR / ROI / RTSTRUCT / SEGMENTATION / SEGMENT / SEG
 
 def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
                  TrgRoiFpath=None, TrgRoiName=None, TrgSliceNum=None, 
-                 ResInterp='BlurThenLinear', PreResVar=(1,1,1), ForceReg=False, 
-                 Tx='affine', TxMaxIters='512', TxInterp='NearestNeighbor', 
-                 ApplyPostTxBlur=True, PostTxVar=(2,2,2), ApplyPostTxBin=True,  
+                 ResInterp='BlurThenLinear', PreResVariance=(1,1,1), 
+                 ApplyPostResBlur=False, PostResVariance=(1,1,1),
+                 ForceReg=False, Tx='affine', TxMaxIters='512', 
+                 TxInterp='NearestNeighbor', ApplyPostTxBin=True,
+                 ApplyPostTxBlur=True, PostTxVariance=(1,1,1),   
                  TxtToAddTrgRoiName='', LogToConsole=False, ExportLogFiles=False):
     """
     Copy a contour/ROI/RTSTRUCT/segmentation/segment/SEG from locally sourced 
@@ -2408,10 +2432,17 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
     
-    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
+    
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
     
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
@@ -2438,17 +2469,17 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
     
-    ApplyPostTxBlur : boolean (optional; True by default)
-        If True, the post-transformed labelmap image will be Gaussian blurred.
-    
-    PostTxVar : tuple of floats (optional; (2,2,2) by default)
-        The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
-        
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
     
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
     TxtToAddTrgRoiName : string (optional, '' by default)
         String of text to pass to CreateRts()/CreateSeg(). The string will be
         appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
@@ -2507,16 +2538,16 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
                     f'TrgRoiName = {TrgRoiName}\n',
                     f'TrgSliceNum = {TrgSliceNum}\n',
                     f'ResInterpSet = {ResInterp}\n',
-                    f'PreResVar = {PreResVar}\n',
-                    #f'PostResThresh = {PostResThresh}\n',
+                    f'PreResVariance = {PreResVariance}\n',
+                    f'ApplyPostResBlur = {ApplyPostResBlur}\n',
+                    f'PostResVariance = {PostResVariance}\n',
                     f'ForceReg = {ForceReg}\n',
                     f'Tx = {Tx}\n',
                     f'TxMaxIters = {TxMaxIters}\n',
                     f'TxInterp = {TxInterp}\n',
-                    f'ApplyPostTxBlur = {ApplyPostTxBlur}\n',
-                    f'PostTxVar = {PostTxVar}\n',
                     f'ApplyPostTxBin = {ApplyPostTxBin}\n',
-                    #f'ThreshPostTx = {ThreshPostTx}\n',
+                    f'ApplyPostTxBlur = {ApplyPostTxBlur}\n',
+                    f'PostTxVariance = {PostTxVariance}\n',
                     f'TxtToAddTrgRoiName = {TxtToAddTrgRoiName}\n',
                     f'LogToConsole = {LogToConsole}']
     
@@ -2530,16 +2561,16 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
                     'TrgRoiName' : TrgRoiName,
                     'TrgSliceNum' : TrgSliceNum,
                     'ResInterpSet' : ResInterp,
-                    'PreResVar' : PreResVar,
-                    #'PostResThresh' : PostResThresh,
+                    'PreResVariance' : PreResVariance,
+                    'ApplyPostResBlur' : ApplyPostResBlur,
+                    'PostResVariance' : PostResVariance,
                     'ForceReg' : ForceReg,
                     'Tx' : Tx,
                     'TxMaxIters' : TxMaxIters,
                     'TxInterp' : TxInterp,
-                    'ApplyPostTxBlur' : ApplyPostTxBlur,
-                    'PostTxVar' : PostTxVar,
                     'ApplyPostTxBin' : ApplyPostTxBin,
-                    #'ThreshPostTx' : ThreshPostTx,
+                    'ApplyPostTxBlur' : ApplyPostTxBlur,
+                    'PostTxVariance' : PostTxVariance,
                     'TxtToAddTrgRoiName' : TxtToAddTrgRoiName,
                     'LogToConsole' : LogToConsole}
     
@@ -2553,8 +2584,8 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     times.append(time.time())
     
     """ Establish whether the inputs are valid. """
-    CheckValidityOfInputs(SrcRoiFpath, SrcRoiName, SrcSliceNum, TrgSliceNum, 
-                          TrgRoiFpath, LogToConsole)
+    CheckValidityOfInputs(SrcRoi, SrcRoiName, SrcSliceNum, TrgRoi, TrgRoiName,
+                          TrgSliceNum, TrgRoiFpath, LogToConsole)
     
     times.append(time.time())
     Dtime = round(1000*(times[-1] - times[-2]), 1)
@@ -2590,18 +2621,20 @@ def CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyRts(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, TrgRoiName, 
-                  TrgSliceNum, ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, 
-                  TxInterp, ApplyPostTxBlur, PostTxVar, ApplyPostTxBin,    
+                  TrgSliceNum, ResInterp, PreResVariance, ApplyPostResBlur, 
+                  PostResVariance,ForceReg, Tx, TxMaxIters, TxInterp, 
+                  ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance,    
                   TxtToAddTrgRoiName, LogToConsole,
                   DictOfInputs, ListOfInputs, ListOfTimings)
     
     elif Modality == 'SEG':
         TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
-        = CopySeg(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
+        = CopySeg(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, TrgRoiName, 
-                  TrgSliceNum, ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, 
-                  TxInterp, ApplyPostTxBlur, PostTxVar, ApplyPostTxBin,    
-                  TxtToAddTrgRoiName, LogToConsole, 
+                  TrgSliceNum, ResInterp, PreResVariance, ApplyPostResBlur, 
+                  PostResVariance,ForceReg, Tx, TxMaxIters, TxInterp, 
+                  ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance,    
+                  TxtToAddTrgRoiName, LogToConsole,
                   DictOfInputs, ListOfInputs, ListOfTimings)
         
     else:
@@ -2651,9 +2684,11 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
                 TrgRoiName=None, TrgSliceNum=None, TxtToAddToTrgAsrName='', 
                 PathsDict=None, XnatDownloadDir='default', 
                 LogToConsole=False, ExportLogFiles=False,
-                ResInterp='BlurThenLinear', PreResVar=(1,1,1), ForceReg=False,   
-                Tx='affine', TxMaxIters='512', TxInterp='NearestNeighbor', 
-                ApplyPostTxBlur=True, PostTxVar=(2,2,2), ApplyPostTxBin=True):
+                ResInterp='BlurThenLinear', PreResVariance=(1,1,1), 
+                ApplyPostResBlur=False, PostResVariance=(1,1,1),
+                ForceReg=False, Tx='affine', TxMaxIters='512', 
+                TxInterp='NearestNeighbor', ApplyPostTxBin=True,
+                ApplyPostTxBlur=True, PostTxVariance=(1,1,1)):
     
     """
     Copy a contour/ROI/RTSTRUCT/segmentation/segment/SEG from data downloaded
@@ -2738,7 +2773,7 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
     
     ExportLogFiles : boolean (optional; False by default)
         If True, log files will be exported.
-        
+    
     ResInterp : string (optional; 'BlurThenLinear' by default)
         The interpolator to be used for (non-registration-based) resampling of
         the Source labelmap image(s) to the Target grid (if applicable). 
@@ -2748,10 +2783,17 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
     
-    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
+    
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
     
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
@@ -2778,16 +2820,18 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
     
-    ApplyPostTxBlur : boolean (optional; True by default)
-        If True, the post-transformed labelmap image will be Gaussian blurred.
-    
-    PostTxVar : tuple of floats (optional; (2,2,2) by default)
-        The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
-        
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
+    
     
                   
     Outputs:
@@ -2838,7 +2882,7 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
     #Defaults = Preferences(directory=os.getcwd(), filename='CopyRoiDefaults.py')
     #
     #ResInterp = Defaults.get('ResInterp')
-    #PreResVar = Defaults.get('PreResVar')
+    #PreResVariance = Defaults.get('PreResVariance')
     #ForceReg = Defaults.get('ForceReg')
     #Tx = Defaults.get('Tx')
     #TxMaxIters = Defaults.get('TxMaxIters')
@@ -2853,8 +2897,10 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
                          SrcSliceNum, TrgStudyLabel, TrgSeriesLabel, TrgAsrMod, 
                          TrgAsrName, TrgRoiName, TrgSliceNum, 
                          TxtToAddToTrgAsrName, LogToConsole, ExportLogFiles, 
-                         ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, 
-                         TxInterp, ApplyPostTxBlur, PostTxVar, ApplyPostTxBin)
+                         ResInterp, PreResVariance, ApplyPostResBlur, 
+                         PostResVariance, ForceReg, Tx, TxMaxIters, 
+                         TxInterp, ApplyPostTxBin, ApplyPostTxBlur, 
+                         PostTxVariance)
     
     DictOfInputs\
     = CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, SrcStudyLabel, 
@@ -2862,8 +2908,10 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
                          SrcSliceNum, TrgStudyLabel, TrgSeriesLabel, TrgAsrMod, 
                          TrgAsrName, TrgRoiName, TrgSliceNum, 
                          TxtToAddToTrgAsrName, LogToConsole, ExportLogFiles, 
-                         ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, 
-                         TxInterp, ApplyPostTxBlur, PostTxVar, ApplyPostTxBin)
+                         ResInterp, PreResVariance, ApplyPostResBlur, 
+                         PostResVariance, ForceReg, Tx, TxMaxIters, 
+                         TxInterp, ApplyPostTxBin, ApplyPostTxBlur, 
+                         PostTxVariance)
     
     
     TimingMsgs = [f'RunDateTime: {RunDateTime}\n']
@@ -2963,8 +3011,9 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
         TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyRts(SrcAsrFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
                   UseCaseToApply, TrgAsrFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, TxInterp, 
-                  ApplyPostTxBlur, PostTxVar, ApplyPostTxBin,  
+                  ResInterp, PreResVariance, ApplyPostResBlur, PostResVariance, 
+                  ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBin, 
+                  ApplyPostTxBlur, PostTxVariance, 
                   TxtToAddToTrgAsrName, LogToConsole,
                   DictOfInputs, ListOfInputs, TimingMsgs)
     
@@ -2975,9 +3024,10 @@ def CopyXnatRoi(XnatUrl, XnatSession, ProjId, SubjLabel, SrcStudyLabel,
         TrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopySeg(SrcAsrFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
                   UseCaseToApply, TrgAsrFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, TxInterp,
-                  ApplyPostTxBlur, PostTxVar, ApplyPostTxBin,    
-                  TxtToAddToTrgAsrName, LogToConsole, 
+                  ResInterp, PreResVariance, ApplyPostResBlur, PostResVariance, 
+                  ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBin, 
+                  ApplyPostTxBlur, PostTxVariance, 
+                  TxtToAddToTrgAsrName, LogToConsole,
                   DictOfInputs, ListOfInputs, TimingMsgs)
         
     else:
@@ -3229,11 +3279,12 @@ RUN COPYROI()
 
 
 def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='', 
-                    ResInterp='BlurThenLinear', PreResVar=(1,1,1), 
-                    ForceReg=False, Tx='affine', TxMaxIters='512',
-                    TxInterp='NearestNeighbor', ApplyPostTxBlur=True, 
-                    PostTxVar=(2,2,2), ApplyPostTxBin=True, ExportRoi=True, 
-                    PlotResults=False, PlotAllSlices=False, 
+                    ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
+                    ApplyPostResBlur=False, PostResVariance=(1,1,1),
+                    ForceReg=False, Tx='affine', TxMaxIters='512', 
+                    TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
+                    ApplyPostTxBlur=True, PostTxVariance=(1,1,1), 
+                    ExportRoi=True, PlotResults=False, PlotAllSlices=False, 
                     ExportPlot=False, ExportLogFiles=True):
     """
     
@@ -3264,7 +3315,7 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -3274,6 +3325,13 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
     #    resampling using a non-label (e.g. linear) interpolator. Example use is 
     #    on a labelmap image if a Gaussian blurring + linearly resampling 
     #    approach is taken to combat aliasing effects.
+    
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
     
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
@@ -3300,13 +3358,6 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
     
-    ApplyPostTxBlur : boolean (optional; True by default)
-        If True, the post-transformed labelmap image will be Gaussian blurred.
-    
-    PostTxVar : tuple of floats (optional; (2,2,2) by default)
-        The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
-        
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
@@ -3314,6 +3365,13 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
     #ThreshPostTx : float (optional; 0.05 by default)
     #    The threshold level used to perform binary thresholding after 
     #    registration transformation.
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
     
     ExportRoi : boolean (optional; True by default)
         If True, the new Target RTS/SEG will be exported to a directory called
@@ -3414,9 +3472,10 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
         
         NewTrgRoi, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyLocalRoi(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
-                       TrgDcmDir, TrgRoiFpath, TrgSliceNum, ResInterp, PreResVar, #PostResThresh, 
-                       ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBlur, 
-                       PostTxVar, ApplyPostTxBin, #ThreshPostTx, 
+                       TrgDcmDir, TrgRoiFpath, TrgSliceNum, ResInterp, 
+                       PreResVariance, ApplyPostResBlur, PostResVariance, 
+                       ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBin, 
+                       ApplyPostTxBlur, PostTxVariance, 
                        TxtToAddTrgRoiName, LogToConsole, ExportLogFiles=False)
         
         
@@ -3619,7 +3678,8 @@ def RunCopyLocalRoi(TestNums, LogToConsole=False, TxtToAddTrgRoiName='',
 
 
 def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False, 
-                   ExportPlot=False, XnatUrl=None, ProjId=None, SubjLabel=None, 
+                   ExportPlot=False, DevOutputs=False, 
+                   XnatUrl=None, ProjId=None, SubjLabel=None, 
                    SrcStudyLabel=None, SrcSeriesLabel=None, SrcAsrMod=None, 
                    SrcAsrName=None, SrcRoiName=None, SrcSliceNum=None, 
                    TrgStudyLabel=None, TrgSeriesLabel=None, TrgAsrMod=None, 
@@ -3649,6 +3709,10 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
     PlotResults : boolean (optional; False by default)
     
     ExportPlot : boolean (optional; False by default)
+    
+    DevOutputs : boolean (optional; False by default)
+        If True various outputs will be returned.  If False, no outputs will be
+        returned.
     
     XnatUrl : string (optional if TestNums != None; None by default)
         Address of XNAT (e.g. 'http://10.1.1.20').
@@ -3720,14 +3784,32 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
         If True, log files will be exported.
         
     
-    Outputs:
-    *******
+    Outputs (if DevOutputs = True):
+    *******************************
     
-    Times : list of floats
-        A list of time stamps at certain task executions.
+    SrcAsr : Pydicom object
+        The Source assessor
+    
+    TrgAsr : Pydicom object or None
+        The Target assessor or None.
+    
+    NewTrgAsr : Pydicom object
+        The new Target assessor.
         
+    PathsDict : dictionary
+        Dictionary of directory and file paths.
+        
+    DictOfInputs : dictionary
+        Dictionary of inputs.
+    
+    ListOfInputs : list
+        List of inputs.
+    
     TimingMsgs : list of strings
         A list of the time to execute certain tasks.
+               
+    Times : list of floats
+        A list of time stamps at certain task executions.
     
     
     Notes:
@@ -3740,7 +3822,7 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
     import time
     import os
     from pypref import Preferences
-    #from pydicom import dcmread
+    from pydicom import dcmread
     #from DicomTools import IsSameModalities
     #from XnatTools import DownloadScan, DownloadAssessor
     from GeneralTools import PrintTitle, ExportListToTxt#, ExportDictionaryToJson
@@ -3822,22 +3904,26 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
                            filename='CopyRoiDefaults.py')
     
     ResInterp = Defaults.get('ResInterp')
-    PreResVar = Defaults.get('PreResVar')
+    PreResVariance = Defaults.get('PreResVariance')
+    ApplyPostResBlur = Defaults.get('ApplyPostResBlur')
+    PostResVariance = Defaults.get('PostResVariance')
     ForceReg = Defaults.get('ForceReg')
     Tx = Defaults.get('Tx')
     TxMaxIters = Defaults.get('TxMaxIters')
     TxInterp = Defaults.get('TxInterp')
-    ApplyPostTxBlur = Defaults.get('ApplyPostTxBlur')
-    PostTxVar = Defaults.get('PostTxVar')
     ApplyPostTxBin = Defaults.get('ApplyPostTxBin')
+    ApplyPostTxBlur = Defaults.get('ApplyPostTxBlur')
+    PostTxVariance = Defaults.get('PostTxVariance')
     ExportNewTrgAsr = Defaults.get('ExportNewTrgAsr')
     
-    print("Default input arguments read from 'CopyRoiDefaults.py':\n",
-          f"   ResInterp = {ResInterp}\n   PreResVar = {PreResVar}\n",
-          f"   ForceReg = {ForceReg}\n   Tx = {Tx}\n   TxMaxIters =",
-          f"{TxMaxIters}\n   TxInterp = {TxInterp}\n   ApplyPostTxBlur =",
-          f"{ApplyPostTxBlur}\n   PostTxVar = {PostTxVar}\n   ApplyPostTxBin =",
-          f"{ApplyPostTxBin}\n")
+    print("Default input arguments read from 'CopyRoiDefaults.py':",
+          f"\n   ResInterp = {ResInterp}\n   PreResVariance = {PreResVariance}",
+          f"\n   ApplyPostResBlur = {ApplyPostResBlur}",
+          f"\n   PostResVariance = {PostResVariance}\n",
+          f"\n   ForceReg = {ForceReg}\n   Tx = {Tx}\n   TxMaxIters = {TxMaxIters}",
+          f"\n   TxInterp = {TxInterp}\n   ApplyPostTxBin = {ApplyPostTxBin}",
+          f"\n   ApplyPostTxBlur = {ApplyPostTxBlur}",
+          f"\n   PostTxVariance = {PostTxVariance}\n")
     
     
     NewTrgAsr, PathsDict, XnatSession, DictOfInputs, ListOfInputs, TimingMsgs\
@@ -3846,15 +3932,16 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
                   TrgStudyLabel, TrgSeriesLabel, TrgAsrMod, TrgAsrName, 
                   TrgRoiName, TrgSliceNum, TxtToAddToTrgAsrName, 
                   PathsDict, XnatDownloadDir, LogToConsole, ExportLogFiles,
-                  ResInterp, PreResVar, ForceReg, Tx, TxMaxIters, TxInterp, 
-                  ApplyPostTxBlur, PostTxVar, ApplyPostTxBin)
+                  ResInterp, PreResVariance, ApplyPostResBlur, PostResVariance, 
+                  ForceReg, Tx, TxMaxIters, TxInterp, ApplyPostTxBin, 
+                  ApplyPostTxBlur, PostTxVariance)
     
     
     """ Error check the new Target RTS/SEG """
     Times.append(time.time())
     
     TrgDcmDir = PathsDict[ProjId][SubjLabel][TrgStudyLabel][TrgSeriesLabel]\
-                ['DicomDir']
+                         ['DicomDir']
     
     ErrorList, Nerrors = ErrorCheckRoi(NewTrgAsr, TrgDcmDir, LogToConsole,
                                        DictOfInputs, False)
@@ -3887,81 +3974,91 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
         print('Log of error checks saved to:\n', Fpath, '\n')
     
     
-
+    
+    """ Info required if exporting the new assessor and/or if DevOutputs = True
+    """
+    UseCaseThatApplies = DictOfInputs['UseCaseThatApplies']
+    UseCaseToApply = DictOfInputs['UseCaseToApply']
+    
+    if TestNum:
+        NewTrgAsrFname = f'TestNum_{TestNum}_{SrcAsrName}'\
+                         + f'{TxtToAddToTrgAsrName}'
+    else:
+        NewTrgAsrFname = f'{SrcAsrName}{TxtToAddToTrgAsrName}'
+    
+    if ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+        NewTrgAsrFname += f'_ForcedReg_{Tx}'
+        
+    if not ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
+        #NewTrgAsrFname += f'_{ResInterp}'
+        
+        """ The actual interpolation used for resampling might not be
+        ResInterp. """
+        DiffInterpByRoi = []
+        
+        for key, val in DictOfInputs.items():
+            if 'ResInterpUsedFor' in key and not ResInterp in key:
+                DiffInterpByRoi.append(val)
+        
+        """ If DiffInterpByRoi is not empty, use the first item. """
+        if DiffInterpByRoi:
+            NewTrgAsrFname += f'_{DiffInterpByRoi[0]}'
+        else:
+            if ResInterp == 'NearestNeighbor':
+                NewTrgAsrFname += '_NN'
+            else:
+                NewTrgAsrFname += f'_{ResInterp}'
+        
+        
+        
+    if UseCaseToApply in ['5a', '5b']:
+        if TxInterp == 'NearestNeighbor':
+            NewTrgAsrFname += '_NN'
+        else:
+            NewTrgAsrFname += f'_{TxInterp}'
+    
+    SrcAsrFpath = PathsDict[ProjId][SubjLabel][SrcStudyLabel][SrcSeriesLabel]\
+                           ['assessors'][SrcAsrMod][SrcAsrName]['AsrFpath']
+                           
+    
+    SrcAsr = dcmread(SrcAsrFpath)
+    
+    SrcDcmDir = PathsDict[ProjId][SubjLabel][SrcStudyLabel][SrcSeriesLabel]\
+                         ['DicomDir']
+    
+    if TrgAsrName:
+        TrgAsrFpath = PathsDict[ProjId][SubjLabel][TrgStudyLabel]\
+                               [TrgSeriesLabel]['assessors'][TrgAsrMod]\
+                               [TrgAsrName]['AsrFpath']
+        
+        TrgAsr = dcmread(TrgAsrFpath)
+    else:
+        TrgAsr = None
+    
+    RtsExportDir = Defaults.get('RtsExportDir')
+    SegExportDir = Defaults.get('SegExportDir')
+    
+    
+    
     """ Export the new Target RTS/SEG """
 
     if ExportNewTrgAsr:# and not Nerrors:
-        UseCaseThatApplies = DictOfInputs['UseCaseThatApplies']
-        UseCaseToApply = DictOfInputs['UseCaseToApply']
-        if TestNum:
-            NewTrgAsrFname = f'TestNum_{TestNum}_{SrcAsrName}'\
-                             + f'{TxtToAddToTrgAsrName}'
-        else:
-            NewTrgAsrFname = f'{SrcAsrName}{TxtToAddToTrgAsrName}'
-        
-        if ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
-            NewTrgAsrFname += f'_ForcedReg_{Tx}'
-            
-        if not ForceReg and UseCaseThatApplies in ['3a', '3b', '4a', '4b']:
-            #NewTrgAsrFname += f'_{ResInterp}'
-            
-            """ The actual interpolation used for resampling might not be
-            ResInterp. """
-            DiffInterpByRoi = []
-            
-            for key, val in DictOfInputs.items():
-                if 'ResInterpUsedFor' in key and not ResInterp in key:
-                    DiffInterpByRoi.append(val)
-            
-            """ If DiffInterpByRoi is not empty, use the first item. """
-            if DiffInterpByRoi:
-                NewTrgAsrFname += f'_{DiffInterpByRoi[0]}'
-            else:
-                if ResInterp == 'NearestNeighbor':
-                    NewTrgAsrFname += '_NN'
-                else:
-                    NewTrgAsrFname += f'_{ResInterp}'
-            
-            
-            
-        if UseCaseToApply in ['5a', '5b']:
-            if TxInterp == 'NearestNeighbor':
-                NewTrgAsrFname += '_NN'
-            else:
-                NewTrgAsrFname += f'_{TxInterp}'
-        
-        SrcAsrFpath = PathsDict[ProjId][SubjLabel][SrcStudyLabel]\
-                      [SrcSeriesLabel]['assessors'][SrcAsrMod][SrcAsrName]\
-                      ['AsrFpath']
-        
-        RtsExportDir = Defaults.get('RtsExportDir')
-        SegExportDir = Defaults.get('SegExportDir')
-        
         if NewTrgAsr.Modality == 'RTSTRUCT':
             NewTrgAsrFpath = ExportTrgRoi(NewTrgAsr, SrcAsrFpath, RtsExportDir, 
                                           NewTrgAsrFname, DictOfInputs)
         else:
             NewTrgAsrFpath = ExportTrgRoi(NewTrgAsr, SrcAsrFpath, SegExportDir, 
                                           NewTrgAsrFname, DictOfInputs)
-    
+        
+        PathsDict[ProjId][SubjLabel][SrcStudyLabel][SrcSeriesLabel]\
+                 ['assessors'][SrcAsrMod]\
+                 .update({NewTrgAsrFname : {'AsrFpath' : NewTrgAsrFpath}})
+                               
     
     """ Plot Contours """
 
     if PlotResults:
-        from pydicom import dcmread
-        
-        SrcAsr = dcmread(SrcAsrFpath)
-        
-        SrcDcmDir = PathsDict[ProjId][SubjLabel][SrcStudyLabel]\
-                    [SrcSeriesLabel]['DicomDir']
-        
         if TrgAsrName:
-            TrgAsrFpath = PathsDict[ProjId][SubjLabel][TrgStudyLabel]\
-                  [TrgSeriesLabel]['assessors'][TrgAsrMod][TrgAsrName]\
-                  ['AsrFpath']
-            
-            TrgAsr = dcmread(TrgAsrFpath)
-                  
             ListOfRois = [SrcAsr, TrgAsr, NewTrgAsr]
 
             ListOfDicomDirs = [SrcDcmDir, TrgDcmDir, TrgDcmDir]
@@ -3973,8 +4070,6 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
             ListOfDicomDirs = [SrcDcmDir, TrgDcmDir]
 
             ListOfPlotTitles = ['Source', 'New Target']
-        
-        
         
         if ExportPlot:
             dpi = 120
@@ -3998,9 +4093,9 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
         Times.append(time.time())
         
         if NewTrgAsr.Modality == 'RTSTRUCT':
-            import PlottingTools
-            import importlib
-            importlib.reload(PlottingTools)
+            #import PlottingTools
+            #import importlib
+            #importlib.reload(PlottingTools)
             from PlottingTools import PlotContoursFromListOfRtss_v1
             
             PlotContoursFromListOfRtss_v1(ListOfRois, ListOfDicomDirs, 
@@ -4034,7 +4129,7 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
     TimingMsgs.append(msg)
     print(f'*{msg}')
         
-    """ change stuff below """    
+    
     #print('All Test run iterations complete.\n')
     
     #Times.append(time.time())
@@ -4058,9 +4153,12 @@ def RunCopyXnatRoi(XnatSession, TestNum, LogToConsole=False, PlotResults=False,
         print('Log file saved to:\n', Fpath, '\n')
     
     
-    #return Times, TimingMsgs # output to send if looping through TestNums
-    #return NewTrgRoi
-    return
+    
+    if DevOutputs:
+        return SrcAsr, TrgAsr, NewTrgAsr, PathsDict, DictOfInputs,\
+               ListOfInputs, TimingMsgs, Times
+    else:
+        return
     
 
 

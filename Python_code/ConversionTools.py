@@ -200,6 +200,8 @@ def Index2Point(Index, RefIm):
     else:
         msg = f"The data type of Index is {Dtypes}. It must be either "\
               + "'int' or 'float'."
+              
+        raise Exception(msg)
          
         
     #return Point # 29/01/2021
@@ -723,10 +725,10 @@ def PixArr2Image(PixArr, F2Sinds, RefIm):
     #print(f'ImSize[2] = {ImSize[2]}')
     #print(f'FrameToSliceInds = {FrameToSliceInds}')
     
-    Labmap = PixArr2Labmap(PixArr=PixArr, NumOfSlices=ImSize[2], 
-                           F2Sinds=F2Sinds)
+    LabmapArr = PixArr2LabmapArr(PixArr=PixArr, NumOfSlices=ImSize[2], 
+                                 F2Sinds=F2Sinds)
     
-    LabmapIm = sitk.GetImageFromArray(Labmap)
+    LabmapIm = sitk.GetImageFromArray(LabmapArr)
     
     # Set the Origin, Spacing and Direction of LabmapIm to that of RefIm:
     LabmapIm.SetOrigin(RefIm.GetOrigin())

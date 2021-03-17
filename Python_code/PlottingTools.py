@@ -3385,6 +3385,121 @@ def PlotFixMovImages(FixInd, MovInd, FixPixArr, MovPixArr,
     return
 
 
+
+
+def PlotFixMovImages_v2(FixIm, MovIm, FixInd, MovInd, 
+                     FixTitle='Fixed image', MovTitle='Moving image'):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    FixPixArr = sitk.GetArrayViewFromImage(FixIm)[FixInd,:,:]
+    MovPixArr = sitk.GetArrayViewFromImage(MovIm)[MovInd,:,:]
+    
+    FixZ = FixIm.TransformIndexToPhysicalPoint([0,0,FixInd])[2]
+    MovZ = MovIm.TransformIndexToPhysicalPoint([0,0,MovInd])[2]
+    
+    FixTitle = f'{FixTitle}\nz = {round(FixZ, 2)} mm'
+    MovTitle = f'{MovTitle}\nz = {round(MovZ, 2)} mm'
+    
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1, 2, figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(FixPixArr, cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1, 2, 2)
+    plt.imshow(MovPixArr, cmap=plt.cm.Greys_r);
+    plt.title(MovTitle)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return
+
+
+
+
+
+def PlotFixMovImagesWithMouseInput(FixInd, MovInd, FixPixArr, MovPixArr,
+                                   FixTitle='Fixed image', MovTitle='Moving image'):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    import matplotlib.pyplot as plt
+    
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1, 2, figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(FixPixArr[FixInd,:,:], cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    FixInput = plt.ginput(0,0)
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1, 2, 2)
+    plt.imshow(MovPixArr[MovInd,:,:], cmap=plt.cm.Greys_r);
+    plt.title(MovTitle)
+    plt.axis('off')
+    
+    
+    return FixInput
+
+
+
+
+
+def PlotFixMovImagesWithMouseInput_v2(FixIm, MovIm, FixInd, MovInd, 
+                     FixTitle='Fixed image', MovTitle='Moving image'):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    FixPixArr = sitk.GetArrayViewFromImage(FixIm)[FixInd,:,:]
+    MovPixArr = sitk.GetArrayViewFromImage(MovIm)[MovInd,:,:]
+    
+    FixZ = FixIm.TransformIndexToPhysicalPoint([0,0,FixInd])[2]
+    MovZ = MovIm.TransformIndexToPhysicalPoint([0,0,MovInd])[2]
+    
+    FixTitle = f'{FixTitle}\nz = {round(FixZ, 2)} mm'
+    MovTitle = f'{MovTitle}\nz = {round(MovZ, 2)} mm'
+    
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1, 2, figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(FixPixArr, cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    FixInput = plt.ginput(0,0)
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1, 2, 2)
+    plt.imshow(MovPixArr, cmap=plt.cm.Greys_r);
+    plt.title(MovTitle)
+    plt.axis('off')
+    MovInput = plt.ginput(0,0)
+    
+    plt.show()
+    
+    return FixInput, MovInput
+
+
+
+
+
+
 def PlotBlendedImage(Ind, alpha, FixIm, ResIm, PlotTitle='Blended image'):
     """ Callback invoked by the IPython interact method for scrolling and 
     modifying the alpha blending of an image stack of two images that 
@@ -3449,6 +3564,56 @@ def PlotValues(RegMethod):
     
     return
 
+
+
+
+
+
+def PlotSrcResSrcTrgImages(SrcIm, ResSrcIm, TrgIm, SrcInd, ResSrcInd, TrgInd,
+                           SrcTitle='Source image', 
+                           ResSrcTitle='Resampled Source image', 
+                           TrgTitle='Target image'):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    SrcPixArr = sitk.GetArrayViewFromImage(SrcIm)[SrcInd,:,:]
+    ResSrcPixArr = sitk.GetArrayViewFromImage(ResSrcIm)[ResSrcInd,:,:]
+    TrgPixArr = sitk.GetArrayViewFromImage(TrgIm)[TrgInd,:,:]
+    
+    SrcZ = SrcIm.TransformIndexToPhysicalPoint([0,0,SrcInd])[2]
+    ResSrcZ = ResSrcIm.TransformIndexToPhysicalPoint([0,0,ResSrcInd])[2]
+    TrgZ = SrcIm.TransformIndexToPhysicalPoint([0,0,TrgInd])[2]
+    
+    SrcTitle = f'{SrcTitle}\nz = {round(SrcZ, 2)} mm'
+    ResSrcTitle = f'{ResSrcTitle}\nz = {round(ResSrcZ, 2)} mm'
+    TrgTitle = f'{TrgTitle}\nz = {round(TrgZ, 2)} mm'
+    
+    plt.subplots(1, 3, figsize=(15,8))
+    
+    # Draw the Source/Moving image in the first subplot.
+    plt.subplot(1, 3, 1)
+    plt.imshow(SrcPixArr, cmap=plt.cm.Greys_r);
+    plt.title(SrcTitle)
+    plt.axis('off')
+    
+    # Draw the Resampled/registered Source/Moving image in the second subplot.
+    plt.subplot(1, 3, 2)
+    plt.imshow(ResSrcPixArr, cmap=plt.cm.Greys_r);
+    plt.title(ResSrcTitle)
+    plt.axis('off')
+    
+    # Draw the Target/Fixed image in the third subplot.
+    plt.subplot(1, 3, 3)
+    plt.imshow(TrgPixArr, cmap=plt.cm.Greys_r);
+    plt.title(TrgTitle)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return
 
 
 
