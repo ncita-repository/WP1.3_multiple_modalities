@@ -389,8 +389,8 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
 
 
 def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcLabel, TrgLabel, 
-                               Case, ImageType, ExportPlot, ExportDir, 
-                               LogToConsole=False, dpi=80):
+                               Case=None, ImageType='', ExportPlot=False, 
+                               ExportDir='', LogToConsole=False, dpi=80):
     
     """ 
     SrcIm/ResSrcIm/TrgIm could either be a SimpleITK image,
@@ -573,10 +573,15 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcLabel, TrgLabel,
         CurrentDate = time.strftime("%Y%m%d", time.gmtime())
         CurrentTime = time.strftime("%H%M%S", time.gmtime())
         CurrentDateTime = CurrentDate + '_' + CurrentTime
-                      
-        ExportFname = CurrentDateTime + '_Case' + Case + '_Orig' + SrcLabel \
-                      + ResOrReg_short + SrcLabel + '_' + TrgLabel + '_' \
-                      + ImageType + '.jpg'
+        
+        if Case:
+            ExportFname = CurrentDateTime + '_Case' + Case + '_Orig' \
+                          + SrcLabel + ResOrReg_short + SrcLabel + '_' \
+                          + TrgLabel + '_' + ImageType + '.jpg'
+        else:
+            ExportFname = CurrentDateTime + '_Orig' \
+                          + SrcLabel + ResOrReg_short + SrcLabel + '_' \
+                          + TrgLabel + '_' + ImageType + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
@@ -1166,8 +1171,8 @@ def PlotPixelArrays(ListOfPixArrs, ListOfFrameToSliceInds, ListOfPlotTitles,
 
 
 def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
-                                 PlotAllSlices=False, AddTxt=None, 
-                                 ExportPlot=False, ExportDir=None, dpi=80, 
+                                 PlotAllSlices=False, ExportPlot=False, 
+                                 ExportDir=None, ExportFname=None, dpi=80, 
                                  LogToConsole=False):
     """ 
     Note:
@@ -1193,7 +1198,7 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
     import matplotlib.pyplot as plt
     import os
     from pathlib import Path
-    import time
+    #import time
     #from copy import deepcopy
     from pydicom import dcmread
     #from DicomTools import GetDicomFpaths
@@ -1331,19 +1336,19 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         
     
     if ExportPlot:
-        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
-        CurrentTime = time.strftime("%H%M%S", time.gmtime())
-        CurrentDateTime = CurrentDate + '_' + CurrentTime
-    
-        if AddTxt:
-            AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
-            AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
-            AddTxt = AddTxt.replace('\n', '')
-        else:
-            AddTxt = ''
-            
-        #ExportFname = CurrentDateTime + '_Segs_' + AddTxt + '.jpg'
-        ExportFname = AddTxt + '.jpg'
+        #CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        #CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        #CurrentDateTime = CurrentDate + '_' + CurrentTime
+        #
+        #if AddTxt:
+        #    AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
+        #    AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
+        #    AddTxt = AddTxt.replace('\n', '')
+        #else:
+        #    AddTxt = ''
+        #    
+        ##ExportFname = CurrentDateTime + '_Segs_' + AddTxt + '.jpg'
+        #ExportFname = AddTxt + '.jpg'
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
@@ -1353,7 +1358,7 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         
         plt.savefig(ExportFpath, bbox_inches='tight')
         
-        print('\nPlot exported to:\n\n', ExportFpath)
+        print(f'Plot exported to:\n {ExportFpath}\n')
         
     return
 
@@ -1775,8 +1780,8 @@ def PlotContoursFromListOfRtss_v1_OLD(ListOfRtss, ListOfDicomDirs, ListOfPlotTit
 
 
 def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
-                                  PlotAllSlices=False, AddTxt=None, 
-                                  ExportPlot=False, ExportDir=None, dpi=80, 
+                                  PlotAllSlices=False, ExportPlot=False, 
+                                  ExportDir=None, ExportFname=None, dpi=80, 
                                   LogToConsole=False):
     """ 
     Note:
@@ -1804,7 +1809,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     import matplotlib.pyplot as plt
     import os
     from pathlib import Path
-    import time
+    #import time
     #from copy import deepcopy
     from pydicom import dcmread
     from RtsTools import GetRtsDataFromListOfRtss
@@ -1851,7 +1856,8 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
     n = 1 # initialised sub-plot number
     
     #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 7.5*Nrows), dpi=dpi)
-    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+    #fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi) # figure size too big
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), dpi=dpi)
     
     # Loop through each AllSliceNums: 
     for SliceNum in AllSliceNums:
@@ -1983,19 +1989,20 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         
     
     if ExportPlot:
-        CurrentDate = time.strftime("%Y%m%d", time.gmtime())
-        CurrentTime = time.strftime("%H%M%S", time.gmtime())
-        CurrentDateTime = CurrentDate + '_' + CurrentTime
+        #CurrentDate = time.strftime("%Y%m%d", time.gmtime())
+        #CurrentTime = time.strftime("%H%M%S", time.gmtime())
+        #CurrentDateTime = CurrentDate + '_' + CurrentTime
     
-        if AddTxt:
-            AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
-            AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
-            AddTxt = AddTxt.replace('\n', '')
-        else:
-            AddTxt = ''
+        #if AddTxt:
+        #    AddTxt = AddTxt.replace(' = ', '_').replace(' ', '_')
+        #    AddTxt = AddTxt.replace(',', '').replace('(', '').replace(')', '')
+        #    AddTxt = AddTxt.replace('\n', '')
+        #else:
+        #    AddTxt = ''
             
-        #ExportFname = CurrentDateTime + '_Contours_' + AddTxt + '.jpg'
-        ExportFname = AddTxt + '.jpg'
+        ##ExportFname = CurrentDateTime + '_Contours_' + AddTxt + '.jpg'
+        #ExportFname = AddTxt + '.jpg'
+        
         
         ExportFpath = os.path.join(ExportDir, ExportFname)
         
@@ -2005,7 +2012,7 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         
         plt.savefig(ExportFpath, bbox_inches='tight')
         
-        print('\nPlot exported to:\n\n', ExportFpath)
+        print(f'Plot exported to:\n {ExportFpath}\n')
         
     return
 
@@ -3500,7 +3507,7 @@ def PlotFixMovImagesWithMouseInput_v2(FixIm, MovIm, FixInd, MovInd,
 
 
 
-def PlotBlendedImage(Ind, alpha, FixIm, ResIm, PlotTitle='Blended image'):
+def PlotBlendedImage(FixIm, ResIm, Ind, alpha=0.5, PlotTitle='Blended image'):
     """ Callback invoked by the IPython interact method for scrolling and 
     modifying the alpha blending of an image stack of two images that 
     occupy the same physical space. """
@@ -3614,6 +3621,620 @@ def PlotSrcResSrcTrgImages(SrcIm, ResSrcIm, TrgIm, SrcInd, ResSrcInd, TrgInd,
     plt.show()
     
     return
+
+
+
+"""
+R0, C0, S0 = Im0.GetSize()
+R1, C1, S1 = Im1.GetSize()
+R2, C2, S2 = Im2.GetSize()
+"""
+
+
+def PlotTwoImages(Im0, Ind0, PlotLabel0, Im1, Ind1, PlotLabel1):
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    PixArr0 = sitk.GetArrayViewFromImage(Im0)[Ind0,:,:]
+    PixArr1 = sitk.GetArrayViewFromImage(Im1)[Ind1,:,:]
+    
+    z0 = Im0.TransformIndexToPhysicalPoint([0,0,Ind0])[2]
+    z1 = Im1.TransformIndexToPhysicalPoint([0,0,Ind1])[2]
+    
+    PlotLabel0 = f'{PlotLabel0}\nz = {round(z0, 2)} mm'
+    PlotLabel1 = f'{PlotLabel1}\nz = {round(z1, 2)} mm'
+    
+    plt.subplots(1, 2, figsize=(15,8))
+    
+    plt.subplot(1, 2, 1)
+    plt.imshow(PixArr0, cmap=plt.cm.Greys_r);
+    plt.title(PlotLabel0)
+    plt.axis('off')
+    
+    plt.subplot(1, 2, 2)
+    plt.imshow(PixArr1, cmap=plt.cm.Greys_r);
+    plt.title(PlotLabel1)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return
+
+
+
+
+
+
+def PlotThreeImages(Im0, Ind0, PlotLabel0, 
+                    Im1, Ind1, PlotLabel1, 
+                    Im2, Ind2, PlotLabel2):
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    PixArr0 = sitk.GetArrayViewFromImage(Im0)[Ind0,:,:]
+    PixArr1 = sitk.GetArrayViewFromImage(Im1)[Ind1,:,:]
+    PixArr2 = sitk.GetArrayViewFromImage(Im2)[Ind2,:,:]
+    
+    z0 = Im0.TransformIndexToPhysicalPoint([0,0,Ind0])[2]
+    z1 = Im1.TransformIndexToPhysicalPoint([0,0,Ind1])[2]
+    z2 = Im2.TransformIndexToPhysicalPoint([0,0,Ind2])[2]
+    
+    PlotLabel0 = f'{PlotLabel0}\nz = {round(z0, 2)} mm'
+    PlotLabel1 = f'{PlotLabel1}\nz = {round(z1, 2)} mm'
+    PlotLabel2 = f'{PlotLabel2}\nz = {round(z2, 2)} mm'
+    
+    plt.subplots(1, 3, figsize=(15,8))
+    
+    plt.subplot(1, 3, 1)
+    plt.imshow(PixArr0, cmap=plt.cm.Greys_r);
+    plt.title(PlotLabel0)
+    plt.axis('off')
+    
+    plt.subplot(1, 3, 2)
+    plt.imshow(PixArr1, cmap=plt.cm.Greys_r);
+    plt.title(PlotLabel1)
+    plt.axis('off')
+    
+    plt.subplot(1, 3, 3)
+    plt.imshow(PixArr2, cmap=plt.cm.Greys_r);
+    plt.title(PlotLabel2)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return
+
+
+
+
+
+
+def PlotTwoImagesWithFiducials(Im0, FidsFpath0, PlotLabel0, 
+                               Im1, FidsFpath1, PlotLabel1,
+                               IndsFromImageJ=False):
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    import importlib
+    import ImageTools
+    importlib.reload(ImageTools)
+    from ImageTools import ImportFiducialsFromTxt
+    
+    Fids0, FidsType0 = ImportFiducialsFromTxt(FidsFpath0, IndsFromImageJ, Im0)
+    Fids1, FidsType1 = ImportFiducialsFromTxt(FidsFpath1, IndsFromImageJ, Im1)
+    
+    Nrows = min(len(Fids0), len(Fids1))
+    
+    plt.subplots(Nrows, 2, figsize=(15,7*Nrows))
+    
+    i = 1 # sub-plot number
+    
+    for r in range(Nrows):
+        i0, j0, k0 = Fids0[r]
+        i1, j1, k1 = Fids1[r]
+        
+        PixArr0 = sitk.GetArrayViewFromImage(Im0)[k0,:,:]
+        PixArr1 = sitk.GetArrayViewFromImage(Im1)[k1,:,:]
+        
+        z0 = Im0.TransformIndexToPhysicalPoint([i0,j0,k0])[2]
+        z1 = Im1.TransformIndexToPhysicalPoint([i1,j1,k1])[2]
+        
+        Lab0 = f'{PlotLabel0}\nz = {round(z0, 2)} mm\nFudicial at {Fids0[r]}'
+        Lab1 = f'{PlotLabel1}\nz = {round(z1, 2)} mm\nFudicial at {Fids1[r]}'
+    
+        plt.subplot(Nrows, 2, i)
+        plt.imshow(PixArr0, cmap=plt.cm.Greys_r);
+        plt.scatter(i0, j0, marker='+', c='r');
+        plt.title(Lab0)
+        plt.axis('off')
+        
+        i += 1
+        
+        plt.subplot(Nrows, 2, i)
+        plt.imshow(PixArr1, cmap=plt.cm.Greys_r);
+        plt.scatter(i1, j1, marker='+', c='r');
+        plt.title(Lab1)
+        plt.axis('off')
+        
+        i += 1
+    
+    plt.show()
+    
+    return
+
+
+
+
+
+
+def PlotThreeImagesWithFiducials(Im0, FidsFpath0, PlotLabel0, 
+                                 Im1, FidsFpath1, PlotLabel1,
+                                 Im2, FidsFpath2, PlotLabel2,
+                                 IndsFromImageJ=False, 
+                                 ExportPlot=False, 
+                                 ExportDir='{cwd}/fiducials',
+                                 TxtToAddToFname=''):
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    import importlib
+    import ImageTools
+    importlib.reload(ImageTools)
+    from ImageTools import ImportFiducialsFromTxt
+    
+    if ExportPlot:
+        dpi = 120
+    else:
+        dpi = 80
+    
+    Fids0, FidsType0 = ImportFiducialsFromTxt(FidsFpath0, IndsFromImageJ, Im0)
+    Fids1, FidsType1 = ImportFiducialsFromTxt(FidsFpath1, IndsFromImageJ, Im1)
+    Fids2, FidsType2 = ImportFiducialsFromTxt(FidsFpath2, IndsFromImageJ, Im2)
+    
+    Nrows = min(len(Fids0), len(Fids1), len(Fids2))
+    
+    plt.subplots(Nrows, 3, figsize=(20,7*Nrows), dpi=dpi)
+    
+    marker = '+'
+    markersize = 154
+    colour = 'r'
+    
+    i = 1 # sub-plot number
+    
+    for r in range(Nrows):
+        i0, j0, k0 = Fids0[r]
+        i1, j1, k1 = Fids1[r]
+        i2, j2, k2 = Fids2[r]
+        
+        PixArr0 = sitk.GetArrayViewFromImage(Im0)[k0,:,:]
+        PixArr1 = sitk.GetArrayViewFromImage(Im1)[k1,:,:]
+        PixArr2 = sitk.GetArrayViewFromImage(Im2)[k2,:,:]
+        
+        z0 = Im0.TransformIndexToPhysicalPoint([i0,j0,k0])[2]
+        z1 = Im1.TransformIndexToPhysicalPoint([i1,j1,k1])[2]
+        z2 = Im2.TransformIndexToPhysicalPoint([i2,j2,k2])[2]
+        
+        Lab0 = f'{PlotLabel0}\nz = {round(z0, 2)} mm\nFudicial at {Fids0[r]}'
+        Lab1 = f'{PlotLabel1}\nz = {round(z1, 2)} mm\nFudicial at {Fids1[r]}'
+        Lab2 = f'{PlotLabel2}\nz = {round(z2, 2)} mm\nFudicial at {Fids2[r]}'
+    
+        plt.subplot(Nrows, 3, i)
+        plt.imshow(PixArr0, cmap=plt.cm.Greys_r);
+        plt.scatter(i0, j0, marker=marker, s=markersize, c=colour);
+        plt.title(Lab0)
+        plt.axis('off')
+        
+        i += 1
+        
+        plt.subplot(Nrows, 3, i)
+        plt.imshow(PixArr1, cmap=plt.cm.Greys_r);
+        plt.scatter(i1, j1, marker=marker, s=markersize, c=colour);
+        plt.title(Lab1)
+        plt.axis('off')
+        
+        i += 1
+        
+        plt.subplot(Nrows, 3, i)
+        plt.imshow(PixArr2, cmap=plt.cm.Greys_r);
+        plt.scatter(i2, j2, marker=marker, s=markersize, c=colour);
+        plt.title(Lab2)
+        plt.axis('off')
+        
+        i += 1
+    
+    #plt.show()
+    
+    if ExportPlot:
+        import time
+        import os
+        from pathlib import Path
+        
+        if ExportDir == '{cwd}/fiducials':
+            cwd = os.getcwd()
+            
+            ExportDir = os.path.join(cwd, 'fiducials')
+            
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        ExportFname = CurrentDateTime + '_' + TxtToAddToFname + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+    
+    return
+
+
+
+
+
+
+
+def PlotResResults(FixIm, MovIm, ResIm, FixInd, MovInd=None,
+                   FixTitle='Fixed image', MovTitle='Moving image', 
+                   ResTitle='Resampled image',
+                   ExportPlot=False, ExportDir='cwd', TxtToAddToFname=''):
+    """ Callback invoked by the IPython interact method for scrolling and 
+    modifying the alpha blending of an image stack of two images that 
+    occupy the same physical space. 
+    """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    from GeneralTools import GetIndOfNearestSlice
+    
+    #UseCentre = True # 16/04/21 Not sure it's working as expected
+    UseCentre = False
+    
+    if MovInd == None:
+        MovInd, zDiff = GetIndOfNearestSlice(FixIm, FixInd, MovIm, UseCentre)
+    
+    FixPixArr = sitk.GetArrayViewFromImage(FixIm)[FixInd,:,:]
+    MovPixArr = sitk.GetArrayViewFromImage(MovIm)[MovInd,:,:]
+    ResPixArr = sitk.GetArrayViewFromImage(ResIm)[FixInd,:,:]
+    
+    if UseCentre:
+        R_f, C_f, S_f = FixIm.GetSize()
+        R_m, C_m, S_m = MovIm.GetSize()
+        
+        i_f = R_f//2
+        j_f = C_f//2
+        
+        i_m = R_m//2
+        j_m = C_m//2
+    else:
+        i_f = 0
+        j_f = 0
+        
+        i_m = 0
+        j_m = 0
+        
+    FixZ = FixIm.TransformIndexToPhysicalPoint([i_f,j_f,FixInd])[2]
+    MovZ = MovIm.TransformIndexToPhysicalPoint([i_m,j_m,MovInd])[2]
+    ResZ = ResIm.TransformIndexToPhysicalPoint([i_f,j_f,FixInd])[2]
+    
+    FixTitle = f'{FixTitle}\nk = {FixInd}\nz = {round(FixZ, 2)} mm'
+    MovTitle = f'{MovTitle}\nk = {MovInd}\nz = {round(MovZ, 2)} mm'
+    ResTitle = f'{ResTitle}\nk = {FixInd}\nz = {round(ResZ, 2)} mm'
+    
+    if ExportPlot:
+        dpi = 300
+    else:
+        dpi = 80
+        
+    plt.subplots(2, 3, figsize=(18,12), dpi=dpi)
+    
+    alpha = 0.5
+    
+    BlendedIm = (1.0 - alpha)*FixIm[:,:,FixInd] + alpha*ResIm[:,:,FixInd]
+    
+    DiffIm = FixIm[:,:,FixInd] - ResIm[:,:,FixInd]
+    
+    plt.subplot(2, 3, 1)
+    plt.imshow(MovPixArr, cmap=plt.cm.Greys_r);
+    plt.title(MovTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 2)
+    plt.imshow(FixPixArr, cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 3)
+    plt.imshow(ResPixArr, cmap=plt.cm.Greys_r);
+    plt.title(ResTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 4)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 5)
+    plt.imshow(sitk.GetArrayViewFromImage(BlendedIm), cmap=plt.cm.Greys_r);
+    plt.title('Blended image')
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 6)
+    plt.imshow(sitk.GetArrayViewFromImage(DiffIm), cmap=plt.cm.Greys_r);
+    plt.title('Difference image')
+    plt.axis('off')
+    
+    #plt.show()
+    
+    if ExportPlot:
+        import time
+        import os
+        from pathlib import Path
+        
+        if ExportDir == 'cwd':
+            ExportDir = os.getcwd()
+        
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        ExportFname = CurrentDateTime + '_' + TxtToAddToFname + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+    
+    return
+
+
+
+
+
+
+def PlotResResultsWithLabIms(FixIm, MovIm, ResIm, MovInd, MovLabIm, ResLabIm, 
+                             FixTitle='Fixed image', MovTitle='Moving image', 
+                             ResTitle='Resampled moving image',
+                             ExportPlot=False, ExportDir='cwd', FileName=''):
+    """ Callback invoked by the IPython interact method for scrolling and 
+    modifying the alpha blending of an image stack of two images that 
+    occupy the same physical space. 
+    """
+    
+    #import numpy as np
+    import SimpleITK as sitk
+    #import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    #from matplotlib.colors import colorConverter
+    from GeneralTools import GetIndOfNearestSlice
+    
+    #UseCentre = True # 16/04/21 Not sure it's working as expected
+    UseCentre = False
+    
+    FixInd, zDiff = GetIndOfNearestSlice(MovIm, MovInd, FixIm, UseCentre)
+    
+    FixPixArr = sitk.GetArrayViewFromImage(FixIm)[FixInd,:,:]
+    MovPixArr = sitk.GetArrayViewFromImage(MovIm)[MovInd,:,:]
+    ResPixArr = sitk.GetArrayViewFromImage(ResIm)[FixInd,:,:]
+    
+    FixZ = FixIm.TransformIndexToPhysicalPoint([0,0,FixInd])[2]
+    MovZ = MovIm.TransformIndexToPhysicalPoint([0,0,MovInd])[2]
+    ResZ = ResIm.TransformIndexToPhysicalPoint([0,0,FixInd])[2]
+    
+    FixTitle = f'{FixTitle}\nz = {round(FixZ, 2)} mm'
+    MovTitle = f'{MovTitle}\nz = {round(MovZ, 2)} mm'
+    ResTitle = f'{ResTitle}\nz = {round(ResZ, 2)} mm'
+    
+    if ExportPlot:
+        dpi = 300
+    else:
+        dpi = 80
+    
+    plt.subplots(2, 3, figsize=(18,12), dpi=dpi)
+    
+    # Colormap for labelmaps:
+    Cmap = plt.cm.nipy_spectral
+    #RedCmap = plt.cm.Reds
+    #Cmap = plt.cm.bwr
+    Cmap = plt.cm.hsv
+    Cmap = plt.cm.Reds
+    
+    # https://stackoverflow.com/questions/10127284/overlay-imshow-plots-in-matplotlib
+    #white = colorConverter.to_rgba('white')
+    #black = colorConverter.to_rgba('black')
+
+    #GreyCmap = mpl.colors.LinearSegmentedColormap.from_list('my_cmap2', [white, black], 256)
+    #ColourCmap = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['red','blue'], 256)
+    
+    #ColourCmap._init() # create the _lut array, with rgba values
+    
+    # create your alpha array and fill the colormap with them.
+    # here it is progressive, but you can create whathever you want
+    #alphas = np.linspace(0, 0.8, ColourCmap.N + 3)
+    #ColourCmap._lut[:,-1] = alphas
+
+    
+    alpha = 0.5
+    alpha = 0.3
+    
+    BlendedFixResIm = (1.0 - alpha)*FixIm[:,:,FixInd] + alpha*ResIm[:,:,FixInd]
+    
+    DiffFixResIm = FixIm[:,:,FixInd] - ResIm[:,:,FixInd]
+    
+    MovSegArr = sitk.GetArrayViewFromImage(MovLabIm)[MovInd,:,:]
+    ResSegArr = sitk.GetArrayViewFromImage(ResLabIm)[FixInd,:,:]
+    
+    #MovSegMask = MovSegArr > 0
+    
+    #BlendedMovSegIm = (1.0 - alpha)*MovIm[:,:,MovInd] + alpha*MovLabmapIm[:,:,MovInd]
+    #BlendedResSegIm = (1.0 - alpha)*ResIm[:,:,FixInd] + alpha*ResLabmapIm[:,:,FixInd]
+    
+    #plt.subplot(2, 3, 1)
+    #plt.imshow(MovPixArr, cmap=plt.cm.Greys_r);
+    ##plt.imshow(MovPixArr, cmap=plt.cm.Greys_r, alpha=alpha);
+    #plt.imshow(MovSegArr, cmap=Cmap, alpha=alpha);
+    #plt.title(MovTitle)
+    #plt.axis('off')
+    
+    
+    plt.subplot(2, 3, 1)
+    plt.imshow(MovPixArr, cmap=plt.cm.Greys_r);
+    #plt.imshow(MovPixArr, cmap=GreyCmap);
+    #plt.imshow(MovPixArr, cmap=GreyCmap, alpha=alpha);
+    #plt.imshow(MovSegArr, cmap=ColourCmap);
+    #plt.imshow(MovSegArr, cmap=RedCmap);
+    plt.imshow(MovSegArr, cmap=Cmap, alpha=alpha);
+    #plt.imshow(MovSegArr*0.5, cmap=Cmap, alpha=alpha);
+    #plt.imshow(MovSegArr*MovSegMask, cmap=Cmap);
+    #plt.imshow(MovSegArr*MovSegMask, cmap=Cmap, alpha=alpha);
+    plt.title(MovTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 2)
+    plt.imshow(FixPixArr, cmap=plt.cm.Greys_r);
+    plt.title(FixTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 3)
+    plt.imshow(ResPixArr, cmap=plt.cm.Greys_r);
+    #plt.imshow(ResPixArr, cmap=plt.cm.Greys_r, alpha=alpha);
+    plt.imshow(ResSegArr, cmap=Cmap, alpha=alpha);
+    plt.title(ResTitle)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 4)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 5)
+    plt.imshow(sitk.GetArrayViewFromImage(BlendedFixResIm), cmap=plt.cm.Greys_r);
+    plt.title('Blended image')
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 6)
+    plt.imshow(sitk.GetArrayViewFromImage(DiffFixResIm), cmap=plt.cm.Greys_r);
+    plt.title('Difference image')
+    plt.axis('off')
+    
+    #plt.show()
+    
+    if ExportPlot:
+        import os
+        
+        if FileName == '':
+            import time
+            
+            Fname = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + '.jpg'
+        
+        if ExportDir == 'cwd':
+            ExportDir = os.getcwd()
+            
+        Fpath = os.path.join(ExportDir, Fname)
+        
+        plt.savefig(Fpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', Fpath)
+        
+    
+    return
+
+
+
+
+
+
+def CompareResResults(ResIm0, ResIm1, ResInd,
+                      ResTitle0='Resampled image 0', 
+                      ResTitle1='Resampled image 1', 
+                      ExportPlot=False, ExportDir='cwd', TxtToAddToFname=''):
+    """ Callback invoked by the IPython interact method for scrolling and 
+    modifying the alpha blending of an image stack of two images that 
+    occupy the same physical space. 
+    """
+    
+    import SimpleITK as sitk
+    import matplotlib.pyplot as plt
+    
+    #UseCentre = True # 16/04/21 Not sure it's working as expected
+    UseCentre = False
+    
+    ResPixArr0 = sitk.GetArrayViewFromImage(ResIm0)[ResInd,:,:]
+    ResPixArr1 = sitk.GetArrayViewFromImage(ResIm1)[ResInd,:,:]
+    
+    if UseCentre:
+        # Assuming that ResIm0 size = ResIm1 size:
+        R, C, S = ResIm0.GetSize()
+        
+        i = R//2
+        j = C//2
+    else:
+        i = 0
+        j = 0
+        
+    ResZ = ResIm0.TransformIndexToPhysicalPoint([i,j,ResInd])[2]
+    
+    ResTitle0 = f'{ResTitle0}\nk = {ResInd}\nz = {round(ResZ, 2)} mm'
+    ResTitle1 = f'{ResTitle1}\nk = {ResInd}\nz = {round(ResZ, 2)} mm'
+    
+    if ExportPlot:
+        dpi = 300
+    else:
+        dpi = 80
+        
+    plt.subplots(2, 2, figsize=(10,10), dpi=dpi)
+    
+    alpha = 0.5
+    
+    BlendedIm = (1.0 - alpha)*ResIm0[:,:,ResInd] + alpha*ResIm1[:,:,ResInd]
+    
+    DiffIm = ResIm0[:,:,ResInd] - ResIm1[:,:,ResInd]
+    
+    plt.subplot(2, 2, 1)
+    plt.imshow(ResPixArr0, cmap=plt.cm.Greys_r);
+    plt.title(ResTitle0)
+    plt.axis('off')
+    
+    plt.subplot(2, 2, 2)
+    plt.imshow(ResPixArr1, cmap=plt.cm.Greys_r);
+    plt.title(ResTitle1)
+    plt.axis('off')
+    
+    plt.subplot(2, 2, 3)
+    plt.imshow(sitk.GetArrayViewFromImage(BlendedIm), cmap=plt.cm.Greys_r);
+    plt.title('Blended image')
+    plt.axis('off')
+    
+    plt.subplot(2, 2, 4)
+    plt.imshow(sitk.GetArrayViewFromImage(DiffIm), cmap=plt.cm.Greys_r);
+    plt.title('Difference image')
+    plt.axis('off')
+    
+    #plt.show()
+    
+    if ExportPlot:
+        import time
+        import os
+        from pathlib import Path
+        
+        if ExportDir == 'cwd':
+            ExportDir = os.getcwd()
+        
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        ExportFname = CurrentDateTime + '_' + TxtToAddToFname + '.jpg'
+        
+        ExportFpath = os.path.join(ExportDir, ExportFname)
+        
+        plt.savefig(ExportFpath, bbox_inches='tight')
+        
+        print('\nPlot exported to:\n\n', ExportFpath)
+    
+    return
+
 
 
 

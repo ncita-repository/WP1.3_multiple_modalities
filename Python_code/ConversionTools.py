@@ -148,7 +148,7 @@ def Index2Point(Index, RefIm):
         elif Dtype == float:
             Point = RefIm.TransformContinuousIndexToPhysicalPoint(Index)
         
-        elif Dtype in [numpy.ndarray, numpy.float64]:
+        elif Dtype in [numpy.ndarray, numpy.float64, numpy.int32]:
             """ Convert from numpy array to list: """
             Index = Index.tolist()
             
@@ -501,6 +501,75 @@ def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
 
 
 
+def PixArr2ListOfInds(PixArr, F2Sinds):
+    """
+    Convert a binary pixel array to a list (for eachof a list of indices of non-zero 
+    elements.  If PixArr is 2D, the function will return a list of length 1 of 
+    a list of indices.  If PixArr is 3D, the function will return a list of
+    length N of a list of indices, where N is the size of PixArr along the 
+    third dimension. 
+    
+    
+    
+    Inputs:
+    ******
+    
+    PixArr : Numpy array
+        A binary pixel array representing a segmentation (2D) or segment (3D).
+    
+    F2Sinds : List of integers
+        The DICOM slice numbers that correspond to each frame in PixArr,
+        e.g. PFFGStoSliceInds = PerFrameFunctionalGroupsSequence-to-slice
+        number.
+    
+        
+    Outputs:
+    *******
+    
+    ListOfInds : list of a list of integers
+        A list (of length N, where N = number of frames in PixArr) of a list
+        (for each dimension) of a list of integer coordinates for each non-zero
+        element in each 2D frame in PixArr.
+    """
+    
+    import numpy as np
+    
+    dim = PixArr.ndim
+    
+    if dim == 2:
+        R, C = PixArr.shape
+        F = 1
+    elif dim == 3:
+        F, R, C = PixArr.shape
+    else:
+        msg = "'PixArr' must have 2 or 3 dimensions."
+        raise Exception(msg)
+    
+    ListOfInds = []
+    
+    for f in range(F):       
+        yInds, xInds = np.where(PixArr[f] > 0)
+        
+        xInds = xInds.tolist()
+        yInds = yInds.tolist()
+        
+        if dim == 2: 
+            Inds = [[yInds[i], xInds[i]] for i in range(len(xInds))]
+        else:
+            s = F2Sinds[f]
+            
+            Inds = [[yInds[i], xInds[i], s] for i in range(len(xInds))]
+        
+        ListOfInds.append(Inds)
+        
+    return ListOfInds
+    
+    
+    
+
+
+
+
 def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
     """
     Convert a list of points in all contours in all ROIs to a list of pixel
@@ -712,7 +781,7 @@ def PixArr2Image(PixArr, F2Sinds, RefIm):
     Outputs:
     *******
         
-    LabmapIm : SimpleITK image
+    LabIm : SimpleITK image
         A SimpleITK image containing zero-padded indices from PixArr.
     """
     
@@ -728,17 +797,17 @@ def PixArr2Image(PixArr, F2Sinds, RefIm):
     LabmapArr = PixArr2LabmapArr(PixArr=PixArr, NumOfSlices=ImSize[2], 
                                  F2Sinds=F2Sinds)
     
-    LabmapIm = sitk.GetImageFromArray(LabmapArr)
+    LabIm = sitk.GetImageFromArray(LabmapArr)
     
-    # Set the Origin, Spacing and Direction of LabmapIm to that of RefIm:
-    LabmapIm.SetOrigin(RefIm.GetOrigin())
-    LabmapIm.SetSpacing(RefIm.GetSpacing())
-    LabmapIm.SetDirection(RefIm.GetDirection())
+    # Set the Origin, Spacing and Direction of LabIm to that of RefIm:
+    LabIm.SetOrigin(RefIm.GetOrigin())
+    LabIm.SetSpacing(RefIm.GetSpacing())
+    LabIm.SetDirection(RefIm.GetDirection())
     
     #print(f'\n\nThe maximum value in Labmap is {Labmap.max()}')
-    #print(f'\n\nThe maximum value in LabmapIm is {ImageMax(LabmapIm)}')
+    #print(f'\n\nThe maximum value in LabIm is {ImageMax(LabIm)}')
         
-    return LabmapIm
+    return LabIm
 
 
 
@@ -772,11 +841,11 @@ def PixArr2ImagesBySeg(PixArr, F2SindsBySeg, FrameNumsBySeg, RefIm):
     Outputs:
     *******
         
-    LabmapIms : List of SimpleITK images
+    LabIms : List of SimpleITK images
         A list of 3D zero-padded labelaps - one per segment.
     """
     
-    LabmapIms = []
+    LabIms = []
     
     #print(f'\nF2SindsBySeg = {F2SindsBySeg}\n')
     #print(f'FrameNumsBySeg = {FrameNumsBySeg}')
@@ -791,13 +860,13 @@ def PixArr2ImagesBySeg(PixArr, F2SindsBySeg, FrameNumsBySeg, RefIm):
         #print(f'PixArr.shape = {PixArr.shape}')
         #print(f'PixArr[{a}:{b+1}].shape = {PixArr[a:b+1].shape}')
         
-        LabmapIm = PixArr2Image(PixArr=PixArr[a:b+1],
-                                RefIm=RefIm,
-                                F2Sinds=F2SindsBySeg[i])
+        LabIm = PixArr2Image(PixArr=PixArr[a:b+1],
+                             RefIm=RefIm,
+                             F2Sinds=F2SindsBySeg[i])
         
-        LabmapIms.append(LabmapIm)
+        LabIms.append(LabIm)
         
-    return LabmapIms
+    return LabIms
 
 
 
@@ -1035,8 +1104,8 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
 
 
 
-def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
-                              LogToConsole=False):
+def PixArrByRoi2LabImByRoi(PixArrByRoi, F2SindsByRoi, RefIm, 
+                           LogToConsole=False):
     """
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each
@@ -1065,7 +1134,7 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
     Outputs:
     *******
     
-    LabmapImByRoi : list of SimpleITK images
+    LabImByRoi : list of SimpleITK images
         A list (for each ROI) of 3D labelmap images representing the pixel
         arrays in PixArrByRoi.
     """
@@ -1075,24 +1144,24 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of PixArrByRoi2LabmapImByRoi():')
+        print(f'Results of PixArrByRoi2LabImByRoi():')
         #print(f'   len(PixArrByRoi) = {len(PixArrByRoi)}')
         
-    LabmapImByRoi = []
+    LabImByRoi = []
     NewF2SindsByRoi = []
 
     for r in range(len(PixArrByRoi)):
-        LabmapIm = PixArr2Image(PixArr=PixArrByRoi[r],
-                                F2Sinds=F2SindsByRoi[r],
-                                RefIm=RefIm)
+        LabIm = PixArr2Image(PixArr=PixArrByRoi[r],
+                             F2Sinds=F2SindsByRoi[r],
+                             RefIm=RefIm)
         
-        LabmapImByRoi.append(LabmapIm)
+        LabImByRoi.append(LabIm)
     
         if LogToConsole:
-            print(f'\n   Image info for LabmapImByRoi[{r}]:')
+            print(f'\n   Image info for LabImByRoi[{r}]:')
             
         PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = GetImageInfo(LabmapIm, LogToConsole)
+        F2Sinds = GetImageInfo(LabIm, LogToConsole)
         
         NewF2SindsByRoi.append(F2Sinds)
     
@@ -1117,7 +1186,7 @@ def PixArrByRoi2LabmapImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
     if LogToConsole:
         print('-'*120)
         
-    return LabmapImByRoi
+    return LabImByRoi
 
 
 

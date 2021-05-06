@@ -858,9 +858,6 @@ def GroupListBySegment(ListToGroup, DIVs):
 
 
 
-
-
-
 def AddToPFFGS(Seg):
     """
     Append the last item in the Per-FrameFunctionalGroupsSequence of the
@@ -1494,8 +1491,6 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
     
     
     return NewPixArr, NewPFFGStoSliceInds
-
-
 
 
 
@@ -2683,3 +2678,880 @@ def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString,
         
     return ListOfPixArrBySeg, ListOfF2SindsBySeg, ListOfDcmFpaths,\
            ListOfIPPs, ListOfDirections, ListOfSpacings
+
+
+
+
+
+
+"""
+******************************************************************************
+******************************************************************************
+COPY A SEGMENTATION / SEGMENT / SEG
+******************************************************************************
+******************************************************************************
+"""
+
+def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
+            UseCaseToApply, TrgSegFpath=None, TrgSegLabel=None, TrgSliceNum=None, 
+            ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
+            ApplyPostResBlur=False, PostResVariance=(1,1,1),
+            ForceReg=False, TxMatrix=None, SelxOrSitk='Selx', Transform='affine', 
+            MaxIters='512', TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
+            ApplyPostTxBlur=True, PostTxVariance=(1,1,1), 
+            TxtToAddToSegLabel='', LogToConsole=False, 
+            DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
+    """
+    Note 09/02/2021:
+        This function will, depending on the inputs, copy either:
+            1. A specific segmentation
+            2. All segmentations in a specific segment
+            3. All segmentations in all segments
+        
+     
+    Inputs:
+    ******
+    
+    SrcSegFpath : string
+        Filepath of the Source SEG file.
+    
+    SrcSliceNum : integer or None
+        The slice indeces within the Source DICOM stack corresponding to the
+        segmentation to be copied (applies for the case of direct copies of a  
+        single segmentation). The index is zero-indexed.
+        If SrcSliceNum = None, a relationship-preserving copy will be made.
+        
+    SrcSegLabel : string
+        All or part of the Source SegmentLabel for the segment containing the
+        segmentation(s) to be copied.
+    
+    SrcDcmDir : string
+        Directory containing the Source DICOMs.
+    
+    TrgDcmDir : string
+        Directory containing the Target DICOMs.
+    
+    UseCaseToApply : string
+        String that denotes the Use Case that will be applied.  This will be
+        the same as UseCaseThatApplies unless ForceRegistration is True and
+        UseCaseThatApplies is '3a', '3b', '4a' or '4b'.
+        
+    TrgRtsFpath : string or None (optional; None by default)
+        Filepath to the Target SEG file that the segmentation(s) is/are to be 
+        copied to. TrgSegFpath != None only if an existing Target SEG exists 
+        and is to added to. An existing SEG will be added to only for Direct 
+        copy operations.     
+    
+    TrgSegLabel : string or None (optional; None by default) 
+        All or part of the SegmentLabel of the destination segment.
+        
+    TrgSliceNum : integer (optional; None by default)
+        The slice index within the Target DICOM stack where the segmentation 
+        will be copied to (applies only for the case of direct copies of single 
+        segmentations). The index is zero-indexed.
+        If TrgSliceNum = None, a relationship-preserving copy will be made, 
+        since the slice location(s) where the segmentation(s) will be copied to 
+        will not depend on user input.
+        
+    ResInterp : string
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding) (Default value)
+    
+    PreResVariance : tuple of floats (optional; (1,1,1) by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
+        
+    #PostResThresh : float (optional; 0.75 by default)
+    #    The threshold level used to perform binary thresholding following 
+    #    resampling if a non-label (e.g. linear) interpolator is used. Example 
+    #    use is on a labelmap image if a Gaussian blurring + linearly resampling 
+    #    approach is taken to combat aliasing effects.
+    
+    ApplyPostResBlur : boolean (optional; True by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
+    
+    ForceReg : boolean (optional; False by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.  
+    
+    TxMatrix : None or list of float strings (optional; None by default)
+        List of float strings representing the transformation that would 
+        tranform the moving (Source) image to the fixed (Target) image. 
+        If not None, image registration will be skipped to save computational
+        time.
+    
+    SelxOrSitk : string (optional; 'Selx' by default)
+        Denotes which package to use for image registration and transformation.
+        Acceptable values include:
+            - 'Selx' for SimpleElastix
+            - 'Sitk' for SimpleITK
+            
+    Transform : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+    
+    MaxIters : string (optional; '512' by default)
+        If 'default', the maximum number of iterations used for the optimiser
+        during image registration (if applicable) will be the pre-set default
+        in the parameter map for Transform. If != 'default' it must be a string 
+        representation of an integer.
+        
+    TxInterp : string (optional; 'NearestNeighbor' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+        
+    ApplyPostTxBin : boolean (optional; True by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
+        
+    #ThreshPostTx : float (optional; 0.05 by default)
+    #    The threshold level used to perform binary thresholding after 
+    #    registration transformation.
+    
+    ApplyPostTxBlur : boolean (optional; True by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        tranformed labelmap image(s).
+        
+    TxtToAddToSegLabel : string (optional, '' by default)
+        String of text to add to the segment label of the new Target SEG.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+    
+    DictOfInputs : dictionary (optional; empty by default)
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings (optional; empty by default)
+        A list containing the inputs that were called to CopyRoi().
+    
+    ListOfTimings : list of strings
+        A list of the time to execute certain tasks during the calling of 
+        CopySeg().
+          
+                  
+    Outputs:
+    *******
+        
+    TrgSeg : Pydicom object
+        The new (if making a Relationship-preserving copy) or modified (if
+        making a Direct copy) Target SEG object.
+    
+    Dro : Pydicom object or None
+        DICOM registration object if image registration was used to create 
+        TrgSeg, None otherwise.
+    
+    DictOfInputs : dictionary
+        A dictionary containing the inputs that were called to CopyRoi().
+        
+    ListOfInputs : list of strings
+        A list containing the inputs that were called to CopyRoi().
+        
+    ListOfTimings : list of strings
+        A list (for each message) of timings for individual operations.
+        
+        
+    Notes:
+    *****
+    
+    An example use of the ForceRegistration option is to overcome translations 
+    in the patient that are not reflected in the ImagePositionPatient tag. If 
+    using resampling techniques the Target segmentations will appear displaced  
+    w.r.t. the anatomical features highlighted in the Source image.
+    """
+    
+    import importlib
+    import ConversionTools
+    importlib.reload(ConversionTools)
+    import GeneralTools
+    importlib.reload(GeneralTools)
+    import ImageTools
+    importlib.reload(ImageTools)
+    import SegTools
+    importlib.reload(SegTools)
+    import DroTools
+    importlib.reload(DroTools)
+    import RoiCopyTools
+    importlib.reload(RoiCopyTools)
+    
+    import time
+    from copy import deepcopy
+    from pydicom import dcmread
+    from ImageTools import ImportImage#, GetImageInfo
+    #from SegTools import GetSegDataOfInterest, ProportionOfSegsInExtent
+    #from SegTools import CreateSeg
+    from GeneralTools import UniqueItems#, PrintIndsByRoi#, PrintTitle
+    #from GeneralTools import ZshiftPtsByCntByRoi#, GetPixelShiftBetweenSlices
+    #from GeneralTools import ShiftFrame
+    from DroTools import CreateDro
+    from RoiCopyTools import CheckValidityOfInputs
+    
+    """ Start timing. """
+    times = []
+    times.append(time.time())
+    #""" Log timing messages. """
+    #TimingMsgs = []
+    
+    
+    SrcSeg = dcmread(SrcSegFpath)
+    if TrgSegFpath:
+        TrgSeg = dcmread(TrgSegFpath)
+    else:
+        TrgSeg = None
+    
+    if LogToConsole:
+        from DicomTools import GetRoiLabels
+        
+        print('\n\n', '-'*120)
+        print(f'Running CopySeg():')
+        
+        SrcSegLabels = GetRoiLabels(SrcSeg)
+        
+        print(f'\nSrcSegLabels = {SrcSegLabels}')
+        
+        if TrgSegFpath:
+            TrgSegLabels = GetRoiLabels(TrgSeg)
+        
+            print(f'\nTrgSegLabels = {TrgSegLabels}')
+    
+    
+    """ Check the validity of the combination of inputs. """
+    CheckValidityOfInputs(SrcSeg, SrcSegLabel, SrcSliceNum, TrgSeg, TrgSegLabel,
+                          TrgSliceNum, LogToConsole)
+    
+    #""" Determine which Use Case to apply. """
+    #UseCaseThatApplies,\
+    #UseCaseToApply = WhichUseCase(SrcSliceNum, FromSegLabel, TrgSliceNum, 
+    #                              SrcDcmDir, TrgDcmDir, ForceRegistration,
+    #                              LogToConsole=True)
+    
+    #""" Manipulate UseCase if ForceRegistration = True and UseCase was 3 or 4. """
+    #if ForceRegistration and not '5' in UseCase:
+    #    msg = f'\nUseCase was {UseCase} but will be treated as UseCase '
+    #    
+    #    UseCase.replace('3', '5').replace('4', '5')
+    #    
+    #    msg = f'{UseCase}.'
+    #    
+    #    print(msg)
+        
+    """ Get the data of interest from the Source SEG. """
+    SrcPixArrBySeg,\
+    SrcF2SindsBySeg = GetSegDataOfInterest(SrcSegFpath, SrcSliceNum, 
+                                           SrcSegLabel, SrcDcmDir, 
+                                           LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to parse the Source SEG file for the ROI.\n'
+    ListOfTimings.append(msg)
+    print(f'*{msg}')
+    
+    """ Raise exception if there is no data of interest from the Source SEG."""
+    if not UniqueItems(SrcF2SindsBySeg):
+        from DicomTools import GetRoiLabels, GetDicomSOPuids
+        #from SegTools import GetPFFGStoSliceIndsBySeg
+        
+        SrcSeg = dcmread(SrcSegFpath)
+        
+        Labels = GetRoiLabels(SrcSeg)
+        L = len(Labels)
+        
+        SOPuids = GetDicomSOPuids(SrcDcmDir)
+        
+        F2SindsBySeg = GetPFFGStoSliceIndsBySeg(SrcSeg, SOPuids)
+        
+        msg = f"There are no segmentations on slice {SrcSliceNum} in any "\
+              + f"segment in the Source SEG. There are {L} segments in the "\
+              + f"Source SEG:"
+        
+        for i in range(L):
+            msg += f"\nSegment {i+1} with label '{Labels[i]}' has "\
+                   + f"{len(F2SindsBySeg[i])} segmentations that correspond "\
+                   + f"to slices {F2SindsBySeg[i]}" 
+                   
+        raise Exception(msg)
+    
+    """
+    Determine whether the segmentations that make up the segment(s) intersect 
+    with the Target image extent. 
+    """
+    FracProp = ProportionOfSegsInExtent(PixArrBySeg=SrcPixArrBySeg,
+                                        F2SindsBySeg=SrcF2SindsBySeg, 
+                                        SrcDicomDir=SrcDcmDir,
+                                        TrgDicomDir=TrgDcmDir,
+                                        LogToConsole=LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to check whether the Source segment(s) intersect '\
+          + 'the Target grid space.\n'
+    ListOfTimings.append(msg)
+    print(f'*{msg}')
+    
+    if LogToConsole:
+        print(f'\n{round(FracProp*100, 1)}% of the indices in the SEG lie',
+              'within the physical extent of the Target image.')
+    
+    if FracProp == 0:
+        msg = 'None of the indices in the SEG lie within the physical extent'\
+              + 'of the Target image.'
+        raise Exception(msg)
+        return None
+    
+    """ Import the 3D images. """
+    SrcIm = ImportImage(SrcDcmDir)
+    TrgIm = ImportImage(TrgDcmDir)
+    
+    
+    """
+    **************************************************************************
+    What follows is UseCase-specific.
+    **************************************************************************
+    """
+    
+    #if UseCase in ['1', '2a', '3a']: # 08/02
+    if UseCaseToApply in ['1', '2a']: # 08/02
+        """ Direct copy of a segmentation without resampling or registration
+        transformation. """
+        
+        from GeneralTools import ReplaceIndInC2SindsByRoi
+        from GeneralTools import ShiftFramesInPixArrBySeg
+        
+        """ The segmentation on SrcSliceNum is to be copied to TrgSliceNum. 
+        Modify the frame-to-slice index (from SrcSliceNum) to TrgSliceNum. """
+        SrcF2SindsBySeg = ReplaceIndInC2SindsByRoi(C2SindsByRoi=SrcF2SindsBySeg,
+                                                   IndToReplace=SrcSliceNum, 
+                                                   ReplacementInd=TrgSliceNum)
+        
+        if LogToConsole:
+                print(f'\nModfied SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
+                
+        if TrgSegFpath:
+            """ Direct copy of a segmentation to an existing SEG. """
+            
+            """ An existing Target SEG is to be modified.  Since this is a  
+            Direct copy, any existing segmentations in Target with segment 
+            label matching FromSegLabel are to be preserved. """
+            
+            """ Get the data of interest from the Target RTS. """
+            TrgPixArrBySeg,\
+            TrgF2SindsBySeg = GetSegDataOfInterest(TrgSegFpath, SrcSliceNum,
+                                                   #SrcSegLabel, TrgDcmDir,
+                                                   TrgSegLabel, TrgDcmDir,
+                                                   LogToConsole)
+            """ 05/03/21: Previously SrcSegLabel was used as an input in 
+            GetSegDataOfInterest for Target, hence requiring that the Target
+            segment have the same label as the Source segment. Now TrgSegLabel 
+            has been added to the list of inputs allowing for the Target segment
+            to have a different label. """
+            
+            times.append(time.time())
+            Dtime = round(times[-1] - times[-2], 1)
+            msg = f'Took {Dtime} s to parse the Target SEG file for '\
+                  + 'existing segmentations within the ROI.\n'
+            ListOfTimings.append(msg)
+            print(f'*{msg}')
+            
+            if LogToConsole:
+                print(f'TrgF2SindsByRoi = {TrgF2SindsBySeg}.')
+        
+
+    #if UseCase in ['1', '2a']:
+        #""" Direct copy without resampling or registration transformation.
+        """
+        The segmentation will be copied to a different slice location, so the
+        z-components of the indices will need to be modified. """
+        
+        """ Shift the in-plane (x & y) and out-of-plane (z) components of the 
+        indices in SrcPixArrBySeg to account for the shift from SrcSliceNum to
+        TrgSliceNum. """
+        SrcPixArrBySeg, SrcF2SindsBySeg\
+        = ShiftFramesInPixArrBySeg(PixArrBySeg=SrcPixArrBySeg, 
+                                   F2SindsBySeg=SrcF2SindsBySeg, 
+                                   SrcImage=SrcIm, 
+                                   SrcSliceNum=SrcSliceNum,
+                                   TrgImage=TrgIm, 
+                                   TrgSliceNum=TrgSliceNum, 
+                                   RefImage=TrgIm,
+                                   ShiftInX=True,
+                                   ShiftInY=True,
+                                   ShiftInZ=True,
+                                   Fractional=False,
+                                   LogToConsole=LogToConsole)
+        
+        if LogToConsole:
+                print(f'\nShifted SrcF2SindsBySeg = {SrcF2SindsBySeg}.')
+                
+        
+        if TrgSegFpath:
+            """ An existing Target SEG is to be modified. 
+            Concatenate TrgF2SindsBySeg and SrcF2SindsBySeg, and 
+            TrgPixArrBySeg and SrcPixArrBySeg. """
+            
+            TrgF2SindsBySeg = [TrgF2SindsBySeg[s] + SrcF2SindsBySeg[s] for s in range(len(TrgF2SindsBySeg))]
+            
+            TrgPixArrBySeg = [TrgPixArrBySeg[s] + SrcPixArrBySeg[s] for s in range(len(TrgPixArrBySeg))]
+        
+        else:
+            """ A Target SEG was not provided. """
+            
+            TrgF2SindsBySeg = deepcopy(SrcF2SindsBySeg)
+            
+            TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
+            
+            if LogToConsole:
+                print(f'\nSrcF2SindsBySeg = {SrcF2SindsBySeg}')
+                print(f'TrgF2SindsBySeg = {TrgF2SindsBySeg}')
+    
+    
+    
+    if UseCaseToApply == '2b':
+        """ Relationship-preserving copy without resampling or registration
+        transformation. """
+        
+        if False:
+            """ TrgPixArrBySeg is simply SrcPixArrBySeg, and 
+            TrgF2SindsBySeg is SrcF2SindsBySeg. """
+            
+            TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
+            TrgF2SindsBySeg = deepcopy(SrcF2SindsBySeg)
+            
+        
+        #from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1
+        from GeneralTools import GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2
+        
+        """ Shift the indices in SrcC2SindsByRoi to account for any differences
+        in the origin of SrcIm and TrgIm. (new 13/02/21) """
+        TrgF2SindsBySeg = GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcF2SindsBySeg, 
+                                                                SrcIm, TrgIm)
+        
+        
+        """ TrgPixArrBySeg is simply SrcPixArrBySeg. """
+        TrgPixArrBySeg = deepcopy(SrcPixArrBySeg)
+        
+        if LogToConsole:
+            print(f'\nSrcF2SindsBySeg = {SrcF2SindsBySeg}')
+            print(f'TrgF2SindsBySeg (= shifted SrcF2SindsBySeg) =',
+                  f'{SrcF2SindsBySeg}.')
+    
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copy with resampling or
+        registration transformation. """
+        
+        #import numpy as np
+        #from ImageTools import GaussianBlurImage, BinaryThresholdImage 
+        #from ImageTools import ResampleLabImByRoi#, GetImageInfo
+        #from ConversionTools import ConvertImagePixelType
+        #from ConversionTools import PixArr2Image, Image2PixArr
+        from ConversionTools import PixArrByRoi2LabImByRoi
+        #from GeneralTools import NumOfListsAtDepthTwo
+        
+        """ Convert pixel arrays to binary labelmap images. """
+        SrcLabImBySeg = PixArrByRoi2LabImByRoi(PixArrByRoi=SrcPixArrBySeg, 
+                                               F2SindsByRoi=SrcF2SindsBySeg, 
+                                               RefIm=SrcIm,
+                                               LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to generate labelmap images from the Source '\
+              'pixel arrays.\n'
+        ListOfTimings.append(msg)
+        print(f'\n*{msg}')
+    
+    
+    
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b']:
+        """ Direct or relationship-preserving copy with resampling. """
+        
+        from ImageTools import ResampleLabImByRoi
+        
+        
+        """ Resample the source labelmaps. """
+        
+        #Interp = 'NearestNeighbor'
+        #Interp = 'LabelGaussian'
+        
+        ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        = ResampleLabImByRoi(LabImByRoi=SrcLabImBySeg, 
+                             #F2SindsByRoi=SrcC2SindsByRoi,
+                             F2SindsByRoi=SrcF2SindsBySeg,
+                             SrcIm=SrcIm, 
+                             TrgIm=TrgIm,
+                             Interp=ResInterp,
+                             PreResVariance=PreResVariance,
+                             #PostResThresh=PostResThresh,
+                             ApplyPostResBlur=ApplyPostResBlur,
+                             PostResVariance=PostResVariance,
+                             LogToConsole=LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to resample the Source labelmap images.\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
+        
+        
+        """ Get the interpolation that was used (the actual interpolation used 
+        might have been different from the interpolation set) and the threshold
+        used to re-binarise the resampled labelmap image (if applicable): """
+        
+        #print(f'\n\n\nMetadata keys in ResSrcLabImBySeg[0]:',
+        #      ResSrcLabImBySeg[0].GetMetaDataKeys())
+        
+        for i in range(len(ResSrcLabImBySeg)):
+            Interp = ResSrcLabImBySeg[i].GetMetaData("ResInterpUsed")
+            
+            ListOfInputs.append(f'ResInterpUsedForSeg{i} = {Interp}')
+            DictOfInputs[f'ResInterpUsedForSeg{i}'] = Interp
+            
+            if Interp == 'BlurThenLinear':
+                Thresh = ResSrcLabImBySeg[i].GetMetaData("PostResThreshUsed")
+                
+                ListOfInputs.append(f'PostResThreshUsedForSeg{i} = {Thresh}')
+                DictOfInputs[f'PostResThreshUsedForSeg{i}'] = Thresh
+                
+        
+    
+    if UseCaseToApply in ['5a', '5b']:
+        """ Direct or relationship-preserving copying with registration
+        transformation. """
+        
+        from ImageTools import RegisterImagesSelx, RegisterImagesSitk
+        from ImageTools import TransformLabImByRoi, GetTransformFromParams
+        
+        if not Transform in ['rigid', 'affine', 'bspline']:
+            msg = f'The chosen transform, {Transform}, is not one of the '\
+                  + 'accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
+            
+            raise Exception(msg)
+        
+        if TxMatrix == None:
+            """ Transform parameters required to register SrcIm to TrgIm were
+            not found from any subject assessors in XNAT. Perform image
+            registration: """
+            
+            if LogToConsole == False:
+                print(f'Performing image registration using {Transform}',
+                      'transform...\n')
+            
+            times.append(time.time())
+            
+            """ Register SrcIm to TrgIm. """
+            if SelxOrSitk == 'Selx':
+                RegIm, SelxImFiltOrSitkTx, TxParamMapDict\
+                = RegisterImagesSelx(FixIm=TrgIm, MovIm=SrcIm, 
+                                     Transform=Transform,
+                                     MaxNumOfIters=MaxIters,
+                                     LogToConsole=LogToConsole)
+                
+                """ Get the registration transform parameters: """
+                TxParams = list(TxParamMapDict['TransformParameters'])
+                
+            if SelxOrSitk == 'Sitk':
+                RegIm, SelxImFiltOrSitkTx\
+                = RegisterImagesSitk(FixIm=TrgIm, MovIm=SrcIm, Transform=Transform, 
+                                     InitMethod='moments', FinalInterp='Linear',
+                                     FixFidsFpath='fixed_fiducials.txt', 
+                                     MovFidsFpath='moving_fiducials.txt',
+                                     ImageJinds=False, LogToConsole=LogToConsole)
+                
+                """ Get the registration transform parameters: """
+                TxParams = [str(item) for item in SelxImFiltOrSitkTx.GetParameters()]
+            
+            times.append(time.time())
+            Dtime = round(times[-1] - times[-2], 1)
+            msg = f'Took {Dtime} s to register the Source image to the Target '\
+                  + f'image using {Transform} transform.\n'
+            ListOfTimings.append(msg)
+            if LogToConsole == False:
+                print(f'*{msg}')
+        else:
+            """ Transform parameters required to register SrcIm to TrgIm were
+            found from the subject assessors in XNAT. Create a SimpleITK
+            transform from TxMatrix: 
+            
+            Note: 'bspline' transform is not currently catered for.
+            """
+            
+            SelxImFiltOrSitkTx = GetTransformFromParams(TrgIm, TxMatrix, 
+                                                        Transform)
+        
+        
+        """ Transform SrcLabImBySeg using the registration transformation. 
+        
+        Note:
+            Even though the data is being transformed the prefix 'Res' will be
+            used since further operations below will need to be applied to
+            either resampled or transformed data. """
+        
+        ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        = TransformLabImByRoi(LabImByRoi=SrcLabImBySeg,
+                              F2SindsByRoi=SrcF2SindsBySeg,
+                              TrgIm=TrgIm,
+                              SelxImFiltOrSitkTx=SelxImFiltOrSitkTx,
+                              Interp=TxInterp,
+                              ApplyPostTxBlur=ApplyPostTxBlur,
+                              PostTxVariance=PostTxVariance,
+                              ApplyPostTxBin=ApplyPostTxBin,
+                              #ThreshPostTx=ThreshPostTx, 
+                              LogToConsole=LogToConsole)
+        
+        #times.append(time.time())
+        #Dtime = round(times[-1] - times[-2], 1)
+        #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
+        #      'from the registration transformation.')
+        
+        """ Get the threshold used to re-binarise the transformed labelmap 
+        image: """
+        for i in range(len(ResSrcLabImBySeg)):
+            Thresh = ResSrcLabImBySeg[i].GetMetaData("PostTxThreshUsed")
+            
+            ListOfInputs.append(f'PostTxThreshUsedForSeg{i} = {Thresh}')
+            DictOfInputs[f'PostTxThreshUsedForSeg{i}'] = Thresh
+    else:
+        TxParams = None
+              
+                
+    
+    if UseCaseToApply in ['3a', '4a', '5a']:
+        """ Direct copy with resampling/registration and averaging of multi-
+        framed pixel arrays.
+        
+        Note:
+        
+        For a Direct copy, one contour/segment is always copied to a single
+        contour/segmentation (irrespective of how many frames are in the 
+        resampled/registered labelmap image).  So if after resampling there are 
+        more than one frame, the frames will be averaged or a logical OR 
+        operation will be performed.
+        """
+        
+        from GeneralTools import ShiftFramesInPixArrBySeg
+        from PlottingTools import PlotPixArrBySeg
+        
+        R = len(ResSrcPixArrBySeg) # number of segments
+        
+        """ Get the number of frames in each pixel array. """
+        NumOfFramesBySeg = [ResSrcPixArrBySeg[r].shape[0] for r in range(R)]
+        
+        MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+        
+        if MaxNumOfFramesBySeg > 1:
+            """ Reduce the number of frames in each pixel array to 1. """
+            
+            """ Perform averaging or OR operation? """
+            #ReduceUsing = 'mean'
+            ReduceUsing = 'OR'
+            
+            if LogToConsole:
+                print(f'\nThere are {NumOfFramesBySeg} frames in each',
+                      f'ROI/segment. Using {ReduceUsing} operation to reduce',
+                      'to single-framed pixel array(s)')
+                
+                PlotPixArrBySeg(ResSrcPixArrBySeg, ResSrcF2SindsBySeg, 
+                                f'Prior to {ReduceUsing} operation')
+                
+            if ReduceUsing == 'mean':
+                from GeneralTools import MeanFrameInPixArrBySeg
+                
+                """ 14/02:  There sems to be a problem with the averaging 
+                operation that results in many more than 1 F2Sind and many more
+                than 1 contour.. """
+                
+                """ The threshold used when converting the averaged (non-binary)  
+                pixel array to a binary pixel array. """
+                BinaryThresh = 0.5 # <-- is this too high?
+    
+                ResSrcPixArrBySeg, ResF2SindsBySeg\
+                = MeanFrameInPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg,
+                                         F2SindsBySeg=ResSrcF2SindsBySeg,
+                                         MakeBinary=True, 
+                                         BinaryThresh=BinaryThresh,
+                                         LogToConsole=LogToConsole)
+            
+            else:
+                from GeneralTools import OrFrameOfPixArrBySeg
+                
+                ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+                = OrFrameOfPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg,
+                                       F2SindsBySeg=ResSrcF2SindsBySeg,
+                                       LogToConsole=LogToConsole)
+        
+            
+            if LogToConsole:
+                NumOfFramesBySeg = [ResSrcPixArrBySeg[r].shape[0] for r in range(R)]
+        
+                MaxNumOfFramesBySeg = max(NumOfFramesBySeg)
+                
+                print(f'\nFollowing {ReduceUsing} operation there are',
+                      f'{NumOfFramesBySeg} frames in each ROI/segment, and',
+                      f'the new ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}.')
+                
+                PlotPixArrBySeg(ResSrcPixArrBySeg, ResSrcF2SindsBySeg, 
+                                'After {ReduceUsing} operation')
+                
+                
+        
+        """ Shift the out-of-plane elements in ResSrcPixArrBySeg to account for
+        the shift from SrcSliceNumber to TrgSliceNum. 
+        Note:
+            The function below was incorrectly applying in-plane shifts as well
+            up until the added inputs ShiftInX / Y / Z was added on 10/02. 
+        
+        14/02: I think SrcSliceNum shouldn't be SrcSliceNum but instead
+        ResSrcF2SindsBySeg[0][0], since this is the frame-to-slice number of the
+        resampled/transformed labelmap.  The slice number of the original
+        (Source) labelmap is not relevant.
+        
+        Likewise, the inputs SrcImage and TrgImage should both be TrgImage 
+        since the resampled labelmap shares the TrgImage grid, and it will be
+        shifted to another location, still within the TrgImage grid.
+        """
+        
+        """ SrcSliceNum --> ResSrcSliceNum following resampling or 
+        transformation. """
+        ResSrcSliceNum = ResSrcF2SindsBySeg[0][0]
+        
+        if LogToConsole:
+            #print(f'\nSrcSliceNum = {SrcSliceNum} --> ResSrcSliceNum =',
+            #      f'{ResSrcSliceNum}')
+            #print(f'TrgSliceNum = {TrgSliceNum}')
+            print(f'SrcSliceNum = {SrcSliceNum} --> ResSrcSliceNum =',
+                  f'{ResSrcSliceNum} following resampling/transformation -->',
+                  f'TrgSliceNum = {TrgSliceNum} for direct copy')
+            print('\nResSrcF2SindsBySeg prior to shifting of out-of-plane',
+                  f'elements: {ResSrcF2SindsBySeg}\n')
+            
+        ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        = ShiftFramesInPixArrBySeg(PixArrBySeg=ResSrcPixArrBySeg, 
+                                   F2SindsBySeg=ResSrcF2SindsBySeg, 
+                                   SrcImage=TrgIm, 
+                                   SrcSliceNum=ResSrcSliceNum,
+                                   TrgImage=TrgIm, 
+                                   TrgSliceNum=TrgSliceNum, 
+                                   RefImage=TrgIm,
+                                   ShiftInX=False,
+                                   ShiftInY=False,
+                                   ShiftInZ=True,
+                                   Fractional=False,
+                                   LogToConsole=LogToConsole)
+        
+        if LogToConsole:
+            print(f'After running ShiftFramesInPixArrBySeg():')
+            print(f'ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}')
+            print(f'len(ResSrcPixArrBySeg) = {len(ResSrcPixArrBySeg)}')
+            for r in range(len(ResSrcPixArrBySeg)):
+                print(f'type(ResSrcPixArrBySeg[{r}]) = {type(ResSrcPixArrBySeg[r])}')
+                print(f'ResSrcPixArrBySeg[{r}].shape = {ResSrcPixArrBySeg[r].shape}')
+            print('')
+                
+    
+    if UseCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        """ Direct or relationship-preserving copying with resampling or
+        registration-transformation. """
+    
+        if UseCaseToApply in ['3a', '4a', '5a']:
+            """ Direct copying with resampling/transformation. """
+            
+            if TrgSegFpath:
+                """ An existing Target SEG is to be modified. 
+                Concatenate TrgF2SindsBySeg and ResSrcF2SindsBySeg, and
+                TrgPixArrBySeg and ResSrcPixArrBySeg. """
+                
+                TrgF2SindsBySeg = [TrgF2SindsBySeg[s] + ResSrcF2SindsBySeg[s] for s in range(len(TrgF2SindsBySeg))]
+                
+                TrgPixArrBySeg = [TrgPixArrBySeg[s] + ResSrcPixArrBySeg[s] for s in range(len(TrgPixArrBySeg))]
+                
+            else:
+                """ A Target SEG was not provided. """
+                
+                TrgF2SindsBySeg = deepcopy(ResSrcF2SindsBySeg)
+                
+                TrgPixArrBySeg = deepcopy(ResSrcPixArrBySeg)
+        
+        
+        else:
+            """ UseCaseToApply is '3b', '4b' or '5b'. """
+            
+            TrgPixArrBySeg = deepcopy(ResSrcPixArrBySeg)
+            
+            TrgF2SindsBySeg = deepcopy(ResSrcF2SindsBySeg)
+    
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 1)
+    msg = f'Took {Dtime} s to copy the ROI(s) from Source to Target.\n'
+    ListOfTimings.append(msg)
+    print(f'*{msg}')
+    
+    #print(f'\n\n\n\n\nTrgPixArrBySeg = {TrgPixArrBySeg}')
+    
+    
+    """ Create/overwrite the Target SEG. """
+    
+    print('Creating the new Target SEG object...\n')
+    
+    #print(f'\nTrgDcmDir = {TrgDcmDir}\n')
+    
+    TrgSeg = CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg, 
+                       TrgF2SindsBySeg, TrgDcmDir, SrcSegLabel,
+                       TxtToAddToSegLabel, LogToConsole)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    msg = f'Took {Dtime} s to create the SEG object.\n'
+    ListOfTimings.append(msg)
+    print(f'*{msg}')
+    
+    
+    """ Create a DICOM Registration Object (if applicable). """
+    if UseCaseToApply in ['5a', '5b']:
+        # ContentDescription:
+        ContentDesc = ''
+        
+        Dro = CreateDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
+                        LogToConsole)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to create the DRO.\n'
+        ListOfTimings.append(msg)
+        print(f'*{msg}')
+    else:
+        Dro = None
+        
+        
+    if LogToConsole:
+        print('\nEnd of CopySeg().')
+        print('-'*120)
+        
+    return TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
+    #return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
+
+
+
+
+

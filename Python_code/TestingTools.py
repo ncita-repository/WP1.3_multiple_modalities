@@ -18,8 +18,8 @@ TESTING FUNCTIONS
 
 def CreateCopyRoiConfigFile():
     """ 
-    Create a configuration file assigning default values for some inputs 
-    required for CopyRoi().
+    Create a configuration file ('CopyRoiDefaults.py') assigning default values 
+    for some inputs required for CopyRoiCol() (in RoiCopyTools.py).
     
     The file will be exported to the current working directory.
     """
@@ -27,12 +27,14 @@ def CreateCopyRoiConfigFile():
     import os
     from pypref import Preferences
     
+    ConfigFname = 'CopyRoiDefaults.py'
+    
     cwd = os.getcwd()
     
-    Dict = {'TrgAsrMod' : None, 
-            'TrgAsrName' : None, 
+    Dict = {'TrgRoiColMod' : None, 
+            'TrgRoiColName' : None, 
             'TrgSliceNum' : None, 
-            'TxtToAddToTrgAsrName' : '', 
+            'TxtToAddToTrgRoiColName' : '', 
             'XnatSession' : None, 
             'PathsDict' : None, 
             'ExportRootDir' : 'cwd', 
@@ -42,23 +44,28 @@ def CreateCopyRoiConfigFile():
             'PreResVariance' : (1,1,1),
             'ApplyPostResBlur' : False, 
             'PostResVariance' : (1,1,1),
-            'ForceReg' : False, 
-            'Tx' : 'affine', 
-            'TxMaxIters' : '512', 
+            'ForceReg' : False,
+            'TxMatrix' : None,
+            'SelxOrSitk' : 'Selx',
+            'Transform' : 'affine',
+            'MaxIters' : '512', 
             'TxInterp' : 'NearestNeighbor', 
             'ApplyPostTxBin' : True,
             'ApplyPostTxBlur' : True, 
             'PostTxVariance' : (1,1,1),
-            'ExportNewTrgAsr' : True,
+            'ExportNewTrgRoiCol' : True,
             'RtsExportDir' : os.path.join(cwd, 'new_RTS'),
             'SegExportDir' : os.path.join(cwd, 'new_SEG'),
+            'ExportNewDro' : True,
+            'DroExportDir' : os.path.join(cwd, 'new_DRO'),
+            'UploadNewDro' : True,
             'PlotAllSlices' : False,
             'RtsPlotExportDir' : os.path.join(cwd, 'plots_RTS'),
             'SegPlotExportDir' : os.path.join(cwd, 'plots_SEG'),
             'LogExportDir' : os.path.join(cwd, 'logs')
             }
     
-    pref = Preferences(directory=cwd, filename='CopyRoiDefaults.py')
+    pref = Preferences(directory=cwd, filename=ConfigFname)
 
     pref.set_preferences(Dict)
     
@@ -69,9 +76,9 @@ def CreateCopyRoiConfigFile():
 
 def CreateTestConfigFile():
     """ 
-    Create a configuration file assigning values for inputs required for 
-    CopyRoi() based on the tests in 
-    https://docs.google.com/document/d/1_LxC1FUdQME4xuXZFGjjGBGYRb1cJX8YiEADjtZTn_g/edit#.
+    Create a configuration file ('CopyRoiTestConfig.py') assigning values for  
+    inputs required for CopyRoiCol() (in RoiCopyTools.py) based on the tests in 
+    https://docs.google.com/document/d/1_LxC1FUdQME4xuXZFGjjGBGYRb1cJX8YiEADjtZTn_g.
     
     The file will be exported to the current working directory.
     """
@@ -79,643 +86,660 @@ def CreateTestConfigFile():
     import os
     from pypref import Preferences
     
+    ConfigFname = 'CopyRoiTestConfig.py'
+    
     Dict = {'XnatUrl' : 'http://10.1.1.20', 
             'ProjId' : 'NCITA_TEST', 
             'SubjLabel' : 'TCGA-BB-A5HY',
             
-            'RR1': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Left eye CT', 
+            'RR1': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Left eye CT', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '4', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '4', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 4'
+                    'TxtToAddToTrgRoiColName' : ' 4'
                     },
             
-            'RR2': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'RR2': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '10', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '10', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 10'
+                    'TxtToAddToTrgRoiColName' : ' 10'
                     },
             
-            'RR3': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Left eye CT', 
+            'RR3': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Left eye CT', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 5'
+                    'TxtToAddToTrgRoiColName' : ' 5'
                     },
             
-            'RR4': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'RR4': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '11', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '11', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 11'
+                    'TxtToAddToTrgRoiColName' : ' 11'
                     },
             
-            'RR5': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'RR5': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '14', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '14', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 14'
+                    'TxtToAddToTrgRoiColName' : ' 14'
                     },
                     
-            'RR6': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Ventricles', 
+            'RR6': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '10', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '10', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 10'
+                    'TxtToAddToTrgRoiColName' : ' 10'
                     },
             
-            'RR7': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Ventricles', 
+            'RR7': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '12', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '12', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 12'
+                    'TxtToAddToTrgRoiColName' : ' 12'
                     },
             
-            'RR8': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Ventricles', 
+            'RR8': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '13', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '13', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 13'
+                    'TxtToAddToTrgRoiColName' : ' 13'
                     },
             
-            'RR9': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Ventricles', 
+            'RR9': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '14', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '14', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 14'
+                    'TxtToAddToTrgRoiColName' : ' 14'
                     },
             
-            'RR10': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '11', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Ventricles', 
+            'RR10': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '11', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Ventricles', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'RR11': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '13', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Nasal cavity', 
+            'RR11': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '13', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Nasal cavity', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'RR12': {'SrcStudyLabel' : 'Session5', 
-                     'SrcSeriesLabel' : '12', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Left eye', 
+            'RR12': {'SrcExpLabel' : 'Session5', 
+                     'SrcScanId' : '12', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Left eye', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'RR13': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '11', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Ventricles', 
+            'RR13': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '11', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Ventricles', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            'RR14': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '13', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Nasal cavity', 
+            'RR14': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '13', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Nasal cavity', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            'RR15': {'SrcStudyLabel' : 'Session5', 
-                     'SrcSeriesLabel' : '12', 
-                     'SrcAsrMod' : 'RTSTRUCT', 
-                     'SrcAsrName' : 'Left eye', 
+            'RR15': {'SrcExpLabel' : 'Session5', 
+                     'SrcScanId' : '12', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Left eye', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'RTSTRUCT', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            #'RR10r': {'SrcStudyLabel' : 'Session3',
-            #          'SrcSeriesLabel' : '6', 
-            #          'SrcAsrMod' : 'RTSTRUCT', 
-            #          'SrcAsrName' : 'Ventricles', 
+            #'RR10r': {'SrcExpLabel' : 'Session3',
+            #          'SrcScanId' : '6', 
+            #          'SrcRoiColMod' : 'RTSTRUCT', 
+            #          'SrcRoiColName' : 'Ventricles', 
             #          'SrcRoiName' : None,
             #          'SrcSliceNum' : None, 
-            #          'TrgStudyLabel' : 'Session4', 
-            #          'TrgSeriesLabel' : '11', 
-            #          'TrgAsrMod' : 'RTSTRUCT', 
-            #          'TrgAsrName' : None, 
+            #          'TrgExpLabel' : 'Session4', 
+            #          'TrgScanId' : '11', 
+            #          'TrgRoiColMod' : 'RTSTRUCT', 
+            #          'TrgRoiColName' : None, 
             #          'TrgRoiName' : None,
             #          'TrgSliceNum' : None,
-            #          'TxtToAddToTrgAsrName' : ' 4_11'
+            #          'TxtToAddToTrgRoiColName' : ' 4_11'
             #         },
             
-            'RD1': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'RD1': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '2', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '2', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 6,
-                    'TxtToAddToTrgAsrName' : ' 2'
+                    'TxtToAddToTrgRoiColName' : ' 2'
                     },
             
-            'RD2': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'RD2': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '4', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '4', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 6,
-                    'TxtToAddToTrgAsrName' : ' 4'
+                    'TxtToAddToTrgRoiColName' : ' 4'
                     },
             
-            'RD3': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'RD3': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 65, # Source slice 5 maps to Target slices 55-64
-                    'TxtToAddToTrgAsrName' : ' 5'
+                    'TxtToAddToTrgRoiColName' : ' 5'
                     },
             
-            'RD4': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'RD4': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session6',
-                    'TrgSeriesLabel' : '3', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session6',
+                    'TrgScanId' : '3', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 8, # Source slice 5 maps to Target slice 7
-                    'TxtToAddToTrgAsrName' : ' 6_3'
+                    'TxtToAddToTrgRoiColName' : ' 6_3'
                     },
             
-            'RD5': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'RD5': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session6',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session6',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 78, # Source slice 5 maps to Target slices 67-77
-                    'TxtToAddToTrgAsrName' : ' 6_5'
+                    'TxtToAddToTrgRoiColName' : ' 6_5'
                     },
             
-            'RD6': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'RTSTRUCT', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'RD6': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'RTSTRUCT', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 18, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '10', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '10', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 21, 
-                    'TxtToAddToTrgAsrName' : ' 10'
+                    'TxtToAddToTrgRoiColName' : ' 10'
                     },
                     
                     
-            'SR1': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Left eye CT', 
+            'SR1': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Left eye CT', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '4', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '4', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 4'
+                    'TxtToAddToTrgRoiColName' : ' 4'
                     },
             
-            'SR2': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'SR2': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '10', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '10', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 10'
+                    'TxtToAddToTrgRoiColName' : ' 10'
                     },
             
-            'SR3': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Left eye CT', 
+            'SR3': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Left eye CT', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 5'
+                    'TxtToAddToTrgRoiColName' : ' 5'
                     },
             
-            'SR4': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'SR4': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '11', 
-                    'TrgAsrMod' : 'RTSTRUCT', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '11', 
+                    'TrgRoiColMod' : 'RTSTRUCT', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 11'
+                    'TxtToAddToTrgRoiColName' : ' 11'
                     },
             
-            'SR5': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '13', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Nasal cavity', 
+            'SR5': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '13', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Nasal cavity', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '14', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '14', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 14'
+                    'TxtToAddToTrgRoiColName' : ' 14'
                     },
                     
-            'SR6': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Ventricles', 
+            'SR6': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '10', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '10', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 10'
+                    'TxtToAddToTrgRoiColName' : ' 10'
                     },
             
-            'SR7': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Ventricles', 
+            'SR7': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '12', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '12', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 12'
+                    'TxtToAddToTrgRoiColName' : ' 12'
                     },
             
-            'SR8': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Ventricles', 
+            'SR8': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '13', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '13', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 13'
+                    'TxtToAddToTrgRoiColName' : ' 13'
                     },
             
-            'SR9': {'SrcStudyLabel' : 'Session4', 
-                    'SrcSeriesLabel' : '11', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Ventricles', 
+            'SR9': {'SrcExpLabel' : 'Session4', 
+                    'SrcScanId' : '11', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Ventricles', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : None, 
-                    'TrgStudyLabel' : 'Session4',
-                    'TrgSeriesLabel' : '14', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session4',
+                    'TrgScanId' : '14', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : None,
-                    'TxtToAddToTrgAsrName' : ' 14'
+                    'TxtToAddToTrgRoiColName' : ' 14'
                     },
             
-            'SR10': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '11', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Ventricles', 
+            'SR10': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '11', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Ventricles', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'SR11': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '13', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Nasal cavity', 
+            'SR11': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '13', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Nasal cavity', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'SR12': {'SrcStudyLabel' : 'Session5', 
-                     'SrcSeriesLabel' : '12', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Left eye', 
+            'SR12': {'SrcExpLabel' : 'Session5', 
+                     'SrcScanId' : '12', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Left eye', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session3',
-                     'TrgSeriesLabel' : '6', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session3',
+                     'TrgScanId' : '6', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 3_6'
+                     'TxtToAddToTrgRoiColName' : ' 3_6'
                      },
             
-            'SR13': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '11', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Ventricles', 
+            'SR13': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '11', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Ventricles', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            'SR14': {'SrcStudyLabel' : 'Session4', 
-                     'SrcSeriesLabel' : '13', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Nasal cavity', 
+            'SR14': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '13', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Nasal cavity', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            'SR15': {'SrcStudyLabel' : 'Session5', 
-                     'SrcSeriesLabel' : '12', 
-                     'SrcAsrMod' : 'SEG', 
-                     'SrcAsrName' : 'Left eye', 
+            'SR15': {'SrcExpLabel' : 'Session5', 
+                     'SrcScanId' : '12', 
+                     'SrcRoiColMod' : 'SEG', 
+                     'SrcRoiColName' : 'Left eye', 
                      'SrcRoiName' : None,
                      'SrcSliceNum' : None, 
-                     'TrgStudyLabel' : 'Session1',
-                     'TrgSeriesLabel' : '5', 
-                     'TrgAsrMod' : 'SEG', 
-                     'TrgAsrName' : None, 
+                     'TrgExpLabel' : 'Session1',
+                     'TrgScanId' : '5', 
+                     'TrgRoiColMod' : 'SEG', 
+                     'TrgRoiColName' : None, 
                      'TrgRoiName' : None,
                      'TrgSliceNum' : None,
-                     'TxtToAddToTrgAsrName' : ' 1_5'
+                     'TxtToAddToTrgRoiColName' : ' 1_5'
                      },
             
-            'SD1': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'SD1': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '2', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '2', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 6,
-                    'TxtToAddToTrgAsrName' : ' 2'
+                    'TxtToAddToTrgRoiColName' : ' 2'
                     },
             
-            'SD2': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'SD2': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '4', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '4', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 6,
-                    'TxtToAddToTrgAsrName' : ' 4'
+                    'TxtToAddToTrgRoiColName' : ' 4'
                     },
             
-            'SD3': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'SD3': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session2',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session2',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 65, # Source slice 5 maps to Target slices 55-64
-                    'TxtToAddToTrgAsrName' : ' 5'
+                    'TxtToAddToTrgRoiColName' : ' 5'
                     },
             
-            'SD4': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'SD4': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session6',
-                    'TrgSeriesLabel' : '3', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session6',
+                    'TrgScanId' : '3', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 8, # Source slice 5 maps to Target slice 7
-                    'TxtToAddToTrgAsrName' : ' 6_3'
+                    'TxtToAddToTrgRoiColName' : ' 6_3'
                     },
             
-            'SD5': {'SrcStudyLabel' : 'Session2', 
-                    'SrcSeriesLabel' : '2', 
-                    'SrcAsrMod' : 'SEG', 
-                    'SrcAsrName' : 'Right eye CT (single slice)', 
+            'SD5': {'SrcExpLabel' : 'Session2', 
+                    'SrcScanId' : '2', 
+                    'SrcRoiColMod' : 'SEG', 
+                    'SrcRoiColName' : 'Right eye CT (single slice)', 
                     'SrcRoiName' : None,
                     'SrcSliceNum' : 5, 
-                    'TrgStudyLabel' : 'Session6',
-                    'TrgSeriesLabel' : '5', 
-                    'TrgAsrMod' : 'SEG', 
-                    'TrgAsrName' : None, 
+                    'TrgExpLabel' : 'Session6',
+                    'TrgScanId' : '5', 
+                    'TrgRoiColMod' : 'SEG', 
+                    'TrgRoiColName' : None, 
                     'TrgRoiName' : None,
                     'TrgSliceNum' : 78, # Source slice 5 maps to Target slices 67-77
-                    'TxtToAddToTrgAsrName' : ' 6_5'
-                    }
+                    'TxtToAddToTrgRoiColName' : ' 6_5'
+                    },
+            
+            'RR16': {'SrcExpLabel' : 'Session4', 
+                     'SrcScanId' : '13', 
+                     'SrcRoiColMod' : 'RTSTRUCT', 
+                     'SrcRoiColName' : 'Nasal cavity', 
+                     'SrcRoiName' : None,
+                     'SrcSliceNum' : None, 
+                     'TrgExpLabel' : 'Session4',
+                     'TrgScanId' : '11', 
+                     'TrgRoiColMod' : 'RTSTRUCT', 
+                     'TrgRoiColName' : 'Ventricles', 
+                     'TrgRoiName' : None,
+                     'TrgSliceNum' : None,
+                     'TxtToAddToTrgRoiColName' : ' Ser11 2021-03-26'
+                     }
             }
     
-    pref = Preferences(directory=os.getcwd(), filename='CopyRoiTestConfig.py')
+    pref = Preferences(directory=os.getcwd(), filename=ConfigFname)
 
     pref.set_preferences(Dict)
     
@@ -1154,8 +1178,35 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     Outputs:
     *******
     
-    Image : SimpleITK image
-        The 3D image with modified pixel type.
+    SrcRoiFpath : string
+        The full filepath to the Source ROI Collection.
+    
+    SrcSliceNum : integer (0-indexed) or None
+        The slice number containing the contour/segmentation of interest, or
+        None if all contours/segmentations and/or all ROIs/segments are of
+        interest.
+    
+    SrcRoiLabel : string
+        The ROI Collection name.
+    
+    TrgSliceNum
+    
+    SrcDcmDir : string
+        The Source DICOM directory.
+    
+    TrgDcmDir : string
+        The Target DICOM directory.
+    
+    TrgRoiFpath : string or None
+        The full filepath to the Source ROI Collection, or None.
+    
+    TxtToAddToRoiLabel
+    
+    SrcExpLabel : string
+        The Source DICOM series / XNAT experiment label.
+    
+    TrgExpLabel : string
+        The Target DICOM series / XNAT experiment label.
 
     
     Note:
@@ -1185,19 +1236,19 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
         # Alternative inputs to test other possible combinations:
-        #FromRoiLabel = None # copy all ROIs
-        #FromSliceNum = 10 # there are no contours on slice 10
-        #FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1 # direct copy to next slice
-        #ToSliceNum = 0
+        #SrcRoiLabel = None # copy all ROIs
+        #SrcSliceNum = 10 # there are no contours on slice 10
+        #SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1 # direct copy to next slice
+        #TrgSliceNum = 0
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser4'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
@@ -1212,12 +1263,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser10'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
@@ -1232,12 +1283,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
@@ -1252,12 +1303,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser11'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser11'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 11'
@@ -1272,12 +1323,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser14'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser14'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
@@ -1292,12 +1343,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser10'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
@@ -1312,12 +1363,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser12'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser12'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 12'
@@ -1332,12 +1383,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser13'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser13'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 13'
@@ -1351,13 +1402,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgDcmKey = 'Ses4_Ser14_DcmDir'
         TrgRoiKey = None
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser14'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser14'
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
@@ -1372,12 +1423,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
-    #    FromRoiLabel = 'Left eye'
-    #    FromSliceNum = None # copy contours on all slices
-    #    ToSliceNum = None # relationship-preserving copy
+    #    SrcRoiLabel = 'Left eye'
+    #    SrcSliceNum = None # copy contours on all slices
+    #    TrgSliceNum = None # relationship-preserving copy
     #    
-    #    SrcLabel = 'Ses2_Ser2'
-    #    TrgLabel = 'Ses3_Ser6'
+    #    SrcExpLabel = 'Ses2_Ser2'
+    #    TrgExpLabel = 'Ses3_Ser6'
     #    
     #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
     #    TxtToAddToRoiLabel = ' 3_6'
@@ -1392,12 +1443,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
-    #    FromRoiLabel = 'Right eye'
-    #    FromSliceNum = None # copy contours on all slices
-    #    ToSliceNum = None # relationship-preserving copy
+    #    SrcRoiLabel = 'Right eye'
+    #    SrcSliceNum = None # copy contours on all slices
+    #    TrgSliceNum = None # relationship-preserving copy
     #    
-    #    SrcLabel = 'Ses2_Ser2'
-    #    TrgLabel = 'Ses3_Ser6'
+    #    SrcExpLabel = 'Ses2_Ser2'
+    #    TrgExpLabel = 'Ses3_Ser6'
     #    
     #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
     #    TxtToAddToRoiLabel = ' 3_6'
@@ -1412,12 +1463,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1432,12 +1483,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1452,12 +1503,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses5_Ser12'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses5_Ser12'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1472,12 +1523,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -1492,12 +1543,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -1512,12 +1563,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses5_Ser12'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses5_Ser12'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -1534,9 +1585,9 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
-    #    FromRoiLabel = 'Nasal cavity'
-    #    FromSliceNum = None # copy contours on all slices
-    #    ToSliceNum = None # relationship-preserving copy
+    #    SrcRoiLabel = 'Nasal cavity'
+    #    SrcSliceNum = None # copy contours on all slices
+    #    TrgSliceNum = None # relationship-preserving copy
     #    
     #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
     #    TxtToAddToRoiLabel = ' MR12 S3'
@@ -1554,9 +1605,9 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     #    TrgRoiKey = None
     #    
     #    # Inputs required for this test:
-    #    FromRoiLabel = 'Ventricles'
-    #    FromSliceNum = None # copy contours on all slices
-    #    ToSliceNum = None # relationship-preserving copy
+    #    SrcRoiLabel = 'Ventricles'
+    #    SrcSliceNum = None # copy contours on all slices
+    #    TrgSliceNum = None # relationship-preserving copy
     #    
     #    # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
     #    TxtToAddToRoiLabel = ' MR12 S3'
@@ -1572,13 +1623,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        #FromSliceNum = 6
-        FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        SrcRoiLabel = 'Right eye'
+        #SrcSliceNum = 6
+        SrcSliceNum = 5
+        TrgSliceNum = SrcSliceNum + 1
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser2'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser2'
     
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 2'
@@ -1593,12 +1644,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        TrgSliceNum = SrcSliceNum + 1
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser4'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
@@ -1613,13 +1664,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 65 # Source slice 5 maps to Target slices 55-64
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 65 # Source slice 5 maps to Target slices 55-64
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
@@ -1634,13 +1685,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 8 # Source slice 5 maps to Target slice 7
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 8 # Source slice 5 maps to Target slice 7
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses6_Ser3'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses6_Ser3'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_3'
@@ -1655,13 +1706,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 78 # Source slice 5 maps to Target slices 67-77
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 78 # Source slice 5 maps to Target slices 67-77
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses6_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses6_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_5'
@@ -1676,12 +1727,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = 18 
-        ToSliceNum = 21
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = 18 
+        TrgSliceNum = 21
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser10'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
@@ -1699,12 +1750,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy segmentations on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy segmentations on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser4'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
@@ -1719,12 +1770,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser10'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
@@ -1739,12 +1790,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
@@ -1759,12 +1810,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser11'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser11'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 11'
@@ -1779,12 +1830,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses4_Ser14'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses4_Ser14'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
@@ -1799,12 +1850,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser10'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser10'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 10'
@@ -1819,12 +1870,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser12'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser12'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 12'
@@ -1839,12 +1890,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser13'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser13'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 13'
@@ -1858,13 +1909,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgDcmKey = 'Ses4_Ser14_DcmDir'
         TrgRoiKey = None
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses4_Ser14'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses4_Ser14'
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 14'
@@ -1880,12 +1931,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser11'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses4_Ser11'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1900,12 +1951,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1920,12 +1971,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses5_Ser12'
-        TrgLabel = 'Ses3_Ser6'
+        SrcExpLabel = 'Ses5_Ser12'
+        TrgExpLabel = 'Ses3_Ser6'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 3_6'
@@ -1940,12 +1991,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Ventricles'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Ventricles'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -1960,12 +2011,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Nasal cavity'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Nasal cavity'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses4_Ser13'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses4_Ser13'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -1980,12 +2031,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Left eye'
-        FromSliceNum = None # copy contours on all slices
-        ToSliceNum = None # relationship-preserving copy
+        SrcRoiLabel = 'Left eye'
+        SrcSliceNum = None # copy contours on all slices
+        TrgSliceNum = None # relationship-preserving copy
         
-        SrcLabel = 'Ses5_Ser12'
-        TrgLabel = 'Ses1_Ser5'
+        SrcExpLabel = 'Ses5_Ser12'
+        TrgExpLabel = 'Ses1_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 1_5'
@@ -2001,13 +2052,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        #FromSliceNum = 6 # <-- no segmentation on slice 6?
-        FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        SrcRoiLabel = 'Right eye'
+        #SrcSliceNum = 6 # <-- no segmentation on slice 6?
+        SrcSliceNum = 5
+        TrgSliceNum = SrcSliceNum + 1
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser2'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser2'
     
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 2'
@@ -2022,12 +2073,12 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        ToSliceNum = FromSliceNum + 1
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        TrgSliceNum = SrcSliceNum + 1
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser4'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser4'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 4'
@@ -2042,13 +2093,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 65 # Source slice 5 maps to Target slices 55-64
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 65 # Source slice 5 maps to Target slices 55-64
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses2_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses2_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 5'
@@ -2063,13 +2114,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 8 # Source slice 5 maps to Target slice 7
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 8 # Source slice 5 maps to Target slice 7
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses6_Ser3'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses6_Ser3'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_3'
@@ -2084,13 +2135,13 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
         TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'Right eye'
-        FromSliceNum = 5
-        #ToSliceNum = FromSliceNum + 1
-        ToSliceNum = 78 # Source slice 5 maps to Target slices 67-77
+        SrcRoiLabel = 'Right eye'
+        SrcSliceNum = 5
+        #TrgSliceNum = SrcSliceNum + 1
+        TrgSliceNum = 78 # Source slice 5 maps to Target slices 67-77
         
-        SrcLabel = 'Ses2_Ser2'
-        TrgLabel = 'Ses6_Ser5'
+        SrcExpLabel = 'Ses2_Ser2'
+        TrgExpLabel = 'Ses6_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
         TxtToAddToRoiLabel = ' 6_5'
@@ -2127,15 +2178,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 23
-        ToSliceNum = 29
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 23
+        TrgSliceNum = 29
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR4_Ser9'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR4_Ser9'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}_s{TrgSliceNum}'
         
     elif TestNum in ['2aR', '2aS']:
         """ UseCase 2a (direct copy) Rts or Seg """
@@ -2156,15 +2207,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 23
-        ToSliceNum = 22
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 23
+        TrgSliceNum = 22
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR4_Ser5'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR4_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}_s{TrgSliceNum}'
         
     elif TestNum in ['2bR', '2bS']:
         """ UseCase 2b (relationship-preserving copy) Rts or Seg """
@@ -2185,15 +2236,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 27
-        ToSliceNum = None
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 27
+        TrgSliceNum = None
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR4_Ser5'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR4_Ser5'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}'
     
     elif TestNum in ['3aiR', '3aiS']:
         """ UseCase 3ai (direct copy) Rts or Seg """
@@ -2214,15 +2265,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 25
-        ToSliceNum = 20
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 25
+        TrgSliceNum = 20
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR4_Ser3'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR4_Ser3'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}_s{TrgSliceNum}'
     
     elif TestNum in ['3aiiR', '3aiiS']:
         """ UseCase 3aii (direct copy) Rts or Seg """
@@ -2243,15 +2294,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 11
-        ToSliceNum = 26
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 11
+        TrgSliceNum = 26
         
-        SrcLabel = 'MR4_Ser3'
-        TrgLabel = 'MR4_Ser9'
+        SrcExpLabel = 'MR4_Ser3'
+        TrgExpLabel = 'MR4_Ser9'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}_s{ToSliceNum}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}_s{TrgSliceNum}'
     
     elif TestNum in ['3biR', '3biS']:
         """ UseCase 3bi (relationship-preserving copy) Rts or Seg"""
@@ -2272,15 +2323,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 26
-        ToSliceNum = None
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 26
+        TrgSliceNum = None
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR4_Ser3'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR4_Ser3'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}'
     
     elif TestNum in ['3biiR', '3biiS']:
         """ UseCase 3bii (relationship-preserving copy) Rts or Seg """
@@ -2301,15 +2352,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 11
-        ToSliceNum = None
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 11
+        TrgSliceNum = None
         
-        SrcLabel = 'MR4_Ser3'
-        TrgLabel = 'MR4_Ser9'
+        SrcExpLabel = 'MR4_Ser3'
+        TrgExpLabel = 'MR4_Ser9'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}'
     
     elif TestNum in ['5bR', '5bS']:
         """ UseCase 5b (relationship-preserving copy) Rts or Seg"""
@@ -2330,15 +2381,15 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
             TrgRoiKey = None
         
         # Inputs required for this test:
-        FromRoiLabel = 'tumour'
-        FromSliceNum = 23
-        ToSliceNum = None
+        SrcRoiLabel = 'tumour'
+        SrcSliceNum = 23
+        TrgSliceNum = None
         
-        SrcLabel = 'MR4_Ser9'
-        TrgLabel = 'MR12_Ser8'
+        SrcExpLabel = 'MR4_Ser9'
+        TrgExpLabel = 'MR12_Ser8'
         
         # Text to add to RTS ROIStructureSetLabel or SEG SeriesDescription:
-        TxtToAddToRoiLabel = f'_s{FromSliceNum}_to_{TrgLabel}'
+        TxtToAddToRoiLabel = f'_s{SrcSliceNum}_to_{TrgExpLabel}'
     
     
     
@@ -2354,5 +2405,5 @@ def GetPathInputs(TestNum, UseOrigTrgRoi=False):
     
     
     
-    return SrcRoiFpath, FromSliceNum, FromRoiLabel, ToSliceNum, SrcDcmDir,\
-           TrgDcmDir, TrgRoiFpath, TxtToAddToRoiLabel, SrcLabel, TrgLabel
+    return SrcRoiFpath, SrcSliceNum, SrcRoiLabel, TrgSliceNum, SrcDcmDir,\
+           TrgDcmDir, TrgRoiFpath, TxtToAddToRoiLabel, SrcExpLabel, TrgExpLabel

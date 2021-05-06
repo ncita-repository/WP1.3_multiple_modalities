@@ -14,6 +14,72 @@ GENERAL UTILITY FUNCTIONS
 ******************************************************************************
 """
 
+def GetIndOfNearestSlice(RefIm, RefInd, Im, UseCentre=True):
+    """ 
+    Get the index of the slice in Im that is nearest in z-position to the
+    RefInd^th slice in RefIm.
+    
+    Inputs:
+    ******
+    
+    RefIm : SimpleITK image
+    
+    RefInd : integer
+        The slice index for RefIm.
+    
+    Im : SimpleITK image
+        The image whose slice index nearest to RefIm[RefInd] is to be 
+        determined.
+    
+    UseCentre : boolean (optional; True by default)
+        If True, the z-position of the central pixel in each slice will be 
+        considered. If False, the origin (0, 0) of each slice will.
+    
+    
+    Outputs:
+    *******
+    
+    Ind : integer
+        The slice index in Im whose z-position is nearest to RefIm[RefInd].
+    
+    MinDiff : float
+        The difference in z-position between RefIm[RefInd] and Im[Ind] in mm.
+    """
+    
+    R_r, C_r, S_r = RefIm.GetSize()
+    R_i, C_i, S_i = Im.GetSize()
+        
+    if UseCentre:
+        i_r = R_r//2
+        j_r = C_r//2
+        
+        i_i = R_i//2
+        j_i = C_i//2
+    else:
+        i_r = 0
+        j_r = 0
+        
+        i_i = 0
+        j_i = 0
+    
+    """ The z-position of RefIm at RefInd: """
+    RefZ = RefIm.TransformIndexToPhysicalPoint([i_r,j_r,RefInd])[2]
+    
+    """ All z-positions in Im: """
+    Zs = [Im.TransformIndexToPhysicalPoint([i_i,j_i,k])[2] for k in range(S_i)]
+    
+    Diffs = [abs(RefZ - Zs[k]) for k in range(S_i)]
+    
+    MinDiff = min(Diffs)
+    
+    Ind = Diffs.index(MinDiff)
+    
+    return Ind, MinDiff
+
+
+
+
+
     
 def ItemsUniqueToWithin(List, epsilon=1e-5):
     
@@ -587,6 +653,183 @@ def CropNonZerosIn2dMask(Orig2dMask):
         
         return non0[0]
     
+
+
+
+
+
+
+def CropPixArr(PixArr):
+    
+    import numpy as np
+    
+    mask = PixArr.any(axis=0)
+    
+    Rinds, Cinds = np.where(mask)
+    
+    rMin = Rinds.min()
+    rMax = Rinds.max()
+    cMin = Cinds.min()
+    cMax = Cinds.max()
+
+    IndsExtent = [rMin, rMax, cMin, cMax]
+    
+    CropPixArr = PixArr[:, rMin:rMax+1, cMin:cMax+1]
+
+    return CropPixArr, IndsExtent
+
+
+
+
+
+
+
+def CropLabmapArr(LabmapArr):
+    """
+    Crop a 3D binary pixel array (e.g. "labelmap array") to a non-zero pixel
+    array.
+    
+    Inputs:
+    ******
+    
+    LabmapArr : Numpy array
+        A binary pixel array containing binary masks along the 3rd dimension.
+    
+    
+    Outputs:
+    *******
+    
+    PixArr : Numpy array
+        LabmapArr cropped within the bounds of all non-zero elements.    
+    """
+    
+    import numpy as np
+    
+    """ Get the slices indices of non-zero frames: """
+    Inds = []
+        
+    """ Loop through all frames in Nda and get the sum of all pixels: """
+    for i in range(LabmapArr.shape[0]):
+        Sum = np.amax(LabmapArr[i])
+        
+        if Sum:
+            Inds.append(i)
+            
+    a = Inds[0]
+    b = Inds[-1] + 1
+    
+    """ Get the indices that surround all non-zero elements along the other
+    axes: """
+    
+    mask = LabmapArr.any(axis=0)
+    
+    Rinds, Cinds = np.where(mask)
+    
+    c = Rinds.min()
+    d = Rinds.max() + 1
+    e = Cinds.min()
+    f = Cinds.max() + 1
+    
+    
+
+    return LabmapArr[a:b, c:d, e:f]
+
+
+
+
+
+
+
+
+def CropLabmapIm(LabmapIm, KeepAspect=False):
+    """
+    Crop a 3D binary pixel array from a labelmap image to a non-zero pixel
+    array.
+    
+    Inputs:
+    ******
+    
+    LabmapIm : SimpleITK image
+        A binary image containing binary masks along the 3rd dimension.
+    
+    KeepAspect : boolean (optional; False by default)
+        KeepAspect will determine the shape of PixArr.  If KeepAspect=False,
+        the shape of PixArr will be the smallest cube that encloses all non-
+        zero elements in LabmapArr.  If True the shape of PixArr will be such 
+        that the relative spacings are maintained. 
+        
+        e.g. If Spacings=(0.5, 0.5, 1), PixArr will have shape (N, N, 2N), 
+        where N = the maximum number of rows or columns that encloses all non-
+        zero elements in LabmapArr. 
+    
+    Outputs:
+    *******
+    
+    PixArr : Numpy array
+        LabmapArr cropped within the bounds of all non-zero elements.    
+    """
+    
+    import numpy as np
+    import SimpleITK as sitk
+    from ConversionTools import Image2PixArr
+    
+    LabmapArr = sitk.GetArrayViewFromImage(LabmapIm)
+    
+    PixArr, F2Sinds = Image2PixArr(LabmapIm)
+    
+    F, C, R = PixArr.shape
+    
+    R, C, S = LabmapIm.GetSize()
+    
+    di, dj, dk = LabmapIm.GetSpacing()
+    
+    
+            
+    imin = F2Sinds[0]
+    imax = F2Sinds[-1] + 1
+    
+    """ Get the indices that surround all non-zero elements along the other
+    axes: """
+    
+    mask = PixArr.any(axis=0)
+    
+    Rinds, Cinds = np.where(mask)
+    
+    jmin = Rinds.min()
+    jmax = Rinds.max() + 1
+    kmin = Cinds.min()
+    kmax = Cinds.max() + 1
+    
+    
+    if KeepAspect:
+        # The number of non-zero rows and cols:
+        N_j = jmax - jmin
+        N_k = kmax - kmin
+        
+        if N_j > N_k:
+            # Increase the number of columns:
+            kmin = kmin - (N_j - N_k)//2
+            kmax = kmin + N_j
+        else:
+            # Increase the number of rows:
+            jmin = jmin - (N_k - N_j)//2
+            jmax = jmin + N_k
+            
+        
+        # Ratio of z-to-x spacing:
+        dk_di = dk/di
+        
+        # The number of pixels along x or y:
+        N = jmax - jmin
+        
+        # Scale by dk_di:
+        imax = imin + int(round(N/dk_di))
+        
+
+    return LabmapArr[imin:imax, jmin:jmax, kmin:kmax]
+
+
+
 
 
 
@@ -1785,166 +2028,6 @@ def GetListOfDataTypes(ListOfItems, Unique=True):
 
 
 
-def ParseTransformParameterFile(Fpath, ParamName):
-    """
-    Parse a SimpleElastix TransformParameters text file for the value(s) of
-    various parameters.
-            
-    Inputs:
-    ******
-    
-    Fpath : string
-        The full filepath of TransformParameters text file.
-        
-    ParamName : string
-        Character string of the parameter name to search and parse.
-        
-        
-    Outputs:
-    *******
-    
-    ParamValues : strings, integers or floats (depends on the parameter of 
-    interest)
-        The value(s) of the parameter of interest.
-    
-    
-    Notes:
-    -----
-    
-    1.  The text file contains data of the following format:
-            
-        (FixedImageDimension 2)     <-- single value
-        (Size 256 256)              <-- two values
-        
-    2. See further notes below.
-    """
-
-    # Determine whether the parameters need to be converted to integers or
-    # float.  
-    
-    # Create a list of parameter names that belong to int and float data types:
-    """
-    Notes: 
-        1. Many of the parameters are to remain as strings.
-        2. The lists below only cover the default parameters, so any additional
-           parameters will need to be added.
-        3. If the parameter is not found to be in ints or floats it will be 
-           assumed that the parameter is a string.
-    """
-    
-    IntParams = ['NumberOfParameters', 'FixedImageDimension', 
-                 'MovingImageDimension', 'Size', 'Index', 
-                 'FinalBSplineInterpolationOrder']
-    
-    FloatParams = ['TransformParameters', 'Spacing', 'Origin', 'Direction', 
-                   'CenterOfRotationPoint', 'DefaultPixelValue']
-    
-    if ParamName in IntParams:
-        dtype = 'int'
-    elif ParamName in FloatParams:
-        dtype = 'float'
-    else:
-        dtype = 'string'
-        
-    
-    # Read in the file:
-    FileTxt = open(Fpath, 'r').read()
-    
-    #print('\nFileTxt:\n', FileTxt)
-    
-    # Get index of string variable parameter:
-    a = FileTxt.index(ParamName)
-    
-    #print(f'\na = {a}')
-    
-    """ Note:
-    The text file has values encoded in the following format:
-    (ParameterName ParameterValue1 ParameterValue2 ...)
-    
-    so the values begin at a+len(ParameterName)+1 and end at the position 
-    before ')'.
-    """
-    StartInd = a + len(ParamName) + 1 # to account for the space after 
-    # ParameterName
-    
-    #print(f'\nStartInd = {StartInd}')
-    
-    # Find the position of the first ')' after StartInd:
-    b = StartInd + FileTxt[StartInd:].index(')')
-    
-    #print(f'\nb = {b}')
-    
-    EndInd = b
-    
-    #print(f'\nEndInd = {EndInd}')
-    
-    # Crop the text between StartInd and EndInd:
-    CroppedTxt = FileTxt[StartInd:EndInd]
-    
-    #print(f'\nCroppedTxt = {CroppedTxt}')
-    
-    """ Note:
-    CroppedTxt may be single value or may have multiple values. 
-    e.g. (FixedImageDimension 2) <-- single value
-         (Size 256 256) <-- two values
-         
-    If CroppedTxt doesn't contain the space character simply return CroppedTxt.
-    If CroppedTxt has a space character, slice and append the elements that 
-    preceed it to a new array called ParameterValues, then search for another 
-    space, repeat until there are no more spaces.
-    """
-    # Check if there are any space characters in CroppedTxt:
-    AreThereSpaces = ' ' in CroppedTxt
-    
-    #print('\nAreThereSpaces =', AreThereSpaces)
-    
-    if AreThereSpaces:
-        ParamValues = []
-        
-        # Continue as long as AreThereSpaces is True:
-        while AreThereSpaces:
-            # Find the first space character:
-            ind = CroppedTxt.index(' ')
-
-            # Slice the characters from 0 to ind:
-            ParamValues.append(CroppedTxt[0:ind])
-            
-            # Remove from CroppedTxt the characters that were appended to 
-            # ParamValues but not including the space character:
-            CroppedTxt = CroppedTxt[ind+1:]
-            
-            #print(f'\n   CroppedTxt = {CroppedTxt}')
-            
-            # Check if there are any space characters in CroppedTxt:
-            AreThereSpaces = ' ' in CroppedTxt
-            
-            #print('\n   AreThereSpaces =', AreThereSpaces)
-            
-        # There are no remaining spaces so simply append what remains of
-        # CroppedTxt to ParamValues:
-        if CroppedTxt:
-            ParamValues.append(CroppedTxt)
-            
-        #return ParamValues
-        if dtype=='int':
-            return [int(item) for item in ParamValues]
-        elif dtype=='float':
-            return [float(item) for item in ParamValues]
-        else:
-            return ParamValues
-        
-    else:
-        #return CroppedTxt
-        if dtype=='int':
-            return [int(item) for item in CroppedTxt]
-        elif dtype=='float':
-            return [float(item) for item in CroppedTxt]
-        else:
-            return CroppedTxt
-        
-
-
-
 
 def GetVectorLength(Vector):
     """
@@ -2125,6 +2208,9 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
     
     M = Matrix
     
+    #print(type(M))
+    print(M)
+    
     if len(M.shape) != 2:
         msg = f'The matrix has {len(M.shape)} dimensions. It must have 2.'
         
@@ -2136,6 +2222,9 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
         raise Exception(msg)
         
     
+    """ Either of the three tests below (Det = 1?, M.M_T = 0?, 
+    SSE of M.T - M^-1 = 0?) would be suitable. Determinant test is chosen for
+    no particular reason. """
     Det = np.linalg.det(M)
     IsOrthonormal = AreItemsEqualToWithinEpsilon(abs(Det), 1, epsilon=1e-06)
     
@@ -2164,101 +2253,6 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
         
     return IsOrthonormal
 
-
-
-
-
-def GetTxMatrixType(LogToConsole=False):
-    """
-    Determine the Transformation Matrix Type from a list of transformation 
-    parameters read from the TransformParameters.0.txt file exported by
-    Elastix following an image registration and assumed to be in the current
-    working directory.
-    
-    Inputs:
-    ******
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-    
-        
-    Outputs:
-    *******
-    
-    MatrixType : string
-        A string containing the matrix type.  Acceptable outputs are:
-        'RIGID', 'RIGID_SCALE' or 'AFFINE'.
-        
-        
-    Notes:
-    -----
-    
-    1. The transform parameters will be read from the file 
-    TransformParameters.0.txt.  The file is generated by Elastix following an
-    image registration, found in the current working directory. It will be 
-    assumed that the file is located in the current working directory and that
-    the filename is as above.
-    
-    2. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
-    TransformParameters.0.txt.  M only includes the elements that describe 
-    rotations, scaling and shearing, i.e not translations (hence only the
-    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxParams).
-    
-    3. There are three types of Registration matrices as defined in C.X.1.1.2
-    (page 27) in DICOM Standard Supplement 7.3:
-        
-        RIGID: 
-        - a registration involving only translations and rotations
-        - the matrix contains 6 degrees of freedom: 3 translations and 3 
-        rotations
-        - the matrix must be orthnormal
-        
-        RIGID_SCALE:
-        - a registration involving only translations, rotations and scaling
-        - the matrix contains 9 degrees of freedom: 3 translations, 3 rotations
-        and 3 scales
-        - the matrix must be orthogonal
-        
-        AFFINE:
-        - a registration involving translations, rotations, scaling and 
-        shearing
-        - the matrix contains 12 degrees of freedom: 3 translations, 3 
-        rotations, 3 scales and 3 shears
-        - there are no constraints on the matrix elements
-    """
-    
-    import os
-    import numpy as np
-    
-    ParamFname = 'TransformParameters.0.txt'
-    ParamFpath = os.path.join(os.getcwd(), ParamFname)
-
-    TxParams = ParseTransformParameterFile(ParamFpath, 'TransformParameters')
-    
-    inds = [0, 1, 2, 4, 5, 6, 8, 9, 10]
-
-    M = np.array([TxParams[i] for i in inds])
-    
-    M = np.reshape(M, (3, 3))
-    
-    IsOrthonormal = IsMatrixOrthonormal(M, LogToConsole)
-    
-    if IsOrthonormal:
-        MatrixType = 'RIGID'
-    else:
-        IsOrthogonal = IsMatrixOrthogonal(M, LogToConsole)
-        
-        if IsOrthogonal:
-            MatrixType = 'RIGID_SCALE'
-        
-        else:
-            MatrixType = 'AFFINE'
-            
-            
-    if LogToConsole:
-        print('Matrix type is', MatrixType)
-    
-    return MatrixType
 
 
 
@@ -2384,6 +2378,9 @@ def DisplayAttributesOfAllData(Keyword='Dcm', RemoveFromKeys='_DcmDir',
 
 
 
+
+
+
 def ExportDictionaryToJson(Dictionary, FileName, ExportDir='cwd'):
     """
     Export a dictionary to a JSON file.
@@ -2459,14 +2456,14 @@ def ImportDictionaryFromJson(FileName):
 
 
 
-def ExportListToTxt(InList, FileName, ExportDir='cwd'):
+def ExportListToTxt(Lst, FileName, ExportDir='cwd'):
     """
     Export a list to a txt file.
     
     Inputs:
     ******
     
-    InList : list
+    Lst : list
         The list to be exported.
         
     FileName : string
@@ -2495,7 +2492,68 @@ def ExportListToTxt(InList, FileName, ExportDir='cwd'):
         FilePath = os.path.join(ExportDir, FileName)
     
     with open(FilePath, 'w') as f:
-        for line in InList:
+        for line in Lst:
             f.write(line)
     
     return
+
+
+
+
+
+def ImportListFromTxt(FileName):
+    """
+    Import a list from a text file from the current working directory.
+    
+    Inputs:
+    ******
+        
+    FileName : string
+        The file name of the text file (which must be in the current working 
+        directory).  FileName does not need to include the .txt extension.
+    
+    
+    Outputs:
+    *******
+        
+    Lst : list
+    """
+    
+    #import os
+    #from pathlib import Path
+    
+    if not '.txt' in FileName:
+        FileName += '.txt'
+    
+    Lst = []
+    
+    with open(FileName, 'r') as file:
+        for line in file:
+            Lst.append(line.replace('\n', '').split(' '))
+    
+    return Lst
+
+
+
+
+def DeleteFile(Filepath):
+    import os
+    
+    try:
+        os.remove(Filepath)
+        print(f'{Filepath} deleted')
+    except PermissionError as error:
+        print(error)
+        print(f'{Filepath} cannot be deleted\n')
+
+
+
+def DeleteDirectory(Dirpath):
+    import shutil
+    
+    try:
+        shutil.rmtree(Dirpath)
+        print(f'{Dirpath} deleted')
+    except PermissionError as error:
+        print(error)
+        print(f'{Dirpath} cannot be deleted\n')

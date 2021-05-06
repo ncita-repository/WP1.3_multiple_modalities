@@ -16,9 +16,12 @@ GENERAL DICOM FUNCTIONS
 """
 
 
-def GetDicomFpaths(DicomDir, SortMethod='slices', WalkThroughSubDirs=False,
+def GetDicomFpaths_OLD(DicomDir, SortMethod='slices', WalkThroughSubDirs=False,
                    LogToConsole=False):
     """
+    NOTE: This function is less efficient than the new one, which uses 
+    SimpleITK's ImageSeriesReader.
+    
     Get a sorted list of full filepaths for all DICOM files in a directory
     
     Inputs:
@@ -169,6 +172,41 @@ def GetDicomFpaths(DicomDir, SortMethod='slices', WalkThroughSubDirs=False,
 
 
 
+
+
+
+def GetDicomFpaths(DicomDir):
+    """
+    Get a list of full filepaths for all DICOM files in a directory using
+    SimpleITK's ImageSeriesReader.
+    
+    Inputs:
+    ******
+    
+    DicomDir : string
+        Path to directory containing DICOMs.
+    
+    
+    Outputs:
+    *******
+    
+    FilePaths : list of strings 
+        List of the full filepaths of all DICOM files in DicomDir.
+    """
+    
+    import SimpleITK as sitk
+    
+    SeriesReader = sitk.ImageSeriesReader()
+    
+    FilePaths = SeriesReader.GetGDCMSeriesFileNames(DicomDir)
+    
+    return FilePaths
+
+
+    
+    
+
+
 def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     """
     Import DICOM objects from a directory containing DICOM files.
@@ -197,7 +235,8 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     
     #print('\nSortMethod (input for GetDicoms()) =', SortMethod)
     
-    fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
+    #fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
+    fpaths = GetDicomFpaths(DicomDir)
     
     Dicoms = []
     
@@ -209,6 +248,7 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
         Dicoms.append(dicom)
         
     return Dicoms
+
 
 
 
@@ -246,7 +286,8 @@ def ImportDicom(DicomDir, SortMethod='slices', InStackNum=0,
     
     from pydicom import read_file
     
-    fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
+    #fpaths = GetDicomFpaths(DicomDir, SortMethod, LogToConsole)
+    fpaths = GetDicomFpaths(DicomDir)
     
     if InStackNum < len(fpaths):
         Dicom = read_file(fpaths[InStackNum])
@@ -267,8 +308,11 @@ def ImportDicom(DicomDir, SortMethod='slices', InStackNum=0,
 
 
 
-def GetDicomSOPuids(DicomDir):
+def GetDicomSOPuids_OLD(DicomDir):
     """
+    NOTE: This function is less efficient than the new one, which uses 
+    SimpleITK's ImageSeriesReader.
+    
     Get a list of SOP Instance UIDs for a DICOM series.
     
     Inputs:
@@ -300,8 +344,56 @@ def GetDicomSOPuids(DicomDir):
 
 
 
-def GetDicomUids(DicomDir):
+def GetDicomSOPuids(DicomDir):
     """
+    Get a list of SOP Instance UIDs for a DICOM series using SimpleITK's 
+    ImageSeriesReader.
+    
+    Inputs:
+    ******
+    
+    DicomDir : string
+        Directory containing the DICOMs.
+        
+    
+    Outputs:
+    *******
+    
+    SOPuids : list of strings
+        List of the SOP UIDs of the DICOMs.
+    """
+    
+    import SimpleITK as sitk
+    
+    SeriesReader = sitk.ImageSeriesReader()
+    
+    FilePaths = SeriesReader.GetGDCMSeriesFileNames(DicomDir)
+    
+    FileReader = sitk.ImageFileReader()
+    
+    SOPuids = [] 
+    
+    for fpath in FilePaths:
+        FileReader.SetFileName(fpath)
+
+        FileReader.ReadImageInformation()
+    
+        SOPuids.append(FileReader.GetMetaData('0008|0018'))
+        
+    return SOPuids
+
+
+
+
+
+
+
+
+def GetDicomUids_OLD(DicomDir):
+    """
+    NOTE: This function is less efficient than the new one, which uses 
+    SimpleITK's ImageSeriesReader.
+    
     Get the Study, Series, Frame of Reference and SOP Instance UIDs for a DICOM 
     series.
     
@@ -339,6 +431,62 @@ def GetDicomUids(DicomDir):
     Studyuid = Dicoms[0].StudyInstanceUID
     Seriesuid = Dicoms[0].SeriesInstanceUID
     FORuid = Dicoms[0].FrameOfReferenceUID
+        
+    return Studyuid, Seriesuid, FORuid, SOPuids
+
+
+
+
+
+
+def GetDicomUids(DicomDir):
+    """
+    Get the Study, Series, Frame of Reference and SOP Instance UIDs for a DICOM 
+    series.
+    
+    Inputs:
+    ******
+    
+    DicomDir : string
+        Directory containing the DICOMs.
+        
+    
+    Outputs:
+    *******
+    
+    Studyuid : string
+        Study Instance UID of the DICOM series.
+        
+    Seriesuid : string
+        Series Instance UID of the DICOM series.
+        
+    FORuid : string
+        Frame of Reference UID of the DICOM series.
+        
+    SOPuids : list of strings
+        List of the SOP UIDs of the DICOMs.
+    """
+    
+    import SimpleITK as sitk
+    
+    SeriesReader = sitk.ImageSeriesReader()
+    
+    FilePaths = SeriesReader.GetGDCMSeriesFileNames(DicomDir)
+    
+    FileReader = sitk.ImageFileReader()
+    
+    SOPuids = [] 
+    
+    for fpath in FilePaths:
+        FileReader.SetFileName(fpath)
+
+        FileReader.ReadImageInformation()
+    
+        SOPuids.append(FileReader.GetMetaData('0008|0018'))
+        
+    Studyuid = FileReader.GetMetaData('0020|000d')
+    Seriesuid = FileReader.GetMetaData('0020|000e')
+    FORuid = FileReader.GetMetaData('0020|0052')
         
     return Studyuid, Seriesuid, FORuid, SOPuids
 
