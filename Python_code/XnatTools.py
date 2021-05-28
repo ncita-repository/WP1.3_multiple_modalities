@@ -378,16 +378,35 @@ def DownloadScan(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
             
         Experiment = request.json()
         
-        #print(f"{Experiment['items']}")
-        #print(f"{Experiment['items'][0]}")
-        #print(f"{Experiment['items'][0]['children']}")
-        #print(f"{Experiment['items'][0]['children'][1]}")
-        #print(f"{Experiment['items'][0]['children'][1]['items']}")
-        #print(f"{Experiment['items'][0]['children'][1]['items'][0]}")
-        #print(f"{Experiment['items'][0]['children'][1]['items'][0]['data_fields']}")
+        #print(Experiment['items'], '\n')
+        #print(Experiment['items'][0], '\n')
+        #print(Experiment['items'][0]['children'], '\n')
+        #print(Experiment['items'][0]['children'][1], '\n')
+        #print(Experiment['items'][0]['children'][1]['items'], '\n')
+        #print(Experiment['items'][0]['children'][1]['items'][0], '\n')
+        #print(Experiment['items'][0]['children'][1]['items'][0]['data_fields'], '\n')
         
+        #return XnatSession, Experiment
+
         #StudyUid = Experiment['items'][0]['children'][1]['items'][0]['data_fields']['type']['UID']
-        StudyUid = Experiment['items'][0]['children'][1]['items'][0]['data_fields']['UID']
+        #StudyUid = Experiment['items'][0]['children'][1]['items'][0]['data_fields']['UID'] # 27/05/2021
+        StudyUid = Experiment['items'][0]['data_fields']['UID'] # 27/05/2021
+        
+        """ There may be more than one item in the list 
+        Experiment['items'][0]['children'] (e.g. depending on whether there are 
+        image assessors or not). Get the index that corresponds to scans: """
+        ScanInd = None # initial value
+        
+        for i in range(len(Experiment['items'][0]['children'])):
+            if 'scan' in Experiment['items'][0]['children'][i]['field']:
+                ScanInd = i
+        
+        if ScanInd == None:
+            msg = f"There are no scans for:\n  ProjId = '{ProjId}'"\
+              + f"\n  SubjLabel = '{SubjLabel}'\n  ExpLabel = '{ExpLabel}'"\
+              + f"\n  ScanId = '{ScanId}'."
+            raise Exception(msg)
+            
         
         """ Get the list of series labels (scan IDs), SeriesUIDs and series 
         descriptions for this series/scan: """
@@ -395,7 +414,8 @@ def DownloadScan(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
         SeriesUids = []
         SeriesDescs = []
         
-        for experiment in Experiment['items'][0]['children'][1]['items']:
+        #for experiment in Experiment['items'][0]['children'][1]['items']: # 27/05/21
+        for experiment in Experiment['items'][0]['children'][ScanInd]['items']: # 27/05/21
             ScanIds.append(experiment['data_fields']['ID'])
             SeriesUids.append(experiment['data_fields']['UID'])
             SeriesDescs.append(experiment['data_fields']['type'])
@@ -736,30 +756,87 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     Experiment = request.json()
     
     
+    """ There are likely more than one item in the list 
+    Experiment['items'][0]['children'] (e.g. one for scans and one for 
+    image assessors). Get the index that corresponds to assessors, AsrInd, and
+    the index that corresponds to scans, ScanInd: """
+    AsrInd = None # initial value
+    
+    for i in range(len(Experiment['items'][0]['children'])):
+        if 'assessor' in Experiment['items'][0]['children'][i]['field']:
+            AsrInd = i
+    
+    if AsrInd == None:
+        msg = f"There are no assessors for:\n  ProjId = '{ProjId}'"\
+          + f"\n  SubjLabel = '{SubjLabel}'\n  ExpLabel = '{ExpLabel}'"\
+          + f"\n  ScanId = '{ScanId}'."
+        raise Exception(msg)
+    
+    ScanInd = None # initial value
+    
+    for i in range(len(Experiment['items'][0]['children'])):
+        if 'scan' in Experiment['items'][0]['children'][i]['field']:
+            ScanInd = i
+    
+    if ScanInd == None:
+        msg = f"There are no scans for:\n  ProjId = '{ProjId}'"\
+          + f"\n  SubjLabel = '{SubjLabel}'\n  ExpLabel = '{ExpLabel}'"\
+          + f"\n  ScanId = '{ScanId}'."
+        raise Exception(msg)
+    
+    #""" Get the SeriesUID for the scan of interest: """
+    #if PathsDict != None:
+    #    try:
+    #        SeriesUid = PathsDict['projects'][ProjId]['subjects'][SubjLabel]\
+    #        ['experiments'][ExpLabel]['scans'][ScanId]['SeriesUID']
+    #        
+    #    except Exception:
+    #        """ Get the list of scan IDs and SeriesUIDs for this scan: """
+    #        ScanIds = []
+    #        SeriesUids = []
+    #        
+    #        #for experiment in Experiment['items'][0]['children'][1]['items']: # 27/05/21
+    #        for experiment in Experiment['items'][0]['children'][ScanInd]['items']: # 27/05/21
+    #            ScanIds.append(experiment['data_fields']['ID'])
+    #            SeriesUids.append(experiment['data_fields']['UID'])
+    #            
+    #        """ The SeriesUID and series description for the scan of interest 
+    #        (ScanId): """
+    #        SeriesUid = SeriesUids[ScanIds.index(ScanId)]
+    
+    """ Above modified on 27/05/21. """
+    
     """ Get the SeriesUID for the scan of interest: """
     if PathsDict != None:
         try:
             SeriesUid = PathsDict['projects'][ProjId]['subjects'][SubjLabel]\
             ['experiments'][ExpLabel]['scans'][ScanId]['SeriesUID']
             
-        except Exception:
-            """ Get the list of scan IDs and SeriesUIDs for this scan: """
-            ScanIds = []
-            SeriesUids = []
+            ExceptionRaised = False
             
-            for experiment in Experiment['items'][0]['children'][1]['items']:
-                ScanIds.append(experiment['data_fields']['ID'])
-                SeriesUids.append(experiment['data_fields']['UID'])
-                
-            """ The SeriesUID and series description for the scan of interest 
-            (ScanId): """
-            SeriesUid = SeriesUids[ScanIds.index(ScanId)]
+        except Exception:
+            ExceptionRaised = True
+    
+    if PathsDict == None or ExceptionRaised:
+        """ Get the list of scan IDs and SeriesUIDs for this scan: """
+        ScanIds = []
+        SeriesUids = []
+        
+        #for experiment in Experiment['items'][0]['children'][1]['items']: # 27/05/21
+        for experiment in Experiment['items'][0]['children'][ScanInd]['items']: # 27/05/21
+            ScanIds.append(experiment['data_fields']['ID'])
+            SeriesUids.append(experiment['data_fields']['UID'])
+            
+        """ The SeriesUID and series description for the scan of interest 
+        (ScanId): """
+        SeriesUid = SeriesUids[ScanIds.index(ScanId)]
 
     
     """ Get the (referenced) SeriesUIDs of all assessors: """
     RefSeriesUids = []
 
-    for experiment in Experiment['items'][0]['children'][0]['items']:
+    #for experiment in Experiment['items'][0]['children'][0]['items']: # 27/05/21
+    for experiment in Experiment['items'][0]['children'][AsrInd]['items']: # 27/05/21
         RefSeriesUids.append(experiment['children'][1]['items'][0]\
                              ['data_fields']['seriesUID'])
     
@@ -768,9 +845,12 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     
     
     if inds == []:
-        msg = f"There are no scan assessors for ScanId '{ScanId}' "\
-              + f"in ExpLabel '{ExpLabel}' for SubjLabel '{SubjLabel}' "\
-              + f"in ProjId '{ProjId}'."
+        #msg = f"There are no scan assessors for ScanId '{ScanId}' "\
+        #      + f"in ExpLabel '{ExpLabel}' for SubjLabel '{SubjLabel}' "\
+        #      + f"in ProjId '{ProjId}'."
+        msg = f"There are no scan assessors for:\n  ProjId = '{ProjId}'"\
+              + f"\n  SubjLabel = '{SubjLabel}'\n  ExpLabel = '{ExpLabel}'"\
+              + f"\n  ScanId = '{ScanId}'\n  ScanLabel = '{Name}'."
         raise Exception(msg)
     
     
@@ -784,7 +864,8 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     Ids = []
     
     for ind in inds:
-        experiment = Experiment['items'][0]['children'][0]['items'][ind]
+        #experiment = Experiment['items'][0]['children'][0]['items'][ind] # 27/05/21
+        experiment = Experiment['items'][0]['children'][AsrInd]['items'][ind] # 27/05/21
         
         Dates.append(experiment['data_fields']['date'])
         Times.append(experiment['data_fields']['time'])
@@ -794,7 +875,7 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
         Ids.append(experiment['data_fields']['id'])
     
     
-    """ The indices of assessors that match AsrMod.: """
+    """ The indices of assessors that match Mod.: """
     inds = [i for i, mod in enumerate(Mods) if mod == Mod]
     
     """ Use inds to filter the lists. """
@@ -810,10 +891,13 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
         ind = Names.index(Name)
     
     except Exception:
-        msg = f"There are no assessors for Scan '{ScanId}' with name "\
-              + f"'{Name}' for ScanId '{ScanId}' in ExpLabel "\
-              + f"'{ExpLabel}' for SubjLabel '{SubjLabel}' in ProjId "\
-              + f"'{ProjId}'."
+        #msg = f"There are no assessors for Scan '{ScanId}' with name "\
+        #      + f"'{Name}' for ScanId '{ScanId}' in ExpLabel "\
+        #      + f"'{ExpLabel}' for SubjLabel '{SubjLabel}' in ProjId "\
+        #      + f"'{ProjId}'."
+        msg = f"There are no scan assessors for:\n  ProjId = '{ProjId}'"\
+              + f"\n  SubjLabel = '{SubjLabel}'\n  ExpLabel = '{ExpLabel}'"\
+              + f"\n  ScanId = '{ScanId}'\n  ScanLabel = '{Name}'."
         raise Exception(msg)
     
     Date = Dates[ind]
@@ -1304,21 +1388,18 @@ def GetFORuid(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
 
 
 
-def SearchTxMatrix(XnatUrl, ProjId, SubjLabel, 
-                   SrcExpLabel, SrcScanId, TrgExpLabel, TrgScanId,
-                   Transform,
-                   XnatSession=None, Username=None, Password=None):
+def SearchXnatForDro(XnatUrl, ProjId, SubjLabel, 
+                     SrcExpLabel, SrcScanId, TrgExpLabel, TrgScanId,
+                     Transform,
+                     XnatSession=None, Username=None, Password=None):
     """
-    NOTE: Currently does not deal with Deformable Spatial Registration DROs.
-    
-    TO DO: Check for REG / REGISTRATION modality.
-    
     Search XNAT for a DRO (as a subject assessor) whose FrameOfReferenceUIDs   
     match the Source (moving) and Target (fixed) FrameOfReferenceUIDs, and 
-    whose FrameOfReferenceTransformationMatrixType match the transform type 
-    specified by Transform. If one (or more) matches, obtain the 
-    FrameOfReferenceTransformation of the moving (Source) image (of the newest 
-    DRO for multiple matches).
+    whose SOP Class UID matches the transformation type specified by Transform. 
+    If one (or more) matches, obtain (from the newest DRO for multiple matches)
+    the FrameOfReferenceTransformation (for non-deformable transforms), or the 
+    GridDimensions, GridResolution and VectorGridData (for deformable 
+    transformation) of the moving (Source) sequence.
     
     Inputs:
     ******
@@ -1351,8 +1432,7 @@ def SearchTxMatrix(XnatUrl, ProjId, SubjLabel,
         The Target DICOM series label / XNAT scan ID of interest.
     
     Transform : string (optional; 'affine' by default)
-        Denotes type of transformation to search for.  Acceptable 
-        values include:
+        Denotes type of registration transformation. Acceptable values include:
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
@@ -1373,9 +1453,27 @@ def SearchTxMatrix(XnatUrl, ProjId, SubjLabel,
     *******
     
     TxMatrix : list of float strings or None
-        List of float strings representing the transformation that maps the
-        moving (Source) image to the fixed (Target) image if there exists a
-        DRO (as a subject assessor) that applies; or None if not.
+        List of float strings representing the non-deformable transformation 
+        that transforms the moving (Source) image to the fixed (Target) image 
+        (if there exists a DRO (as a subject assessor) that matches the 
+        requirements); None if not.
+    
+    GridDims : list of integers or None
+        List of integers representing the dimensions of the BSpline grid used 
+        to deform the moving (Source) image to the fixed (Target) image (if 
+        there exists a DRO (as a subject assessor) that matches the 
+        requirements); None if not.
+    
+    GridRes : list of floats or None
+        List of floats representing the resolution of the BSpline grid used to 
+        deform the moving (Source) image to the fixed (Target) image (if there 
+        exists a DRO (as a subject assessor) that matches the requirements); 
+        None if not.
+    
+    VectGridData : list of float strings or None
+        List of floats representing the vector deformations that deform the
+        moving (Source) image to the fixed (Target) image (if there exists a
+        DRO (as a subject assessor) that matches the requirements); None if not.
     """
     
     from pydicom.filebase import DicomBytesIO
@@ -1411,16 +1509,24 @@ def SearchTxMatrix(XnatUrl, ProjId, SubjLabel,
     Fnames = []
 
     for result in request.json()['ResultSet']['Result']:
-        Fnames.append(result['Name'])
+        #Fnames.append(result['Name']) # 07/05/21
+        fname = result['Name'] # 07/05/21
+        if '.dcm' in fname: # 07/05/21
+            Fnames.append(fname) # 07/05/21
     
     # Get a list of the FrameOfReferenceUID as a tuple of pairs, 
     # e.g. (SrcForUid, TrgForUid), for all items:
     #ForUidPairs = []
     
-    # Get a list of all FrameOfReferenceTransformations for all moving 
-    # sequences whose FrameOfReferenceUIDs match SrcFORuid and TrgFORuid:
+    # Initialise a list of all FrameOfReferenceTransformations (from Spatial
+    # Registration Objects), GridDimensions, GridResolutions and VectorGridData
+    # (for Deformable Spatial Registration Objects):
     TxMatrices = []
     #TxMatrixTypes = []
+    GridDimss = []
+    GridRess = []
+    VectGridDatas = []
+    
     
     #ContentDateTimes = []
     
@@ -1442,60 +1548,113 @@ def SearchTxMatrix(XnatUrl, ProjId, SubjLabel,
         
         dro = dcmread(raw)
         
-        #ForUidPairs.append((dro.RegistrationSequence[0].FrameOfReferenceUID,
-        #                    dro.RegistrationSequence[1].FrameOfReferenceUID))
-                   
-        # Use f-strings instead of deepcopy:
-        FORuid0 = f'{dro.RegistrationSequence[0].FrameOfReferenceUID}'
-        FORuid1 = f'{dro.RegistrationSequence[1].FrameOfReferenceUID}'
-        
-        Type = f'{dro.RegistrationSequence[1].MatrixRegistrationSequence[0].MatrixSequence[0].FrameOfReferenceTransformationMatrixType}'
-        Type = Type.lower()
-        
         Mod = f'{dro.Modality}'
-                    
-        #print(Type)
         
-        if FORuid0 == TrgFORuid and FORuid1 == SrcFORuid and Type == Transform\
-        and Mod == 'REG':
-            Inds.append(i)
+        if Mod == 'REG': # 07/05/21
+            DroType = f'{dro.SOPClassUID}'
             
-            TxMatrices.append(dro.RegistrationSequence[1]\
-                                 .MatrixRegistrationSequence[0]\
-                                 .MatrixSequence[0]\
-                                 .FrameOfReferenceTransformationMatrix)
-        
-            #TxMatrixTypes.append(dro.RegistrationSequence[1]\
-            #                        .MatrixRegistrationSequence[0]\
-            #                        .MatrixSequence[0]\
-            #                        .FrameOfReferenceTransformationMatrixType)
-
-            ContentDateTime = f'{dro.ContentDate}{dro.ContentTime}'
-
-            #ContentDateTimes.append(ContentDateTime)
-
-            TimeDiffs.append(Now - time.mktime(time.strptime(ContentDateTime, 
-                                                             '%Y%m%d%H%M%S')))
+            if 'Deformable' in DroType:
+                if Transform == 'bspline':
+                    MatchOnDroType = True
+                else:
+                    MatchOnDroType = False
+            else:
+                if Transform == 'bspline':
+                    MatchOnDroType = False
+                else:
+                    MatchOnDroType = True
+            
+            #ForUidPairs.append((dro.RegistrationSequence[0].FrameOfReferenceUID,
+            #                    dro.RegistrationSequence[1].FrameOfReferenceUID))
+                       
+            # Use f-strings instead of deepcopy:
+            if 'Deformable' in DroType:
+                FORuid0 = f'{dro.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
+                FORuid1 = f'{dro.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
+            else:
+                FORuid0 = f'{dro.RegistrationSequence[0].FrameOfReferenceUID}'
+                FORuid1 = f'{dro.RegistrationSequence[1].FrameOfReferenceUID}'
+            
+            #Type = f'{dro.RegistrationSequence[1].MatrixRegistrationSequence[0].MatrixSequence[0].FrameOfReferenceTransformationMatrixType}'
+            #Type = Type.lower()
+            
+            #Mod = f'{dro.Modality}' # 07/05/21
+                        
+            #print(Type)
+            
+            #if FORuid0 == TrgFORuid and FORuid1 == SrcFORuid and Type == Transform\
+            #and Mod == 'REG': # 07/05/21
+            if FORuid0 == TrgFORuid and FORuid1 == SrcFORuid and MatchOnDroType:
+                Inds.append(i)
+                
+                if 'Deformable' in DroType:
+                    GridDimss.append(dro.DeformableRegistrationSequence[1]\
+                                        .DeformableRegistrationGridSequence[0]\
+                                        .GridDimensions)
+                    
+                    GridRess.append(dro.DeformableRegistrationSequence[1]\
+                                       .DeformableRegistrationGridSequence[0]\
+                                       .GridResolution)
+                    
+                    VectGridDatas.append(dro.DeformableRegistrationSequence[1]\
+                                            .DeformableRegistrationGridSequence[0]\
+                                            .VectorGridData)
+                else:
+                    TxMatrices.append(dro.RegistrationSequence[1]\
+                                         .MatrixRegistrationSequence[0]\
+                                         .MatrixSequence[0]\
+                                         .FrameOfReferenceTransformationMatrix)
+            
+                #TxMatrixTypes.append(dro.RegistrationSequence[1]\
+                #                        .MatrixRegistrationSequence[0]\
+                #                        .MatrixSequence[0]\
+                #                        .FrameOfReferenceTransformationMatrixType)
+    
+                ContentDateTime = f'{dro.ContentDate}{dro.ContentTime}'
+    
+                #ContentDateTimes.append(ContentDateTime)
+    
+                TimeDiffs.append(Now - time.mktime(time.strptime(ContentDateTime, 
+                                                                 '%Y%m%d%H%M%S')))
 
     
     if TimeDiffs:
         # The index of the most recent ContentDateTime:
         ind = TimeDiffs.index(min(TimeDiffs))
-
-        TxMatrix = TxMatrices[ind]
         
-        msg = f"There were {len(Fnames)} subject assessors found, of which "\
-              + f"{len(TimeDiffs)} contained matching FrameOfReferenceUIDs "\
-              + "and transform type, the most recent of which contains the "\
-              + f"transformation matrix:\n{TxMatrix}\n"
+        if 'Deformable' in DroType:
+            TxMatrix = None
+            GridDims = GridDimss[ind]
+            GridRes = GridRess[ind]
+            VectGridData = VectGridDatas[ind]
+            
+            msg = f"There were {len(Fnames)} subject assessors found, of which "\
+                  + f"{len(TimeDiffs)} contained matching FrameOfReferenceUIDs "\
+                  + "and transform type, the most \nrecent of which contains the "\
+                  + f"grid dimensions (GridDims):\n{GridDims}\ngrid resolution:"\
+                  + f"{GridRes}\nand vector grid data containing {len(VectGridData)}"\
+                  + " elements"
+        else:
+            TxMatrix = TxMatrices[ind]
+            GridDims = None
+            GridRes = None
+            VectGridData = None
+        
+            msg = f"There were {len(Fnames)} subject assessors found, of which "\
+                  + f"{len(TimeDiffs)} contained matching FrameOfReferenceUIDs "\
+                  + "and transform type, the most \nrecent of which contains the "\
+                  + f"transformation matrix (TxMatrix):\n{TxMatrix}\n"
     else:
         msg = "There were no DROs with FrameOfReferenceUIDs matching those of"\
               + f" the Source ({SrcFORuid}) and Target ({TrgFORuid}) image "\
-              + "series, and with FrameOfReferenceTransformationMatrixType "\
-              + f"matching the desired transform type ({Transform}).\n"
+              + "series, and whose SOP Class UID matched the desired "\
+              + f"transform type ({Transform}).\n"
         
         TxMatrix = None
+        GridDims = None
+        GridRes = None
+        VectGridData = None
     
     print(msg)
     
-    return TxMatrix
+    return TxMatrix, GridDims, GridRes, VectGridData

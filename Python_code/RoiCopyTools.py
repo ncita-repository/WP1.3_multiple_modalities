@@ -515,10 +515,10 @@ def CreateListOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel,
                        TrgRoiColMod, TrgRoiColName, TrgRoiName, 
                        TxtToAddToTrgRoiColName, 
                        LogToConsole, ExportLogFiles, 
-                       ResInterp, PreResVariance, ApplyPostResBlur, 
-                       PostResVariance, ForceReg, TxMatrix, SelxOrSitk, 
+                       ResInterp, PreResVar, ApplyPostResBlur, 
+                       PostResVar, ForceReg, SelxOrSitk, 
                        Transform, MaxIters, TxInterp, ApplyPostTxBin, 
-                       ApplyPostTxBlur, PostTxVariance):
+                       ApplyPostTxBlur, PostTxVar):
     
     ListOfInputs = [f"RunDateTime: {RunDateTime}\n",
                     f"XnatUrl = {XnatUrl}\n",
@@ -540,18 +540,18 @@ def CreateListOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel,
                     f"LogToConsole = {LogToConsole}",
                     f"ExportLogFiles = {ExportLogFiles}",
                     f"ResInterpSet = {ResInterp}\n",
-                    f"PreResVariance = {PreResVariance}\n",
+                    f"PreResVar = {PreResVar}\n",
                     f"ApplyPostResBlur = {ApplyPostResBlur}\n",
-                    f"PostResVariance = {PostResVariance}\n",
+                    f"PostResVar = {PostResVar}\n",
                     f"ForceReg = {ForceReg}\n",
-                    f"TxMatrix = {TxMatrix}\n",
+                    #f"TxMatrix = {TxMatrix}\n",
                     f"SelxOrSitk = {SelxOrSitk}\n",
                     f"Transform = {Transform}\n",
                     f"MaxIters = {MaxIters}\n",
                     f"TxInterp = {TxInterp}\n",
                     f"ApplyPostTxBin = {ApplyPostTxBin}\n",
                     f"ApplyPostTxBlur = {ApplyPostTxBlur}\n",
-                    f"PostTxVariance = {PostTxVariance}\n"
+                    f"PostTxVar = {PostTxVar}\n"
                     ]
     
     return ListOfInputs
@@ -567,10 +567,10 @@ def CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel,
                        TrgRoiColMod, TrgRoiColName, TrgRoiName, 
                        TxtToAddToTrgRoiColName, 
                        LogToConsole, ExportLogFiles, 
-                       ResInterp, PreResVariance, ApplyPostResBlur, 
-                       PostResVariance, ForceReg, TxMatrix, SelxOrSitk, 
+                       ResInterp, PreResVar, ApplyPostResBlur, 
+                       PostResVar, ForceReg, SelxOrSitk, 
                        Transform, MaxIters, TxInterp, ApplyPostTxBin, 
-                       ApplyPostTxBlur, PostTxVariance):
+                       ApplyPostTxBlur, PostTxVar):
     
     DictOfInputs = {'RunDateTime' : RunDateTime,
                     'XnatUrl' : XnatUrl,
@@ -592,18 +592,18 @@ def CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel,
                     'LogToConsole' : LogToConsole,
                     'ExportLogFiles' : ExportLogFiles,
                     'ResInterpSet' : ResInterp,
-                    'PreResVariance' : PreResVariance,
+                    'PreResVar' : PreResVar,
                     'ApplyPostResBlur' : ApplyPostResBlur,
-                    'PostResVariance' : PostResVariance,
+                    'PostResVar' : PostResVar,
                     'ForceReg' : ForceReg,
-                    'TxMatrix' : TxMatrix,
+                    #'TxMatrix' : TxMatrix,
                     'SelxOrSitk' : SelxOrSitk,
                     'Transform' : Transform,
                     'MaxIters' : MaxIters,
                     'TxInterp' : TxInterp,
                     'ApplyPostTxBin' : ApplyPostTxBin,
                     'ApplyPostTxBlur' : ApplyPostTxBlur,
-                    'PostTxVariance' : PostTxVariance
+                    'PostTxVar' : PostTxVar
                     }
     
     return DictOfInputs
@@ -623,12 +623,12 @@ COPY A CONTOUR / ROI / RTSTRUCT / SEGMENTATION / SEGMENT / SEG
 
 def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                     TrgDcmDir, TrgRoiFpath=None, TrgRoiName=None, TrgSliceNum=None, 
-                    ResInterp='BlurThenLinear', PreResVariance=(1,1,1), 
-                    ApplyPostResBlur=False, PostResVariance=(1,1,1),
+                    ResInterp='BlurThenLinear', PreResVar=(1,1,1), 
+                    ApplyPostResBlur=False, PostResVar=(1,1,1),
                     ForceReg=False, SelxOrSitk='Selx', Transform='affine', 
                     MaxIters='512', TxInterp='NearestNeighbor', 
                     ApplyPostTxBin=True, ApplyPostTxBlur=True, 
-                    PostTxVariance=(1,1,1), TxtToAddToTrgRoiColName='', 
+                    PostTxVar=(1,1,1), TxtToAddToTrgRoiColName='', 
                     LogToConsole=False, ExportLogFiles=False):
     """
     Copy an ROI Collection (contour/ROI/RTSTRUCT/segmentation/segment/SEG) from 
@@ -677,7 +677,7 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
     
-    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -685,7 +685,7 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
     ApplyPostResBlur : boolean (optional; True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
         
-    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+    PostResVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         resampled labelmap image(s).
     
@@ -727,9 +727,9 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image will be Gaussian blurred.
         
-    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+    PostTxVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
+        transformed labelmap image(s).
         
     TxtToAddToTrgRoiColName : string (optional, '' by default)
         String of text to pass to CreateRts()/CreateSeg(). The string will be
@@ -795,9 +795,9 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
                     f'TrgRoiName = {TrgRoiName}\n',
                     f'TrgSliceNum = {TrgSliceNum}\n',
                     f'ResInterpSet = {ResInterp}\n',
-                    f'PreResVariance = {PreResVariance}\n',
+                    f'PreResVar = {PreResVar}\n',
                     f'ApplyPostResBlur = {ApplyPostResBlur}\n',
-                    f'PostResVariance = {PostResVariance}\n',
+                    f'PostResVar = {PostResVar}\n',
                     f'ForceReg = {ForceReg}\n',
                     f'SelxOrSitk = {SelxOrSitk}\n',
                     f'Transform = {Transform}\n',
@@ -805,7 +805,7 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
                     f'TxInterp = {TxInterp}\n',
                     f'ApplyPostTxBin = {ApplyPostTxBin}\n',
                     f'ApplyPostTxBlur = {ApplyPostTxBlur}\n',
-                    f'PostTxVariance = {PostTxVariance}\n',
+                    f'PostTxVar = {PostTxVar}\n',
                     f'TxtToAddToTrgRoiColName = {TxtToAddToTrgRoiColName}\n',
                     f'LogToConsole = {LogToConsole}']
     
@@ -819,9 +819,9 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
                     'TrgRoiName' : TrgRoiName,
                     'TrgSliceNum' : TrgSliceNum,
                     'ResInterpSet' : ResInterp,
-                    'PreResVariance' : PreResVariance,
+                    'PreResVar' : PreResVar,
                     'ApplyPostResBlur' : ApplyPostResBlur,
-                    'PostResVariance' : PostResVariance,
+                    'PostResVar' : PostResVar,
                     'ForceReg' : ForceReg,
                     'SelxOrSitk' : SelxOrSitk,
                     'Transform' : Transform,
@@ -829,7 +829,7 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
                     'TxInterp' : TxInterp,
                     'ApplyPostTxBin' : ApplyPostTxBin,
                     'ApplyPostTxBlur' : ApplyPostTxBlur,
-                    'PostTxVariance' : PostTxVariance,
+                    'PostTxVar' : PostTxVar,
                     'TxtToAddToTrgRoiColName' : TxtToAddToTrgRoiColName,
                     'LogToConsole' : LogToConsole}
     
@@ -887,9 +887,9 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyRts(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, TrgRoiName, 
-                  TrgSliceNum, ResInterp, PreResVariance, ApplyPostResBlur, 
-                  PostResVariance, ForceReg, SelxOrSitk, Transform, MaxIters, 
-                  TxInterp, ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance,    
+                  TrgSliceNum, ResInterp, PreResVar, ApplyPostResBlur, 
+                  PostResVar, ForceReg, SelxOrSitk, Transform, MaxIters, 
+                  TxInterp, ApplyPostTxBin, ApplyPostTxBlur, PostTxVar,    
                   TxtToAddToTrgRoiColName, LogToConsole,
                   DictOfInputs, ListOfInputs, ListOfTimings)
     
@@ -897,9 +897,9 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopySeg(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                   TrgDcmDir, UseCaseToApply, TrgRoiFpath, TrgRoiName, 
-                  TrgSliceNum, ResInterp, PreResVariance, ApplyPostResBlur, 
-                  PostResVariance, ForceReg, SelxOrSitk, Transform, MaxIters, 
-                  TxInterp, ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance,    
+                  TrgSliceNum, ResInterp, PreResVar, ApplyPostResBlur, 
+                  PostResVar, ForceReg, SelxOrSitk, Transform, MaxIters, 
+                  TxInterp, ApplyPostTxBin, ApplyPostTxBlur, PostTxVar,    
                   TxtToAddToTrgRoiColName, LogToConsole,
                   DictOfInputs, ListOfInputs, ListOfTimings)
         
@@ -952,12 +952,14 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                    TxtToAddToTrgRoiColName='',
                    PathsDict=None, XnatDownloadDir='default', 
                    LogToConsole=False, ExportLogFiles=False,
-                   ResInterp='BlurThenLinear', PreResVariance=(1,1,1), 
-                   ApplyPostResBlur=False, PostResVariance=(1,1,1),
-                   ForceReg=False, TxMatrix=None, SelxOrSitk='Selx',  
-                   Transform='affine', MaxIters='512', 
+                   ResInterp='BlurThenLinear', PreResVar=(1,1,1), 
+                   ApplyPostResBlur=False, PostResVar=(1,1,1),
+                   ForceReg=False, SelxOrSitk='Sitk', Transform='affine', 
+                   MaxIters='512', InitMethod='centerofgravity',
+                   SrcFidsFpath='moving_fiducials.txt',
+                   TrgFidsFpath='fixed_fiducials.txt',
                    TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
-                   ApplyPostTxBlur=True, PostTxVariance=(1,1,1)):
+                   ApplyPostTxBlur=True, PostTxVar=(1,1,1)):
     
     """
     Copy a contour/ROI/RTSTRUCT/segmentation/segment/SEG from data downloaded
@@ -1052,7 +1054,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
     
-    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -1060,7 +1062,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     ApplyPostResBlur : boolean (optional; True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
         
-    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+    PostResVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         resampled labelmap image(s).
     
@@ -1069,13 +1071,13 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
     
-    TxMatrix : None or list of float strings (optional; None by default)
-        List of float strings representing the transformation that would 
-        tranform the moving (Source) image to the fixed (Target) image. 
-        If not None, image registration will be skipped to save computational
-        time.
+    #TxMatrix : None or list of float strings (optional; None by default)
+    #    List of float strings representing the transformation that would 
+    #    transform the moving (Source) image to the fixed (Target) image. 
+    #    If not None, image registration will be skipped to save computational
+    #    time.
     
-    SelxOrSitk : string (optional; 'Selx' by default)
+    SelxOrSitk : string (optional; 'Sitk' by default)
         Denotes which package to use for image registration and transformation.
         Acceptable values include:
             - 'Selx' for SimpleElastix
@@ -1089,10 +1091,20 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         - 'bspline' (i.e. deformable)
     
     MaxIters : string (optional; '512' by default)
-        If 'default', the maximum number of iterations used for the optimiser
-        during image registration (if applicable) will be the pre-set default
-        in the parameter map for Transform. If != 'default' it must be a string 
-        representation of an integer.
+        The maximum number of iterations used for the optimiser during image 
+        registration (if applicable).
+    
+    InitMethod : string (optional, 'centerofgravity' by default)
+        The initialisation method used for initial alignment prior to image
+        registration (if applicable).
+    
+    SrcFidsFpath : string (optional; 'moving_fiducials.txt' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Source/Moving image.
+    
+    TrgFidsFpath : string (optional; 'fixed_fiducials.txt' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Target/Fixed image.
     
     TxInterp : string (optional; 'NearestNeighbor' by default)
         The interpolator to be used for registration-based resampling (i.e.
@@ -1108,11 +1120,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image will be Gaussian blurred.
         
-    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+    PostTxVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
-        
-    
+        transformed labelmap image(s).
     
                   
     Outputs:
@@ -1160,7 +1170,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     import XnatTools
     importlib.reload(XnatTools)
     from XnatTools import CreateXnatSession, DownloadScan, DownloadImAsr
-    from XnatTools import GetFnameAndIdFromName
+    from XnatTools import GetFnameAndIdFromName, SearchXnatForDro
     from GeneralTools import ExportDictionaryToJson, ExportListToTxt
     import RtsTools, SegTools
     importlib.reload(RtsTools)
@@ -1173,7 +1183,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     #Defaults = Preferences(directory=os.getcwd(), filename='CopyRoiDefaults.py')
     #
     #ResInterp = Defaults.get('ResInterp')
-    #PreResVariance = Defaults.get('PreResVariance')
+    #PreResVar = Defaults.get('PreResVar')
     #ForceReg = Defaults.get('ForceReg')
     #Tx = Defaults.get('Tx')
     #TxMaxIters = Defaults.get('TxMaxIters')
@@ -1183,28 +1193,42 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     #ApplyPostTxBin = Defaults.get('ApplyPostTxBin')
     
     ListOfInputs\
-    = CreateListOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, 
-                         SrcExpLabel, SrcScanId, SrcSliceNum, 
-                         SrcRoiColMod, SrcRoiColName, SrcRoiName, 
-                         TrgExpLabel, TrgScanId, TrgSliceNum,
-                         TrgRoiColMod, TrgRoiColName, TrgRoiName,  
-                         TxtToAddToTrgRoiColName, LogToConsole, ExportLogFiles, 
-                         ResInterp, PreResVariance, ApplyPostResBlur, 
-                         PostResVariance, ForceReg, TxMatrix, SelxOrSitk, 
-                         Transform, MaxIters, TxInterp, ApplyPostTxBin, 
-                         ApplyPostTxBlur, PostTxVariance)
+    = CreateListOfInputs(RunDateTime=RunDateTime, XnatUrl=XnatUrl, 
+                         ProjId=ProjId, SubjLabel=SubjLabel, 
+                         SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
+                         SrcSliceNum=SrcSliceNum, SrcRoiColMod=SrcRoiColMod,
+                         SrcRoiColName=SrcRoiColName, SrcRoiName=SrcRoiName, 
+                         TrgExpLabel=TrgExpLabel, TrgScanId=TrgScanId, 
+                         TrgSliceNum=TrgSliceNum, TrgRoiColMod=TrgRoiColMod,
+                         TrgRoiColName=TrgRoiColName, TrgRoiName=TrgRoiName,  
+                         TxtToAddToTrgRoiColName=TxtToAddToTrgRoiColName, 
+                         LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles, 
+                         ResInterp=ResInterp, PreResVar=PreResVar, 
+                         ApplyPostResBlur=ApplyPostResBlur, 
+                         PostResVar=PostResVar, ForceReg=ForceReg, 
+                         SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                         MaxIters=MaxIters, TxInterp=TxInterp, 
+                         ApplyPostTxBin=ApplyPostTxBin, 
+                         ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
     
     DictOfInputs\
-    = CreateDictOfInputs(RunDateTime, XnatUrl, ProjId, SubjLabel, 
-                         SrcExpLabel, SrcScanId, SrcSliceNum, 
-                         SrcRoiColMod, SrcRoiColName, SrcRoiName, 
-                         TrgExpLabel, TrgScanId, TrgSliceNum,
-                         TrgRoiColMod, TrgRoiColName, TrgRoiName,  
-                         TxtToAddToTrgRoiColName, LogToConsole, ExportLogFiles, 
-                         ResInterp, PreResVariance, ApplyPostResBlur, 
-                         PostResVariance, ForceReg, TxMatrix, SelxOrSitk, 
-                         Transform, MaxIters, TxInterp, ApplyPostTxBin, 
-                         ApplyPostTxBlur, PostTxVariance)
+    = CreateDictOfInputs(RunDateTime=RunDateTime, XnatUrl=XnatUrl, 
+                         ProjId=ProjId, SubjLabel=SubjLabel, 
+                         SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
+                         SrcSliceNum=SrcSliceNum, SrcRoiColMod=SrcRoiColMod,
+                         SrcRoiColName=SrcRoiColName, SrcRoiName=SrcRoiName, 
+                         TrgExpLabel=TrgExpLabel, TrgScanId=TrgScanId, 
+                         TrgSliceNum=TrgSliceNum, TrgRoiColMod=TrgRoiColMod,
+                         TrgRoiColName=TrgRoiColName, TrgRoiName=TrgRoiName,  
+                         TxtToAddToTrgRoiColName=TxtToAddToTrgRoiColName, 
+                         LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles, 
+                         ResInterp=ResInterp, PreResVar=PreResVar, 
+                         ApplyPostResBlur=ApplyPostResBlur, 
+                         PostResVar=PostResVar, ForceReg=ForceReg, 
+                         SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                         MaxIters=MaxIters, TxInterp=TxInterp, 
+                         ApplyPostTxBin=ApplyPostTxBin, 
+                         ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
     
     
     TimingMsgs = [f'RunDateTime: {RunDateTime}\n']
@@ -1213,6 +1237,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     
     """ Create XNAT session. """
     if XnatSession == None:
+        print('User name and password required to establish XNAT connection.')
         XnatSession = CreateXnatSession(XnatUrl)
     
     
@@ -1301,24 +1326,59 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     DictOfInputs['UseCaseThatApplies'] = UseCaseThatApplies
     DictOfInputs['UseCaseToApply'] = UseCaseToApply
     
-    if SrcRoiColMod == 'RTSTRUCT':        
+    
+    """ If image registration will be performed (UseCase = '5a' or '5b'), check
+    whether there exists a DRO for this set of Source and Target images: """
+    if UseCaseToApply in ['5a', '5b']:
+        times.append(time.time())
+        
+        TxMatrix, GridDims, GridRes,\
+        VectGridData = SearchXnatForDro(XnatUrl, ProjId, SubjLabel, 
+                                        SrcExpLabel, SrcScanId, 
+                                        TrgExpLabel, TrgScanId,
+                                        Transform, XnatSession)
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 1)
+        msg = f'Took {Dtime} s to search XNAT for an existing DRO.\n'
+        TimingMsgs.append(msg)
+        print(f'*{msg}')
+    else:
+        TxMatrix = None
+        GridDims = None
+        GridRes = None
+        VectGridData = None
+        
+    #DictOfInputs['TxMatrix'] = TxMatrix
+    #DictOfInputs['GridDims'] = GridDims
+    #DictOfInputs['GridRes'] = GridRes
+    #DictOfInputs['VectGridData'] = VectGridData
+    
+    #print(type(TxMatrix))
+    #print(f'TxMatrix = {TxMatrix}\n')
+    
+    
+    
+    if SrcRoiColMod == 'RTSTRUCT':
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyRts(SrcRoiColFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
                   UseCaseToApply, TrgRoiColFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVariance, ApplyPostResBlur, PostResVariance, 
-                  ForceReg, TxMatrix, SelxOrSitk, Transform, MaxIters, TxInterp, 
-                  ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance, 
-                  TxtToAddToTrgRoiColName, LogToConsole,
+                  ResInterp, PreResVar, ApplyPostResBlur, PostResVar, 
+                  ForceReg, SelxOrSitk, Transform, MaxIters, InitMethod,
+                  SrcFidsFpath, TrgFidsFpath, TxInterp, ApplyPostTxBin, 
+                  ApplyPostTxBlur, PostTxVar, TxMatrix, GridDims, GridRes,
+                  VectGridData, TxtToAddToTrgRoiColName, LogToConsole,
                   DictOfInputs, ListOfInputs, TimingMsgs)
     
     elif SrcRoiColMod == 'SEG':
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopySeg(SrcRoiColFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
                   UseCaseToApply, TrgRoiColFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVariance, ApplyPostResBlur, PostResVariance, 
-                  ForceReg, TxMatrix, SelxOrSitk, Transform, MaxIters, TxInterp, 
-                  ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance, 
-                  TxtToAddToTrgRoiColName, LogToConsole,
+                  ResInterp, PreResVar, ApplyPostResBlur, PostResVar, 
+                  ForceReg, SelxOrSitk, Transform, MaxIters, InitMethod,
+                  SrcFidsFpath, TrgFidsFpath, TxInterp, ApplyPostTxBin, 
+                  ApplyPostTxBlur, PostTxVar, TxMatrix, GridDims, GridRes,
+                  VectGridData, TxtToAddToTrgRoiColName, LogToConsole,
                   DictOfInputs, ListOfInputs, TimingMsgs)
         
     else:
@@ -1573,12 +1633,12 @@ PlotContoursFromListOfRtss_v1() or PlotPixArrsFromListOfSegs_v1()
 
 
 def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiColName='', 
-                    ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
-                    ApplyPostResBlur=False, PostResVariance=(1,1,1),
+                    ResInterp='BlurThenLinear', PreResVar=(1,1,1),
+                    ApplyPostResBlur=False, PostResVar=(1,1,1),
                     ForceReg=False, SelxOrSitk='Selx', Transform='affine', 
                     MaxIters='512', TxInterp='NearestNeighbor', 
                     ApplyPostTxBin=True, ApplyPostTxBlur=True, 
-                    PostTxVariance=(1,1,1), ExportRoi=True, PlotResults=False, 
+                    PostTxVar=(1,1,1), ExportRoi=True, PlotResults=False, 
                     PlotAllSlices=False, ExportPlot=False, ExportLogFiles=True):
     """
     
@@ -1609,7 +1669,7 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding) (Default value)
     
-    PreResVariance : tuple of floats (optional; (1, 1, 1) by default)
+    PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
@@ -1623,7 +1683,7 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
     ApplyPostResBlur : boolean (optional; True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
         
-    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+    PostResVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         resampled labelmap image(s).
     
@@ -1669,9 +1729,9 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image will be Gaussian blurred.
         
-    PostTxVariance : tuple of floats (optional; (1,1,1) by default)
+    PostTxVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
+        transformed labelmap image(s).
     
     ExportRoi : boolean (optional; True by default)
         If True, the new Target RTS/SEG will be exported to a directory called
@@ -1773,9 +1833,9 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
         NewTrgRoiCol, TxParams, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopyLocalRoiCol(SrcRoiColFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, 
                           TrgDcmDir, TrgRoiColFpath, TrgSliceNum, ResInterp, 
-                          PreResVariance, ApplyPostResBlur, PostResVariance, 
+                          PreResVar, ApplyPostResBlur, PostResVar, 
                           ForceReg, SelxOrSitk, Transform, MaxIters, TxInterp, 
-                          ApplyPostTxBin, ApplyPostTxBlur, PostTxVariance, 
+                          ApplyPostTxBin, ApplyPostTxBlur, PostTxVar, 
                           TxtToAddToTrgRoiColName, LogToConsole, ExportLogFiles=False)
         
         
@@ -1986,103 +2046,116 @@ PlotContoursFromListOfRtss_v1() or PlotPixArrsFromListOfSegs_v1()
 ******************************************************************************
 """
 
-def RunCopyXnatRoiCol(XnatSession, TestNum, LogToConsole=False, 
-                      PlotResults=False, ExportPlot=False, DevOutputs=False,
-                      XnatUrl=None, ProjId=None, SubjLabel=None, 
-                      SrcExpLabel=None, SrcScanId=None, SrcSliceNum=None, 
-                      SrcRoiColMod=None, SrcRoiColName=None, SrcRoiName=None, 
-                      TrgExpLabel=None, TrgScanId=None, TrgSliceNum=None,  
-                      TrgRoiColMod=None, TrgRoiColName=None, TrgRoiName=None, 
-                      TxtToAddToTrgRoiColName='', 
-                      PathsDict=None, XnatDownloadDir='default', 
-                      ExportLogFiles=False):
+def RunAll(TestNum=None, XnatSession=None, XnatUrl='default', 
+           ProjId='default', SubjLabel='default', 
+           SrcExpLabel='default', SrcScanId='default', SrcSliceNum='default', 
+           SrcRoiColMod='default', SrcRoiColName='default', SrcRoiName='default', 
+           TrgExpLabel='default', TrgScanId='default', TrgSliceNum='default',  
+           TrgRoiColMod='default', TrgRoiColName='default', TrgRoiName='default', 
+           TxtToAddToTrgRoiColName='default', 
+           ResInterp='default', PreResVar='default', 
+           ApplyPostResBlur='default', PostResVar='default',
+           ForceReg='default', SelxOrSitk='default', Transform='default', 
+           MaxIters='default', InitMethod='default',
+           SrcFidsFpath='default', TrgFidsFpath='default',
+           TxInterp='default', ApplyPostTxBin='default', 
+           ApplyPostTxBlur='default', PostTxVar='default',
+           PathsDict=None, XnatDownloadDir='default',
+           ExportNewTrgRoiCol='default', RtsExportDir='default',
+           SegExportDir='default', ExportNewDro='default', DroExportDir='default', 
+           UploadNewDro='default', LogToConsole='default', PlotResults='default', 
+           ExportPlot='default', ExportLogFiles='default', DevOutputs='default'):
     """
     Wrapper function for CopyXnatRoiCol(), ErrorCheckRoiCol(), ExportTrgRoiCol(),
     and PlotContoursFromListOfRtss_v1() or PlotPixArrsFromListOfSegs_v1().
     
+    Note for all optional inputs with default value 'default', if a value is
+    provided (other than 'default'), the value stored for that variable in
+    CopyRoiDefaults.py will be used.
+    
     Inputs:
     ******
     
-    XnatSession : requests session or None
+    XnatSession : requests session or None(optional; None by default)
         
-    TestNum : string or None
+    TestNum : string or None (optional; None by default)
         Either a string denoting the test to run (as defined in 
         CopyRoiTestConfig.py, e.g. 'SR1'), or None. 
         To run the algorithm on a different combination of data, either update 
         CopyRoiTestConfig.py or set TestNums = None and provide the necessary 
         optional inputs as described below.
     
-    LogToConsole : boolean (optional; False by default)
+    LogToConsole : boolean or string (optional; 'default' by default)
         If True, intermediate results will be logged to the console during the
         running of CopyRoiCol().
     
-    PlotResults : boolean (optional; False by default)
+    PlotResults : boolean or string (optional; 'default' by default)
     
-    ExportPlot : boolean (optional; False by default)
+    ExportPlot : boolean or string (optional; 'default' by default)
     
-    DevOutputs : boolean (optional; False by default)
+    DevOutputs : boolean or string (optional; 'default' by default)
         If True various outputs will be returned.  If False, no outputs will be
         returned.
     
-    XnatUrl : string (optional if TestNum != None; None by default)
+    XnatUrl : string or string (optional if TestNum != None; 'default' by default)
         Address of XNAT (e.g. 'http://10.1.1.20').
     
-    ProjId : string (optional if TestNum != None; None by default)
+    ProjId : string or string (optional if TestNum != None; 'default' by default)
         The project ID of interest.
     
-    SubjLabel : string (optional if TestNum != None; None by default)
+    SubjLabel : string or string (optional if TestNum != None; 'default' by default)
         The subject label of interest. 
     
-    SrcExpLabel : string (optional if TestNum != None; None by default)
+    SrcExpLabel : string or string (optional if TestNum != None; 'default' by default)
         The Source DICOM study / XNAT experiment label. 
     
-    SrcScanId : string (optional if TestNum != None; None by default)
+    SrcScanId : string or string (optional if TestNum != None; 'default' by default)
         The Source DICOM series label / XNAT scan ID.
     
-    SrcSliceNum : integer (0-indexed)
+    SrcSliceNum : integer or string (optional; 0-indexed; 'default' by default)
         Slice index of the Source DICOM stack corresponding to the contour/
         segmentation to be copied.
     
-    SrcRoiColMod : string
+    SrcRoiColMod : string (optional; 'default' by default)
         The modality of the Source ROI Collection.
         
-    SrcRoiColName : string
+    SrcRoiColName : string (optional; 'default' by default)
         The Source ROI Collection name (StructureSetLabel or SeriesDescription).
         
-    SrcRoiName : string
+    SrcRoiName : string (optional; 'default' by default)
         The Source ROIName or SegmentLabel.
     
-    TrgExpLabel : string (optional if TestNum != None; None by default)
+    TrgExpLabel : string (optional if TestNum != None; 'default' by default)
         The Target DICOM study / XNAT experiment label. 
     
-    TrgScanId : string (optional if TestNum != None; None by default)
+    TrgScanId : string (optional if TestNum != None; 'default' by default)
         The Target DICOM series label / XNAT scan ID.
     
     TrgSliceNum : integer (optional unless making a direct copy; 0-indexed; 
-    None by default)
+    'default' by default)
         Slice index within the Target DICOM stack where the contour/
         segmentation is to be copied to.  This only applies for direct copies, 
         hence the default value None.
     
     TrgRoiColMod : string (optional but required if TrgRoiColName != None; 
-    None by default)
+    'default' by default)
         The Target image assessor modality.
         
     TrgRoiColName : string (optional but required if TrgRoiColMod != None; 
-    None by default)
+    'default' by default)
         The Target ROI Collection name (StructureSetLabel or SeriesDescription). 
         If provided and if a direct copy is to be made, existing contours/
         segmentations for the ROI/segment will be preserved.
     
-    TrgRoiName : string (optional; None by default)
+    TrgRoiName : string (optional; 'default' by default)
         The Target ROIName or SegmentLabel.
     
-    TxtToAddToTrgRoiColName : string (optional, '' by default)
+    TxtToAddToTrgRoiColName : string (optional, 'default' by default)
         If provided the string of text will be appended to the scan assessor  
         name (StructureSetLabel or SeriesDescription), and to the filename of 
         the exported (new) Target RTS/SEG.
         
-    PathsDict : dictionary (optional; None by default)
+    PathsDict : dictionary (optional; 'default' by default)
         Dictionary containing paths of data downloaded. If provided, paths of
         newly downloaded data will be added to PathsDict. If not provided, a
         new dictionary will be initialised.
@@ -2093,11 +2166,86 @@ def RunCopyXnatRoiCol(XnatSession, TestNum, LogToConsole=False,
         Assessors, etc. If not provided, the data will be downloaded to the
         sub-directory "XnatDownloads" within the default downloads directory.
     
-    LogToConsole : boolean (optional; False by default)
+    LogToConsole : boolean or string (optional; 'default' by default)
         If True, some results will be logged to the console.
     
-    ExportLogFiles : boolean (optional; False by default)
+    ExportLogFiles : boolean or string (optional; 'default' by default)
         If True, log files will be exported.
+    
+    ResInterp : string (optional; 'default' by default)
+        The interpolator to be used for (non-registration-based) resampling of
+        the Source labelmap image(s) to the Target grid (if applicable). 
+        Acceptable values are:
+        - 'NearestNeighbor'
+        - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
+        - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
+        (followed by binary thresholding)
+    
+    PreResVar : tuple of floats/integers or string (optional; 
+    'default' by default)
+        A tuple (for each dimension) of the variance to be applied if the 
+        Source labelmap image(s) is/are to be Gaussian blurred prior to  
+        resampling.
+    
+    ApplyPostResBlur : boolean or string (optional; 'default' by default)
+        If True, the post-resampled labelmap image will be Gaussian blurred.
+        
+    PostResVar : tuple of floats/integers or string (optional; 
+    'default' by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        resampled labelmap image(s).
+    
+    ForceReg : boolean or string (optional; 'default' by default)
+        If True the Source image will be registered to the Target image, and 
+        the Source labelmap will be transformed to the Target image grid
+        accordingly.
+    
+    SelxOrSitk : string (optional; 'default' by default)
+        Denotes which package to use for image registration and transformation.
+        Acceptable values include:
+            - 'Selx' for SimpleElastix
+            - 'Sitk' for SimpleITK
+     
+    Transform : string (optional; 'default' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+    
+    MaxIters : string (optional; 'default' by default)
+        The maximum number of iterations used for the optimiser during image 
+        registration (if applicable).
+    
+    InitMethod : string (optional, 'default' by default)
+        The initialisation method used for initial alignment prior to image
+        registration (if applicable).
+    
+    SrcFidsFpath : string (optional; 'default' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Source/Moving image.
+    
+    TrgFidsFpath : string (optional; 'default' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Target/Fixed image.
+    
+    TxInterp : string (optional; 'default' by default)
+        The interpolator to be used for registration-based resampling (i.e.
+        transformation; if applicable).  Accepatable values are:
+        - 'Default' which leaves unchanged whatever interpolator was used in
+        the image registration (i.e. RegImFilt)
+        - 'NearestNeighbor'
+    
+    ApplyPostTxBin : boolean or string (optional; 'default' by default)
+        If True, the post-transformed (or post-transformed + Gaussian blurred)
+        labelmap image will be binary thresholded.
+    
+    ApplyPostTxBlur : boolean or string (optional; 'default' by default)
+        If True, the post-transformed labelmap image will be Gaussian blurred.
+        
+    PostTxVar : tuple of floats/integers (optional; 'default' by default)
+        The variance along all dimensions if Gaussian blurring the post-
+        transformed labelmap image(s).
         
     
     Outputs:
@@ -2159,24 +2307,25 @@ def RunCopyXnatRoiCol(XnatSession, TestNum, LogToConsole=False,
     from pydicom import dcmread
     #from DicomTools import IsSameModalities
     #from XnatTools import DownloadScan, DownloadAssessor
-    from XnatTools import GetFnameAndIdFromName, UploadSubjAsr, SearchTxMatrix
+    from XnatTools import GetFnameAndIdFromName, UploadSubjAsr#, SearchXnatForDro
     from GeneralTools import PrintTitle, ExportListToTxt#, ExportDictionaryToJson
     
+    #print(f'XnatSession = {XnatSession}\n')
     
     """ Ensure that inputs are valid. """
-    if TestNum == None and (XnatUrl == None or ProjId == None \
-                            or SubjLabel == None or SrcExpLabel == None \
-                            or SrcScanId == None or SrcRoiColMod == None \
-                            or SrcRoiColName == None or SrcRoiName == None \
-                            or TrgExpLabel == None or TrgScanId == None):
+    if TestNum == None and (XnatUrl == 'default' or ProjId == 'default' \
+                            or SubjLabel == 'default' or SrcExpLabel == 'default' \
+                            or SrcScanId == 'default' or SrcRoiColMod == 'default' \
+                            or SrcRoiColName == 'default' or SrcRoiName == 'default' \
+                            or TrgExpLabel == 'default' or TrgScanId == 'default'):
         msg = "If a TestNum is not provided, inputs to XnatUrl, ProjId, "\
               + "SubjLabel, SrcExpLabel, SrcScanId, SrcRoiColMod,\nSrcRoiColName"\
               + "SrcRoiName, TrgExpLabel and TrgScanId must all be provided."
         
         raise Exception(msg)
     
-    if (TrgRoiColMod != None and TrgRoiColName == None) \
-    or (TrgRoiColMod == None and TrgRoiColName != None):
+    if (TrgRoiColMod != 'default' and TrgRoiColName == 'default') \
+    or (TrgRoiColMod == 'default' and TrgRoiColName != 'default'):
         msg = "Both a Target ROI Collection name and modality must be provided"\
               + " - not only one or the other."
         
@@ -2207,34 +2356,54 @@ def RunCopyXnatRoiCol(XnatSession, TestNum, LogToConsole=False,
         print(f'\nThe pre-configured inputs for TestNum {TestNum}:')
         for key, value in TestCfg.get(TestNum).items():
             print(f'   {key} : {value}')
+        print('')
         
     
-    if TestNum:
-        if not isinstance(TestNum, str):
+    if TestNum != None:
+        if isinstance(TestNum, int):
+            TestNum = str(TestNum)
+        if not (isinstance(TestNum, int) and isinstance(TestNum, str)):
             msg = 'The input argument "TestNum" must be a character string.'
             print(msg)
             raise Exception(msg)
-        
+        PrintTitle(f'Running Test {TestNum}:')
+    
+    if TestNum != None or XnatUrl == 'default':
         XnatUrl = TestCfg.get('XnatUrl')
+    if TestNum != None or ProjId == 'default':
         ProjId = TestCfg.get('ProjId')
+    if TestNum != None or SubjLabel == 'default':
         SubjLabel = TestCfg.get('SubjLabel')
+    if TestNum != None or SrcExpLabel == 'default':
         SrcExpLabel = TestCfg.get(TestNum)['SrcExpLabel']
+    if TestNum != None or SrcScanId == 'default':
         SrcScanId = TestCfg.get(TestNum)['SrcScanId']
+    if TestNum != None or SrcSliceNum == 'default':
         SrcSliceNum = TestCfg.get(TestNum)['SrcSliceNum']
+    if TestNum != None or SrcRoiColMod == 'default':
         SrcRoiColMod = TestCfg.get(TestNum)['SrcRoiColMod']
+    if TestNum != None or SrcRoiColName == 'default':
         SrcRoiColName = TestCfg.get(TestNum)['SrcRoiColName']
+    if TestNum != None or SrcRoiName == 'default':
         SrcRoiName = TestCfg.get(TestNum)['SrcRoiName']
+    if TestNum != None or TrgExpLabel == 'default':
         TrgExpLabel = TestCfg.get(TestNum)['TrgExpLabel']
+    if TestNum != None or TrgScanId == 'default':
         TrgScanId = TestCfg.get(TestNum)['TrgScanId']
+    if TestNum != None or TrgSliceNum == 'default':
         TrgSliceNum = TestCfg.get(TestNum)['TrgSliceNum']
+    if TestNum != None or TrgRoiColMod == 'default':
         TrgRoiColMod = TestCfg.get(TestNum)['TrgRoiColMod']
+    if TestNum != None or TrgRoiColName == 'default':
         TrgRoiColName = TestCfg.get(TestNum)['TrgRoiColName']
+    if TestNum != None or TrgRoiName == 'default':
         TrgRoiName = TestCfg.get(TestNum)['TrgRoiName']
+    if TestNum != None or TxtToAddToTrgRoiColName == 'default':
         TxtToAddToTrgRoiColName = TestCfg.get(TestNum)['TxtToAddToTrgRoiColName']
         
-        PrintTitle(f'Running Test {TestNum}:')
-    else:
-        if XnatUrl == None:
+        
+    if TestNum == None:
+        if XnatUrl == 'default':
             XnatUrl = TestCfg.get('XnatUrl')
             
         if ProjId == None:
@@ -2258,66 +2427,122 @@ def RunCopyXnatRoiCol(XnatSession, TestNum, LogToConsole=False,
         if TrgRoiColMod == None:
             TrgRoiColMod = SrcRoiColMod
             print("TrgRoiColMod has not been provided so using SrcRoiColMod:",
-                  f"{SrcRoiColMod}.")
+                  f"{SrcRoiColMod}.\n")
     
     
     """ The pre-defined defaults for remaining inputs: """
     Defaults = Preferences(directory=os.getcwd(), 
                            filename='CopyRoiDefaults.py')
     
-    ResInterp = Defaults.get('ResInterp')
-    PreResVar = Defaults.get('PreResVariance')
-    ApplyPostResBlur = Defaults.get('ApplyPostResBlur')
-    PostResVar = Defaults.get('PostResVariance')
-    ForceReg = Defaults.get('ForceReg')
-    SelxOrSitk = Defaults.get('SelxOrSitk')
-    Transform = Defaults.get('Transform')
-    MaxIters = Defaults.get('MaxIters')
-    TxInterp = Defaults.get('TxInterp')
-    ApplyPostTxBin = Defaults.get('ApplyPostTxBin')
-    ApplyPostTxBlur = Defaults.get('ApplyPostTxBlur')
-    PostTxVar = Defaults.get('PostTxVariance')
-    ExportNewTrgRoiCol = Defaults.get('ExportNewTrgRoiCol')
-    RtsExportDir = Defaults.get('RtsExportDir')
-    SegExportDir = Defaults.get('SegExportDir')
-    ExportNewDro = Defaults.get('ExportNewDro')
-    DroExportDir = Defaults.get('DroExportDir')
-    UploadNewDro = Defaults.get('UploadNewDro')
+    if ResInterp == 'default':
+        ResInterp = Defaults.get('ResInterp')
+    if PreResVar == 'default':
+        PreResVar = Defaults.get('PreResVar')
+    if ApplyPostResBlur == 'default':
+        ApplyPostResBlur = Defaults.get('ApplyPostResBlur')
+    if PostResVar == 'default':
+        PostResVar = Defaults.get('PostResVar')
+    if ForceReg == 'default':
+        ForceReg = Defaults.get('ForceReg')
+    if SelxOrSitk == 'default':
+        SelxOrSitk = Defaults.get('SelxOrSitk')
+    if Transform == 'default':
+        Transform = Defaults.get('Transform')
+    if MaxIters == 'default':
+        MaxIters = Defaults.get('MaxIters')
+    if InitMethod == 'default':
+        InitMethod = Defaults.get('InitMethod')
+    if SrcFidsFpath == 'default':
+        SrcFidsFpath = Defaults.get('SrcFidsFpath')
+    if TrgFidsFpath == 'default':
+        TrgFidsFpath = Defaults.get('TrgFidsFpath')
+    if TxInterp == 'default':
+        TxInterp = Defaults.get('TxInterp')
+    if ApplyPostTxBin == 'default':
+        ApplyPostTxBin = Defaults.get('ApplyPostTxBin')
+    if ApplyPostTxBlur == 'default':
+        ApplyPostTxBlur = Defaults.get('ApplyPostTxBlur')
+    if PostTxVar == 'default':
+        PostTxVar = Defaults.get('PostTxVar')
+    if ExportNewTrgRoiCol == 'default':
+        ExportNewTrgRoiCol = Defaults.get('ExportNewTrgRoiCol')
+    if RtsExportDir == 'default':
+        RtsExportDir = Defaults.get('RtsExportDir')
+    if SegExportDir == 'default':
+        SegExportDir = Defaults.get('SegExportDir')
+    if ExportNewDro == 'default':
+        ExportNewDro = Defaults.get('ExportNewDro')
+    if DroExportDir == 'default':
+        DroExportDir = Defaults.get('DroExportDir')
+    if UploadNewDro == 'default':
+        UploadNewDro = Defaults.get('UploadNewDro')
+    if LogToConsole == 'default':
+        LogToConsole = Defaults.get('LogToConsole')
+    if PlotResults == 'default':
+        PlotResults = Defaults.get('PlotResults')
+    if ExportPlot == 'default':
+        ExportPlot = Defaults.get('ExportPlot')
+    if DevOutputs == 'default':
+        DevOutputs = Defaults.get('DevOutputs')
     
     print("Default input arguments read from 'CopyRoiDefaults.py':",
           f"\n   ResInterp = {ResInterp}\n   PreResVar = {PreResVar}",
           f"\n   ApplyPostResBlur = {ApplyPostResBlur}",
-          f"\n   PostResVar = {PostResVar}",
-          f"\n   ForceReg = {ForceReg}\n   SelxOrSitk = {SelxOrSitk}",
-          f"\n   Transform = {Transform}\n   MaxIters = {MaxIters}",
+          f"\n   PostResVar = {PostResVar}\n   ForceReg = {ForceReg}",
+          f"\n   SelxOrSitk = {SelxOrSitk}\n   Transform = {Transform}",
+          f"\n   MaxIters = {MaxIters}\n   InitMethod = {InitMethod}",
+          f"\n   SrcFidsFpath = {SrcFidsFpath}\n   TrgFidsFpath = {TrgFidsFpath}",
           f"\n   TxInterp = {TxInterp}\n   ApplyPostTxBin = {ApplyPostTxBin}",
           f"\n   ApplyPostTxBlur = {ApplyPostTxBlur}",
           f"\n   PostTxVar = {PostTxVar}",
           f"\n   ExportNewTrgRoiCol = {ExportNewTrgRoiCol}",
-          f"\n   ExportNewDro = {ExportNewDro}"
-          f"\n   UploadNewDro = {UploadNewDro}\n")
+          f"\n   ExportNewDro = {ExportNewDro}\n   UploadNewDro = {UploadNewDro}",
+          f"\n   LogToConsole = {LogToConsole}\n   PlotResults = {PlotResults}",
+          f"\n   ExportPlot = {ExportPlot}\n   DevOutputs = {DevOutputs}\n")
     
     
-    """ Check whether there exists a DRO for this set of Source and Target
-    images: """
-    TxMatrix = SearchTxMatrix(XnatUrl, ProjId, SubjLabel, 
-                              SrcExpLabel, SrcScanId, TrgExpLabel, TrgScanId,
-                              Transform, XnatSession)
+    #""" Check whether there exists a DRO for this set of Source and Target
+    #images: """
+    # 10/05/21: Moved to CopyXnatRoiCol().
+    #Times.append(time.time())
+    #
+    #TxMatrix, GridDims, GridRes,\
+    #VectGridData = SearchXnatForDro(XnatUrl, ProjId, SubjLabel, 
+    #                                SrcExpLabel, SrcScanId, 
+    #                                TrgExpLabel, TrgScanId,
+    #                                Transform, XnatSession)
+    #
+    #Times.append(time.time())
+    #Dtime = round(Times[-1] - Times[-2], 1)
+    #msg = f'Took {Dtime} s to search XNAT for an existing DRO.\n'
+    #TimingMsgs.append(msg)
+    #print(f'*{msg}')
+    #
+    ##print(type(TxMatrix))
+    ##print(f'TxMatrix = {TxMatrix}\n')
     
-    #print(type(TxMatrix))
+    #print(f'XnatSession = {XnatSession}\n')
     
     NewTrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfInputs,\
     TimingMsgs\
-    = CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel, 
-                     SrcExpLabel, SrcScanId, SrcSliceNum,
-                     SrcRoiColMod, SrcRoiColName, SrcRoiName,  
-                     TrgExpLabel, TrgScanId, TrgSliceNum, 
-                     TrgRoiColMod, TrgRoiColName, TrgRoiName, 
-                     TxtToAddToTrgRoiColName, 
-                     PathsDict, XnatDownloadDir, LogToConsole, ExportLogFiles,
-                     ResInterp, PreResVar, ApplyPostResBlur, PostResVar, 
-                     ForceReg, TxMatrix, SelxOrSitk, Transform, MaxIters, 
-                     TxInterp, ApplyPostTxBin, ApplyPostTxBlur, PostTxVar)
+    = CopyXnatRoiCol(XnatUrl=XnatUrl, XnatSession=XnatSession, 
+                     ProjId=ProjId, SubjLabel=SubjLabel, 
+                     SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
+                     SrcSliceNum=SrcSliceNum, SrcRoiColMod=SrcRoiColMod,
+                     SrcRoiColName=SrcRoiColName, SrcRoiName=SrcRoiName,  
+                     TrgExpLabel=TrgExpLabel, TrgScanId=TrgScanId, 
+                     TrgSliceNum=TrgSliceNum, TrgRoiColMod=TrgRoiColMod,
+                     TrgRoiColName=TrgRoiColName, TrgRoiName=TrgRoiName, 
+                     TxtToAddToTrgRoiColName=TxtToAddToTrgRoiColName, 
+                     PathsDict=PathsDict, XnatDownloadDir=XnatDownloadDir, 
+                     LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles,
+                     ResInterp=ResInterp, PreResVar=PreResVar, 
+                     ApplyPostResBlur=ApplyPostResBlur, PostResVar=PostResVar, 
+                     ForceReg=ForceReg, SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                     MaxIters=MaxIters, InitMethod=InitMethod,
+                     SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
+                     TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin,
+                     ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
     
     
     if TestNum:

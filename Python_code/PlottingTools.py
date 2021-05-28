@@ -4146,7 +4146,8 @@ def PlotResResultsWithLabIms(FixIm, MovIm, ResIm, MovInd, MovLabIm, ResLabIm,
 def CompareResResults(ResIm0, ResIm1, ResInd,
                       ResTitle0='Resampled image 0', 
                       ResTitle1='Resampled image 1', 
-                      ExportPlot=False, ExportDir='cwd', TxtToAddToFname=''):
+                      ExportPlot=False, ExportDir='cwd', TxtToAddToFname='',
+                      ColorbarForDiffIm=False):
     """ Callback invoked by the IPython interact method for scrolling and 
     modifying the alpha blending of an image stack of two images that 
     occupy the same physical space. 
@@ -4204,10 +4205,14 @@ def CompareResResults(ResIm0, ResIm1, ResInd,
     plt.title('Blended image')
     plt.axis('off')
     
-    plt.subplot(2, 2, 4)
-    plt.imshow(sitk.GetArrayViewFromImage(DiffIm), cmap=plt.cm.Greys_r);
-    plt.title('Difference image')
-    plt.axis('off')
+    ax = plt.subplot(2, 2, 4)
+    im = ax.imshow(sitk.GetArrayViewFromImage(DiffIm), cmap=plt.cm.Greys_r);
+    ax.set_title('Difference image')
+    ax.axis('off')
+    if ColorbarForDiffIm:
+        #cbar = plt.colorbar(im, ax=ax)
+        #cbar.mappable.set_clim(0, MaxVal)
+        plt.colorbar(im, ax=ax)
     
     #plt.show()
     

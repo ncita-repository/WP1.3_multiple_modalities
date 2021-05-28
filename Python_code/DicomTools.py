@@ -789,3 +789,409 @@ def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
 #    import os
 #    
 #    FileList = os.listdir(Directory)  
+    
+
+
+
+
+def ConvertNumpyDtype(ArrayIn, ConvertTo, LogToConsole=False):
+    """
+    Convert Numpy array from one data type to another, preserving the
+    dynamic range.
+    
+    Inputs:
+    ******
+    
+    ArrayIn : Numpy array 
+        Numpy array whose data type is to be converted.  Acceptable data types
+        include:
+          - 'uint8'
+          - 'uint16'
+          - 'int8'
+          - 'int16'
+          - 'float32'
+          - 'float64'
+                        
+    ConvertTo : string
+        String denoting the data type to convert ArrayIn to.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+        
+    Outputs:
+    ********
+    
+    ArrayOut : Numpy array
+        Numpy array with converted data type.
+    """
+    import numpy as np
+    
+    # Get info on input array, first assuming that it is an int dtype:
+    try:
+        info = np.iinfo(ArrayIn.dtype)
+        
+    # If ValueError arises, assume it is a float:
+    except ValueError:
+        info = np.finfo(ArrayIn.dtype)
+      
+    
+    # Determine value to scale array up to and desired Numpy data type:
+    if ConvertTo == 'uint8':
+        MinValue = 0
+        MaxValue = 255
+        NpDtype = np.uint8
+    
+    elif ConvertTo == 'uint16':
+        MinValue = 0
+        MaxValue = 65535
+        NpDtype = np.uint16
+    
+    elif ConvertTo == 'int8':
+        MinValue = -128
+        MaxValue = 127
+        NpDtype = np.int8
+    
+    elif ConvertTo == 'int16':
+        MinValue = -32768
+        MaxValue = 32767
+        NpDtype = np.int16
+        
+    elif ConvertTo == 'float32':
+        MinValue = -3.4028235e+38
+        MaxValue = -MinValue
+        NpDtype = np.float32
+    
+    elif ConvertTo == 'float64':
+        MinValue = -1.7976931348623157e+308
+        MaxValue = -MinValue
+        NpDtype = np.float64
+    
+    else:
+        msg = f"ConvertTo (= {ConvertTo}) must be 'uint8', 'uint16', 'int8', "\
+              + "'int16', 'float32' or 'float64'."
+        raise Exception(msg)
+        
+    
+    
+    if LogToConsole:    
+        print('Before dtype:', ArrayIn.dtype, '\n')
+        print(info, '\n')
+        print(f'ConvertTo = {ConvertTo}\n')
+        print(np.iinfo(NpDtype), '\n')
+    
+    
+    #if LogToConsole:    
+    #    print(f'Max value possible for {ConvertTo} = {MaxValue}\n')
+    
+    # Get min/max values:
+    ArrayMin = np.min(ArrayIn)
+    ArrayMax = np.max(ArrayIn)
+    
+    if LogToConsole:
+        print(f'Min/Max of input array = [{ArrayMin}, {ArrayMax}]\n')
+    
+    
+    if ArrayMin < MinValue or ArrayMax > MaxValue:
+        # Deal with negative values if ConvertTo is an unsigned integer
+        # (by subtracting the min value):
+        if 'u' in ConvertTo:
+            Array = ArrayIn - ArrayMin
+    
+            # Get min/max values:
+            ArrayMin = np.min(Array)
+            ArrayMax = np.max(Array)
+            
+            if LogToConsole:
+                print('Min/Max of array after subtracting Min =',
+                      f'[{ArrayMin}, {ArrayMax}]\n')
+            
+        else:
+            Array = ArrayIn - 0
+        
+        # Normalise Array to [0, 1] or [-1, 1] (depends on whether the input array
+        # is signed or unsigned):
+        #Array = ArrayIn.astype(np.float64) / info.max # is conversion to float useful?
+        #Array = ArrayIn / info.max 
+        Array = Array / MaxValue
+        
+        # Get min/max values:
+        ArrayMin = np.min(Array)
+        ArrayMax = np.max(Array)
+        
+        if LogToConsole:
+            print(f'Min/Max of Array after normalising = [{ArrayMin}, {ArrayMax}]\n')
+            
+        
+        # Scale Array by MaxValue:
+        Array = MaxValue * Array
+        
+        # Get min/max values:
+        ArrayMin = np.min(Array)
+        ArrayMax = np.max(Array)
+        
+        if LogToConsole:
+            print(f'Min/Max of array after scaling by {MaxValue} =',
+                  f'[{ArrayMin}, {ArrayMax}]\n')
+    
+        # Convert Array to desired dtype:
+        ArrayOut = Array.astype(NpDtype)
+    else:
+        # Convert ArrayIn to desired dtype:
+        ArrayOut = ArrayIn.astype(NpDtype)
+    
+    
+    if LogToConsole:
+        # Get min/max values:
+        ArrayMin = np.min(ArrayOut)
+        ArrayMax = np.max(ArrayOut)
+    
+        print(f'Min/Max of array after converting to {ConvertTo}',
+              f'= [{ArrayMin}, {ArrayMax}]\n')
+    
+        # Re-check info:
+        try:
+            info = np.iinfo(ArrayOut.dtype)
+            
+        # If ValueError arises, assume it is a float:
+        except ValueError:
+            info = np.finfo(ArrayOut.dtype)
+        
+        print('After dtype:', ArrayOut.dtype, '\n')
+        #print(f'After: {info}\n')
+    
+    return ArrayOut
+
+
+
+
+
+def CreateDicomsFromCroppedSitkIm(CroppedIm, FirstZind, OrigDicomDir, 
+                                  TxtToAddToSeriesDesc, NewSeriesNum,
+                                  SortMethod='slices', LogToConsole=False):
+    """
+    27/05/21: The DICOMs created are not displaying properly, suggesting an 
+    issue with the conversion to bytes. I've not figured out what the problem
+    is.
+    
+    Create new DICOM objects from a SimpleITK image using as templates, the 
+    original DICOMs (that were imported as a SimpleITK image and modified in
+    some way).
+    
+    Inputs:
+    *******
+    
+    CroppedIm : SimpleITK image
+        The cropped image.
+    
+    FirstZind : integer
+        The slice number within the original DICOM series that corresponds to
+        the first frame in CroppedIm.
+    
+    OrigDicomDir : string
+        Path to directory containing the original DICOM files.
+    
+    TxtToAddToSeriesDesc : string
+        Text that will be added to the original SeriesDescription for all
+        new DICOMs (e.g. 'cropped').
+    
+    NewSeriesNum : string
+        The new series number to assign to the new DICOM series.
+    
+        
+    Outputs:
+    *******
+    
+    Dicoms : list of Pydicom objects
+        List of DICOM objects related to the frames in SitkIm.
+    
+    
+    Note:
+    ****
+    
+    Only the following tags are modified (all else are either the same or not
+    significant enough to change):
+        SOPInstanceUID
+        MediaStorageSOPInstanceUID
+        ContentDate
+        ContentTime
+        SeriesDescription
+        SeriesInstanceUID
+        SeriesNumber
+        ImagePositionPatient
+        SliceLocation
+        Rows
+        Columns
+        PixelData
+    """
+    
+    import datetime
+    #import numpy as np
+    #from pydicom import dcmread
+    from pydicom.uid import generate_uid
+    #from pydicom.pixel_data_handlers.numpy_handler import pack_bits
+    from pydicom.dataset import validate_file_meta
+    import SimpleITK as sitk
+    
+    # Convert CroppedIm to int16:
+    #CroppedIm = sitk.Cast(CroppedIm, sitk.sitkInt16)
+    
+    OrigDicoms = ImportDicoms(OrigDicomDir, SortMethod, LogToConsole)
+    
+    if False:
+        if len(OrigDicoms) != CroppedIm.GetSize()[2]:
+            msg = f"The number of original DICOMs, {len(OrigDicoms)}, does not "\
+                  + f"match the number of frames in CroppedIm, {CroppedIm.GetSize()[2]}."
+            raise Exception(msg)
+            
+            """ Get the list of all z-positions for the original series: """
+            OrigZs = []
+            
+            for dicom in OrigDicoms:
+                OrigZs.append(float(dicom.ImagePositionPatient[2]))
+    
+    
+    TimeNow = datetime.datetime.now()
+    CurrentDate = TimeNow.strftime('%Y%m%d')
+    CurrentTime = TimeNow.strftime('%H%M%S.%f')
+    
+    # Generate a new SeriesInstanceUID:
+    NewSeriesInstanceUID = generate_uid()
+    
+    R, C, F = CroppedIm.GetSize()
+    
+    if type(NewSeriesNum) != str:
+        NewSeriesNum = str(NewSeriesNum)
+        
+    # Get the data type of the original DICOMs:
+    OrigDtype = str(OrigDicoms[0].pixel_array.dtype)
+    
+    print(f'OrigDtype = {OrigDtype}\n')
+    
+    Dicoms = []
+    
+    #import matplotlib.pyplot as plt
+    #fig, ax = plt.subplots(F, 1, figsize=(14, 7*F))
+    #n = 1 # sub-plot number
+    
+    for f in range(F):
+        dc = OrigDicoms[f + FirstZind]
+        
+        # Generate a new SOPInstanceUID:
+        dc.SOPInstanceUID = generate_uid()
+        dc.file_meta.MediaStorageSOPInstanceUID = dc.SOPInstanceUID
+        
+        dc.ContentDate = CurrentDate
+        dc.ContentTime = CurrentTime
+        
+        dc.SeriesDescription +=  TxtToAddToSeriesDesc
+        
+        dc.SeriesInstanceUID = NewSeriesInstanceUID
+        
+        dc.SeriesNumber = NewSeriesNum
+        
+        newIPP = CroppedIm.TransformContinuousIndexToPhysicalPoint([0,0,f])
+        
+        dc.ImagePositionPatient = [str(item) for item in newIPP]
+        
+        dc.SliceLocation = str(newIPP[2])
+        
+        dc.Rows = R
+        dc.Columns = C
+        
+        PixArr = sitk.GetArrayFromImage(CroppedIm[:,:,f])
+        
+        print(f'PixArr.shape = {PixArr.shape}\n')
+        print(f'PixArr.dtype = {PixArr.dtype}\n')
+        print(f'PixArr.tobytes()[0:50] = {PixArr.tobytes()[0:50]}\n')
+        print(f'PixArr.tostring()[0:50] = {PixArr.tostring()[0:50]}\n')
+        
+        #ax = plt.subplot(F, 1, n)
+        #ax.imshow(PixArr, cmap=plt.cm.Greys_r);
+        #n += 1 # increment sub-plot number
+        
+        #""" Convert PixArr to bytes. """
+        if True:
+            # The following seem to be equivalent but not sure they will 
+            # result in required int16 dtype:
+            #dc.PixelData = PixArr.tobytes()
+            dc.PixelData = PixArr.tostring()
+            
+            # https://stackoverflow.com/questions/14350675/create-pydicom-file-from-numpy-array:
+            validate_file_meta(dc.file_meta, enforce_standard=True)
+        
+        
+        if False:
+            print(f'PixArr.dtype = {PixArr.dtype}\n')
+            
+            # Convert PixArr from PixArr.dtype (e.g. float32) to OrigDtype 
+            # (e.g. int16):
+            PixArr = ConvertNumpyDtype(PixArr, OrigDtype, LogToConsole)
+            
+            dc.PixelData = PixArr.tostring()
+        
+        Dicoms.append(dc)
+        
+    return Dicoms
+
+
+
+
+
+def ExportDicoms(Dicoms, RootExportDir):
+    """
+    Export a list of DICOM Objects to disk.  
+    
+    Inputs:
+    ******
+    
+    Dicoms : list of Pydicom objects
+        A list of DICOM objects to export.
+        
+    RootExportDir : string
+        Root directory path to where the new DICOMs are to be exported. The
+        directory name within RootExportDir will have the form 
+        "SeriesNumber-SeriesDescription".
+    
+    
+    Outputs:
+    *******
+    
+    None
+    
+    
+    Note:
+    ****
+    
+    The exported DICOMs will have filenames of the form "000001.dcm",
+    "000002.dcm", ...
+    """
+    
+    import os
+    from pathlib import Path
+    
+    SeriesNum = Dicoms[0].SeriesNumber
+    
+    SeriesDesc = Dicoms[0].SeriesDescription
+    
+    ExportDir = os.path.join(RootExportDir, f'{SeriesNum}-{SeriesDesc}')
+    
+    if not os.path.isdir(ExportDir):
+        #os.mkdir(ExportDir)
+        Path(ExportDir).mkdir(parents=True)
+    
+    
+    for i in range(len(Dicoms)):
+        
+        Fname = f'{i+1:06d}.dcm'
+    
+        Fpath = os.path.join(ExportDir, Fname)
+    
+        Dicoms[i].save_as(Fpath)
+        
+        # https://pydicom.github.io/pydicom/dev/tutorials/dataset_basics.html?highlight=enforce_standard:
+        Dicoms[i].save_as(filename=Fpath, write_like_original=False) 
+        
+        #print(f'\nNew DICOM Object exported to:\n {Fpath}\n')
+    
+    return

@@ -1869,7 +1869,8 @@ def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi,
     
     from pydicom import dcmread
     from pydicom.uid import generate_uid
-    import time
+    #import time
+    import datetime
     from copy import deepcopy
     from DicomTools import ImportDicoms#, GetRoiNums, GetRoiLabels
     from GeneralTools import UniqueItems
@@ -1909,8 +1910,12 @@ def CreateRts(SrcRtsFpath, TrgRtsFpath, TrgCntDataByCntByRoi, TrgPtsByCntByRoi,
     """ Generate a new SeriesInstanceUID. """
     NewTrgRts.SeriesInstanceUID = generate_uid()
     
-    NewDate = time.strftime("%Y%m%d", time.gmtime())
-    NewTime = time.strftime("%H%M%S", time.gmtime())
+    #NewDate = time.strftime("%Y%m%d", time.gmtime())
+    #NewTime = time.strftime("%H%M%S", time.gmtime())
+    
+    TimeNow = datetime.datetime.now()
+    NewDate = TimeNow.strftime('%Y%m%d')
+    NewTime = TimeNow.strftime('%H%M%S.%f')
     
     """ If TrgRtsFpath != None, some tags will not need to be replaced.
     If TrgRtsFpath = None, use the corresponding values in the first Target 
@@ -3085,9 +3090,12 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgRtsFpath=None, TrgRoiName=None, TrgSliceNum=None, 
             ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
             ApplyPostResBlur=False, PostResVariance=(1,1,1), 
-            ForceReg=False, TxMatrix=None, SelxOrSitk='Selx', Transform='affine', 
-            MaxIters='512', TxInterp='NearestNeighbor', ApplyPostTxBin=True,
-            ApplyPostTxBlur=True, PostTxVariance=(1,1,1),  
+            ForceReg=False, SelxOrSitk='Sitk', Transform='affine', 
+            MaxIters='512', InitMethod='centerofgravity', 
+            SrcFidsFpath='moving_fiducials.txt', 
+            TrgFidsFpath='target_fiducials.txt', TxInterp='NearestNeighbor', 
+            ApplyPostTxBin=True, ApplyPostTxBlur=True, PostTxVariance=(1,1,1),  
+            TxMatrix=None, GridDims=None, GridRes=None, VectGridData=None,
             TxtToAddToTrgRoiName='', LogToConsole=False,
             DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
@@ -3174,13 +3182,7 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
     
-    TxMatrix : None or list of float strings (optional; None by default)
-        List of float strings representing the transformation that would 
-        tranform the moving (Source) image to the fixed (Target) image. 
-        If not None, image registration will be skipped to save computational
-        time.
-    
-    SelxOrSitk : string (optional; 'Selx' by default)
+    SelxOrSitk : string (optional; 'Sitk' by default)
         Denotes which package to use for image registration and transformation.
         Acceptable values include:
             - 'Selx' for SimpleElastix
@@ -3198,7 +3200,19 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         during image registration (if applicable) will be the pre-set default
         in the parameter map for Transform. If != 'default' it must be a string 
         representation of an integer.
-        
+    
+    InitMethod : string (optional, 'centerofgravity' by default)
+        The initialisation method used for initial alignment prior to image
+        registration (if applicable).
+    
+    SrcFidsFpath : string (optional; 'moving_fiducials.txt' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Source/Moving image.
+    
+    TrgFidsFpath : string (optional; 'fixed_fiducials.txt' by default)
+        The full filepath (or filename within the current working directory)
+        of the list of fiducials for the Target/Fixed image.
+    
     TxInterp : string (optional; 'NearestNeighbor' by default)
         The interpolator to be used for registration-based resampling (i.e.
         transformation; if applicable).  Accepatable values are:
@@ -3219,7 +3233,31 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         
     PostTxVariance : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
+        transformed labelmap image(s).
+    
+    TxMatrix : list of float strings or None (optional; None by default)
+        List of float strings representing the non-deformable transformation 
+        that transforms the moving (Source) image to the fixed (Target) image;
+        or None.  If not None, image registration will be skipped to save 
+        computational time.
+    
+    GridDims : list of integers or None (optional; None by default)
+        List of integers representing the dimensions of the BSpline grid used 
+        to deform the moving (Source) image to the fixed (Target) image; 
+        or None.  If not None, image registration will be skipped to save 
+        computational time.
+    
+    GridRes : list of floats or None (optional; None by default)
+        List of floats representing the resolution of the BSpline grid used to 
+        deform the moving (Source) image to the fixed (Target) image; or None.
+        If not None, image registration will be skipped to save computational
+        time.
+    
+    VectGridData : list of float strings or None (optional; None by default)
+        List of floats representing the vector deformations that deform the
+        moving (Source) image to the fixed (Target) image; or None.
+        If not None, image registration will be skipped to save computational
+        time.
     
     TxtToAddToTrgRoiName : string (optional, '' by default)
         String of text to add to the ROI Name of the new Target RTS.
@@ -3298,7 +3336,7 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     #from ConversionTools import Points2ContourData
     from ConversionTools import PtsByCntByRoi2CntDataByCntByRoi
     from ImageTools import ImportImage
-    from DroTools import CreateDro
+    from DroTools import CreateSpaDro, CreateDefDro
     from RoiCopyTools import CheckValidityOfInputs
     
     """ Start timing. """
@@ -3729,7 +3767,8 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
         transformation. """
         
         from ImageTools import RegisterImagesSelx, RegisterImagesSitk
-        from ImageTools import TransformLabImByRoi, GetTransformFromParams
+        from ImageTools import TransformLabImByRoi, CreateSitkTxFromTxMatrix
+        from ImageTools import GetParamFromSelxImFilt
         
         if not Transform in ['rigid', 'affine', 'bspline']:
             msg = f'The chosen transform, {Transform}, is not one of the '\
@@ -3737,10 +3776,11 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             
             raise Exception(msg)
         
-        if TxMatrix == None:
-            """ Transform parameters required to register SrcIm to TrgIm were
-            not found from any subject assessors in XNAT. Perform image
-            registration: """
+        if (Transform in ['rigid', 'affine'] and TxMatrix == None) \
+        or (Transform == 'bspline' and VectGridData == None):
+            """ The transform parameters required to register SrcIm to TrgIm 
+            were not found from any matching subject assessors in XNAT. Perform
+            image registration: """
             
             if LogToConsole == False:
                 print(f'Performing image registration using {Transform}',
@@ -3751,20 +3791,31 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             """ Register SrcIm to TrgIm. """
             if SelxOrSitk == 'Selx':
                 RegIm, SelxImFiltOrSitkTx, TxParamMapDict\
-                = RegisterImagesSelx(FixIm=TrgIm, MovIm=SrcIm, Transform=Transform,
-                                     MaxNumOfIters=MaxIters, 
-                                     LogToConsole=LogToConsole)
+                = RegisterImagesSelx(FixIm=TrgIm, MovIm=SrcIm, 
+                                     Transform=Transform,
+                                     MaxNumOfIters=MaxIters,
+                                     InitMethod=InitMethod,
+                                     FixFidsFpath=TrgFidsFpath, 
+                                     MovFidsFpath=SrcFidsFpath,
+                                     FlipK=False, LogToConsole=LogToConsole)
                 
-                """ Get the registration transform parameters: """
-                TxParams = list(TxParamMapDict['TransformParameters'])
+                #""" Get the registration transform parameters: """
+                #TxParams = list(TxParamMapDict['TransformParameters'])
+                
+                """ Get the registration transform parameters for the final
+                transform parameter map: (10/05/21) """
+                TxParams = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+                                                  Param='TransformParameters')
+                
                 
             if SelxOrSitk == 'Sitk':
                 RegIm, SelxImFiltOrSitkTx\
-                = RegisterImagesSitk(FixIm=TrgIm, MovIm=SrcIm, Transform=Transform, 
-                                     InitMethod='moments', FinalInterp='Linear',
-                                     FixFidsFpath='fixed_fiducials.txt', 
-                                     MovFidsFpath='moving_fiducials.txt',
-                                     ImageJinds=False, LogToConsole=LogToConsole)
+                = RegisterImagesSitk(FixIm=TrgIm, MovIm=SrcIm, 
+                                     Transform=Transform, InitMethod=InitMethod,
+                                     FinalInterp='Linear',
+                                     FixFidsFpath=TrgFidsFpath, 
+                                     MovFidsFpath=TrgFidsFpath,
+                                     FlipK=False, LogToConsole=LogToConsole)
                 
                 """ Get the registration transform parameters: """
                 TxParams = [str(item) for item in SelxImFiltOrSitkTx.GetParameters()]
@@ -3776,15 +3827,52 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             ListOfTimings.append(msg)
             if LogToConsole == False:
                 print(f'*{msg}')
-                
-            #print(f'TxParams = {TxParams}')
-        else:
-            """ Transform parameters required to register SrcIm to TrgIm were
-            found from the subject assessors in XNAT. Create a SimpleITK
-            transform from TxMatrix: """
             
-            SelxImFiltOrSitkTx = GetTransformFromParams(TrgIm, TxMatrix, 
-                                                        Transform)
+            #print(f'TxParams = {TxParams}')
+            
+            #""" Add the row vector [0, 0, 0, 1] to TxParams to complete the 
+            #Frame of Reference Transformation Matrix 
+            #(http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+            #"""
+            ##TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+            #TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
+            #            str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
+            #            str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
+            #            str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
+            
+            
+        else:
+            """ The transform parameters required to register SrcIm to TrgIm 
+            are obtained from the transform matrix, found from the DRO (subject 
+            assessor) in XNAT. Create a SimpleITK transform from TxMatrix: 
+            
+            Note: 'bspline' transform is not currently catered for.
+            """
+            
+            if Transform in ['rigid' 'affine']:
+                SelxImFiltOrSitkTx = CreateSitkTxFromTxMatrix(TrgIm, TxMatrix, 
+                                                              Transform)
+                
+                """ TxMatrix has additional bottom row [0 0 0 1] (see 
+                http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+                
+                Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. 
+                Hence:
+                TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+                """
+                TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 06/05/21
+                
+                print(f'TxParams from TxMatrix (from DRO) = {TxParams}\n')
+                
+                print(f'\n')
+            else:
+                """ 10/05/21: Still need to create CreateSelxImFiltFromParams()
+                """
+                SelxImFiltOrSitkTx = CreateSelxImFiltFromParams(TrgIm, GridDims, 
+                                                                GridRes, 
+                                                                VectGridData,
+                                                                Transform)
+            
         
         
         """ Transform SrcLabImByRoi using the registration transformation. 
@@ -3796,6 +3884,9 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
             
             Note: 'bspline' transform is not currently catered for.
             """
+        
+        """ 10/05/21: Need to test whether TransformLabImByRoi() works with
+        SelxImFilt passed by yet-to-be-developed GetSelxImFilterFromParams() """
         
         ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi\
         = TransformLabImByRoi(LabImByRoi=SrcLabImByRoi,
@@ -4092,8 +4183,47 @@ def CopyRts(SrcRtsFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir,
     
     """ Create a DICOM Registration Object (if applicable). """
     if UseCaseToApply in ['5a', '5b']:
-        Dro = CreateDro(SrcDcmDir, TrgDcmDir, TxParams, Description='', 
-              LogToConsole=LogToConsole)
+        # ContentDescription:
+        ContentDesc = ''
+        
+        if Transform in ['rigid', 'affine']:
+            """ Create a Spatial Registration DRO. """
+            Dro = CreateSpaDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
+                               LogToConsole)
+        else:
+            """ Get the bspline grid related registration transform parameters 
+            for the final transform parameter map: (10/05/21) """
+            GridOrig = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1, 
+                                              'GridOrigin')
+            
+            GridDir = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+                                             'GridDirection')
+            
+            GridDims = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+                                              'GridSize')
+            GridDims = [int(item) for item in GridDims]
+            
+            GridRes = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+                                             'GridSpacing')
+            GridRes = [float(item) for item in GridRes]
+            
+            VectGridData = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+                                                  'TransformParameters')
+            VectGridData = [float(item) for item in VectGridData]
+            
+            """ Get the non-deformable registration transform parameters 
+            for the second-last transform parameter map: (12/05/21) """
+            TxParams = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -2,
+                                              'TransformParameters')
+            if TxParams != None:
+                TxParams = [float(item) for item in TxParams]
+            
+            """ Create a Deformable Spatial Registration DRO. """
+            Dro = CreateDefDro(SrcDcmDir, TrgDcmDir, GridOrig, GridDir, 
+                               GridDims, GridRes, VectGridData, TxParams,
+                               ContentDesc, LogToConsole)
+        
+        
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)

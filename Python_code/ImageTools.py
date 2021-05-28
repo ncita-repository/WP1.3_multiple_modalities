@@ -17,7 +17,7 @@ DICOM IMAGE FUNCTIONS
 
 
 
-def ImportImage(DicomDir):
+def ImportImage(DicomDir, Dtype='float32'):
     """
     Import a DICOM series as a SimpleITK image.
     
@@ -26,17 +26,61 @@ def ImportImage(DicomDir):
         
     DicomDir : string
         Directory containing the DICOMs.
-        
-        
+    
+    Dtype : string (optional; 'float32' by default)
+        The pixel ID type as defined at the link in the Notes section. 
+        Acceptable values are:
+            - 'SameAsRefImage' (default)
+            - 'uint8'
+            - 'int8'
+            - 'uint16'
+            - 'int16'
+            - 'uint32'
+            - 'int32'
+            - 'uint64'
+            - 'int64'
+            - 'float32'
+            - 'float64'
+    
+    
     Outputs:
     *******
     
     Image : SimpleITK object
         SimpleITK 3D image of the DICOM stack.
+    
+    
+    Notes:
+    *****
+    
+    https://simpleitk.org/SimpleITK-Notebooks/01_Image_Basics.html
     """
     
     import SimpleITK as sitk
     
+    if Dtype == 'uint8':
+        PixIdType = sitk.sitkUInt8
+    elif Dtype == 'int8':
+        PixIdType = sitk.sitkInt8
+    elif Dtype == 'uint16':
+        PixIdType = sitk.sitkUInt16
+    elif Dtype == 'int16':
+        PixIdType = sitk.sitkInt16
+    elif Dtype == 'uint32':
+        PixIdType = sitk.sitkUInt32
+    elif Dtype == 'int32':
+        PixIdType = sitk.sitkInt32
+    elif Dtype == 'uint64':
+        PixIdType = sitk.sitkUInt64
+    elif Dtype == 'int64':
+        PixIdType = sitk.sitkInt64
+    elif Dtype == 'float32':
+        PixIdType = sitk.sitkFloat32
+    elif Dtype == 'float64':
+        PixIdType = sitk.sitkFloat64
+    else:
+        msg = f"Dtype '{Dtype}' is not a valid input."
+        raise Exception(msg)
     
     Reader = sitk.ImageSeriesReader()
     Fnames = Reader.GetGDCMSeriesFileNames(DicomDir)
@@ -44,7 +88,8 @@ def ImportImage(DicomDir):
     #Reader.ReadImageInformation() # doesn't exist for ImageSeriesReader; works
     # for ImageFileReader
     Image = Reader.Execute()
-    Image = sitk.Cast(Image, sitk.sitkFloat32)
+    #Image = sitk.Cast(Image, sitk.sitkFloat32)
+    Image = sitk.Cast(Image, PixIdType)
     
     
     """
@@ -771,7 +816,7 @@ def CompareImageAttributes(SrcDcmDir, TrgDcmDir):
 
 
 
-def InitialiseImage(RefImage, PixType='SameAsRefImage'):
+def InitialiseImage(RefImage, Dtype='SameAsRefImage'):
     """
     Initialise an empty SimpleITK image with the same size, spacing, origin and
     direction as another image.  
@@ -783,7 +828,7 @@ def InitialiseImage(RefImage, PixType='SameAsRefImage'):
         The reference image whose attributes will be used for the initialised
         image.
     
-    PixType : string (optional; 'SameAsRefImage' by default)
+    Dtype : string (optional; 'SameAsRefImage' by default)
         The pixel ID type as defined at the link in the Notes section. 
         Acceptable values are:
             - 'SameAsRefImage' (default)
@@ -815,34 +860,34 @@ def InitialiseImage(RefImage, PixType='SameAsRefImage'):
     
     import SimpleITK as sitk
     
-    if PixType == 'SameAsRefImage':
-        PixId = RefImage.GetPixelID()
-    elif PixType == 'uint8':
-        PixId = sitk.sitkUInt8
-    elif PixType == 'int8':
-        PixId = sitk.sitkInt8
-    elif PixType == 'uint16':
-        PixId = sitk.sitkUInt16
-    elif PixType == 'int16':
-        PixId = sitk.sitkInt16
-    elif PixType == 'uint32':
-        PixId = sitk.sitkUInt32
-    elif PixType == 'int32':
-        PixId = sitk.sitkInt32
-    elif PixType == 'uint64':
-        PixId = sitk.sitkUInt64
-    elif PixType == 'int64':
-        PixId = sitk.sitkInt64
-    elif PixType == 'float32':
-        PixId = sitk.sitkFloat32
-    elif PixType == 'float64':
-        PixId = sitk.sitkFloat64
+    if Dtype == 'SameAsRefImage':
+        PixIdType = RefImage.GetPixelID()
+    elif Dtype == 'uint8':
+        PixIdType = sitk.sitkUInt8
+    elif Dtype == 'int8':
+        PixIdType = sitk.sitkInt8
+    elif Dtype == 'uint16':
+        PixIdType = sitk.sitkUInt16
+    elif Dtype == 'int16':
+        PixIdType = sitk.sitkInt16
+    elif Dtype == 'uint32':
+        PixIdType = sitk.sitkUInt32
+    elif Dtype == 'int32':
+        PixIdType = sitk.sitkInt32
+    elif Dtype == 'uint64':
+        PixIdType = sitk.sitkUInt64
+    elif Dtype == 'int64':
+        PixIdType = sitk.sitkInt64
+    elif Dtype == 'float32':
+        PixIdType = sitk.sitkFloat32
+    elif Dtype == 'float64':
+        PixIdType = sitk.sitkFloat64
     else:
-        msg = f"PixType '{PixType}' is not a valid input."
+        msg = f"Dtype '{Dtype}' is not a valid input."
         raise Exception(msg)
     
     #NewImage = sitk.Image(RefImage.GetSize(), RefImage.GetPixelID())
-    NewImage = sitk.Image(RefImage.GetSize(), PixId)
+    NewImage = sitk.Image(RefImage.GetSize(), PixIdType)
     
     NewImage.SetOrigin(RefImage.GetOrigin())
     
@@ -1399,11 +1444,11 @@ def ResampleImage(Im, RefIm, Tx='Identity', Interp='Linear',
     Inputs:
     ******                      
         
-    Im : SimpleITK image
+    Im : SimpleITK Image
         The 3D image to be resampled.
                            
-    RefIm : SimpleITK image
-        The 3D image reference image whose gridspace Image will be resampled to.
+    RefIm : SimpleITK Image
+        The 3D image reference image whose gridspace Im will be resampled to.
         
     Tx : string (optional; 'Identity' by default)
         The transform to be used.  Acceptable inputs are:
@@ -1427,9 +1472,6 @@ def ResampleImage(Im, RefIm, Tx='Identity', Interp='Linear',
     ResIm : SimpleITK image
         The resampled 3D image.
     
-    Resampler : SimpleITK image filter
-    
-
     
     Notes:
     *****
@@ -1440,7 +1482,7 @@ def ResampleImage(Im, RefIm, Tx='Identity', Interp='Linear',
 
     import SimpleITK as sitk
     
-    # Define which tranform to use:
+    # Define which transform to use:
     if Tx == 'Identity':    
         sitkTx = sitk.Transform()
         
@@ -1516,7 +1558,7 @@ def ResampleImage(Im, RefIm, Tx='Identity', Interp='Linear',
     #ResTx = Resampler.GetTransform()
     
     #if LogToConsole:
-    #    print('\nResampling tranform:\n', ResTx)
+    #    print('\nResampling transform:\n', ResTx)
 
     return ResIm
     #return ResIm, ResTx
@@ -2222,7 +2264,7 @@ def RegisterImages_OLD(FixIm, MovIm, Tx='bspline', MaxNumOfIters=512,
 
 
 
-def RegisterImagesSelx(FixIm, MovIm, Transform='affine', 
+def RegisterImagesSelx_OLD(FixIm, MovIm, Transform='affine', 
                        MaxNumOfIters='default', InitMethod='centerofgravity',
                        FixFidsFpath='fixed_fiducials.txt', 
                        MovFidsFpath='moving_fiducials.txt',
@@ -2254,8 +2296,8 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
     
     InitMethod : string (optional; 'centerofgravity' by default)
         The method used for initialisation.  Acceptable inputs include:
-            - 'centerofgravity'
-            - 'geometricalcenter'
+            - 'centerofgravity' (or 'moments')
+            - 'geometricalcenter' (or 'geometricalcenter')
             - 'origin' (only available for affine transform)
             - 'landmarks'
     
@@ -2273,9 +2315,11 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
         Elastix image registration transformation filter used to register/
         transform MovIm to FixIm.
     
+    ParamMapDict : dictionary
+        A dictionary containing the parameter map from SelxImFilt.
+    
     TxParamMapDict : dictionary
-        A dictionary containing the transform parameter map (including the 
-        transform parameters).
+        A dictionary containing the transform parameter map from SelxImFilt.
     
         
     Notes:
@@ -2301,11 +2345,11 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
               + 'the accepted inputs: \'rigid\', \'affine\', or \'bspline\'.'
         raise Exception(msg)
     
-    if not InitMethod in ['centerofgravity', 'geometricalcenter', 'origins',
-                          'landmarks']:
+    if not InitMethod in ['centerofgravity', 'moments', 'geometricalcenter', 
+                          'geometry', 'origins', 'landmarks']:
         msg = f"The chosen initialisation method (InitMethod), {InitMethod}, "\
-              "is not one of the accepted inputs: 'centerofgravity', "\
-              + "'geometricalcenter', 'origins' or 'landmarks'."
+              + "is not one of the accepted inputs: 'centerofgravity'/'moments',"\
+              + " 'geometricalcenter'/'geometry', 'origins' or 'landmarks'."
         raise Exception(msg)
         
     if Transform != 'affine' and InitMethod == 'origins':
@@ -2314,7 +2358,7 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
         raise Exception(msg)
     
     
-    """ Initiate RegImFilt: """
+    """ Initiate ElastixImageFilter: """
     SelxImFilt = sitk.ElastixImageFilter()
     if LogToConsole:
         SelxImFilt.LogToConsoleOn() # no output in Jupyter
@@ -2326,10 +2370,33 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
     SelxImFilt.SetMovingImage(MovIm)
     
     """ Get the default parameter map for the chosen transform: """
-    #ElxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
+    #SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
     #ParamMap = sitk.GetDefaultParameterMap('affine')
-    ParamMap = sitk.GetDefaultParameterMap(Transform)
-        
+    #ParamMap = sitk.GetDefaultParameterMap(Transform) # 10/05/21
+    if InitMethod == 'landmarks': # 10/05/21
+        #ParamMap = sitk.VectorOfParameterMap() # 14/05/21
+        #ParamMap.append(sitk.GetDefaultParameterMap('translation')) # 14/05/21
+        SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('translation')) # 14/05/21
+        if Transform == 'bspline':
+            #ParamMap.append(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+        else:
+            #ParamMap.append(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+    else:
+        if Transform == 'bspline':
+            #ParamMap = sitk.VectorOfParameterMap() # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+            SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+        else:
+            #ParamMap = sitk.GetDefaultParameterMap(Transform) # 14/05/21
+            SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+    ParamMap = SelxImFilt.GetParameterMap() # 14/05/21
+    
     """ 18/03/21:
     
     Kasper said that AutomaticTransformInitialization should be true for rigid,
@@ -2361,9 +2428,9 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
     #ParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity'] # 19/03/21
     #ParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
     
-    if InitMethod == 'centerofgravity':
+    if InitMethod in ['centerofgravity', 'moments']:
         ParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity']
-    elif InitMethod == 'geometricalcenter':
+    elif InitMethod in ['geometricalcenter', 'geometry']:
         ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
     elif InitMethod == 'origins':
         ParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
@@ -2467,35 +2534,604 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
         # at 0x00000220072E8B70> >
         
     
-    """ Get the items in parameter map and in the transform parameter map
-    (both from file and from the Elastix image filter) as a dictionary. """ 
-
-    """ First get the parameter map from SelxImFilt: """
-    ParamMapDict = ParamMapFromSelxImFilt(SelxImFilt)
+    #""" Get the items in parameter map and in the transform parameter map
+    #(both from file and from the Elastix image filter) as a dictionary. """ 
+    #
+    #""" First get the parameter map from SelxImFilt: """
+    #ParamMapDict = ParamMapFromSelxImFilt(SelxImFilt)
+    #
+    #""" Add the transform parameters from SelxImFilt: """
+    #TxParamMapDict = TxParamMapFromSelxImFilt(SelxImFilt, ParamMapDict)
+    #
+    #""" Add the additional transform parameters (and over-write existing ones*)
+    #from the file TransformParameters.0.txt.
+    #
+    #* There are more decimals in the parameters containted from the file than
+    #those stored in ElxImFilt. """
+    #TxParamMapDict = TxParamMapFromFile(TxParamMapDict)
     
-    """ Add the transform parameters from SelxImFilt: """
-    TxParamMapDict = TxParamMapFromSelxImFilt(SelxImFilt, ParamMapDict)
-    
-    """ Add the additional transform parameters (and over-write existing ones*)
-    from the file TransformParameters.0.txt.
-    
-    * There are more decimals in the parameters containted from the file than
-    those stored in ElxImFilt. """
-    TxParamMapDict = TxParamMapFromFile(TxParamMapDict)
+    """ Get the parameter map and transform parameter map: """
+    ParamMapDict = GetParamMapFromSelxImFilt(SelxImFilt)
+    TxParamMapDict = GetTxParamMapFromSelxImFilt(SelxImFilt)
     
     
     #return RegIm, SelxImFilt
-    return RegIm, SelxImFilt, TxParamMapDict
+    return RegIm, SelxImFilt, ParamMapDict, TxParamMapDict
 
 
 
 
 
 
-
-def ParamMapFromSelxImFilt(SelxImFilt, Dict=None):
+def RegisterImagesSelx_INCOMPLETE(FixIm, MovIm, Transform='affine', 
+                       MaxNumOfIters='default', InitMethod='centerofgravity',
+                       FixFidsFpath='fixed_fiducials.txt', 
+                       MovFidsFpath='moving_fiducials.txt',
+                       FlipK=False,
+                       LogToConsole=False):
     """
-    Get the Elastix parameter map from a Elastix image filter.
+    Register two 3D SimpleITK images using SimpleElastix.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+        
+    Transform : string (optional; 'affine' by default)
+        Denotes type of transformation to use for registration.  Acceptable 
+        values include:
+        - 'translation'
+        - 'rigid'
+        - 'affine'
+        - 'bspline' (i.e. deformable)
+    
+    MaxNumOfIters : string (optional; 'default' by default)
+        If 'default', the maximum number of iterations used during optimisation
+        will be whatever is set by default in the parameter map of choice.  
+        If != 'default' it must be a string representation of an integer.
+    
+    InitMethod : string (optional; 'centerofgravity' by default)
+        The method used for initialisation.  Acceptable inputs include:
+            - 'centerofgravity' (or 'moments')
+            - 'geometricalcenter' (or 'geometricalcenter')
+            - 'origin' (only available for affine transform)
+            - 'landmarks'
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    SelxImFilt : Elastix image filter
+        Elastix image registration transformation filter used to register/
+        transform MovIm to FixIm.
+    
+    ParamMapDict : dictionary
+        A dictionary containing the parameter map from SelxImFilt.
+    
+    TxParamMapDict : dictionary
+        A dictionary containing the transform parameter map from SelxImFilt.
+    
+        
+    Notes:
+    *****
+    
+    29/05/20: Trying this instead of trying to change it for Transformix
+    ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+    
+    13/02/21 Try https://github.com/SuperElastix/SimpleElastix/issues/70
+    ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
+    
+    22/02/21 Try parameters in Appendix A in "Multimodal image registration by 
+    edge attraction and regularization using a B-spline grid" by Klein et al 
+    2011; and from the SimpleElastix docs:
+    https://simpleelastix.readthedocs.io/ParameterMaps.html
+    
+    18/03/21 Kasper said that AutomaticTransformInitialization should be true 
+    for rigid, and false for affine or bspine: 
+    
+    https://github.com/SuperElastix/elastix/issues/45
+         
+    - FixedImagePyramid should be FixedImageSmoothingPyramid for best results 
+    (unless memory is really and issue).
+    - AutomaticTransformInitialization should be true for rigid and false for 
+    affine and bspline.
+    - 250 number of iterations is also on the low side. If speed is really an 
+    issue, 250 is fine, but if you can afford it use at least 512.
+    - Depending on the problem you might want to use at least 3 resolutions. 
+    Some places you use 2 which is on the low side.
+    - ImageSampler should be RandomSparseMask if users use masks. Otherwise it 
+    is fine.
+    - If you use a BSplineInterplationOrder of 1 you might as well use 
+    LinearInterpolator which produces the same results but is faster.
+    """
+    
+    import SimpleITK as sitk
+    import time
+    
+    if not Transform in ['translation', 'rigid', 'affine', 'bspline']:
+        msg = f'The chosen transform (Transform), {Transform}, is not one of '\
+              + 'the accepted inputs: \'translation\', \'rigid\', \'affine\','\
+              + ' or \'bspline\'.'
+        raise Exception(msg)
+    
+    if not InitMethod in ['centerofgravity', 'moments', 'geometricalcenter', 
+                          'geometry', 'origins', 'landmarks']:
+        msg = f"The chosen initialisation method (InitMethod), {InitMethod}, "\
+              + "is not one of the accepted inputs: 'centerofgravity'/'moments',"\
+              + " 'geometricalcenter'/'geometry', 'origins' or 'landmarks'."
+        raise Exception(msg)
+        
+    if Transform != 'affine' and InitMethod == 'origins':
+        msg = f"The chosen initialisation method (InitMethod), {InitMethod}, "\
+              "is only allowed for the affine transform."
+        raise Exception(msg)
+    
+    
+    """ Initiate ElastixImageFilter: """
+    SelxImFilt = sitk.ElastixImageFilter()
+    if LogToConsole:
+        SelxImFilt.LogToConsoleOn() # no output in Jupyter
+    else:
+        SelxImFilt.LogToConsoleOff() 
+    SelxImFilt.LogToFileOn() # output's elastix.log ONLY ONCE per kernel in Jupyter
+    
+    SelxImFilt.SetFixedImage(FixIm)
+    SelxImFilt.SetMovingImage(MovIm)
+    
+    
+    """ Define the parameter map. Deal with different cases separately. """
+    if InitMethod != 'landmarks' and Transform != 'bspline':
+        """ This is a single-itemed parameter map. """
+        ParamMap = sitk.GetDefaultParameterMap(Transform)
+        
+        """ Set the parameters accordingly: """
+        if Transform in ['translation', 'rigid']:
+            ParamMap['AutomaticTransformInitialization'] = ['true']
+        else:
+            ParamMap['AutomaticTransformInitialization'] = ['false']
+        
+        if InitMethod in ['centerofgravity', 'moments']:
+            ParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity']
+        elif InitMethod in ['geometricalcenter', 'geometry']:
+            ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+        elif InitMethod == 'origins':
+            ParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
+        
+        ParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+        #ParamMap['DefaultPixelValue'] = ['0']
+        #ParamMap['ResampleInterpolator'] = ['FinalBSplineInterpolator'] # recommended in elastix manual (5.3.4 Interpolator)
+        #ParamMap['FinalBSplineInterpolatorOrder'] = ['3'] # default for affine and bspline
+        #ParamMap['FixedImagePyramid'] = ['FixedSmoothingImagePyramid'] # default for affine and bspline
+        #ParamMap['MovingImagePyramid'] = ['MovingSmoothingImagePyramid'] # default for affine and bspline
+        #if Transform == 'bspline': # 22/04/2021
+        #    ParamMap['FixedImagePyramid'] = ['FixedRecursiveImagePyramid']
+        #    ParamMap['MovingImagePyramid'] = ['MovingRecursiveImagePyramid']
+        ParamMap['FixedInternalImagePixelType'] = ['float']
+        ParamMap['MovingInternalImagePixelType'] = ['float']
+        #ParamMap['HowToCombineTransforms'] = ['Compose'] # 14/05/21
+        #ParamMap['ImageSampler'] = ['RandomCoordinate'] # default for affine and bspline
+        #ParamMap['Interpolator'] = ['LinearInterpolator'] # default for affine
+        #ParamMap['Interpolator'] = ['BSplineInterpolator'] # default for bspline
+        #ParamMap['MaximumNumberOfIterations'] = ['256'] # default for affine
+        #ParamMap['MaximumNumberOfIterations'] = ['512'] # default for bspline
+        if MaxNumOfIters != 'default':
+            ParamMap['MaximumNumberOfIterations'] = [MaxNumOfIters]
+        #ParamMap['Metric'] = ['AdvancedMattesMutualInformation'] # default for affine
+        #ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+        #                      'TransformBendingEnergyPenalty'] # default for bspline
+        #ParamMap['NewSamplesEveryIteration'] = ['true'] # default for bspline; recommended in elastix manual (5.3.3 Sampler)
+        ParamMap['NumberOfHistogramBins'] = ['32']
+        #ParamMap['NumberOfResolutions'] = ['4'] # default for affine and bspline
+        #ParamMap['NumberOfSpatialSamples'] = ['2048'] # default for affine and bspline
+        #if Transform == 'bspline': # 22/04/2021
+        #    ParamMap['NumberOfSpatialSamples'] = ['3000'] # recommended in elastix manual (5.3.3 Sampler)
+        #    ParamMap['Metric0Weight'] = ['0.5']
+        #    ParamMap['Metric1Weight'] = ['1.0']
+        #ParamMap['Optimizer'] = ['AdaptiveStochasticGradientDescent'] # default for affine and bspline
+        #ParamMap['Registration'] = ['MultiResolutionRegistration'] # default for affine
+        #ParamMap['Registration'] = ['MultiMetricMultiResolutionRegistration'] # default for bspline
+        #ParamMap['Resampler'] = ['DefaultResampler'] # default for affine and bspline
+        #ParamMap['Transform'] = ['AffineTransform'] # default for affine
+        #ParamMap['Transform'] = ['BSplineTransform'] # default for bspline
+        ParamMap['UseDirectionCosines'] = ['true']
+        ParamMap['WriteIterationInfo'] = ['true']
+        
+    elif InitMethod != 'landmarks' and Transform == 'bspline':
+        """ This will require two parameter maps: an affine and a bspline. """
+        AffineParamMap = sitk.GetDefaultParameterMap('affine')
+        BsplineParamMap = sitk.GetDefaultParameterMap('bspline')
+        
+        """ Set the parameters for the affine parameter map: """
+        AffineParamMap['AutomaticTransformInitialization'] = ['false']
+        if InitMethod in ['centerofgravity', 'moments']:
+            AffineParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity']
+        elif InitMethod in ['geometricalcenter', 'geometry']:
+            AffineParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+        elif InitMethod == 'origins':
+            AffineParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
+        AffineParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+        #ParamMap['DefaultPixelValue'] = ['0']
+        #ParamMap['ResampleInterpolator'] = ['FinalBSplineInterpolator'] # recommended in elastix manual (5.3.4 Interpolator)
+        #ParamMap['FinalBSplineInterpolatorOrder'] = ['3'] # default for affine and bspline
+        #ParamMap['FixedImagePyramid'] = ['FixedSmoothingImagePyramid'] # default for affine and bspline
+        #ParamMap['MovingImagePyramid'] = ['MovingSmoothingImagePyramid'] # default for affine and bspline
+        #if Transform == 'bspline': # 22/04/2021
+        #    ParamMap['FixedImagePyramid'] = ['FixedRecursiveImagePyramid']
+        #    ParamMap['MovingImagePyramid'] = ['MovingRecursiveImagePyramid']
+        AffineParamMap['FixedInternalImagePixelType'] = ['float']
+        AffineParamMap['MovingInternalImagePixelType'] = ['float']
+        AffineParamMap['HowToCombineTransforms'] = ['Compose']
+        #ParamMap['ImageSampler'] = ['RandomCoordinate'] # default for affine and bspline
+        #ParamMap['Interpolator'] = ['LinearInterpolator'] # default for affine
+        #ParamMap['Interpolator'] = ['BSplineInterpolator'] # default for bspline
+        #ParamMap['MaximumNumberOfIterations'] = ['256'] # default for affine
+        #ParamMap['MaximumNumberOfIterations'] = ['512'] # default for bspline
+        if MaxNumOfIters != 'default':
+            AffineParamMap['MaximumNumberOfIterations'] = [MaxNumOfIters]
+        #ParamMap['Metric'] = ['AdvancedMattesMutualInformation'] # default for affine
+        #ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+        #                      'TransformBendingEnergyPenalty'] # default for bspline
+        #ParamMap['NewSamplesEveryIteration'] = ['true'] # default for bspline; recommended in elastix manual (5.3.3 Sampler)
+        AffineParamMap['NumberOfHistogramBins'] = ['32']
+        #ParamMap['NumberOfResolutions'] = ['4'] # default for affine and bspline
+        #ParamMap['NumberOfSpatialSamples'] = ['2048'] # default for affine and bspline
+        #if Transform == 'bspline': # 22/04/2021
+        #    ParamMap['NumberOfSpatialSamples'] = ['3000'] # recommended in elastix manual (5.3.3 Sampler)
+        #    ParamMap['Metric0Weight'] = ['0.5']
+        #    ParamMap['Metric1Weight'] = ['1.0']
+        #ParamMap['Optimizer'] = ['AdaptiveStochasticGradientDescent'] # default for affine and bspline
+        #ParamMap['Registration'] = ['MultiResolutionRegistration'] # default for affine
+        #ParamMap['Registration'] = ['MultiMetricMultiResolutionRegistration'] # default for bspline
+        #ParamMap['Resampler'] = ['DefaultResampler'] # default for affine and bspline
+        #ParamMap['Transform'] = ['AffineTransform'] # default for affine
+        #ParamMap['Transform'] = ['BSplineTransform'] # default for bspline
+        AffineParamMap['UseDirectionCosines'] = ['true']
+        AffineParamMap['WriteIterationInfo'] = ['true']
+        
+        """ Set the parameters for the bspline parameter map: """
+        BsplineParamMap['AutomaticTransformInitialization'] = ['false']
+        
+        """ continue copying lines from old code below... """
+        ParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+        #ParamMap['DefaultPixelValue'] = ['0']
+        
+        
+        
+    elif InitMethod != 'landmarks':
+        """ This will require two or more parameter maps. """
+        TranslationParamMap = sitk.GetDefaultParameterMap('tranlation')
+    
+    
+    
+    """ old code below """
+    
+    
+    
+    """ Get the default parameter map for the chosen transform: """
+    #SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine'))
+    #ParamMap = sitk.GetDefaultParameterMap('affine')
+    #ParamMap = sitk.GetDefaultParameterMap(Transform) # 10/05/21
+    if InitMethod == 'landmarks': # 10/05/21
+        #ParamMap = sitk.VectorOfParameterMap() # 14/05/21
+        #ParamMap.append(sitk.GetDefaultParameterMap('translation')) # 14/05/21
+        SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('translation')) # 14/05/21
+        if Transform == 'bspline':
+            #ParamMap.append(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+        else:
+            #ParamMap.append(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+    else:
+        if Transform == 'bspline':
+            #ParamMap = sitk.VectorOfParameterMap() # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            #ParamMap.append(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+            SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('affine')) # 14/05/21
+            SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('bspline')) # 14/05/21
+        else:
+            #ParamMap = sitk.GetDefaultParameterMap(Transform) # 14/05/21
+            SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap(Transform)) # 14/05/21
+    ParamMap = SelxImFilt.GetParameterMap() # 14/05/21
+    
+    
+    
+    """ Add/modify parameters: """
+    if Transform == 'rigid': # 26/04/21
+        ParamMap['AutomaticTransformInitialization'] = ['true']
+    else:
+        ParamMap['AutomaticTransformInitialization'] = ['false']
+    #ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter'] # 19/03/21
+    #ParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity'] # 19/03/21
+    #ParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
+    
+    if InitMethod in ['centerofgravity', 'moments']:
+        ParamMap['AutomaticTransformInitializationMethod'] = ['CenterOfGravity']
+    elif InitMethod in ['geometricalcenter', 'geometry']:
+        ParamMap['AutomaticTransformInitializationMethod'] = ['GeometricalCenter']
+    elif InitMethod == 'origins':
+        ParamMap['AutomaticTransformInitializationMethod'] = ['Origins']
+        
+    
+    ParamMap['AutomaticScalesEstimation'] = ['true'] # 22/02/21
+    #ParamMap['DefaultPixelValue'] = ['0']
+    """ 05/05/21: Not sure why BSplineInterpolatorOrder was set to 1. """
+    if False:
+        ParamMap['BSplineInterpolatorOrder'] = ['1']
+    #ParamMap['ResampleInterpolator'] = ['FinalBSplineInterpolator'] # recommended in elastix manual (5.3.4 Interpolator)
+    #ParamMap['FinalBSplineInterpolatorOrder'] = ['3'] # default for affine and bspline
+    #ParamMap['FixedImagePyramid'] = ['FixedSmoothingImagePyramid'] # default for affine and bspline
+    #ParamMap['MovingImagePyramid'] = ['MovingSmoothingImagePyramid'] # default for affine and bspline
+    #if Transform == 'bspline': # 22/04/2021
+    #    ParamMap['FixedImagePyramid'] = ['FixedRecursiveImagePyramid']
+    #    ParamMap['MovingImagePyramid'] = ['MovingRecursiveImagePyramid']
+    ParamMap['FixedInternalImagePixelType'] = ['float']
+    ParamMap['MovingInternalImagePixelType'] = ['float']
+    ParamMap['HowToCombineTransforms'] = ['Compose']
+    #ParamMap['ImageSampler'] = ['RandomCoordinate'] # default for affine and bspline
+    #ParamMap['Interpolator'] = ['LinearInterpolator'] # default for affine
+    #ParamMap['Interpolator'] = ['BSplineInterpolator'] # default for bspline
+    #ParamMap['MaximumNumberOfIterations'] = ['256'] # default for affine
+    #ParamMap['MaximumNumberOfIterations'] = ['512'] # default for bspline
+    if MaxNumOfIters != 'default':
+        ParamMap['MaximumNumberOfIterations'] = [MaxNumOfIters]
+    #ParamMap['Metric'] = ['AdvancedMattesMutualInformation'] # default for affine
+    #ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+    #                      'TransformBendingEnergyPenalty'] # default for bspline
+    if InitMethod == 'landmarks':
+        if Transform in ['rigid', 'affine']:
+            ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+                                  'CorrespondingPointsEuclideanDistanceMetric']
+            #ParamMap['Metric0Weight'] = ['1.0']
+            ParamMap['Metric0Weight'] = ['0.3']
+            ParamMap['Metric1Weight'] = ['1.0']
+            
+        elif Transform == 'bspline':
+            ParamMap['Metric'] = ['AdvancedMattesMutualInformation', 
+                                  'TransformBendingEnergyPenalty',
+                                  'CorrespondingPointsEuclideanDistanceMetric']
+            ParamMap['Metric0Weight'] = ['1.0']
+            ParamMap['Metric1Weight'] = ['1.0']
+            ParamMap['Metric2Weight'] = ['1.0']
+    #ParamMap['NewSamplesEveryIteration'] = ['true'] # default for bspline; recommended in elastix manual (5.3.3 Sampler)
+    ParamMap['NumberOfHistogramBins'] = ['32']
+    #ParamMap['NumberOfResolutions'] = ['4'] # default for affine and bspline
+    #ParamMap['NumberOfSpatialSamples'] = ['2048'] # default for affine and bspline
+    #if Transform == 'bspline': # 22/04/2021
+    #    ParamMap['NumberOfSpatialSamples'] = ['3000'] # recommended in elastix manual (5.3.3 Sampler)
+    #    ParamMap['Metric0Weight'] = ['0.5']
+    #    ParamMap['Metric1Weight'] = ['1.0']
+    #ParamMap['Optimizer'] = ['AdaptiveStochasticGradientDescent'] # default for affine and bspline
+    if InitMethod == 'landmarks':
+        """ MultiResolutionRegistration, which is default for affine, only
+        allows for 1 metric. """
+        ParamMap['Registration'] = ['MultiMetricMultiResolutionRegistration']
+    #ParamMap['Registration'] = ['MultiResolutionRegistration'] # default for affine
+    #ParamMap['Registration'] = ['MultiMetricMultiResolutionRegistration'] # default for bspline
+    #ParamMap['Resampler'] = ['DefaultResampler'] # default for affine and bspline
+    #ParamMap['Transform'] = ['AffineTransform'] # default for affine
+    #ParamMap['Transform'] = ['BSplineTransform'] # default for bspline
+    ParamMap['UseDirectionCosines'] = ['true']
+    ParamMap['WriteIterationInfo'] = ['true']
+    
+    
+    # Print the parameters:
+    #for keys,values in ParamMap.items():
+    #    print(keys, '=', values)
+        
+    """ Set the parameter map: """
+    SelxImFilt.SetParameterMap(ParamMap)
+    
+    if InitMethod == 'landmarks':
+        SelxImFilt.SetFixedPointSetFileName(FixFidsFpath)
+        SelxImFilt.SetMovingPointSetFileName(MovFidsFpath)
+    
+    if LogToConsole:
+        print(f'Performing image registration using {Transform} transform...\n')
+        
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    """ Register the 3D images: """
+    SelxImFilt.Execute()
+    
+    """ Get the registered image: """
+    RegIm = SelxImFilt.GetResultImage()
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to perform image registration.\n')
+        #print('\n', ElxImFilt.GetTransform()) # 'ElastixImageFilter' object has 
+        ## no attribute 'GetTransform'
+        #print('\n', ElxImFilt.PrintParameterMap()) # <SimpleITK.SimpleITK.ElastixImageFilter; 
+        # proxy of <Swig Object of type 'itk::simple::ElastixImageFilter::Self *' 
+        # at 0x00000220072E8B70> >
+        
+    
+    #""" Get the items in parameter map and in the transform parameter map
+    #(both from file and from the Elastix image filter) as a dictionary. """ 
+    #
+    #""" First get the parameter map from SelxImFilt: """
+    #ParamMapDict = ParamMapFromSelxImFilt(SelxImFilt)
+    #
+    #""" Add the transform parameters from SelxImFilt: """
+    #TxParamMapDict = TxParamMapFromSelxImFilt(SelxImFilt, ParamMapDict)
+    #
+    #""" Add the additional transform parameters (and over-write existing ones*)
+    #from the file TransformParameters.0.txt.
+    #
+    #* There are more decimals in the parameters containted from the file than
+    #those stored in ElxImFilt. """
+    #TxParamMapDict = TxParamMapFromFile(TxParamMapDict)
+    
+    """ Get the parameter map and transform parameter map: """
+    ParamMapDict = GetParamMapFromSelxImFilt(SelxImFilt)
+    TxParamMapDict = GetTxParamMapFromSelxImFilt(SelxImFilt)
+    
+    
+    #return RegIm, SelxImFilt
+    return RegIm, SelxImFilt, ParamMapDict, TxParamMapDict
+
+
+
+
+
+
+def SelxBsplineRegUsingFiducials(FixIm, MovIm, 
+                       FixFidsFpath='fixed_fiducials.txt', 
+                       MovFidsFpath='moving_fiducials.txt',
+                       LogToConsole=False):
+    """
+    Register two 3D SimpleITK images using a BSpline transformation and
+    fiducials for initial alignment in SimpleElastix.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+        
+    FixFidsFpath : string (optional; 'fixed_fiducials.txt' by default)
+        The file name (if the file is in the current working directory) or
+        full file path of the txt file containing fiducials for the fixed image
+        in the required format for indices.
+    
+    MovFidsFpath : string (optional; 'moving_fiducials.txt' by default)
+        The file name (if the file is in the current working directory) or
+        full file path of the txt file containing fiducials for the moving image
+        in the required format for indices.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    SelxImFilt : Elastix image filter
+        Elastix image registration transformation filter used to register/
+        transform MovIm to FixIm.
+    
+    ParamMapDict : dictionary
+        A dictionary containing the parameter map from SelxImFilt.
+    
+    TxParamMapDict : dictionary
+        A dictionary containing the transform parameter map from SelxImFilt.
+    
+        
+    Notes:
+    *****
+    
+    29/05/20: Trying this instead of trying to change it for Transformix
+    ElastixParamMap['FinalBSplineInterpolationOrder'] = ['0']
+    
+    13/02/21 Try https://github.com/SuperElastix/SimpleElastix/issues/70
+    ParamMap['Registration'] = ['MultiMetricResolutionRegistration']
+    
+    22/02/21 Try parameters in Appendix A in "Multimodal image registration by 
+    edge attraction and regularization using a B-spline grid" by Klein et al 
+    2011; and from the SimpleElastix docs:
+    https://simpleelastix.readthedocs.io/ParameterMaps.html
+    
+    18/03/21 Kasper said that AutomaticTransformInitialization should be true 
+    for rigid, and false for affine or bspine: 
+    
+    https://github.com/SuperElastix/elastix/issues/45
+         
+    - FixedImagePyramid should be FixedImageSmoothingPyramid for best results 
+    (unless memory is really and issue).
+    - AutomaticTransformInitialization should be true for rigid and false for 
+    affine and bspline.
+    - 250 number of iterations is also on the low side. If speed is really an 
+    issue, 250 is fine, but if you can afford it use at least 512.
+    - Depending on the problem you might want to use at least 3 resolutions. 
+    Some places you use 2 which is on the low side.
+    - ImageSampler should be RandomSparseMask if users use masks. Otherwise it 
+    is fine.
+    - If you use a BSplineInterpolationOrder of 1 you might as well use 
+    LinearInterpolator which produces the same results but is faster.
+    
+    14/05/21 Use of FinalLinearInterpolator reduced time by 12 s (2.6%).
+    """
+    
+    import SimpleITK as sitk
+    import time
+    
+    SelxImFilt = sitk.ElastixImageFilter()
+    SelxImFilt.LogToConsoleOn()
+    SelxImFilt.LogToFileOn()
+    
+    SelxImFilt.SetFixedImage(FixIm)
+    SelxImFilt.SetMovingImage(MovIm)
+    
+    SelxImFilt.SetFixedPointSetFileName(FixFidsFpath)
+    SelxImFilt.SetMovingPointSetFileName(MovFidsFpath)
+    
+    SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('translation'))
+    #SelxImFilt.SetParameterMap(sitk.GetDefaultParameterMap('rigid'))
+    SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('affine'))
+    SelxImFilt.AddParameterMap(sitk.GetDefaultParameterMap('bspline'))
+    
+    #SelxImFilt.SetParameter("Transform", "BSplineTransform")
+    
+    SelxImFilt.SetParameter( "Metric", ("AdvancedMattesMutualInformation", 
+                                        "TransformBendingEnergyPenalty",
+                                        "CorrespondingPointsEuclideanDistanceMetric",))
+    #SelxImFilt.SetParameter("Metric0Weight", "0.3")
+    SelxImFilt.SetParameter("Metric0Weight", "1.0")
+    SelxImFilt.SetParameter("Metric1Weight", "1.0")
+    SelxImFilt.SetParameter("Metric2Weight", "1.0")
+    #SelxImFilt.SetParameter("MaximumNumberOfIterations" , '500')
+    #SelxImFilt.SetParameter("NumberOfSpatialSamples" , '3000')
+    #SelxImFilt.SetParameter("Registration", "AdvancedImageToImageMetric") # error:
+    # The following component could not be created: AdvancedImageToImageMetric
+    SelxImFilt.SetParameter("Registration", "MultiMetricMultiResolutionRegistration")
+    #SelxImFilt.SetParameter("ResampleInterpolator", "FinalBSplineInterpolator") # recommended in elastix manual (5.3.4 Interpolator)
+    SelxImFilt.SetParameter("ResampleInterpolator", "FinalLinearInterpolator") # reduces computational time
+    
+    times = []
+    times.append(time.time())
+    
+    SelxImFilt.Execute()
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    print(f'*Took {Dtime} s to perform image registration.\n')
+    
+    RegIm = SelxImFilt.GetResultImage()
+    
+    ParamMapDict = GetParamMapFromSelxImFilt(SelxImFilt)
+    TxParamMapDict = GetTxParamMapFromSelxImFilt(SelxImFilt)
+    
+    return RegIm, SelxImFilt, ParamMapDict, TxParamMapDict
+    
+    
+
+
+
+def ParamMapFromSelxImFilt_OLD(SelxImFilt, Dict=None):
+    """
+    Get a dictionary containing the parameter map from an Elastix image filter.
     
     Inputs:
     ******
@@ -2530,11 +3166,66 @@ def ParamMapFromSelxImFilt(SelxImFilt, Dict=None):
 
 
 
-
-
-def TxParamMapFromSelxImFilt(SelxImFilt, Dict=None):
+def GetParamMapFromSelxImFilt(SelxImFilt):
     """
-    Get the Elastix transform parameter map from a Elastix image filter.
+    Get a dictionary containing the parameter map(s) from an Elastix image 
+    filter.
+    
+    Inputs:
+    ******
+    
+    SelxImFilt : Elastix image filter
+        Elastix image transformation filter used to perform image registration.
+    
+    
+    Outputs:
+    *******
+    
+    Dict : dictionary
+        A dictionary containing the parameter values used in the Elastix image 
+        filter.  
+    
+    
+    Note:
+    ****
+    
+    The keys of Dict at the first level are integer strings that indicate the 
+    parameter map number, e.g. Dict['0'], Dict['1'], Dict['2'], etc.
+    
+    If there was only one parameter map, there will only be one key,
+    e.g. Dict['0'].
+    
+    Each first level key corresponds to a dictionary containing the parameters 
+    for that parameter map, 
+    
+    e.g. Dict['0'] = {Param0 : value0,
+                      Param1 : value1,
+                      Param2 : value2,
+                      ...}
+    """
+    
+    Dict = {}
+    
+    for i in range(len(SelxImFilt.GetParameterMap())):
+        ParamMap = {}
+        
+        for key, value in SelxImFilt.GetParameterMap()[i].items():
+            ParamMap.update({key : value})
+        
+        Dict.update({str(i) : ParamMap})
+    
+    return Dict
+
+
+
+
+
+
+
+def TxParamMapFromSelxImFilt_OLD(SelxImFilt, Dict=None):
+    """
+    Get a dictionary containing the transform parameter map from an Elastix
+    image filter.
     
     Inputs:
     ******
@@ -2638,6 +3329,178 @@ def TxParamMapFromSelxImFilt(SelxImFilt, Dict=None):
         Dict.update({key : value})
     
     return Dict
+
+
+
+
+
+def GetTxParamMapFromSelxImFilt(SelxImFilt):
+    """
+    Get a dictionary containing the transform parameter map(s) from an Elastix 
+    image filter.
+    
+    Inputs:
+    ******
+    
+    SelxImFilt : Elastix image filter
+        Elastix image transformation filter used to perform image registration.
+    
+    
+    Outputs:
+    *******
+    
+    Dict : dictionary
+        A dictionary containing the transform parameter values used in the 
+        Elastix image filter.  
+    
+    
+    Note:
+    ****
+    
+    The keys of Dict at the first level are integer strings that indicate the 
+    parameter map number, e.g. Dict['0'], Dict['1'], Dict['2'], etc.
+    
+    If there was only one transform parameter map, there will only be one key,
+    e.g. Dict['0'].
+    
+    Each first level key corresponds to a dictionary containing the transform
+    parameters for that transform parameter map, 
+    
+    e.g. Dict['0'] = {Param0 : value0,
+                      Param1 : value1,
+                      Param2 : value2,
+                      ...}
+    """
+    
+    Dict = {}
+    
+    for i in range(len(SelxImFilt.GetTransformParameterMap())):
+        ParamMap = {}
+        
+        for key, value in SelxImFilt.GetTransformParameterMap()[i].items():
+            ParamMap.update({key : value})
+        
+        Dict.update({str(i) : ParamMap})
+    
+    return Dict
+
+
+
+
+
+
+def GetParamOfFinalParamMapFromSelxImFilt(SelxImFilt, Param):
+    """
+    Get the parameter value(s) for a parameter of interest from the last  
+    parameter map of an Elastix image filter.
+    
+    Inputs:
+    ******
+    
+    SelxImFilt : Elastix image filter
+        Elastix image transformation filter used to perform image registration.
+    
+    Param : string
+        The key corresponding to the parameter of interest,
+        e.g. 'TransformParameters'; 'GridSize'; 'GridSpacing'.
+    
+    Outputs:
+    *******
+    
+    ParamVal : string or list of strings
+        The parameter value(s) of parameter Param for the final transform 
+        parameter map in SelxImFilt.
+    """
+    
+    # Get all transform parameter maps:
+    Dict = GetTxParamMapFromSelxImFilt(SelxImFilt)
+    
+    keys = list(Dict.keys())
+    last = keys[-1]
+    
+    ParamVal = list(Dict[last][Param])
+    
+    if len(ParamVal) == 1:
+        ParamVal = ParamVal[0]
+    
+    return ParamVal
+
+
+
+
+
+def GetParamFromSelxImFilt(SelxImFilt, ParamMapInd, Param):
+    """
+    Get the parameter value for a parameter of interest from a parameter 
+    map of interest of an Elastix image filter.
+    
+    Inputs:
+    ******
+    
+    SelxImFilt : Elastix image filter
+        Elastix image transformation filter used to perform image registration.
+    
+    ParamMapInd : integer
+        The index of the parameter map containing the parameter of interest.
+    
+    Param : string
+        The key corresponding to the parameter of interest,
+        e.g. 'TransformParameters'; 'GridSize'; 'GridSpacing'.
+    
+    Outputs:
+    *******
+    
+    ParamVal : string or list of strings or None
+        The parameter value(s) of parameter Param for the ParamMapInd^th 
+        transform parameter map in SelxImFilt.  The value None will be returned
+        if the required parameter does not exist in the chosen parameter map.
+    
+    
+    Note:
+    ****
+    
+    The keys of Dict at the first level are integer strings that indicate the 
+    parameter map number, e.g. Dict['0'], Dict['1'], Dict['2'], etc.
+    
+    If there was only one transform parameter map, there will only be one key,
+    e.g. Dict['0'].
+    
+    Each first level key corresponds to a dictionary containing the transform
+    parameters for that transform parameter map, 
+    
+    e.g. Dict['0'] = {Param0 : value0,
+                      Param1 : value1,
+                      Param2 : value2,
+                      ...}
+    
+    Hence, to get the parameter value for parameter key 'Param5' in the first
+    parameter map:
+        GetParamFromSelxImFilt(SelxImFilt, 0, 'Param5')
+        
+    To get the parameter value for parameter key 'Param5' in the last parameter
+    map:
+        GetParamFromSelxImFilt(SelxImFilt, -1, 'Param5')
+    
+    To get the parameter value for parameter key 'Param5' in the second last 
+    parameter map:
+        GetParamFromSelxImFilt(SelxImFilt, -2, 'Param5')
+    """
+    
+    # Get all transform parameter maps:
+    Dict = GetTxParamMapFromSelxImFilt(SelxImFilt)
+    
+    ParamMapKeys = list(Dict.keys())
+    ParamMapKey = ParamMapKeys[ParamMapInd]
+    
+    try:
+        ParamVal = list(Dict[ParamMapKey][Param])
+        
+        if len(ParamVal) == 1:
+            ParamVal = ParamVal[0]
+    except KeyError:
+        ParamVal = None
+    
+    return ParamVal
 
 
 
@@ -2962,7 +3825,13 @@ def GetTxMatrixType(TxParams, LogToConsole=False):
     2. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
     TransformParameters.0.txt.  M only includes the elements that describe 
     rotations, scaling and shearing, i.e not translations (hence only the
-    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxParams).
+    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxMatrix).
+    
+    TxMatrix has additional bottom row [0 0 0 1] (see 
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+    
+    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
+    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
     
     3. There are three types of Registration matrices as defined in C.X.1.1.2
     (page 27) in DICOM Standard Supplement 7.3:
@@ -3002,10 +3871,11 @@ def GetTxMatrixType(TxParams, LogToConsole=False):
                                                'TransformParameters')
     
     #inds = [0, 1, 2, 4, 5, 6, 8, 9, 10] # 06/05/21
-    inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 06/05/21
+    #inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 06/05/21
 
     #M = np.array([TxParams[i] for i in inds]) # 06/05/21
-    M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
+    #M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
+    M = np.array([float(TxParams[i]) for i in range(9)]) # 07/05/21
     
     M = np.reshape(M, (3, 3))
     
@@ -3072,6 +3942,228 @@ def CompareSelxParameterMaps(SelxImFilt0, SelxImFilt1, DiffsOnly=True):
                 print(f"{ParamMap0[key1]} v {ParamMap1[key1]}")
 
     return
+
+
+
+
+
+def CreateSelxImFiltFromDro(Dro, FixIm, MovIm, TxMatrix, Transform, LogToConsole):
+    """
+    Create a SimpleElastix image filter from a DRO.
+    
+    list of elements that make up the
+    transform matrix.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image
+        The 3D image whose grid is to be transformed to.
+    
+    TxMatrix : list of float strings
+        List of float strings representing the transformation that maps the
+        moving (Source) image to the fixed (Target) image (e.g. as parsed from
+        the FrameOfReferenceTransformationMatrix of a DRO).
+    
+    SitkTransform : SimpleITK Transform
+        The transform (e.g. image registration transform) that maps Im to TrgIm.
+    
+        
+    Outputs:
+    *******
+    
+    SitkTransform : SimpleITK transform
+        The 3D transformed image.
+    
+    
+    Note:
+    ****
+    
+    TxMatrix has additional bottom row [0 0 0 1] (see 
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+    
+    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
+    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+    """
+    
+    import SimpleITK as sitk
+    
+    mod = Dro.Modality
+    
+    if mod != 'REG':
+        msg = "The DRO does not have Modality 'REG'. Modality is {mod}."
+        raise Exception(msg)
+    
+    
+    """ The indices of the elements in TxMatrix that relate to TxParams: """
+    inds = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
+    
+    """ Initiate ElastixImageFilter: """
+    SelxImFilt = sitk.ElastixImageFilter()
+    if LogToConsole:
+        SelxImFilt.LogToConsoleOn() # no output in Jupyter
+    else:
+        SelxImFilt.LogToConsoleOff() 
+    SelxImFilt.LogToFileOn() # output's elastix.log ONLY ONCE per kernel in Jupyter
+    
+    SelxImFilt.SetFixedImage(FixIm)
+    SelxImFilt.SetMovingImage(MovIm)
+    
+    """ Initialise the parameter map. """
+    ParamMap = sitk.VectorOfParameterMap()
+    
+    if 'Deformable' in Dro.SOPClassUID:
+        """ Get the pre-deformation FOR transformation matrix and matrix type. 
+        
+        Note:
+            The DRO contains two sequences in DeformableRegistrationSequence
+            - the first relates to the fixed image series, the second to the 
+            moving image series. It is the latter sequence that contains 
+            PreDeformationMatrixRegistrationSequence, 
+            PostDeformationMatrixRegistrationSequence, and
+            DeformableRegistrationGridSequence.
+        """
+        PreDefTxMatrixType = Dro.DeformableRegistrationSequence[1]\
+                                .PreDeformationMatrixRegistrationSequence[0]\
+                                .FrameOfReferenceTransformationMatrixType\
+                                .lower()
+        
+        PreDefTxMatrix = Dro.DeformableRegistrationSequence[1]\
+                            .PreDeformationMatrixRegistrationSequence[0]\
+                            .FrameOfReferenceTransformationMatrix
+        
+        """ If the matrix type is 'rigid' determine if the matrix is not the
+        identity matrix. """
+        if PreDefTxMatrixType == 'rigid':
+            from GeneralTools import AreListsEqualToWithinEpsilon
+            
+            IdentityMatrix = [1.0, 0.0, 0.0, 0.0, 
+                              0.0, 1.0, 0.0, 0.0, 
+                              0.0, 0.0, 1.0, 0.0, 
+                              0.0, 0.0, 0.0, 1.0]
+            
+            matrix = [float(item) for item in PreDefTxMatrix]
+
+            if AreListsEqualToWithinEpsilon(matrix, IdentityMatrix):
+                """ There's no need to apply the pre-deformation matrix. """
+                PreDefTxMatrix = None
+            else:
+                PreDefTxParams = [PreDefTxMatrix[i] for i in inds]
+                
+        elif PreDefTxMatrixType == 'rigid_scale':
+            """ Need to deal with this case. """
+        
+        
+        """ Get the post-deformation FOR transformation matrix and matrix type. 
+        """
+        PostDefTxMatrixType = Dro.DeformableRegistrationSequence[1]\
+                                 .PostDeformationMatrixRegistrationSequence[0]\
+                                 .FrameOfReferenceTransformationMatrixType\
+                                 .lower()
+        
+        PostDefTxMatrix = Dro.DeformableRegistrationSequence[1]\
+                             .PostDeformationMatrixRegistrationSequence[0]\
+                             .FrameOfReferenceTransformationMatrix
+        
+        """ If the matrix type is 'rigid' determine if the matrix is not the
+        identity matrix. """
+        if PostDefTxMatrixType == 'rigid':
+            from GeneralTools import AreListsEqualToWithinEpsilon
+            
+            IdentityMatrix = [1.0, 0.0, 0.0, 0.0, 
+                              0.0, 1.0, 0.0, 0.0, 
+                              0.0, 0.0, 1.0, 0.0, 
+                              0.0, 0.0, 0.0, 1.0]
+            
+            matrix = [float(item) for item in PreDefTxMatrix]
+
+            if AreListsEqualToWithinEpsilon(matrix, IdentityMatrix):
+                """ There's no need to apply the pre-deformation matrix. """
+                PostDefTxMatrix = None
+            else:
+                PostDefTxParams = [PostDefTxMatrix[i] for i in inds]
+                
+        elif PostDefTxMatrixType == 'rigid_scale':
+            """ Need to deal with this case. """
+        
+        
+        """ Get the grid origin, direction, dimensions and resolution, and 
+        transform parameters from DeformableRegistrationGridSequence. """
+        GridOrig = Dro.DeformableRegistrationSequence[1]\
+                      .DeformableRegistrationGridSequence[0]\
+                      .ImagePositionPatient
+        
+        GridDir = Dro.DeformableRegistrationSequence[1]\
+                     .DeformableRegistrationGridSequence[0]\
+                     .ImageOrientationPatient
+        
+        GridDims = Dro.DeformableRegistrationSequence[1]\
+                      .DeformableRegistrationGridSequence[0]\
+                      .GridDimensions
+        
+        GridRes = Dro.DeformableRegistrationSequence[1]\
+                     .DeformableRegistrationGridSequence[0]\
+                     .GridResolution
+        
+        DefTxParams = Dro.DeformableRegistrationSequence[1]\
+                         .DeformableRegistrationGridSequence[0]\
+                         .VectorGridData
+        
+        
+        """ Add to the parameter map. """
+        if PreDefTxMatrix:
+            """ Note: 
+                Need to deal with case PreDefTxMatrixType = 'rigid_scale'. 
+            """
+            ParamMap.append(sitk.GetDefaultParameterMap(PreDefTxMatrixType))
+        
+        ParamMap.append(sitk.GetDefaultParameterMap('bspline'))
+        
+        if PostDefTxMatrix:
+            """ Note: 
+                Need to deal with case PostDefTxMatrixType = 'rigid_scale'. 
+            """
+            ParamMap.append(sitk.GetDefaultParameterMap(PostDefTxMatrixType))
+        
+            
+    
+
+    else:
+        """ Get the FOR transformation matrix and matrix type. 
+        
+        Note:
+            The DRO contains two sequences in RegistrationSequence - the first
+            relates to the fixed image series, the second to the moving image 
+            series. It is the latter sequence that contains the matrix and 
+            matrix type of interest.
+        """
+        TxMatrixType = Dro.RegistrationSequence[1]\
+                          .MatrixRegistrationSequence[0]\
+                          .MatrixSequence[0]\
+                          .FrameOfReferenceTransformationMatrixType\
+                          .lower()
+        
+        TxMatrix = Dro.RegistrationSequence[1]\
+                      .MatrixRegistrationSequence[0]\
+                      .MatrixSequence[0]\
+                      .FrameOfReferenceTransformationMatrix
+        
+        """ Add to the parameter map.
+        Note: 
+            Need to deal with case PreDefTxMatrixType = 'rigid_scale'. 
+        """
+        ParamMap.append(sitk.GetDefaultParameterMap(TxMatrixType))
+    
+    
+    ParamMap['HowToCombineTransforms'] = ['Compose']
+    
+    
+    #if 
+    
+    
+    return SelxImFilt
+
+
 
 
 
@@ -3412,7 +4504,7 @@ def AlignImagesUsingLandmarks(FixIm, MovIm,
                               MovFidsFpath='moving_fiducials.txt',
                               FlipK=False):
     """
-    Return the landmark-based aligned image and tranform based on fiducials.
+    Return the landmark-based aligned image and transform based on fiducials.
     
     Inputs:
     ******
@@ -3510,10 +4602,14 @@ def AlignImagesUsingLandmarks(FixIm, MovIm,
     FixPts = [c for p in FixFids for c in p]
     MovPts = [c for p in MovFids for c in p]
     
-    Tx = sitk.LandmarkBasedTransformInitializer(sitk.VersorRigid3DTransform(), 
+    dim = FixIm.GetDimension()
+    
+    #Tx = sitk.LandmarkBasedTransformInitializer(sitk.VersorRigid3DTransform(), 
+    #                                            FixPts, MovPts)
+    Tx = sitk.LandmarkBasedTransformInitializer(sitk.AffineTransform(dim), 
                                                 FixPts, MovPts)
     
-    print(f'Landmark-based initial transformation is: \n {Tx.GetParameters()}')
+    print(f'Landmark-based initial transformation is:\n {Tx.GetParameters()}\n')
     
     AlignedIm = sitk.Resample(MovIm, FixIm, Tx, sitk.sitkLinear, 0.0, 
                               MovIm.GetPixelID())
@@ -3637,8 +4733,8 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     
     InitMethod : string (optional; 'moments' by default)
         The method used for initialisation.  Acceptable inputs include:
-            - 'geometry'
-            - 'moments'
+            - 'geometry' (or 'geometricalcenter')
+            - 'moments' (or 'centerofgravity')
             - 'landmarks'
     
     FinalInterp : string (optional; 'Linear' by default)
@@ -3688,6 +4784,7 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     
     import SimpleITK as sitk
     import time
+    import winsound
     
     #import matplotlib.pyplot as plt
     from ipywidgets import interact, fixed
@@ -3778,10 +4875,11 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
               + "accepted inputs: 'rigid', 'affine', or 'bspline'."
         raise Exception(msg)
     
-    if not InitMethod in ['geometry', 'moments', 'landmarks']:
+    if not InitMethod in ['geometry', 'geometricalcenter', 'moments', 
+                          'centerofgravity', 'landmarks']:
         msg = f"The chosen initialisation method (InitMethod), {InitMethod}, "\
-              "is not one of the accepted inputs: 'geometry', 'moments', or "\
-              + "'landmarks'."
+              + "is not one of the accepted inputs: 'geometry'/'geometricalcenter',"\
+              + "  'moments'/'centerofgravity', or 'landmarks'."
         raise Exception(msg)
         
     if not FinalInterp in ['Linear', 'NearestNeighbor']:
@@ -3790,9 +4888,9 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
         raise Exception(msg)
     
     
-    if InitMethod == 'geometry':
+    if InitMethod in ['geometry', 'geometricalcenter']:
         CTIF = sitk.CenteredTransformInitializerFilter.GEOMETRY
-    elif InitMethod == 'moments':
+    elif InitMethod in ['moments', 'centerofgravity']:
         CTIF = sitk.CenteredTransformInitializerFilter.MOMENTS
     
     
@@ -3898,6 +4996,7 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
                                                transformDomainMeshSize=MeshSize, 
                                                order=3)
     
+    
     #ResMovIm = sitk.Resample(MovIm, FixIm, InitialTx, sitk.sitkLinear, 0.0, 
     #                         MovIm.GetPixelID())
     #
@@ -3995,8 +5094,7 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     
     
         
-    """ Connect all of the observers so that we can perform plotting during 
-    registration. """
+    # Connect all of the observers for plotting during registration:
     RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
     RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
     RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, UpdateMultiresIterations) 
@@ -4009,9 +5107,17 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     FinalTx = RegMethod.Execute(FixIm, MovIm)
     
     """ Post registration analysis. """
+    print("-------")
+    print('InitialTx:')
+    print(InitialTx)
+    print("-------")
+    print("-------")
+    print('FinalTx:')
+    print(FinalTx)
+    print("-------")
     print(f'Final metric value: {RegMethod.GetMetricValue()}')
-    print('Optimizer\'s stopping condition,',
-          f'{RegMethod.GetOptimizerStopConditionDescription()}')
+    print(f"Optimizer stopping condition: {RegMethod.GetOptimizerStopConditionDescription()}")
+    #print(f"Final Iteration: {RegMethod.GetOptimizerIteration()}")
     
     RegIm = sitk.Resample(MovIm, FixIm, FinalTx, finalinterp, 0.0, 
                           MovIm.GetPixelID())
@@ -4044,10 +5150,743 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
                                'GridOrigin' : tuple([str(item) for item in FinalTx.GetFixedParameters()[6:9]]),
                                """
                                'GridDirection' : tuple([str(item) for item in FinalTx.GetFixedParameters()[9:]])})
-        
-
+    
+    frequency = 2500  # Hz
+    duration = 1500  # ms
+    winsound.Beep(frequency, duration)
     
     return RegIm, FinalTx
+
+
+
+
+def command_iteration(method):
+    print(f"{method.GetOptimizerIteration():3} = {method.GetMetricValue():10.5f}")
+    print("\t#: ", len(method.GetOptimizerPosition()))
+
+
+def command_multi_iteration(method):
+    print("--------- Resolution Changing ---------")
+
+
+
+
+def SitkAffineReg(FixIm, MovIm, InitMethod='moments',
+                  FixFidsFpath='fixed_fiducials.txt', 
+                  MovFidsFpath='moving_fiducials.txt', 
+                  FlipK=False, LogToConsole=False):
+    """
+    Register two 3D SimpleITK images using SimpleITK.
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+        
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+    
+    InitMethod : string (optional; 'moments' by default)
+        The method used for initialisation.  Acceptable inputs include:
+            - 'geometry' (or 'geometricalcenter')
+            - 'moments' (or 'centerofgravity')
+            - 'landmarks'
+    
+    FinalInterp : string (optional; 'Linear' by default)
+        The type of final interpolation to be applied.  Acceptable inputs
+        include:
+            - 'Linear'
+            - 'NearestNeighbor'
+    
+    FixFidsFpath : string (optional; 'fixed_fiducials.txt' by default)
+        The file path (or file name if the file is present in the current 
+        working directory) of the text file containing fiducials for FixIm. 
+        The string need not contain the .txt extension. This argument is only
+        relevant if InitMethod = 'landmarks'.
+    
+    MovFidsFpath : string (optional; 'moving_fiducials.txt' by default)
+        The file path (or file name if the file is present in the current 
+        working directory) of the text file containing fiducials for MovIm. 
+        The string need not contain the .txt extension. This argument is only
+        relevant if InitMethod = 'landmarks'.
+    
+    FlipK : boolean (optional; False by default)
+        Set to True if the fiducials specified in FixFidsFpath and MovFidsFpath
+        are indices obtained from ImageJ. This argument is only relevant if 
+        InitMethod = 'landmarks'.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Outputs:
+    *******
+    
+    RegIm : SimpleITK image
+        The 3D registered image.
+        
+    FinalTx : SimpleITK transform
+        The final transform used to register/transform MovIm to FixIm.
+        
+    
+    Notes:
+    *****
+    
+    https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
+    
+    https://simpleitk.readthedocs.io/en/master/link_ImageRegistrationMethodBSpline3_docs.html
+    """
+    
+    import SimpleITK as sitk
+    import time
+    import winsound
+    
+    #import matplotlib.pyplot as plt
+    from ipywidgets import interact, fixed
+    #from IPython.display import clear_output
+    
+    if not InitMethod in ['geometry', 'geometricalcenter', 'moments', 
+                          'centerofgravity', 'landmarks']:
+        msg = f"The chosen initialisation method (InitMethod), {InitMethod}, "\
+              + "is not one of the accepted inputs: 'geometry'/'geometricalcenter',"\
+              + "  'moments'/'centerofgravity', or 'landmarks'."
+        raise Exception(msg)
+    
+    if InitMethod in ['geometry', 'geometricalcenter']:
+        CTIF = sitk.CenteredTransformInitializerFilter.GEOMETRY
+    elif InitMethod in ['moments', 'centerofgravity']:
+        CTIF = sitk.CenteredTransformInitializerFilter.MOMENTS
+    
+    #SamplingPercentage = 0.01
+    SamplingPercentage = 0.05
+    
+    LearningRate = 1.0
+    #LearningRate = 5.0
+    
+    SitkTx = sitk.AffineTransform(FixIm.GetDimension())
+    
+    """ Initial alignment. """   
+    if InitMethod == 'landmarks':
+        #InitialTx = sitk.LandmarkBasedTransformInitializer(sitk.VersorRigid3DTransform(), 
+        #                                                   FixPts_flat, 
+        #                                                   MovPts_flat)
+        
+        #print(f'FixFidsFpath = {FixFidsFpath}')
+        #print(f'MovFidsFpath = {MovFidsFpath}')
+        #print(f'ImageJinds = {ImageJinds}')
+        
+        AlignedIm, InitialTx = AlignImagesUsingLandmarks(FixIm, MovIm, 
+                                                         FixFidsFpath, 
+                                                         MovFidsFpath,
+                                                         FlipK)
+    else:
+        InitialTx = sitk.CenteredTransformInitializer(FixIm, MovIm,
+                                                      SitkTx, CTIF)
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    """ Registration. """
+    RegMethod = sitk.ImageRegistrationMethod()
+    
+    RegMethod.SetInitialTransform(InitialTx, inPlace=False)
+
+    """ Similarity metric settings. """
+    RegMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
+    #RegMethod.SetMetricAsJointHistogramMutualInformation()
+    RegMethod.SetMetricSamplingStrategy(RegMethod.RANDOM)
+    RegMethod.SetMetricSamplingPercentage(SamplingPercentage)
+    
+    """ Setup for the multi-resolution framework. """
+    ShrinkFactors = [4,2,1]
+    SmoothingSigmas = [2,1,1]
+    
+    RegMethod.SetShrinkFactorsPerLevel(shrinkFactors=ShrinkFactors)
+    RegMethod.SetSmoothingSigmasPerLevel(smoothingSigmas=SmoothingSigmas)
+    RegMethod.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+    
+    """ Interpolator settings. """
+    RegMethod.SetInterpolator(sitk.sitkLinear)
+    
+    """ Optimizer settings. """
+    #RegMethod.SetOptimizerAsGradientDescent(learningRate=LearningRate, 
+    #                                        numberOfIterations=500, 
+    #                                        convergenceMinimumValue=1e-6, 
+    #                                        convergenceWindowSize=10)
+    RegMethod.SetOptimizerAsGradientDescent(learningRate=LearningRate, 
+                                            numberOfIterations=500, 
+                                            estimateLearningRate=RegMethod.Once)
+    #RegMethod.SetOptimizerAsGradientDescentLineSearch(learningRate=LearningRate, 
+    #                                                  numberOfIterations=100,
+    #                                                  convergenceMinimumValue=1e-4,
+    #                                                  #convergenceMinimumValue=1e-6,
+    #                                                  convergenceWindowSize=5)
+    RegMethod.SetOptimizerScalesFromPhysicalShift()
+    
+    
+    
+    # Connect all of the observers for plotting during registration:
+    RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+    RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+    RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, UpdateMultiresIterations) 
+    RegMethod.AddCommand(sitk.sitkIterationEvent, lambda: PlotValues(RegMethod))
+    
+    #FinalTx = RegMethod.Execute(sitk.Cast(FixIm, sitk.sitkFloat32), 
+    #                            sitk.Cast(MovIm, sitk.sitkFloat32))
+    """ 28/04/21: Should the MovIm be registered or AlignedIm 
+    (for InitMethod = 'landmarks')? """
+    FinalTx = RegMethod.Execute(FixIm, MovIm)
+    
+    """ Post registration analysis. """
+    print("-------")
+    print('InitialTx:')
+    print(InitialTx)
+    print("-------")
+    print("-------")
+    print('FinalTx:')
+    print(FinalTx)
+    print("-------")
+    print(f'Final metric value: {RegMethod.GetMetricValue()}')
+    print(f"Optimizer stopping condition: {RegMethod.GetOptimizerStopConditionDescription()}")
+    #print(f"Final Iteration: {RegMethod.GetOptimizerIteration()}")
+    
+    RegIm = sitk.Resample(MovIm, FixIm, FinalTx, sitk.sitkLinear, 0.0, 
+                          MovIm.GetPixelID())
+    
+    if False:
+        interact(PlotBlendedImage, Ind=(0,FixIm.GetSize()[2] - 1), 
+                 alpha=(0.0,1.0,0.05), FixIm=fixed(FixIm), ResIm=fixed(RegIm));
+
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    if True:#LogToConsole:
+        print(f'*Took {Dtime} s to perform image registration.\n')
+    
+    
+    """ Create a dictionary to store the Parameters and FixedParameters, 
+    similar to the TxParamMapDict returned with RegisterImagesSelx: """
+    TxParamsStr = tuple([str(item) for item in FinalTx.GetParameters()])
+    
+    TxParamMapDict = {'Transform' : ('Affine',),
+                      'NumberOfParameters' : (f'{len(FinalTx.GetParameters())}'),
+                      'TransformParameters' : TxParamsStr}
+    
+    frequency = 2500  # Hz
+    duration = 1500  # ms
+    winsound.Beep(frequency, duration)
+    
+    return RegIm, FinalTx, TxParamMapDict
+
+
+
+
+
+def SitkBsplineReg(FixIm, MovIm, NumControlPts=8, LearningRate=5.0, 
+                   NumIters=100, LogToConsole=False):
+    """ Best result from 14/05/21 achieved in 
+    20210423_Bspline_registrations.ipynb
+    """
+    import SimpleITK as sitk
+    import time
+    import winsound
+    
+    # Print simple metric values to console or plot of metric value v iteration?
+    PlotToConsole = False # simple
+    PlotToConsole = True
+    
+    #def command_iteration(method):
+    #    print(f"{method.GetOptimizerIteration():3} = {method.GetMetricValue():10.5f}")
+    #    print("\t#: ", len(method.GetOptimizerPosition()))
+    #
+    #def command_multi_iteration(method):
+    #    print("--------- Resolution Changing ---------")
+    
+    
+    #SamplingPercentage = 0.01
+    SamplingPercentage = 0.05
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+        
+    #MeshSize = [8] * MovIm.GetDimension()
+    MeshSize = [NumControlPts] * MovIm.GetDimension()
+    
+    InitialTx = sitk.BSplineTransformInitializer(image1=FixIm,
+                                                 transformDomainMeshSize=MeshSize)
+    
+    #print("Initial Parameters:")
+    #print(InitialITx.GetParameters())
+    
+    RegMethod = sitk.ImageRegistrationMethod()
+    
+    RegMethod.SetInitialTransform(InitialTx, True)
+    
+    RegMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
+    """ Change to original method: """
+    RegMethod.SetMetricSamplingStrategy(RegMethod.RANDOM)
+    RegMethod.SetMetricSamplingPercentage(SamplingPercentage)
+    
+    RegMethod.SetOptimizerAsGradientDescentLineSearch(learningRate=LearningRate, 
+                                                      numberOfIterations=NumIters,
+                                                      convergenceMinimumValue=1e-4,
+                                                      convergenceWindowSize=5)
+    RegMethod.SetOptimizerScalesFromPhysicalShift()
+    
+    RegMethod.SetInterpolator(sitk.sitkLinear)
+    
+    RegMethod.SetShrinkFactorsPerLevel([6, 2, 1])
+    RegMethod.SetSmoothingSigmasPerLevel([6, 2, 1])
+    
+    if True:#LogToConsole:
+        if PlotToConsole:
+            # Connect all of the observers so that we can perform plotting  
+            # during registration.
+            RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+            RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, UpdateMultiresIterations) 
+            RegMethod.AddCommand(sitk.sitkIterationEvent, lambda: PlotValues(RegMethod))
+        else:
+            RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                                 lambda: command_iteration(RegMethod))
+            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                                 lambda: command_multi_iteration(RegMethod))
+    
+    FinalTx = RegMethod.Execute(FixIm, MovIm)
+    
+    """ Post registration analysis. """
+    if LogToConsole:
+        print("-------")
+        print('InitialTx:')
+        print(InitialTx)
+        print("-------")
+        print("-------")
+        print('FinalTx:')
+        print(FinalTx)
+        print("-------")
+        print(f'Final metric value: {RegMethod.GetMetricValue()}')
+        print("Optimizer stop condition:", 
+              f"{RegMethod.GetOptimizerStopConditionDescription()}")
+        #print(f"Final Iteration: {RegMethod.GetOptimizerIteration()}")
+    
+    
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(FixIm)
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetDefaultPixelValue(0.0)
+    resampler.SetTransform(FinalTx)
+    
+    RegIm = resampler.Execute(MovIm)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    Dtime_min = round(Dtime/60, 1)
+    print(f'*Took {Dtime} s ({Dtime_min} min) to perform image registration.\n')
+    
+    # Convert FinalTx from sitk Transform to sitk BSplineTransform:
+    FinalTx = sitk.BSplineTransform(FinalTx)
+    
+    frequency = 2500  # Hz
+    duration = 1500  # ms
+    winsound.Beep(frequency, duration)
+    
+    # Took 2283 s = 38 min at iteration 18 (all samples)
+    # Took 118.6 s = 2 min (1% samples)
+    # Took 214 s = 3.6 min (5% samples)
+    
+    return RegIm, RegMethod, InitialTx, FinalTx
+
+
+
+
+
+def GetFiducialsWithinImExtents(FixIm, FixFids, MovIm, MovFids, xtra=0):
+    """
+    Return the fixed and moving fiducials which lie within the image extents
+    and do not lie on the boundary.  The fiducials must be indices (not points).
+    
+    Inputs:
+    ******
+    
+    FixIm : SimpleITK image 
+        The 3D image that MovIm will be registered to.
+    
+    FixFids : list of a list of integers
+        A list (for each fiducial) of a list of [i, j, k] indices for FixIm.
+    
+    MovIm : SimpleITK image
+        The 3D image that will be registered to FixIm.
+    
+    MovFids : list of a list of integers
+        A list (for each fiducial) of a list of [i, j, k] indices for MovIm.
+    
+    xtra : integer (optional; 0 by default)
+        Rather than eliminating all fiducials at or beyond the boundary, also
+        filter out any fiducials that lie within xtra pixels of any boundary.
+    
+    
+    Outputs:
+    *******
+    
+    FixFids : list of a list of integers
+        A list (for each fiducial) of a list of [i, j, k] indices for FixIm.
+    
+    MovFids : list of a list of integers
+        A list (for each fiducial) of a list of [i, j, k] indices for MovIm.
+    
+    inds : list of integers
+        A list of indices of the original fiducials that lie within both image
+        boundaries.
+    
+    
+    Note:
+    *****
+    
+    For BSpline Transforms it's not enough for the points to lie within the    
+    extent of the image - they also must not lie on the boundary:
+
+    https://itk.org/pipermail/insight-users/2012-June/044975.html
+    """
+    
+    I_f, J_f, K_f = FixIm.GetSize()
+    I_m, J_m, K_m = MovIm.GetSize()
+    
+    # Store the indices of the fiducials that do not lie on any boundary of 
+    # either image:
+    inds = []
+    
+    for n in range(len(FixFids)):
+        i_f, j_f, k_f = FixFids[n]
+        i_m, j_m, k_m = MovFids[n]
+        
+        # The n^th fiducial lies within the boundaries of both images if all of
+        # the following are True:
+        t0 = i_f > 0 + xtra
+        t1 = i_f < I_f - 1 - xtra
+        t2 = j_f > 0 + xtra
+        t3 = j_f < J_f - 1 - xtra
+        t2 = k_f > 0 + xtra
+        t3 = k_f < K_f - 1 - xtra
+        t4 = i_m > 0 + xtra
+        t5 = i_m < I_m - 1 - xtra
+        t6 = j_m > 0 + xtra
+        t7 = j_m < J_m - 1 - xtra
+        t8 = k_m > 0 + xtra
+        t9 = k_m < K_m - 1 - xtra
+        
+        if t0 & t1 & t2 & t3 & t4 & t5 & t6 & t7 & t8 & t9:
+            inds.append(n)
+        
+    FixFids = [FixFids[i] for i in inds]
+    MovFids = [MovFids[i] for i in inds]
+    
+    return FixFids, MovFids, inds
+
+
+    
+
+def SitkBsplineRegWithFiducials_OLD(FixIm, MovIm, NumControlPts=8, 
+                                FixFidsFpath='fixed_fiducials.txt', 
+                                MovFidsFpath='moving_fiducials.txt', 
+                                NumIters=100, LogToConsole=False):
+    """ Best result from 14/05/21 achieved in 
+    20210423_Bspline_registrations.ipynb
+    
+    NOTE:
+        This doesn't work because the initialisation using a deformable
+        LandmarkBasedTransformInitializer produces a bizarre result.
+    """
+    import SimpleITK as sitk
+    import time
+    import winsound
+    
+    # Print simple metric values to console or plot of metric value v iteration?
+    PlotToConsole = False # simple
+    PlotToConsole = True
+    
+    
+    OrigFixFids, FixFidType = ImportFiducialsFromTxt(FixFidsFpath)
+
+    OrigMovFids, MovFidType = ImportFiducialsFromTxt(MovFidsFpath)
+    
+    print('Fixed fiducials:\n', OrigFixFids, '\n')
+    print('Moving fiducials:\n', OrigMovFids, '\n')
+    
+    """ For BSpline Transforms it's not enough for the points to lie within the
+    extent of the image - they also must not lie on the boundary:
+    https://itk.org/pipermail/insight-users/2012-June/044975.html
+    
+    So eliminate all fiducial pairs for which one or both fiducials lie on any
+    boundary in the corresponding image.
+    """
+    xtra = 0 # exclude fiducials on any boundary
+    xtra = 3 # extend exclusion to 3 pixels from boundary
+    xtra = 1 # extend exclusion to 1 pixel from boundary
+    
+    FixFids, MovFids,\
+    inds = GetFiducialsWithinImExtents(FixIm, OrigFixFids, MovIm, OrigMovFids,
+                                       xtra)
+    
+    if len(FixFids) < len(OrigFixFids):
+        import GeneralTools
+        import importlib
+        importlib.reload(GeneralTools)
+        from GeneralTools import xor
+        
+        allinds = list(range(len(OrigFixFids)))
+        
+        xorinds = xor(allinds, inds)
+        
+        print('Fixed fiducials that lie within FixIm:\n', FixFids, '\n')
+        print('Moving fiducials that lie within MovIm:\n', MovFids, '\n')
+        print('Eliminated Fixed fiducials:\n', 
+              [OrigFixFids[i] for i in xorinds], '\n')
+        print('Eliminated Moving fiducials:\n', 
+              [OrigMovFids[i] for i in xorinds], '\n')
+    
+    if FixFidType == 'index':
+        FixFids = [FixIm.TransformIndexToPhysicalPoint(ind) for ind in FixFids]
+
+    if MovFidType == 'index':
+        MovFids = [MovIm.TransformIndexToPhysicalPoint(ind) for ind in MovFids]
+    
+    #print(f'Fixed fiducials: \n {FixFids}\n')
+    #print(f'Moving fiducials: \n {MovFids}\n')
+    
+    """ Flatten the list of points """
+    FixPts = [c for p in FixFids for c in p]
+    MovPts = [c for p in MovFids for c in p]
+    
+    
+    if False:
+        InitialTx = sitk.LandmarkBasedTransformInitializer(transform=sitk.VersorRigid3DTransform(),
+                                                           fixedLandmarks=FixPts, 
+                                                           movingLandmarks=MovPts)
+    
+    if False:
+        dim = FixIm.GetDimension()
+        
+        InitialTx = sitk.LandmarkBasedTransformInitializer(transform=sitk.BSplineTransform(dim),
+                                                           fixedLandmarks=FixPts, 
+                                                           movingLandmarks=MovPts,
+                                                           referenceImage=FixIm,
+                                                           numberOfControlPoints=NumControlPts)
+                                                           #BSplineNumberOfControlPoints=NumControlPts)
+        """ Shouldn't be using BSplineTransform unless objective is to elastically
+        deform the image using the fiducials! """
+        
+    if True:
+        # https://github.com/SimpleITK/SimpleITK/issues/197
+        MeshSize = [NumControlPts] * MovIm.GetDimension()
+    
+        InitTx = sitk.BSplineTransformInitializer(image1=FixIm,
+                                                  transformDomainMeshSize=MeshSize)
+        
+        LandmarkTx = sitk.LandmarkBasedTransformInitializerFilter()
+        LandmarkTx.SetFixedLandmarks(FixPts)
+        LandmarkTx.SetMovingLandmarks(MovPts)
+        LandmarkTx.SetBSplineNumberOfControlPoints(NumControlPts)
+        LandmarkTx.SetReferenceImage(FixIm)
+        InitialTx = LandmarkTx.Execute(InitTx)
+    
+    
+    """ 24/05/21: It seems that despite setting the number of control points
+    for LandmarkTx, that info isn't preserved during the call
+        InitialTx = LandmarkTx.Execute(InitTx)
+        
+    and InitialTx ends up with a TransformDomainMeshSize of [20, 20, 20]
+    (which is odd given that the default number of control points when
+    calling LandmarkBasedTransformInitializerFilter() is 4).
+    
+    So need to re-set the mesh size for InitialTx, but in order to do that,
+    need to convert InitialTx from Transform to BSplineTransform.
+    """
+    InitialTx = sitk.BSplineTransform(InitialTx)
+    InitialTx.SetTransformDomainMeshSize(MeshSize)
+    
+    print(f'type(InitTx) = {type(InitTx)}')
+    print(f'type(LandmarkTx) = {type(LandmarkTx)}')
+    print(f'type(InitialTx) = {type(InitialTx)}')
+    print('InitialTx:\n')
+    print(InitialTx, '\n')
+    
+    #SamplingPercentage = 0.01
+    SamplingPercentage = 0.05
+    
+    LearningRate = 5.0 # Took 4424.5 s (73.7 min)
+    LearningRate = 50.0 # Took 5004.0 s (83.4 min) 
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+        
+    ##MeshSize = [8] * MovIm.GetDimension()
+    #MeshSize = [NumControlPts] * MovIm.GetDimension()
+    #
+    #InitialTx = sitk.BSplineTransformInitializer(image1=FixIm,
+    #                                             transformDomainMeshSize=MeshSize)
+    
+    #print("Initial Parameters:")
+    #print(InitialITx.GetParameters())
+    
+    RegMethod = sitk.ImageRegistrationMethod()
+    
+    RegMethod.SetInitialTransform(InitialTx, True)
+    
+    RegMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
+    """ Change to original method: """
+    RegMethod.SetMetricSamplingStrategy(RegMethod.RANDOM)
+    RegMethod.SetMetricSamplingPercentage(SamplingPercentage)
+    
+    RegMethod.SetOptimizerAsGradientDescentLineSearch(learningRate=LearningRate, 
+                                                      numberOfIterations=NumIters,
+                                                      convergenceMinimumValue=1e-4,
+                                                      convergenceWindowSize=5)
+    
+    RegMethod.SetOptimizerScalesFromPhysicalShift()
+    
+    RegMethod.SetInterpolator(sitk.sitkLinear)
+    
+    RegMethod.SetShrinkFactorsPerLevel([6, 2, 1])
+    RegMethod.SetSmoothingSigmasPerLevel([6, 2, 1])
+    
+    if True:#LogToConsole:
+        if PlotToConsole:
+            # Connect all of the observers so that we can perform plotting  
+            # during registration.
+            RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+            RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, UpdateMultiresIterations) 
+            RegMethod.AddCommand(sitk.sitkIterationEvent, lambda: PlotValues(RegMethod))
+        else:
+            RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                                 lambda: command_iteration(RegMethod))
+            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                                 lambda: command_multi_iteration(RegMethod))
+    
+    FinalTx = RegMethod.Execute(FixIm, MovIm)
+    
+    """ Post registration analysis. """
+    print("-------")
+    print('InitialTx:')
+    print(InitialTx)
+    print("-------")
+    print("-------")
+    print('FinalTx:')
+    print(FinalTx)
+    print("-------")
+    print(f'Final metric value: {RegMethod.GetMetricValue()}')
+    print(f"Optimizer stop condition: {RegMethod.GetOptimizerStopConditionDescription()}")
+    #print(f"Final Iteration: {RegMethod.GetOptimizerIteration()}")
+    
+    
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(FixIm)
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetDefaultPixelValue(0.0)
+    resampler.SetTransform(FinalTx)
+    
+    RegIm = resampler.Execute(MovIm)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 1)
+    Dtime_min = round(Dtime/60, 1)
+    print(f'*Took {Dtime} s ({Dtime_min} min) to perform image registration.\n')
+    
+    # Convert FinalTx from sitk Transform to sitk BSplineTransform:
+    #FinalTx = sitk.BSplineTransform(FinalTx)
+    
+    frequency = 2500  # Hz
+    duration = 1500  # ms
+    winsound.Beep(frequency, duration)
+    
+    # Took 2283 s = 38 min at iteration 18 (all samples)
+    # Took 118.6 s = 2 min (1% samples)
+    # Took 214 s = 3.6 min (5% samples)
+    
+    return RegIm, RegMethod, InitialTx, FinalTx
+
+
+
+
+
+
+def SitkBsplineRegWithFiducials(FixIm, MovIm, NumControlPts=8, 
+                                LearningRate=5.0, NumIters=100, 
+                                FixFidsFpath='fixed_fiducials.txt', 
+                                MovFidsFpath='moving_fiducials.txt', 
+                                LogToConsole=False):
+    """ Best result from 14/05/21 achieved in 
+    20210423_Bspline_registrations.ipynb
+    
+    Note 26/05/21: 
+        I was unable to successfully initialise the BSpline using a deformable
+        use of LandmarkBasedTransformInitializer so instead I am using a 
+        global alignment, and performing a BSpline registration on the aligned
+        image. This is not ideal since interpolation errors stack up but it's
+        a working solution for now.
+    """
+    import SimpleITK as sitk
+    #import time
+    #import winsound
+    
+    
+    """ Get the rigid landmark-based transform and aligned image: """
+    AlignedIm, AlignTx = AlignImagesUsingLandmarks(FixIm, MovIm, 
+                                                   FixFidsFpath=FixFidsFpath, 
+                                                   MovFidsFpath=MovFidsFpath)
+    
+    print('AlignTx:\n')
+    print(AlignTx, '\n')
+    
+    RegIm, RegMethod, InitialBsplineTx,\
+    FinalBSplineTx = SitkBsplineReg(FixIm, AlignedIm, NumControlPts, 
+                                    LearningRate, NumIters, LogToConsole)
+    
+    """ Post registration analysis. """
+    if LogToConsole:
+        print("-------")
+        print('AlignTx:')
+        print(AlignTx)
+        print("-------")
+        print("-------")
+        print('InitialBsplineTx:')
+        print(InitialBsplineTx)
+        print("-------")
+        print("-------")
+        print('FinalBSplineTx:')
+        print(FinalBSplineTx)
+        print("-------")
+        print(f'Final metric value: {RegMethod.GetMetricValue()}')
+        print("Optimizer stop condition:",
+              f"{RegMethod.GetOptimizerStopConditionDescription()}")
+        #print(f"Final Iteration: {RegMethod.GetOptimizerIteration()}")
+    
+    
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(FixIm)
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetDefaultPixelValue(0.0)
+    resampler.SetTransform(FinalBSplineTx)
+    
+    #RegIm = resampler.Execute(MovIm)
+    RegIm = resampler.Execute(AlignedIm)
+    
+    
+    # Convert FinalTx from sitk Transform to sitk BSplineTransform:
+    #FinalTx = sitk.BSplineTransform(FinalTx)
+    
+    
+    # Took 2283 s = 38 min at iteration 18 (all samples)
+    # Took 118.6 s = 2 min (1% samples)
+    # Took 214 s = 3.6 min (5% samples)
+    
+    return RegIm, RegMethod, AlignTx, InitialBsplineTx, FinalBSplineTx
+    #return RegIm, RegMethod, AlignTx, InitialBsplineTx, FinalBSplineTx, AlignedIm
+
 
 
 
@@ -4178,13 +6017,78 @@ def GetLandmarkTx_v2(FixIm, MovIm, FixFidsFpath, MovFidsFpath,
 
 
 
-def ResampleImage_v2(Im, RefIm, ResTx, ResInterp=sitk.sitkLinear):
+def ResampleImage_v2(Im, RefIm, SitkTx, Interp='Linear'):
+    """
+    Resample a 3D SimpleITK image.  The image can be a 3D DICOM image or a
+    3D labelmap image.
+    
+    Inputs:
+    ******                      
+        
+    Im : SimpleITK Image
+        The 3D image to be resampled.
+                           
+    RefIm : SimpleITK Image
+        The 3D image reference image whose gridspace Im will be resampled to.
+        
+    SitkTx : SimpleITK Transform
+        The SimpleIK Transform to be used.
+    
+    Interp : string (optional; 'linear' by default)
+        The type of interpolation to be used.  Acceptable inputs are:
+        - 'Linear'
+        - 'Bspline'
+        - 'NearestNeighbor'
+        - 'LabelGaussian'
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether some results will be logged to the console.
+        
+    
+    Outputs:
+    *******
+    
+    ResIm : SimpleITK image
+        The resampled 3D image.
+
+    
+    Notes:
+    *****
+        While a linear (or BSpline) interpolator is appropriate for intensity 
+        images, only a NearestNeighbor interpolator is appropriate for binary 
+        images (e.g. segmentations) so that no new labels are introduced.
+    """
+    
     import SimpleITK as sitk
+    
+    if Interp == 'NearestNeighbor':    
+        SitkInterp = sitk.sitkNearestNeighbor
+        #SitkPixType = sitk.sitkUInt64
+        SitkPixType = sitk.sitkUInt32
+        
+    elif Interp == 'LabelGaussian':
+        SitkInterp = sitk.sitkLabelGaussian
+        #SitkInterp = sitk.sitkUInt64
+        SitkPixType = sitk.sitkUInt32
+        
+    elif Interp == 'Linear':
+        SitkInterp = sitk.sitkLinear
+        SitkPixType = sitk.sitkFloat32
+        
+    elif Interp == 'Bspline':
+        SitkInterp = sitk.sitkBSpline
+        SitkPixType = sitk.sitkFloat32
+        
+    else:
+        msg = '"Interp" must be "Linear", "BSpline" or "LabelGaussian".'
+        
+        raise Exception(msg)
+    
     
     ResImFilt = sitk.ResampleImageFilter()
     #ResImFilt.SetTransform(sitk.Transform())
-    ResImFilt.SetTransform(ResTx)
-    ResImFilt.SetInterpolator(ResInterp)
+    ResImFilt.SetTransform(SitkTx)
+    ResImFilt.SetInterpolator(SitkInterp)
     
     ResImFilt.SetReferenceImage(RefIm)
     #ResImFilt.SetOutputSpacing(RefIm.GetSpacing())
@@ -4192,9 +6096,10 @@ def ResampleImage_v2(Im, RefIm, ResTx, ResInterp=sitk.sitkLinear):
     #ResImFilt.SetOutputDirection(RefIm.GetDirection())
     #ResImFilt.SetOutputOrigin(RefIm.GetOrigin())
     
-    ResImFilt.SetDefaultPixelValue(RefIm.GetPixelIDValue())
-    ResImFilt.SetOutputPixelType(RefIm.GetPixelID())
-    
+    #ResImFilt.SetDefaultPixelValue(RefIm.GetPixelIDValue())
+    #ResImFilt.SetOutputPixelType(RefIm.GetPixelID())
+    ResImFilt.SetOutputPixelType(SitkPixType)
+    ResImFilt.SetDefaultPixelValue(0)
     
     ResIm = ResImFilt.Execute(Im)
     
@@ -4577,58 +6482,7 @@ def RegUsingFiducials_v3(FixIm, MovIm, FixFidsFpath, MovFidsFpath,
 
 
 
-def GetTransformFromParams(FixIm, TxMatrix, Transform):
-    """
-    Return a SimpleITK transform from a list of transform parameters.
-    
-    Inputs:
-    ******
-    
-    FixIm : SimpleITK image
-        The 3D image whose grid is to be transformed to.
-    
-    TxMatrix : list of float strings
-        List of float strings representing the transformation that maps the
-        moving (Source) image to the fixed (Target) image (e.g. as parsed from
-        the FrameOfReferenceTransformationMatrix of a DRO).
-    
-    Transform : SimpleITK Transform
-        The transform (e.g. image registration transform) that maps Im to TrgIm.
-    
-        
-    Outputs:
-    *******
-    
-    SitkTransform : SimpleITK transform
-        The 3D transformed image.
-    """
-    
-    import SimpleITK as sitk
-            
-    if Transform == 'rigid':
-        SitkTransform = sitk.Euler3DTransform()
-        
-        SitkTransform.SetParameters(TxMatrix[0:6])
-        
-    elif Transform == 'affine':
-        SitkTransform = sitk.AffineTransform(FixIm.GetDimension())
-        
-        SitkTransform.SetParameters(TxMatrix[0:12])
-        
-    else:
-        msg = "Only 'rigid' and 'affine' transforms are supported at present."\
-              + f" Transform = {Transform} is not allowed."
-        
-        raise Exception(msg)
-    
-    return SitkTransform
-
-
-
-
-
-
-def TransformImageSitk(MovIm, FixIm, Transform, Interp='NearestNeighbor', 
+def TransformImageSitk(MovIm, FixIm, SitkTransform, Interp='NearestNeighbor', 
                        LogToConsole=False):
     """
     Transform a 3D SimpleITK image using SimpleITK.
@@ -4642,7 +6496,7 @@ def TransformImageSitk(MovIm, FixIm, Transform, Interp='NearestNeighbor',
     FixIm : SimpleITK image
         The 3D image whose grid MovIm is to be transformed to.
         
-    Transform : SimpleITK Transform
+    SitkTransform : SimpleITK Transform
         The transform (e.g. image registration transform) that maps Im to TrgIm.
         
     Interp : string (optional; 'NearestNeighbor' by default)
@@ -4670,12 +6524,14 @@ def TransformImageSitk(MovIm, FixIm, Transform, Interp='NearestNeighbor',
         
     
     if Interp == 'NearestNeighbor':
-        interp = sitk.sitkLinear
+        #interp = sitk.sitkLinear # 13/05/21
+        interp = sitk.sitkNearestNeighbor # 13/05/21
     else:
-        interp = sitk.sitkNearestNeighbor
+        #interp = sitk.sitkNearestNeighbor # 13/05/21
+        interp = sitk.sitkLinear # 13/05/21
     
     
-    TxIm = sitk.Resample(MovIm, FixIm, Transform, interp)
+    TxIm = sitk.Resample(MovIm, FixIm, SitkTransform, interp)
     
     if LogToConsole:
         print('-'*120)
@@ -4730,7 +6586,7 @@ def TransformLabImByRoi(LabImByRoi, F2SindsByRoi, TrgIm, SelxImFiltOrSitkTx,
     
     PostTxVariance : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
-        tranformed labelmap image(s).
+        transformed labelmap image(s).
         
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
@@ -4810,7 +6666,8 @@ def TransformLabImByRoi(LabImByRoi, F2SindsByRoi, TrgIm, SelxImFiltOrSitkTx,
                                          LogToConsole=LogToConsole)
         elif 'Transform' in str(type(SelxImFiltOrSitkTx)):
             TxLabIm = TransformImageSitk(MovIm=LabIm, FixIm=TrgIm, 
-                                         Tx=SelxImFiltOrSitkTx, Interp=Interp, 
+                                         SitkTransform=SelxImFiltOrSitkTx, 
+                                         Interp=Interp, 
                                          LogToConsole=LogToConsole)
         
         times.append(time.time())

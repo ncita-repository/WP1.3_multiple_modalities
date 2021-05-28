@@ -38,3 +38,5 @@ fiducials/
 sample_DRO/
 *.png
 *.jpg
+VirtualEnvs/
+Deformable_results/

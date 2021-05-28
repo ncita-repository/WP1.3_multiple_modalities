@@ -199,6 +199,22 @@ def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
 
 
 
+def unique(a):
+    """ return the list with duplicate elements removed """
+    return list(set(a))
+
+def intersect(a, b):
+    """ return the intersection of two lists """
+    return list(set(a) & set(b))
+
+def union(a, b):
+    """ return the union of two lists """
+    return list(set(a) | set(b))
+
+def xor(a, b):
+    # use the symmetric difference operator (i.e. XOR operator)
+    return list(set(a) ^ set(b))
+
 
 
 
@@ -2557,3 +2573,27 @@ def DeleteDirectory(Dirpath):
     except PermissionError as error:
         print(error)
         print(f'{Dirpath} cannot be deleted\n')
+
+
+
+def ReduceListOfStringFloatsTo16(OrigList):
+    """ Decimal strings (VR DS in DICOM standard) must be limited to 16 
+    characters. Reduce a list of string floats to the required limit.
+    
+    Inputs:
+    ******
+        
+    OrigList : list of strings
+        The original list of string floats.
+    
+    
+    Outputs:
+    *******
+        
+    NewList : list of strings
+        The list of strings with characters limited to 16.
+    """
+    
+    NewList = [item[:16] for item in OrigList]
+    
+    return NewList
