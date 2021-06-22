@@ -4396,6 +4396,9 @@ def GetXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None,
         The password for XNAT log-in.  If not provided (i.e. Password = None)
         the user will be prompted to enter a password.
     
+    XnatSession : requests session (optional; None by default)
+        If provided a multiple XNAT session requests will be avoided.
+    
     ExportToXlsx : boolean (optional; False by default)
     
     Outputs:
@@ -4407,6 +4410,8 @@ def GetXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None,
     
     DataXnatWide : dictionary
         A dictionary containing XNAT-wide analytics.
+    
+    XnatSession : requests session
     
     
     Notes:
@@ -4550,7 +4555,7 @@ def GetXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None,
         Dtime = round(times[-1] - times[-2], 1)
         print(f'*Took {Dtime} s to export the snapshots to XLSX files.\n')
     
-    return DataByProj, DataXnatwide
+    return DataByProj, DataXnatwide, XnatSession
 
 
 
