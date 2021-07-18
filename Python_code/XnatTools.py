@@ -47,53 +47,9 @@ dro = dcmread(raw)
 """
 
 
-def CreateXnatSession(XnatUrl, Username=None, Password=None):
-    """
-    Create an XNAT session.
-    
-    Inputs:
-    ******
-    
-    XnatUrl : string
-        URL of XNAT (e.g. 'http://10.1.1.20').
-        
-    Username : string (optional; None by default)
-        The username for XNAT log-in.  If not provided (i.e. Username = None)
-        the user will be prompted to enter a user name.
-    
-    Password : string (optional; None by default)
-        The password for XNAT log-in.  If not provided (i.e. Password = None)
-        the user will be prompted to enter a password.
-    
-    
-    Outputs:
-    *******
-    
-    XnatSession : requests session
-    """
-    
-    from getpass import getpass
-    import requests
-    #from pathlib import Path
-    
-    if Username == None:
-        Username = getpass("Enter user name: ")
-    
-    if Password == None:
-        Password = getpass("Enter password:")
-        
-    
-    with requests.Session() as XnatSession:
-        XnatSession.auth = (f'{Username}', f'{Password}')
-        
-    
-    print(f'Connection established to XNAT at {XnatUrl}\n')
-    
-    return XnatSession
 
 
-
-    """
+"""
     scan_id_list = []
     
     scans_request = XnatSession.get(f"{self.domain}/data/experiments/{self.experiment_id}/scans")
@@ -108,8 +64,134 @@ def CreateXnatSession(XnatUrl, Username=None, Password=None):
     with open("path/to/save/data/at/", 'wb') as file:
         file.write(scan_full_download.content)
     
-    """
+"""
 
+
+
+
+
+
+
+def CreateXnatSession(XnatUrl, Username=None, Password=None):
+    """Create a requests session.
+    
+    Parameters
+    ----------
+    
+    url : str
+        URL of XNAT (e.g. 'http://10.1.1.20').
+        
+    Username : string (optional; None by default)
+        The username for XNAT log-in.  If not provided (i.e. Username = None)
+        the user will be prompted to enter a user name.
+    
+    Password : string (optional; None by default)
+        The password for XNAT log-in.  If not provided (i.e. Password = None)
+        the user will be prompted to enter a password.
+    
+    Returns
+    -------
+    
+    XnatSession : requests session
+    """
+    
+    import time
+    from getpass import getpass
+    import requests
+    #from pathlib import Path
+    
+    if Username == None:
+        Username = getpass("Enter user name: ")
+    
+    if Password == None:
+        Password = getpass("Enter password:")
+        
+    
+    with requests.Session() as XnatSession:
+        XnatSession.url = XnatUrl
+        XnatSession.auth = (f'{Username}', f'{Password}')
+    
+    # Test connection:
+    request = requests.get(XnatSession.url, auth=XnatSession.auth)
+    
+    #if request.status_code == 200:
+    #    print(f'Connection established to XNAT at {XnatUrl}\n')
+    #elif request.status_code == 401:
+    #    print(f'Connection not established to XNAT at {XnatUrl}.',
+    #          f'\nAuthentication error ({request.status_code}). Check your',
+    #          'log-in details and try again.\n')
+    #else:
+    #    print(f'Connection not established to XNAT at {XnatUrl}. \nError code',
+    #          f'{request.status_code}.\n')
+    
+    # Raise status error if not None:
+    if request.raise_for_status() == None:
+        print(f'Connection established to XNAT at {XnatUrl}\n')
+    else:
+        print(request.raise_for_status())
+    
+    return XnatSession
+
+
+
+"""
+01/07/2021
+
+Considered writing a simple function to check whether an existing requests
+session (e.g. XnatSession) has expired, and if so, create a new session.
+
+The idea was to not create multiple log-in sessions, and simply use on if it
+exists, i.e.:
+    
+if not 'XnatSession' in locals():    
+    from XnatTools import CreateXnatSession
+    XnatSession = CreateXnatSession(XnatUrl)
+    
+However it's possible for sessions to expire.  And during some testing I ran
+into errors when making requests since an existing XnatSession had expired
+(which wasn't obvious). 
+
+The plan was to make a simple request, and check the headers for an expiration 
+date-time:
+    
+import requests
+
+request = requests.get(XnatSession.url, auth=XnatSession.auth)
+
+request.headers will return, for example:
+
+{'Server': 'nginx/1.14.0 (Ubuntu)', 
+ 'Date': 'Wed, 30 Jun 2021 03:16:32 GMT', 
+ 'Content-Type': 'text/html;charset=ISO-8859-1', 
+ 'Transfer-Encoding': 'chunked', 
+ 'Connection': 'keep-alive', 
+ 'Set-Cookie': 'JSESSIONID=4F6F9FB75FCD730761EA33F4B6BFBEB4; Path=/; HttpOnly, SESSION_EXPIRATION_TIME="1625022991874,432000000"; Version=1; Path=/', 
+ 'Expires': 'Tue, 03 Jul 2001 06:00:00 GMT', 
+ 'Last-Modified': 'Wed Jun 30 03:16:31 UTC 2021', 
+ 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0', 
+ 'Pragma': 'no-cache', 
+ 'X-Content-Type-Options': 'nosniff', 
+ 'X-XSS-Protection': '1; mode=block', 
+ 'X-Frame-Options': 'SAMEORIGIN', 
+ 'Content-Security-Policy': "frame-ancestors 'self'", 
+ 'Content-Language': 'en-US', 
+ 'Content-Encoding': 'gzip'}
+
+Although the value for 'Expires' had a sensible day and month, the year was
+2001!! 
+
+I hoped that the values in 'Set-Cookie' following 'SESSION_EXPIRATION_TIME' 
+might be useable:
+    
+session_exp_time = request.headers['Set-Cookie'].split('SESSION_EXPIRATION_TIME="')[1].split(',')[0]
+
+datetime.datetime.fromtimestamp(int(session_exp_time)/1000) # convert from ms to s
+
+> datetime.datetime(2021, 6, 30, 3, 14, 34, 266000)
+
+which was in the past.  Since I was unable to identify a sensible expiration 
+date-time from the headers I gave up.
+"""
 
 
 
@@ -222,7 +304,6 @@ def CreatePathsDictForScan(ProjId, SubjLabel, ExpLabel, ScanId,
 
 
 
-
 def DownloadScan(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
                  XnatSession=None, ExportRootDir='default', PathsDict=None,
                  Username=None, Password=None):
@@ -312,19 +393,23 @@ def DownloadScan(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
     
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-        else:
-            msg = str(request)
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #    else:
+    #        msg = str(request)
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     
     
@@ -380,17 +465,21 @@ def DownloadScan(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
         
         request = XnatSession.get(uri)
         
-        if not '200' in str(request):
-            if '403' in str(request):
-                msg = 'Response 403: Forbidden'
-            elif '404' in str(request):
-                msg = 'Response 403: Not found'
-            elif '409' in str(request):
-                msg = 'Response 409: Conflict'
-            elif '422' in str(request):
-                msg = 'Response 422: Unprocessable entity'
-                
-            raise Exception(msg)
+        #if not '200' in str(request):
+        #    if '403' in str(request):
+        #        msg = 'Response 403: Forbidden'
+        #    elif '404' in str(request):
+        #        msg = 'Response 403: Not found'
+        #    elif '409' in str(request):
+        #        msg = 'Response 409: Conflict'
+        #    elif '422' in str(request):
+        #        msg = 'Response 422: Unprocessable entity'
+        #        
+        #    raise Exception(msg)
+        
+        # Raise status error if not None:
+        if request.raise_for_status() != None:
+            print(request.raise_for_status())
             
         Experiment = request.json()
         
@@ -621,17 +710,21 @@ def DownloadImAsrs_INCOMPLETE(XnatUrl, ProjId, SubjLabel, ExpLabel,
                                    
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     
     
@@ -767,17 +860,21 @@ def DownloadImAsr_OLD(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
                               
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
         
     Experiment = request.json()
     
@@ -963,17 +1060,21 @@ def DownloadImAsr_OLD(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     
     
@@ -1136,17 +1237,21 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
                               
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
         
     Experiment = request.json()
     
@@ -1274,9 +1379,9 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
                    ['data_fields']['name']
             
             if LogToConsole:
-                print(f"seriesUID = {seriesUid}")
-                print(f"collType = {collType}")
-                print(f"name = {name}\n")
+                print(f"  seriesUID = {seriesUid}")
+                print(f"  collType = {collType}")
+                print(f"  name = {name}\n")
             
                 #if seriesUid == SeriesUid:
                 #    print(f"   * Matched collectionType = {collectionType}")
@@ -1330,17 +1435,21 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     
     ExportDir = os.path.join(ExportRootDir, 'projects', ProjId, 'subjects',
@@ -1384,8 +1493,12 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
 
 
 def GetFnameAndIdFromName(PathsDict, ProjId, SubjLabel, ExpLabel, Mod, Name):
-
-    """ Get the scan assessor filename and scan ID corresponding to a scan
+    """ 
+    06/07/21:
+        See get_scan_asr_fname_and_id in xnat_tools.format_paths_dict.py
+        (also xnat_tools.scan_assessors.py).
+        
+    Get the scan assessor filename and scan ID corresponding to a scan
     assessor name of interest with given modality. """
     
     # Get all Ids:
@@ -1557,17 +1670,21 @@ def DownloadSubjAsrs(XnatUrl, ProjId, SubjLabel, XnatSession=None,
                               
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     for result in request.json()['ResultSet']['Result']:
         fulluri = f"{XnatUrl}{result['URI']}"
@@ -1671,17 +1788,21 @@ def UploadSubjAsr(SubjAsrFpath, XnatUrl, ProjId, SubjLabel,
         request = XnatSession.put(f'{uri}?inbody=true&file_format=DICOM'
                                   '&overwrite=true', data=file)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
         
     print(f'The DRO was uploaded as a subject assessor to: \n{uri}\n')
     
@@ -1745,17 +1866,21 @@ def GetFORuid(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId,
     
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = f'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = f'Response 403: Not found'
-        elif '409' in str(request):
-            msg = f'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = f'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = f'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = f'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = f'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = f'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     files = request.json()
     
@@ -1902,17 +2027,21 @@ def SearchXnatForDro(XnatUrl, ProjId, SubjLabel,
     
     request = XnatSession.get(uri)
     
-    if not '200' in str(request):
-        if '403' in str(request):
-            msg = 'Response 403: Forbidden'
-        elif '404' in str(request):
-            msg = 'Response 403: Not found'
-        elif '409' in str(request):
-            msg = 'Response 409: Conflict'
-        elif '422' in str(request):
-            msg = 'Response 422: Unprocessable entity'
-            
-        raise Exception(msg)
+    #if not '200' in str(request):
+    #    if '403' in str(request):
+    #        msg = 'Response 403: Forbidden'
+    #    elif '404' in str(request):
+    #        msg = 'Response 403: Not found'
+    #    elif '409' in str(request):
+    #        msg = 'Response 409: Conflict'
+    #    elif '422' in str(request):
+    #        msg = 'Response 422: Unprocessable entity'
+    #        
+    #    raise Exception(msg)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
     
     
     Fnames = []
@@ -2079,20 +2208,23 @@ def SearchXnatForDro(XnatUrl, ProjId, SubjLabel,
     
     if ContentDateTimes:#TimeDiffs:
         # The index of the most recent ContentDateTime:
-        #ind = TimeDiffs.index(min(TimeDiffs))
-        ind = ContentDateTimes.index(max(ContentDateTimes))
+        #NewInd = TimeDiffs.index(min(TimeDiffs))
+        NewInd = ContentDateTimes.index(max(ContentDateTimes))
+        
+        # The index of the most recent file that matches:
+        DroInd = Inds[NewInd]
         
         if LogToConsole:
-            print(f'  The index of the most recent file that matches = {ind}')
+            print(f'  The index of the most recent file that matches = {DroInd}')
         
-        Dro = Dros[ind]
+        Dro = Dros[DroInd]
         
         #if 'Deformable' in DroType:
         if Transform == 'bspline':
             TxMatrix = None
-            GridDims = GridDimss[ind]
-            GridRes = GridRess[ind]
-            VectGridData = VectGridDatas[ind]
+            GridDims = GridDimss[NewInd]
+            GridRes = GridRess[NewInd]
+            VectGridData = VectGridDatas[NewInd]
             
             GridRes_rounded = [round(item, 2) for item in GridRes]
             
@@ -2106,7 +2238,7 @@ def SearchXnatForDro(XnatUrl, ProjId, SubjLabel,
                   + "elements.\n"
         #else:
         if Transform in ['rigid', 'affine']:
-            TxMatrix = TxMatrices[ind]
+            TxMatrix = TxMatrices[NewInd]
             GridDims = None
             GridRes = None
             VectGridData = None
@@ -2939,7 +3071,7 @@ def GetNumOfImSessionByTypeByProject(XnatUrl, XnatSession, DataByProj=None):
 
 
 
-def GetExpsSessionsScansByProject(XnatUrl, XnatSession, DataByProj=None):
+def GetExpsSessionsScansByProject_OLD(XnatUrl, XnatSession, DataByProj=None):
     """
     18/06/21: Expansion of combination of GetNumOfExpsByProject and 
     GetNumOfImSessionByTypeByProject.
@@ -3514,7 +3646,7 @@ def GetFileCountAndSizeByTypeByProject(XnatUrl, XnatSession, DataByProj=None,
     is a dictionary with keys 'children' (= []), 'meta' and 'data_fields'.
     """
     
-    from copy import deepcopy
+    #from copy import deepcopy
     
     if DataByProj == None:
         DataByProj = {}
@@ -3551,7 +3683,8 @@ def GetFileCountAndSizeByTypeByProject(XnatUrl, XnatSession, DataByProj=None,
         else:
             #DataByProj[ProjId] = {}
             #DataByProj[ProjId] = EmptyDict
-            DataByProj[ProjId] = deepcopy(EmptyDict)
+            #DataByProj[ProjId] = deepcopy(EmptyDict)
+            DataByProj[ProjId] = dict(EmptyDict) # or EmptyDict.copy()
             
             #print('EmptyDict = ', EmptyDict, '\n')
             
@@ -4263,6 +4396,241 @@ def ReorderKeysAndFillZeros(DataByProj):
 
 
 
+
+def GetXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None,
+                    ExportToXlsx=False, LogToConsole=False):
+    """
+    Get a "snapshot" of info from an XNAT broken down by projects, and 
+    XNAT-wide.
+    
+    Inputs:
+    ******
+    
+    XnatUrl : string
+        URL of XNAT (e.g. 'http://10.1.1.20').
+        
+    Username : string (optional; None by default)
+        The username for XNAT log-in.  If not provided (i.e. Username = None)
+        the user will be prompted to enter a user name.
+    
+    Password : string (optional; None by default)
+        The password for XNAT log-in.  If not provided (i.e. Password = None)
+        the user will be prompted to enter a password.
+    
+    XnatSession : requests session (optional; None by default)
+        If provided a multiple XNAT session requests will be avoided.
+    
+    ExportToXlsx : boolean (optional; False by default)
+    
+    Outputs:
+    *******
+    
+    DataByProj : dictionary
+        A dictionary with projects as keys, containing data organised by 
+        projects.
+    
+    DataXnatWide : dictionary
+        A dictionary containing XNAT-wide analytics.
+    
+    XnatSession : requests session
+    
+    
+    Notes:
+    *****
+    
+    List of items of interest (message from Simon on 25/05/21):
+
+    Project name
+    PI and co-investigators
+    Number of subjects
+    Number of imaging sessions
+    Number of imaging sessions broken down by type (MR, PET, CT, etc.)
+    First data upload
+    Last data upload/activity
+    Number of authorised users
+    User list
+    Project description
+    Average number of scans per session - needs calculating
+    Total data storage for project - needs calculating
+    
+    If ExportToXlsx = True, the data dictionary will be exported to the
+    current working directory with an automatically generated filename of the
+    form "YYYYMMDD_XNAT_snapshot.xlsx".
+    
+    Times for my XNAT:
+        *Took 0.09 s to fetch investigators.
+        *Took 0.01 s to fetch subjects.
+        *Took 2.78 s to fetch file counts and sizes.
+        *Took 0.04 s to fetch project descriptions.
+        *Took 0.04 s to fetch users.
+        *Took 0.29 s to fetch image session uploads.
+        *Took 0.0 s to reorder keys.
+        *Took 3.26 s to generate data-by-project snapshot.
+        *Took 0.0 s to generate XNAT-wide snapshot.
+        *Took 3.26 s to get all snapshots.
+    """
+    
+    import time
+    #from getpass import getpass
+    #import requests
+    #import os
+    #from pathlib import Path
+    #import datetime
+    
+    if XnatSession == None:
+        XnatSession = CreateXnatSession(XnatUrl, Username, Password)
+    
+    
+    """ Start timing: """
+    times = []
+    times.append(time.time())
+    
+    #""" Get a list of projects: """
+    #request = XnatSession.get(f'{XnatUrl}/data/projects')
+    #projects = request.json()
+    #Projects = [item['name'] for item in projects['ResultSet']['Result']]
+    
+    
+    #""" Get a list of PIs: """
+    #PIs = [f"{item['pi_firstname']} {item['pi_lastname']}" for item in projects['ResultSet']['Result']]
+    
+    
+    
+    """ Get a list of investigators grouped by project: """
+    DataByProj = GetInvestigatorsByProject(XnatUrl, XnatSession)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch investigators.\n')
+        
+    """ Get a list of subjects grouped by project: """
+    DataByProj = GetSubjectsByProject(XnatUrl, XnatSession, DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch subjects.\n')
+    
+    """ Get the number of experiments by project: """
+    #DataByProj = GetNumOfExpsByProject(XnatUrl, XnatSession, DataByProj)
+    
+    
+    """ Get the number of scans by image session type by project: """
+    #DataByProj = GetNumOfImSessionByTypeByProject(XnatUrl, XnatSession, 
+    #                                              DataByProj)
+    
+    """ Get the number of experiments, image sessions by modality, image scans 
+    by modality, and average number of scans per session, all organised by 
+    project: """
+    #DataByProj = GetExpsSessionsScansByProject(XnatUrl, XnatSession, DataByProj)
+    
+    """ Get the no. of experiments, no. of image sessions by modality, no. of
+    image scans by modality, ave. scans/session, ave. image scans/session,
+    no. of DICOM/RTSTRUCT/AIM/SEG files, total size of DICOM/RTSTRUCT/SEG files,
+    etc, all organised by project: """
+    DataByProj = GetFileCountAndSizeByTypeByProject(XnatUrl, XnatSession,
+                                                    DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch file counts and sizes.\n')
+    
+    """ Get the project description by project: """
+    DataByProj = GetProjectDescriptionByProject(XnatUrl, XnatSession, 
+                                                DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch project descriptions.\n')
+        
+    """ Start date might not be the same as first upload.. """
+    #""" Get the start date by project: """
+    #DataByProj = GetStartDateByProject(XnatUrl, XnatSession, DataByProj)
+    
+    
+    """ Get the project users by project: """
+    DataByProj = GetUsersByProject(XnatUrl, XnatSession, DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch users.\n')
+        
+    """ Get the first and last upload dates by project: """
+    DataByProj = GetFirstAndLastImSessionUploadsByProject(XnatUrl, XnatSession, 
+                                                          DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to fetch image session uploads.\n')
+        
+    """ Re-order the keys at the second tier: """
+    DataByProj = ReorderKeysAndFillZeros(DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to reorder keys.\n')
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 2)
+    print(f'*Took {Dtime} s to generate data-by-project snapshot.\n')
+    
+    """ Get XNAT-wide analytics (not broken down by project, i.e.:
+        - no. of unique users
+        - average no. of users per project
+    """
+    DataXnatwide = GetXnatWideSnapshot(DataByProj)
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[-2], 2)
+    if LogToConsole:
+        print(f'*Took {Dtime} s to generate XNAT-wide snapshot.\n')
+    
+    
+    times.append(time.time())
+    Dtime = round(times[-1] - times[0], 2)
+    print(f'*Took {Dtime} s to get all snapshots.\n')
+    
+    
+    """ Export the dictionary: """
+    if ExportToXlsx:
+        import datetime
+        from importlib import reload
+        import GeneralTools
+        reload(GeneralTools)
+        from GeneralTools import ExportDictionaryToXlsx
+        from GeneralTools import ExportDictionaryOfDictionariesToXlsx
+        
+        TimeNow = datetime.datetime.now()
+        DateTime = TimeNow.strftime('%Y%m%d_%H%M%S')
+        
+        FileName = DateTime + '_XNAT_by_project_snapshot.xlsx'
+        
+        # Export the by-project snapshot:
+        ExportDictionaryOfDictionariesToXlsx(DataByProj, FileName, 
+                                             ExportDir='cwd',
+                                             NameOfFirstColumn='Project')
+        
+        FileName = DateTime + '_XNAT_wide_snapshot.xlsx'
+        
+        # Export the XNAT-wide snapshot:
+        ExportDictionaryToXlsx(DataXnatwide, FileName, ExportDir='cwd')
+        
+        
+        times.append(time.time())
+        Dtime = round(times[-1] - times[-2], 2)
+        print(f'*Took {Dtime} s to export the snapshots to XLSX files.\n')
+    
+    return DataByProj, DataXnatwide, XnatSession
+
+
+
+
 def GetXnatWideSnapshot(DataByProj):
     """ 
     Get XNAT-wide analytics (not broken down by project).
@@ -4376,192 +4744,7 @@ def GetXnatWideSnapshot(DataByProj):
 
 
 
-def GetXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None,
-                    ExportToXlsx=False):
-    """
-    Get a "snapshot" of info from an XNAT broken down by projects, and 
-    XNAT-wide.
-    
-    Inputs:
-    ******
-    
-    XnatUrl : string
-        URL of XNAT (e.g. 'http://10.1.1.20').
-        
-    Username : string (optional; None by default)
-        The username for XNAT log-in.  If not provided (i.e. Username = None)
-        the user will be prompted to enter a user name.
-    
-    Password : string (optional; None by default)
-        The password for XNAT log-in.  If not provided (i.e. Password = None)
-        the user will be prompted to enter a password.
-    
-    XnatSession : requests session (optional; None by default)
-        If provided a multiple XNAT session requests will be avoided.
-    
-    ExportToXlsx : boolean (optional; False by default)
-    
-    Outputs:
-    *******
-    
-    DataByProj : dictionary
-        A dictionary with projects as keys, containing data organised by 
-        projects.
-    
-    DataXnatWide : dictionary
-        A dictionary containing XNAT-wide analytics.
-    
-    XnatSession : requests session
-    
-    
-    Notes:
-    *****
-    
-    List of items of interest (message from Simon on 25/05/21):
-
-    Project name
-    PI and co-investigators
-    Number of subjects
-    Number of imaging sessions
-    Number of imaging sessions broken down by type (MR, PET, CT, etc.)
-    First data upload
-    Last data upload/activity
-    Number of authorised users
-    User list
-    Project description
-    Average number of scans per session - needs calculating
-    Total data storage for project - needs calculating
-    
-    If ExportToXlsx = True, the data dictionary will be exported to the
-    current working directory with an automatically generated filename of the
-    form "YYYYMMDD_XNAT_snapshot.xlsx".
-    """
-    
-    import time
-    #from getpass import getpass
-    #import requests
-    #import os
-    #from pathlib import Path
-    #import datetime
-    
-    """ Start timing: """
-    times = []
-    times.append(time.time())
-    
-    if XnatSession == None:
-        XnatSession = CreateXnatSession(XnatUrl, Username, Password)
-    
-    #""" Get a list of projects: """
-    #request = XnatSession.get(f'{XnatUrl}/data/projects')
-    #projects = request.json()
-    #Projects = [item['name'] for item in projects['ResultSet']['Result']]
-    
-    
-    #""" Get a list of PIs: """
-    #PIs = [f"{item['pi_firstname']} {item['pi_lastname']}" for item in projects['ResultSet']['Result']]
-    
-    
-    
-    """ Get a list of investigators grouped by project: """
-    DataByProj = GetInvestigatorsByProject(XnatUrl, XnatSession)
-    
-    
-    """ Get a list of subjects grouped by project: """
-    DataByProj = GetSubjectsByProject(XnatUrl, XnatSession, DataByProj)
-    
-    
-    """ Get the number of experiments by project: """
-    #DataByProj = GetNumOfExpsByProject(XnatUrl, XnatSession, DataByProj)
-    
-    
-    """ Get the number of scans by image session type by project: """
-    #DataByProj = GetNumOfImSessionByTypeByProject(XnatUrl, XnatSession, 
-    #                                              DataByProj)
-    
-    """ Get the number of experiments, image sessions by modality, image scans 
-    by modality, and average number of scans per session, all organised by 
-    project: """
-    #DataByProj = GetExpsSessionsScansByProject(XnatUrl, XnatSession, DataByProj)
-    
-    """ Get the no. of experiments, no. of image sessions by modality, no. of
-    image scans by modality, ave. scans/session, ave. image scans/session,
-    no. of DICOM/RTSTRUCT/AIM/SEG files, total size of DICOM/RTSTRUCT/SEG files,
-    etc, all organised by project: """
-    DataByProj = GetFileCountAndSizeByTypeByProject(XnatUrl, XnatSession,
-                                                    DataByProj)
-    
-    
-    """ Get the project description by project: """
-    DataByProj = GetProjectDescriptionByProject(XnatUrl, XnatSession, 
-                                                DataByProj)
-    
-    
-    """ Start date might not be the same as first upload.. """
-    #""" Get the start date by project: """
-    #DataByProj = GetStartDateByProject(XnatUrl, XnatSession, DataByProj)
-    
-    
-    """ Get the project users by project: """
-    DataByProj = GetUsersByProject(XnatUrl, XnatSession, DataByProj)
-    
-    
-    """ Get the first and last upload dates by project: """
-    DataByProj = GetFirstAndLastImSessionUploadsByProject(XnatUrl, XnatSession, 
-                                                          DataByProj)
-    
-    """ Re-order the keys at the second tier: """
-    DataByProj = ReorderKeysAndFillZeros(DataByProj)
-    
-    
-    
-    """ Get XNAT-wide analytics (not broken down by project, i.e.:
-        - no. of unique users
-        - average no. of users per project
-    """
-    DataXnatwide = GetXnatWideSnapshot(DataByProj)
-    
-    
-    times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 1)
-    print(f'*Took {Dtime} s to generate snapshot.\n')
-    
-    
-    """ Export the dictionary: """
-    if ExportToXlsx:
-        import datetime
-        from importlib import reload
-        import GeneralTools
-        reload(GeneralTools)
-        from GeneralTools import ExportDictionaryToXlsx
-        from GeneralTools import ExportDictionaryOfDictionariesToXlsx
-        
-        TimeNow = datetime.datetime.now()
-        DateTime = TimeNow.strftime('%Y%m%d_%H%M%S')
-        
-        FileName = DateTime + '_XNAT_by_project_snapshot.xlsx'
-        
-        # Export the by-project snapshot:
-        ExportDictionaryOfDictionariesToXlsx(DataByProj, FileName, 
-                                             ExportDir='cwd',
-                                             NameOfFirstColumn='Project')
-        
-        FileName = DateTime + '_XNAT_wide_snapshot.xlsx'
-        
-        # Export the XNAT-wide snapshot:
-        ExportDictionaryToXlsx(DataXnatwide, FileName, ExportDir='cwd')
-        
-        
-        times.append(time.time())
-        Dtime = round(times[-1] - times[-2], 1)
-        print(f'*Took {Dtime} s to export the snapshots to XLSX files.\n')
-    
-    return DataByProj, DataXnatwide, XnatSession
-
-
-
-
-
-def UploadXnatSnapshot(XnatUrl, Username=None, Password=None, XnatSession=None):
+def UploadXnatSnapshot_WIP(XnatUrl, Username=None, Password=None, XnatSession=None):
     """
     need to edit below...
     

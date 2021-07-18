@@ -169,14 +169,11 @@ def GetDicomFpaths_OLD(DicomDir, SortMethod='slices', WalkThroughSubDirs=False,
     return FilePaths
 
 
-
-
-
-
-
-
 def GetDicomFpaths(DicomDir):
     """
+    06/07/21:
+        See dicom_tools.imports.py
+        
     Get a list of full filepaths for all DICOM files in a directory using
     SimpleITK's ImageSeriesReader.
     
@@ -203,12 +200,11 @@ def GetDicomFpaths(DicomDir):
     return FilePaths
 
 
-    
-    
-
-
 def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     """
+    06/07/21:
+        See dicom_tools.imports.py
+        
     Import DICOM objects from a directory containing DICOM files.
     
     Inputs:
@@ -250,13 +246,12 @@ def ImportDicoms(DicomDir, SortMethod='slices', LogToConsole=False):
     return Dicoms
 
 
-
-
-
-
 def ImportDicom(DicomDir, SortMethod='slices', InStackNum=0, 
                 LogToConsole=False):
     """
+    06/07/21:
+        See dicom_tools.imports.py
+        
     Import a single DICOM object from a directory containing DICOM file(s).
     
     Inputs:
@@ -304,10 +299,6 @@ def ImportDicom(DicomDir, SortMethod='slices', InStackNum=0,
         return None
 
 
-
-
-
-
 def GetDicomSOPuids_OLD(DicomDir):
     """
     NOTE: This function is less efficient than the new one, which uses 
@@ -338,9 +329,6 @@ def GetDicomSOPuids_OLD(DicomDir):
         SOPuids.append(dicom.SOPInstanceUID)
         
     return SOPuids
-
-
-
 
 
 
@@ -381,12 +369,6 @@ def GetDicomSOPuids(DicomDir):
         SOPuids.append(FileReader.GetMetaData('0008|0018'))
         
     return SOPuids
-
-
-
-
-
-
 
 
 def GetDicomUids_OLD(DicomDir):
@@ -435,12 +417,11 @@ def GetDicomUids_OLD(DicomDir):
     return Studyuid, Seriesuid, FORuid, SOPuids
 
 
-
-
-
-
 def GetDicomUids(DicomDir):
     """
+    06/07/21:
+        See dicom_tools.metadata.py
+        
     Get the Study, Series, Frame of Reference and SOP Instance UIDs for a DICOM 
     series.
     
@@ -491,13 +472,11 @@ def GetDicomUids(DicomDir):
     return Studyuid, Seriesuid, FORuid, SOPuids
 
 
-
-
-
-
-
 def GetRoiLabels(Roi):
     """
+    06/07/21:
+        See get_roicol_labels in dicom_tools.metadata.py
+        
     Get the list of contour/segment labels in a RTS/SEG.
     
     Inputs:
@@ -542,13 +521,11 @@ def GetRoiLabels(Roi):
 
 
 
-
-
-
-
-
 def GetRoiNums(Roi, SearchString):
     """
+    06/07/21:
+        See get_roicol_nums in dicom_tools.metadata.py
+        
     Get the ROI/segment number(s) that matches SearchString.
     
     Inputs:
@@ -611,13 +588,6 @@ def GetRoiNums(Roi, SearchString):
     return RoiNums
 
 
-
-
-
-
-
-
-
 def IsSameModalities(Roi0, Roi1):
     """
     Compare Modality tag of two RTS or two SEG objects. 
@@ -628,14 +598,6 @@ def IsSameModalities(Roi0, Roi1):
     
     else:
         return False
-
-
-
-
-
-
-
-
 
 
 def InspectDicomStudyDir(StudyDir):
@@ -738,9 +700,6 @@ def InspectDicomStudyDir(StudyDir):
     return StudyDict
     
     
-
-
-
 def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
     """
     This is not complete.
@@ -779,9 +738,6 @@ def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
     return
 
 
-
-
-
 #def DoesDirContainDicoms(Directory):
 #    """ Check if a directory contains any DICOMs. Return True if there is one
 #    or more .dcm files, False otherwise. Also return the number of files. """
@@ -789,9 +745,6 @@ def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
 #    import os
 #    
 #    FileList = os.listdir(Directory)  
-    
-
-
 
 
 def ConvertNumpyDtype(ArrayIn, ConvertTo, LogToConsole=False):
@@ -964,8 +917,6 @@ def ConvertNumpyDtype(ArrayIn, ConvertTo, LogToConsole=False):
 
 
 
-
-
 def CreateDicomsFromCroppedSitkIm(CroppedIm, FirstZind, OrigDicomDir, 
                                   TxtToAddToSeriesDesc, NewSeriesNum,
                                   SortMethod='slices', LogToConsole=False):
@@ -1133,8 +1084,6 @@ def CreateDicomsFromCroppedSitkIm(CroppedIm, FirstZind, OrigDicomDir,
         Dicoms.append(dc)
         
     return Dicoms
-
-
 
 
 

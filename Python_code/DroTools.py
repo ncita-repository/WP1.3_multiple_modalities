@@ -19,6 +19,9 @@ DICOM SPATIAL OR DEFORMABLE SPATIAL REGISTRATION OBJECT (SRO) RELATED FUNCTIONS
 
 def DownloadSampleDros():
     """
+    08/07/21:
+        See download_samples in dro_tools.download.py
+        
     Download sample DICOM Registration Objects from:
     https://www.insight-journal.org/browse/publication/923
     """
@@ -121,12 +124,11 @@ def DownloadSampleDros():
     print(f'\n*Took {Dtime} s to download the sample DROs.')
 
 
-
-
-
-
 def ModifyRefImSeq(Sequence, Dicoms, RefAllSOPs=False, LogToConsole=False):
     """
+    08/07/21:
+        See modify_ref_im_seq in dro_tools.general.py
+      
     Modify a ReferencedImageSequence (or ReferencedInstanceSequence).  
     
     Inputs:
@@ -208,13 +210,11 @@ def ModifyRefImSeq(Sequence, Dicoms, RefAllSOPs=False, LogToConsole=False):
     return Sequence
 
 
-
-
-
-
-
 def ModifyRefSerSeq(Dro, SeqNum, Dicoms, RefAllSOPs=False, LogToConsole=False):
     """
+    08/07/21:
+        See modify_ref_ser_seq in dro_tools.general.py
+      
     Modify the ReferencedSeriesSequence in a DICOM Spatial or Deformable
     Spatial Registration Object (DRO) for a chosen sequence number.  
     
@@ -314,12 +314,12 @@ def ModifyRefSerSeq(Dro, SeqNum, Dicoms, RefAllSOPs=False, LogToConsole=False):
     return Dro
 
 
-
-
-
 def ModifyStuConOthRefInsSeq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
                              LogToConsole=False):
     """
+    08/07/21:
+        See modify_stu_con_oth_ref_ins_seq in dro_tools.general.py
+      
     Modify the StudiesContainingOtherReferencedInstancesSequence in a DICOM 
     Spatial or Deformable Spatial Registration Object (DRO) for a chosen 
     sequence number.  
@@ -432,19 +432,18 @@ def ModifyStuConOthRefInsSeq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
     if LogToConsole:
         msg = f'\n   *Took {Dtime} s to update '\
               + f'StudiesContainingOtherReferencedInstancesSequence[{SeqNum}]'\
-              + f'.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
+              + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
         print(msg)
     
     return Dro
 
 
-
-
-
-
 def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='', 
                  LogToConsole=False):
     """
+    08/07/21:
+        See create_spa_dro in dro_tools.tx_to_spa_dro.py
+     
     Create a DICOM Spatial Registration Object (DRO).  
     
     Inputs:
@@ -458,8 +457,7 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     
     TxParams : list of floats
         List of floats representing the non-deformable transformation 
-        parameters from the SimpleElastix image filter or SimpleITK transform
-        used to register the moving (Source) image to the fixed (Target) image.
+        parameters from the SimpleElastix image filter or SimpleITK transform.
     
     Description : string (optional; '' by default)
         Description to be added to ContentDescription, and used in the file
@@ -492,12 +490,12 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     
     import os
     import time
-    import datetime
+    from datetime import datetime
     from pydicom import dcmread
     from pydicom.uid import generate_uid
     #from copy import deepcopy
     from DicomTools import ImportDicoms
-    from ImageTools import GetTxMatrixType
+    from GeneralTools import GetTxMatrixType
     
     cwd = os.getcwd()
 
@@ -563,11 +561,11 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     #CurrentTime = time.strftime("%H%M%S", time.gmtime())
     ##CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
     
-    TimeNow = datetime.datetime.now()
+    TimeNow = datetime.now()
     CurrentDate = TimeNow.strftime('%Y%m%d')
     CurrentTime = TimeNow.strftime('%H%M%S.%f')
     
-    Dro.InstanceCreationData = CurrentDate
+    Dro.InstanceCreationDate = CurrentDate
     Dro.InstanceCreationTime = CurrentTime
     
     # Generate a new SOPInstanceUID:
@@ -775,6 +773,77 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     return Dro
 
 
+def CreateSpaDroFromSitkTx(SrcDicomDir, TrgDicomDir, SitkTx, Description='', 
+                           LogToConsole=False):
+    """
+    08/07/21:
+        See create_spa_dro_from_tx in dro_tools.tx_to_spa_dro.py
+     
+    Create a DICOM Spatial Registration Object (DRO) from a SimpleITK 
+    transform.  
+    
+    Inputs:
+    ******
+    
+    SrcDicomDir : string
+        Directory containing Source DICOMs.
+    
+    TrgDicomDir : string
+        Directory containing Target DICOMs.
+    
+    SitkTx : SimpleITK Transform
+        The SimpleITK transform containing the transform parameters.
+    
+    Description : string (optional; '' by default)
+        Description to be added to ContentDescription, and used in the file
+        name of the exported DRO.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+    
+    Outputs:
+    *******
+    
+    Dro : Pydicom object
+        The DICOM Registration Object.
+    
+    
+    Notes:
+    *****
+    
+    Sample DROs from:
+    https://www.insight-journal.org/browse/publication/923
+    
+    Spatial Registration Object module:
+    https://dicom.innolitics.com/ciods/spatial-registration
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html
+    
+    Example Spatial DRO:
+    https://docs.google.com/document/d/1tMUWGe4kw6yLC2j7-y9WC-gY6LoiRL8XbG-_LeRU2_U
+    """
+    
+    # The transform parameters:
+    TxParams = SitkTx.GetParameters()
+    
+    """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
+    Reference Transformation Matrix 
+    (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+    """
+    #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+    TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
+                str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
+                str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
+                str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
+    
+    if LogToConsole:
+        print(f'TxParams = {TxParams}\n')
+        print(f'TxMatrix = {TxMatrix}\n')
+    
+    Dro = CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description, 
+                       LogToConsole)
+        
+    return Dro
 
 
 def CreateDefDro_OLD(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, GridRes,
@@ -855,7 +924,7 @@ def CreateDefDro_OLD(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, Grid
     from pydicom.uid import generate_uid
     from copy import deepcopy
     from DicomTools import ImportDicoms
-    from ImageTools import GetTxMatrixType
+    from GeneralTools import GetTxMatrixType
     
     cwd = os.getcwd()
 
@@ -938,7 +1007,7 @@ def CreateDefDro_OLD(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, Grid
     CurrentTime = time.strftime("%H%M%S", time.gmtime())
     #CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
     
-    Dro.InstanceCreationData = CurrentDate
+    Dro.InstanceCreationDate = CurrentDate
     Dro.InstanceCreationTime = CurrentTime
     
     # Generate a new SOPInstanceUID:
@@ -1221,12 +1290,13 @@ def CreateDefDro_OLD(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, Grid
 
 
 
-
-
 def CreateDefDro(SrcDicomDir, TrgDicomDir, 
                  GridOrig, GridDir, GridDims, GridRes, VectGridData,
-                 TxParams=None, Description='', LogToConsole=False):
+                 TxMatrix=None, Description='', LogToConsole=False):
     """
+    08/07/21:
+        See create_def_dro in dro_tools.tx_to_def_dro.py
+     
     Create a DICOM Deformable Spatial Registration Object (DRO).  
     
     Inputs:
@@ -1258,13 +1328,11 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
         List of floats representing the vector deformations that deform the
         moving (Source) image to the fixed (Target) image.
     
-    TxParams : list of floats or None (optional; None by default)
-        List of floats representing the non-deformable transformation 
-        parameters from the SimpleElastix image filter or SimpleITK transform
-        used prior to the bspline transformation used to register the moving 
-        (Source) image to the fixed (Target) image; and will be stored in 
-        PreDeformationMatrixRegistrationSequence.  If None, the identity 
-        matrix will be used.
+    TxMatrix : list of strings or None (optional; None by default)
+        List of strings representing the non-deformable transformation 
+        parameters to be applied prior to the bspline registration. TxMatrix
+        will be stored in PreDeformationMatrixRegistrationSequence.  If None, 
+        the identity matrix will be used.
     
     Description : string (optional; '' by default)
         Description to be added to ContentDescription, and used in the file
@@ -1303,11 +1371,10 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
     from pydicom.uid import generate_uid
     #from copy import deepcopy
     from DicomTools import ImportDicoms
-    from ImageTools import GetTxMatrixType
     #import importlib
     #import GeneralTools
     #importlib.reload(GeneralTools)
-    from GeneralTools import ReduceListOfStringFloatsTo16
+    from GeneralTools import GetTxMatrixType, ReduceListOfStringFloatsTo16
     
     cwd = os.getcwd()
 
@@ -1354,21 +1421,22 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
         print(f'\n*Took {Dtime} s to import the 3D images.')
     
     
-    if TxParams == None:
-        TxMatrix = ['1.0', '0.0', '0.0', '0.0',
-                    '0.0', '1.0', '0.0', '0.0',
-                    '0.0', '0.0', '1.0', '0.0',
-                    '0.0', '0.0', '0.0', '1.0']
-    else:
-        """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
-        Reference Transformation Matrix 
-        (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
-        """
-        #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
-        TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
-                    str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
-                    str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
-                    str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
+    # The following was moved to CreateDefDroFromBsplineTx(): (04/06/21) 
+    #if TxParams == None:
+    #    TxMatrix = ['1.0', '0.0', '0.0', '0.0',
+    #                '0.0', '1.0', '0.0', '0.0',
+    #                '0.0', '0.0', '1.0', '0.0',
+    #                '0.0', '0.0', '0.0', '1.0']
+    #else:
+    #    """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
+    #    Reference Transformation Matrix 
+    #    (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+    #    """
+    #    #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+    #    TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
+    #                str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
+    #                str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
+    #                str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
     
     
     """ Read in the DRO template. """
@@ -1644,20 +1712,25 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
     Note:  Need to verify that GetTxMatrixType covers all 3 options.
     """
     
-    if TxParams != None:
-        print(f'TxParams = {TxParams}')
-        
-        Dro.DeformableRegistrationSequence[1]\
-           .PreDeformationMatrixRegistrationSequence[0]\
-           .FrameOfReferenceTransformationMatrixType = GetTxMatrixType(TxParams, 
-                                                                       LogToConsole)
+    #if TxParams != None: # 04/06/21
+    #    print(f'TxParams = {TxParams}')
+    #    
+    #    Dro.DeformableRegistrationSequence[1]\
+    #       .PreDeformationMatrixRegistrationSequence[0]\
+    #       .FrameOfReferenceTransformationMatrixType = GetTxMatrixType(TxParams, 
+    #                                                                   LogToConsole)
+    #
+    #    times.append(time.time())
+    #    Dtime = round(times[-1] - times[-2], 3)
+    #    if LogToConsole:
+    #        print(f'\n   *Took {Dtime} s to get the transform matrix type.')
     
-        times.append(time.time())
-        Dtime = round(times[-1] - times[-2], 3)
-        if LogToConsole:
-            print(f'\n   *Took {Dtime} s to get the transform matrix type.')
-    
-    
+    # 04/06/21:
+    Dro.DeformableRegistrationSequence[1]\
+       .PreDeformationMatrixRegistrationSequence[0]\
+       .FrameOfReferenceTransformationMatrixType = GetTxMatrixType(TxMatrix, 
+                                                                   LogToConsole)
+           
     """ > Consider adding details for the FrameOfReferenceTransformationComment
     and RegistrationTypeCodeSequence (optional). 
     Dro.DeformableRegistrationSequence[1]\
@@ -1698,10 +1771,6 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
         
         
     return Dro
-
-
-
-
 
 
 def CreateDefDroFromBsplineTx_OLD(SrcDicomDir, TrgDicomDir, BsplineTx, 
@@ -1822,13 +1891,13 @@ def CreateDefDroFromBsplineTx_OLD(SrcDicomDir, TrgDicomDir, BsplineTx,
     return Dro
 
 
-
-
-
 def CreateDefDroFromBsplineTx(SrcDicomDir, TrgDicomDir, BsplineTx, 
                               PreRegTx=None, Description='', 
                               LogToConsole=False):
     """
+    08/07/21:
+        See create_def_dro_from_tx in dro_tools.tx_to_def_dro.py
+     
     Create a DICOM Deformable Spatial Registration Object (DRO) from a 
     SimpleITK BSpline transformation.  
     
@@ -1933,19 +2002,34 @@ def CreateDefDroFromBsplineTx(SrcDicomDir, TrgDicomDir, BsplineTx,
     print(f'type(VectGridData) = {type(VectGridData)}')
     #print(f'VectGridData = {VectGridData}\n')
     
+    """ Get the transformation matrix (TxMatrix) from the pre-registration
+    transform parameters: """
     if PreRegTx == None:
-        PreRegTxParams = None
+        #PreRegTxParams = None
+        
+        TxMatrix = ['1.0', '0.0', '0.0', '0.0',
+                    '0.0', '1.0', '0.0', '0.0',
+                    '0.0', '0.0', '1.0', '0.0',
+                    '0.0', '0.0', '0.0', '1.0']
     else:
-        PreRegTxParams = PreRegTx.GetParameters()
+        TxParams = PreRegTx.GetParameters()
+        
+        """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
+        Reference Transformation Matrix 
+        (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+        """
+        #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+        TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
+                    str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
+                    str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
+                    str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
+    
     
     Dro = CreateDefDro(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, 
-                       GridRes, VectGridData, PreRegTxParams, Description, 
+                       GridRes, VectGridData, TxMatrix, Description, 
                        LogToConsole)
     
     return Dro
-
-
-
 
 
 
@@ -2028,12 +2112,107 @@ def CreateSitkTxFromTxMatrix_INCOMPLETE(TxMatrix, Transform):
     return SitkTx
 
 
-
-
-
-
-def CreatePreDefTxFromDefDro(Dro, LogToConsole=False):
+def CreateSitkTxFromSpaDro(Dro, LogToConsole=False):
     """
+    08/07/21:
+        See create_tx_from_spa_dro in dro_tools.dro_to_tx.py
+    
+    Create a SimpleITK transformation based on parameters parsed from
+    a DICOM Spatial Registration Object (DRO).  
+    
+    Inputs:
+    ******
+    
+    Dro : Pydicom object
+        The DICOM Spatial Registration Object.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+    
+    Outputs:
+    *******
+    
+    SitkTx : SimpleITK Transform
+        A transform based on the parameters stored in Dro.
+    
+    
+    Notes:
+    *****
+    
+    It will be assumed that RegistrationSequence has two items: the first for
+    the Fixed scan and thev second for the Moving scan.  While the 
+    FrameOfReferenceMatrix in the second item is necessary, the first provides
+    a convenient means of arciving the FrameOfReferenceUID of the Fixed scan.
+    
+    Sample DRO from:
+    https://wiki.cancerimagingarchive.net/display/Public/Head-Neck-PET-CT#242838679219e971f0494026a216c74aeae636e6
+    
+    Spatial Registration Object module:
+    https://dicom.innolitics.com/ciods/spatial-registration
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html
+    
+    Example Spatial DRO:
+    https://docs.google.com/document/d/1tMUWGe4kw6yLC2j7-y9WC-gY6LoiRL8XbG-_LeRU2_U
+    """
+    
+    import SimpleITK as sitk
+    #import numpy as np
+    
+    MatrixType = Dro.RegistrationSequence[1]\
+                    .MatrixRegistrationSequence[0]\
+                    .MatrixSequence[0]\
+                    .FrameOfReferenceTransformationMatrixType
+    
+    Matrix = [float(s) for s in Dro.RegistrationSequence[1]\
+                                   .MatrixRegistrationSequence[0]\
+                                   .MatrixSequence[0]\
+                                   .FrameOfReferenceTransformationMatrix]
+    
+    if LogToConsole:
+        print(f'MatrixType from DRO = {MatrixType}')
+        print(f'Matrix from DRO = {Matrix}')
+    
+    if MatrixType == 'RIGID':
+        SitkTx = sitk.Euler3DTransform()
+        
+        #SitkTx.SetParameters(TxMatrix[0:6]) # 07/05/21
+        #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
+        #SitkTx.SetParameters(TxParams) # 07/05/21
+        
+    
+    elif MatrixType == 'RIGID_SCALE':
+        SitkTx = sitk.Similarity3DTransform()
+        
+        #SitkTx.SetParameters(TxMatrix[0:12]) # 07/05/21
+        #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
+        #SitkTx.SetParameters(TxParams) # 07/05/21
+        
+    elif MatrixType == 'AFFINE':
+        SitkTx = sitk.AffineTransform(3)
+        
+        #SitkTx.SetParameters(TxMatrix[0:12]) # 07/05/21
+        Matrix = [Matrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
+        SitkTx.SetParameters(Matrix) # 07/05/21
+        
+    else:
+        msg = f"MatrixType = {MatrixType} is not a recognised value. Only "\
+              + "'RIGID', 'RIGID_SCALE' and 'AFFINE' are acceptable values."
+        
+        raise Exception(msg)
+    
+    if LogToConsole:
+        print(f'Parameters in new SitkTx = {SitkTx.GetParameters()}\n')
+    
+    return SitkTx
+
+
+
+def CreatePreDefSitkTxFromDefDro(Dro, LogToConsole=False):
+    """
+    08/07/21:
+        See create_pre_tx_from_def_dro in dro_tools.dro_to_tx.py
+    
     Create a SimpleITK transformation based on parameters parsed from
     PreDeformationMatrixRegistrationSequence in a DICOM Deformable Spatial 
     Registration Object (DRO).  
@@ -2113,10 +2292,11 @@ def CreatePreDefTxFromDefDro(Dro, LogToConsole=False):
     return PreDefTx
 
 
-
-
-def CreateBsplineTxFromDefDro(Dro, RefIm=None, LogToConsole=False):
+def CreateSitkTxFromDefDro(Dro, RefIm=None, LogToConsole=False):
     """
+    08/07/21:
+        See create_tx_from_def_dro in dro_tools.dro_to_tx.py
+    
     Create a SimpleITK BSpline transformation based on parameters parsed from
     a DICOM Deformable Spatial Registration Object (DRO).  
     
@@ -2145,7 +2325,7 @@ def CreateBsplineTxFromDefDro(Dro, RefIm=None, LogToConsole=False):
     Outputs:
     *******
     
-    BsplineTx : SimpleITK Transform
+    SitkTx : SimpleITK Transform
         A transform based on the parameters stored in Dro.
     
     
@@ -2265,12 +2445,9 @@ def CreateBsplineTxFromDefDro(Dro, RefIm=None, LogToConsole=False):
     CoeffImZ.SetDirection(GridDir)
     CoeffImZ.SetSpacing(GridSpacing)
     
-    BsplineTx = sitk.BSplineTransform([CoeffImX, CoeffImY, CoeffImZ])
+    SitkTx = sitk.BSplineTransform([CoeffImX, CoeffImY, CoeffImZ])
     
-    return BsplineTx
-
-
-
+    return SitkTx
 
 
 
@@ -2317,18 +2494,27 @@ def ExportDro(Dro, ExportDir, Fname='', DictOfInputs=None):
     
     import os
     import time
+    from datetime import datetime
     from pathlib import Path
     
     if not os.path.isdir(ExportDir):
         #os.mkdir(ExportDir)
         Path(ExportDir).mkdir(parents=True)
-    
-    if not DictOfInputs == None:
-        DateTime = DictOfInputs['RunDateTime']
-    else:
-        DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
     if Fname == '':
+        if DictOfInputs == None:
+            DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        else:
+            DateTime = DictOfInputs['RunDateTime']
+            
+            """ Remove the decimal from the seconds (e.g. 20210611_145930.766799
+            to 20210611_145930): """
+            # Convert from string to datetime:
+            dateTime = datetime.strptime(DateTime, "%Y%m%d_%H%M%S.%f")
+            
+            # Convert back to string without fractional seconds:
+            DateTime = datetime.strftime(dateTime, "%Y%m%d_%H%M%S")
+        
         Fname = DateTime + '_' + '.dcm'
     else:
         Fname = Fname.replace(' ', '_')

@@ -76,12 +76,12 @@ def GetIndOfNearestSlice(RefIm, RefInd, Im, UseCentre=True):
     
     return Ind, MinDiff
 
-
-
-
-
     
 def ItemsUniqueToWithin(List, epsilon=1e-5):
+    """
+    06/07/21:
+        See general_tools.general.py
+    """
     
     UniqueList = []
     
@@ -103,11 +103,11 @@ def ItemsUniqueToWithin(List, epsilon=1e-5):
     
 
 
-
-
-
-
 def FlattenList(ListOfLists):
+    """
+    06/07/21:
+        See general_tools.general.py
+    """
     if len(ListOfLists) == 0:
         return ListOfLists
     if isinstance(ListOfLists[0], list):
@@ -116,12 +116,11 @@ def FlattenList(ListOfLists):
 
 
 
-
-
-
-
 def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
     """
+    06/07/21:
+        See general_tools.general.py
+        
     Get list of unique items in a list or Numpy data array.
     
     Inputs:
@@ -197,8 +196,6 @@ def UniqueItems(Items, IgnoreZero=False, MaintainOrder=False):
     
 
 
-
-
 def unique(a):
     """ return the list with duplicate elements removed """
     return list(set(a))
@@ -214,9 +211,6 @@ def union(a, b):
 def xor(a, b):
     # use the symmetric difference operator (i.e. XOR operator)
     return list(set(a) ^ set(b))
-
-
-
 
 
 def AppendItemToListAndSort(OrigList, ItemToAppend):
@@ -251,15 +245,11 @@ def AppendItemToListAndSort(OrigList, ItemToAppend):
     return NewList
 
 
-
-
-
-
-
-
-
 def Unpack(Items):
     """
+    07/07/21:
+        See unpack in general_tools.general.py
+        
     Unpack list of 2D or 3D lists (e.g. [x, y] or [x, y, z] coordinates, or 
     [i, j] or [i, j, k] indices) into separate lists for each dimension.
     
@@ -323,14 +313,11 @@ def Unpack(Items):
         raise Exception(msg)
 
 
-
-
-
-
-
-
 def AreItemsEqualToWithinEpsilon(Item0, Item1, epsilon=1e-06):
     """
+    07/07/21:
+        See are_items_equal_to_within_eps_REDUNDANT in general_tools.general.py
+        
     Are two items equal to within epsilon?
     
     Default value of epsilon is 1e-06.
@@ -346,12 +333,11 @@ def AreItemsEqualToWithinEpsilon(Item0, Item1, epsilon=1e-06):
     return IsEqual
 
 
-
-
-
-
 def AreListsEqualToWithinEpsilon(List0, List1, epsilon=1e-06):
     """
+    07/07/21:
+        See are_lists_equal_to_within_eps in general_tools.general.py
+        
     Are two lists equal to within epsilon?
     
     Default value of epsilon is 1e-06.
@@ -369,9 +355,6 @@ def AreListsEqualToWithinEpsilon(List0, List1, epsilon=1e-06):
         IsEqual = False
         
     return IsEqual
-
-
-
 
 
 def NumOfListsAtDepthTwo(NestedList):
@@ -398,10 +381,6 @@ def NumOfListsAtDepthTwo(NestedList):
         N = N + len(NestedList[i])
         
     return N
-
-
-
-
 
 
 def NumOfItemsInAListByDepth(List):
@@ -438,12 +417,11 @@ def NumOfItemsInAListByDepth(List):
 
 
 
-
-
-
-
-
 def PrintTitle(Title):
+    """
+    06/07/21:
+        See print_title in general_tools.console_printing.py
+    """
     
     ul = '*' * len(Title)
     print('\n' + Title)
@@ -453,11 +431,14 @@ def PrintTitle(Title):
 
 
 
-
-
 def PrintIndsByRoi(IndsByRoi):
-    """ Print the list of indices in each ROI, e.g. from a list of C2SindsByRoi
-    or F2SindsBySeg. """
+    """
+    06/07/21:
+        See print_inds_by_roi in general_tools.console_printing.py
+    
+    Print the list of indices in each ROI, e.g. from a list of C2SindsByRoi
+    or F2SindsBySeg. 
+    """
     
     R = len(IndsByRoi)
     print(f'There are {R} ROIs/segments in IndsByRoi')
@@ -485,11 +466,13 @@ def PrintIndsByRoi(IndsByRoi):
 
 
 
-
-
-
 def PrintPtsByCnt(PtsByCnt):
-    """ Print the number of points in each contour in PtsByCnt. """
+    """ 
+    06/07/21:
+        See print_pts_by_cnt in general_tools.console_printing.py
+    
+    Print the number of points in each contour in PtsByCnt. 
+    """
     
     C = len(PtsByCnt)
     print(f'There are {C} contours')
@@ -501,17 +484,16 @@ def PrintPtsByCnt(PtsByCnt):
     return
 
 
-
-
-
-
-
 def PrintPtsByCntByRoi(PtsByCntByRoi):
-    """ Print the number of points in each contour of each ROI in 
-    PtsByCntByRoi. """
+    """ 
+    06/07/21:
+        See print_pts_by_cnt in general_tools.console_printing.py
+    
+    Print the number of points in each contour of each ROI in PtsByCntByRoi. 
+    """
     
     R = len(PtsByCntByRoi)
-    print(f'There are two ROIs/segments in IndsByRoi')
+    print('There are two ROIs/segments in IndsByRoi')
     
     #C = [len(PtsByCntByRoi[r]) for r in range(R)]
     #print(f'There are {C} contours/frames in each ROI/segment')
@@ -527,13 +509,12 @@ def PrintPtsByCntByRoi(PtsByCntByRoi):
     return
 
 
-
-
-
-
-
 def PrintPixArrBySeg(PixArrBySeg):
-    """ If PixArrBySeg is a list of pixel arrays (as the input variable name
+    """ 
+    06/07/21:
+        See print_pixarr_by_seg in general_tools.console_printing.py
+    
+    If PixArrBySeg is a list of pixel arrays (as the input variable name
     suggests):
         - print the number of pixel arrays in the list
         - print the shape of each pixel array
@@ -553,10 +534,12 @@ def PrintPixArrBySeg(PixArrBySeg):
     return
 
 
-
-
-
 def PrintPixArrShapeBySeg(PixArrBySeg):
+    """
+    06/07/21:
+        See print_pixarr_by_seg in general_tools.console_printing.py
+    """
+    
     #import numpy as np
     
     S = len(PixArrBySeg)
@@ -585,11 +568,11 @@ def PrintPixArrShapeBySeg(PixArrBySeg):
 
 
 
-
-
-
 def IsPointInPolygon(point, vertices):
     """
+    07/07/21:
+        See is_pt_in_poly in general_tools.geometry.py
+        
     Determine if a point lies within a polygon.
     
     Inputs:
@@ -632,13 +615,6 @@ def IsPointInPolygon(point, vertices):
     return PtInPoly
 
 
-
-
-
-
-
-
-
 def CropNonZerosIn2dMask(Orig2dMask):
     
     import numpy as np
@@ -671,10 +647,6 @@ def CropNonZerosIn2dMask(Orig2dMask):
     
 
 
-
-
-
-
 def CropPixArr(PixArr):
     
     import numpy as np
@@ -693,10 +665,6 @@ def CropPixArr(PixArr):
     CropPixArr = PixArr[:, rMin:rMax+1, cMin:cMax+1]
 
     return CropPixArr, IndsExtent
-
-
-
-
 
 
 
@@ -749,12 +717,6 @@ def CropLabmapArr(LabmapArr):
     
 
     return LabmapArr[a:b, c:d, e:f]
-
-
-
-
-
-
 
 
 def CropLabmapIm(LabmapIm, KeepAspect=False):
@@ -845,11 +807,6 @@ def CropLabmapIm(LabmapIm, KeepAspect=False):
     return LabmapArr[imin:imax, jmin:jmax, kmin:kmax]
 
 
-
-
-
-
-
 def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
     """ Compare cropped masks of non-zero elements only. """ 
     
@@ -935,14 +892,11 @@ def Compare2dMasksFrom3dMasks(OrigSegRoi, NewSegRoi, OrigDicomDir, NewDicomDir):
 
 
 
-
-
-
-
-
-
 def GetPhysicalShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1):
     """
+    07/07/21:
+        See get_phys_shift_bt_slices in general_tools.shifting.py
+        
     Get the physical shift between SliceNum0 in Image0 and SliceNum1 in Image1
     based on the origins of the two slices (i.e. Image0[0,0,SliceNum0] and
     Image1[0,0,SliceNum1]).
@@ -977,13 +931,12 @@ def GetPhysicalShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1):
 
 
 
-
-
-
-
 def GetPixelShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1, RefImage,
                                Fractional=False):
     """
+    07/07/21:
+        See get_pix_shift_bt_slices in general_tools.shifting.py
+        
     Get the shift in pixels between SliceNum0 in Image0 and SliceNum1 in Image1
     based on the origins of the two slices (i.e. Image0[0,0,SliceNum0] and
     Image1[0,0,SliceNum1]).
@@ -1032,10 +985,11 @@ def GetPixelShiftBetweenSlices(Image0, SliceNum0, Image1, SliceNum1, RefImage,
 
 
 
-
-
-
 def ReplaceIndInC2SindsByRoi(C2SindsByRoi, IndToReplace, ReplacementInd):
+    """ 
+    07/07/21:
+        See replace_ind_in_C2SindsByRoi in general_tools.shifting.py
+    """
     
     for r in range(len(C2SindsByRoi)):
         for c in range(len(C2SindsByRoi[r])):
@@ -1043,9 +997,6 @@ def ReplaceIndInC2SindsByRoi(C2SindsByRoi, IndToReplace, ReplacementInd):
                 C2SindsByRoi[r][c] = ReplacementInd
     
     return C2SindsByRoi
-
-
-
 
 
 
@@ -1074,10 +1025,12 @@ def GetSrcC2SindsByRoi2TrgC2SindsByRoi_v1(SrcC2SindsByRoi, SrcImage, TrgImage):
 
 
 
-
-
-
 def GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcC2SindsByRoi, SrcImage, TrgImage):
+    """
+    07/07/21:
+        See get_src_C2SindsByRoi_to_trg_C2SindsByRoi in 
+        general_tools.shifting.py
+    """
     
     """ Compare origins: """
     SrcOrigin = SrcImage.GetOrigin()
@@ -1107,13 +1060,11 @@ def GetSrcC2SindsByRoi2TrgC2SindsByRoi_v2(SrcC2SindsByRoi, SrcImage, TrgImage):
     return TrgC2SindsByRoi
 
 
-
-
-
-
-
 def ShiftFrame(Frame, PixShift):
     """
+    07/07/21:
+        See shift_frame in general_tools.shifting.py
+        
     Shift the items in a 2D frame.
     
     Inputs:
@@ -1140,7 +1091,7 @@ def ShiftFrame(Frame, PixShift):
     F, R, C = Frame.shape
     
     if F > 1:
-        msg = f"'Frame' must be a 2D frame with shape (1, R, C) but has shape"\
+        msg = "'Frame' must be a 2D frame with shape (1, R, C) but has shape"\
               + f" ({F}, {R}, {C})."
         
         raise Exception(msg)
@@ -1196,16 +1147,14 @@ def ShiftFrame(Frame, PixShift):
     return ShiftedFrame
 
 
-
-
-
-
-
 def ShiftFramesInPixArrBySeg(PixArrBySeg, F2SindsBySeg, SrcImage, SrcSliceNum,
                              TrgImage, TrgSliceNum, RefImage, ShiftInX=True,
                              ShiftInY=True, ShiftInZ=True, Fractional=False,
                              LogToConsole=False):
     """
+    07/07/21:
+        See shift_frames_in_pixarrBySeg in general_tools.shifting.py
+    
     Shift the items in each frame of each pixel array in a list of 
     pixel-arrays-by-segment.  Example uses: To compensate for differences in 
     z-positions of a single-framed Source pixel array to be "direct" copied to
@@ -1265,7 +1214,8 @@ def ShiftFramesInPixArrBySeg(PixArrBySeg, F2SindsBySeg, SrcImage, SrcSliceNum,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of ShiftFramesInPixArrBySeg():')
+        print('Running of ShiftFramesInPixArrBySeg():')
+        print('\n\n', '-'*120)
         
     # Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
     # TrgImage in the Target image domain:
@@ -1327,15 +1277,14 @@ def ShiftFramesInPixArrBySeg(PixArrBySeg, F2SindsBySeg, SrcImage, SrcSliceNum,
         print('-'*120)
         
     return PixArrBySeg, F2SindsBySeg
-    
-    
-
-
 
 
 
 def ChangeZinds(Indices, NewZind):
     """
+    07/07/21:
+        See change_z_inds in general_tools.shifting.py
+        
     Re-assign the z-components of a list of indeces (as required when
     making a direct copy of contour points).
     
@@ -1370,12 +1319,11 @@ def ChangeZinds(Indices, NewZind):
 
 
 
-
-
-
-
 def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
     """
+    07/07/21:
+        See z_shift_ptsByCntByRoi in general_tools.shifting.py
+      
     Shift the z-component of the points in PtsByCntByRoi (as required when
     making a direct copy of contour points).
     
@@ -1442,8 +1390,6 @@ def ZshiftPtsByCntByRoi(PtsByCntByRoi, NewZind, DicomDir):
 
 
 
-
-
 def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum, 
                        TrgImage, TrgSliceNum, RefImage, ShiftInX=True,  
                        ShiftInY=True, ShiftInZ=True, Fractional=False, 
@@ -1452,6 +1398,9 @@ def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
     #NewZind, DicomDir, 
     
     """
+    07/07/21:
+        See shift_ptsByCntByRoi in general_tools.shifting.py
+     
     Shift the points in each list of points in each list of contours in each
     list of ROIs.  Example uses: To compensate for differences in 
     z-positions of a single-contour Source points to be "direct" copied to
@@ -1486,7 +1435,8 @@ def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of ShiftPtsByCntByRoi():')
+        print('Running of ShiftPtsByCntByRoi():')
+        print('\n\n', '-'*120)
         
     """ Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
     TrgImage in the Target image domain: """
@@ -1559,12 +1509,12 @@ def ShiftPtsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
 
 
 
-
-
-
 def MeanFrameInPixArr(PixArr, F2Sinds, MakeBinary=True, BinaryThresh=0.5,
                       LogToConsole=False):
     """
+    09/07/21:
+        See mean_frame_in_pixarr in general_tools.pixarr_ops.py
+    
     Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
     binary pixel array if binary=True (or undefined).
     
@@ -1606,7 +1556,8 @@ def MeanFrameInPixArr(PixArr, F2Sinds, MakeBinary=True, BinaryThresh=0.5,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of MeanFrameInPixArr():')
+        print('Running of MeanFrameInPixArr():')
+        print('\n\n', '-'*120)
         
     F, R, C = PixArr.shape
     
@@ -1652,12 +1603,12 @@ def MeanFrameInPixArr(PixArr, F2Sinds, MakeBinary=True, BinaryThresh=0.5,
 
 
 
-
-
-
 def MeanFrameInPixArrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True, 
                            BinaryThresh=0.5, LogToConsole=False):
     """
+    09/07/21:
+        See mean_frame_in_pixarrBySeg in general_tools.pixarr_ops.py
+    
     Perform pixel-by-pixel mean of all frames in all pixel arrays in a list
     of pixel-arrays-by-ROI which have more than 1 frame. No changes will be
     made to empty or single-framed pixel arrays.  If there are less than 2
@@ -1703,7 +1654,8 @@ def MeanFrameInPixArrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of MeanFrameInPixArrBySeg():')
+        print('Running of MeanFrameInPixArrBySeg():')
+        print('\n\n', '-'*120)
         
     MeanPixArrBySeg = []
     MeanF2SindBySeg = []
@@ -1745,12 +1697,11 @@ def MeanFrameInPixArrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True,
 
 
 
-
-
-
-
 def OrFrameOfPixArrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
     """
+    09/07/21:
+        See or_frame_of_pixarrBySeg in general_tools.pixarr_ops.py
+    
     Perform pixel-by-pixel logical OR of all frames in all pixel arrays in a 
     list of pixel-arrays-by-segment which have more than 1 frame. No changes 
     will be made to empty or single-framed pixel arrays. If there are less than
@@ -1790,7 +1741,8 @@ def OrFrameOfPixArrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of OrFrameOfPixArrBySeg():')
+        print('Running of OrFrameOfPixArrBySeg():')
+        print('\n\n', '-'*120)
         
     # Get the shape of any pixel array:
     F, R, C = PixArrBySeg[0].shape
@@ -1852,10 +1804,6 @@ def OrFrameOfPixArrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
 
 
 
-
-
-
-
 def Distance(item0, item1):
     """
     Compute the distance between points or indices.  
@@ -1899,10 +1847,9 @@ def Distance(item0, item1):
         msg = "The inputs must both be 2D or 3D lists of points/indices."
         
         raise Exception(msg)
-        
-        
-        
-        
+
+
+
 def SplitString(String, SearchString, Separator='_'):
     """
     Split a string to the string of characters on either side of a search
@@ -1948,7 +1895,6 @@ def SplitString(String, SearchString, Separator='_'):
         StringList.append(StringSplit[ind+1])
         
     return StringList
-
 
 
 
@@ -2006,9 +1952,11 @@ def SliceNoFromFpath(Fpath, SearchString, Separator='_'):
 
 
 
-
 def GetListOfDataTypes(ListOfItems, Unique=True):
     """
+    07/07/21:
+        See get_list_of_dtypes in general_tools.general.py
+        
     Return a list of the data type of the elements in the list.  If the input
     Unique is True or omitted, the set of data types will be returned.  Hence
     a single-itemed list containing a single data type is a permitted output.
@@ -2037,11 +1985,6 @@ def GetListOfDataTypes(ListOfItems, Unique=True):
         Dtypes = list(set(Dtypes))
     
     return Dtypes
-
-
-
-
-
 
 
 
@@ -2083,11 +2026,11 @@ def GetVectorLength(Vector):
 
 
 
-
-
-
 def SumOfSquaresOfMatrix(Matrix):
     """
+    08/07/21:
+        See matrix_sum_of_squares in dro_tools.matrices.py
+    
     Compute the root-sum-of-squares of a matrix.
     
     Inputs:
@@ -2111,14 +2054,11 @@ def SumOfSquaresOfMatrix(Matrix):
     return RSS
 
 
-
-
-
-
-
-
 def IsMatrixOrthogonal(Matrix, LogToConsole=False):
     """
+    08/07/21:
+        See is_matrix_orthogonal in dro_tools.matrices.py
+    
     Determine if a matrix is orthogonal.
     
     Inputs:
@@ -2173,20 +2113,19 @@ def IsMatrixOrthogonal(Matrix, LogToConsole=False):
         print(f'\nSSE = {SSE}')
         
         if IsOrthogonal:
-            print(f'\nM is orthogonal')
+            print('\nM is orthogonal')
         else:
-            print(f'\nM is not orthogonal')
+            print('\nM is not orthogonal')
         
         
     return IsOrthogonal
 
 
-
-
-
-
 def IsMatrixOrthonormal(Matrix, LogToConsole=False):
     """
+    08/07/21:
+        See is_matrix_orthonormal in dro_tools.matrices.py
+    
     Determine if a matrix is orthonormal.
     
     Inputs:
@@ -2225,7 +2164,7 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
     M = Matrix
     
     #print(type(M))
-    print(M)
+    #print(M)
     
     if len(M.shape) != 2:
         msg = f'The matrix has {len(M.shape)} dimensions. It must have 2.'
@@ -2263,14 +2202,335 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
         print(f'\nSSE = {SSEofTequalsInv}')
         
         if IsOrthonormal:
-            print(f'\nM is orthonormal')
+            print('\nM is orthonormal')
         else:
-            print(f'\nM is not orthonormal')
+            print('\nM is not orthonormal')
         
     return IsOrthonormal
 
 
+def GetTxMatrixType_OLD(TxParams, LogToConsole=False):
+    """
+    NOTE 03/06/21: This was primarily intended for use with SimpleElastix.
+    
+    Determine the Transformation Matrix Type (from a list of transformation 
+    parameters read from the TransformParameters.0.txt file exported by
+    Elastix )following an image registration and assumed to be in the current
+    working directory.
+    
+    Inputs:
+    ******
+    
+    TxParams : list of strings
+        The registration transform parameters. If TxParams = None, the 
+        transform parameters will be parsed from TransformParameters.0.txt
+        (see Notes).
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+        
+    Outputs:
+    *******
+    
+    MatrixType : string
+        A string containing the matrix type.  Possible outputs are:
+            - 'RIGID'
+            - 'RIGID_SCALE'
+            - 'AFFINE'
+        
+        
+    Notes:
+    -----
+    
+    1. The transform parameters will be read from the file 
+    TransformParameters.0.txt.  The file is generated by Elastix following an
+    image registration, found in the current working directory. It will be 
+    assumed that the file is located in the current working directory and that
+    the filename is as above.
+    
+    2. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
+    TransformParameters.0.txt.  M only includes the elements that describe 
+    rotations, scaling and shearing, i.e not translations (hence only the
+    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxMatrix).
+    
+    TxMatrix has additional bottom row [0 0 0 1] (see 
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+    
+    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
+    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+    
+    3. There are three types of Registration matrices as defined in C.X.1.1.2
+    (page 27) in DICOM Standard Supplement 7.3:
+        
+        RIGID: 
+        - a registration involving only translations and rotations
+        - the matrix contains 6 degrees of freedom: 3 translations and 3 
+        rotations
+        - the matrix must be orthnormal
+        
+        RIGID_SCALE:
+        - a registration involving only translations, rotations and scaling
+        - the matrix contains 9 degrees of freedom: 3 translations, 3 rotations
+        and 3 scales
+        - the matrix must be orthogonal
+        
+        AFFINE:
+        - a registration involving translations, rotations, scaling and 
+        shearing
+        - the matrix contains 12 degrees of freedom: 3 translations, 3 
+        rotations, 3 scales and 3 shears
+        - there are no constraints on the matrix elements
+    """
+    
+    import os
+    import numpy as np
+    #from ImageTools import ParseTransformParameterFile
+    from GeneralTools import IsMatrixOrthonormal, IsMatrixOrthogonal
+    
+    #print(f'TxParams = {TxParams}\n')
+    
+    if TxParams == None:
+        ParamFname = 'TransformParameters.0.txt'
+        ParamFpath = os.path.join(os.getcwd(), ParamFname)
+    
+        TxParams = ParseTransformParameterFile(ParamFpath, 
+                                               'TransformParameters')
+    
+    #inds = [0, 1, 2, 4, 5, 6, 8, 9, 10] # 06/05/21
+    #inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 06/05/21
 
+    #M = np.array([TxParams[i] for i in inds]) # 06/05/21
+    #M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
+    M = np.array([float(TxParams[i]) for i in range(9)]) # 07/05/21
+    
+    M = np.reshape(M, (3, 3))
+    
+    #print(f'M = {M}\n')
+    
+    IsOrthonormal = IsMatrixOrthonormal(M, LogToConsole)
+    
+    if IsOrthonormal:
+        MatrixType = 'RIGID'
+    else:
+        IsOrthogonal = IsMatrixOrthogonal(M, LogToConsole)
+        
+        if IsOrthogonal:
+            MatrixType = 'RIGID_SCALE'
+        
+        else:
+            MatrixType = 'AFFINE'
+            
+            
+    if LogToConsole:
+        print('Matrix type is', MatrixType)
+    
+    return MatrixType
+
+
+def GetTxMatrixType_OLD2(TxParams, LogToConsole=False):
+    """
+    Determine the Transformation Matrix Type from a list of transformation 
+    parameters.
+    
+    Inputs:
+    ******
+    
+    TxParams : list of strings
+        The registration transform parameters.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+        
+    Outputs:
+    *******
+    
+    MatrixType : string
+        A string containing the matrix type.  Possible outputs are:
+            - 'RIGID'
+            - 'RIGID_SCALE'
+            - 'AFFINE'
+        
+        
+    Notes:
+    -----
+    
+    1. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
+    TransformParameters.0.txt.  M only includes the elements that describe 
+    rotations, scaling and shearing, i.e not translations (hence only the
+    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxMatrix).
+    
+    TxMatrix has additional bottom row [0 0 0 1] (see 
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+    
+    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
+    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+    
+    3. There are three types of Registration matrices as defined in C.X.1.1.2
+    (page 27) in DICOM Standard Supplement 7.3:
+        
+        RIGID: 
+        - a registration involving only translations and rotations
+        - the matrix contains 6 degrees of freedom: 3 translations and 3 
+        rotations
+        - the matrix must be orthnormal
+        
+        RIGID_SCALE:
+        - a registration involving only translations, rotations and scaling
+        - the matrix contains 9 degrees of freedom: 3 translations, 3 rotations
+        and 3 scales
+        - the matrix must be orthogonal
+        
+        AFFINE:
+        - a registration involving translations, rotations, scaling and 
+        shearing
+        - the matrix contains 12 degrees of freedom: 3 translations, 3 
+        rotations, 3 scales and 3 shears
+        - there are no constraints on the matrix elements
+    """
+    
+    #import os
+    import numpy as np
+    #from ImageTools import ParseTransformParameterFile
+    from GeneralTools import IsMatrixOrthonormal, IsMatrixOrthogonal
+    
+    #print(f'TxParams = {TxParams}\n')
+    
+    #inds = [0, 1, 2, 4, 5, 6, 8, 9, 10] # 06/05/21
+    #inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 06/05/21
+
+    #M = np.array([TxParams[i] for i in inds]) # 06/05/21
+    #M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
+    M = np.array([float(TxParams[i]) for i in range(9)]) # 07/05/21
+    
+    M = np.reshape(M, (3, 3))
+    
+    #print(f'M = {M}\n')
+    
+    IsOrthonormal = IsMatrixOrthonormal(M, LogToConsole)
+    
+    if IsOrthonormal:
+        MatrixType = 'RIGID'
+    else:
+        IsOrthogonal = IsMatrixOrthogonal(M, LogToConsole)
+        
+        if IsOrthogonal:
+            MatrixType = 'RIGID_SCALE'
+        
+        else:
+            MatrixType = 'AFFINE'
+            
+            
+    if LogToConsole:
+        print('Matrix type is', MatrixType)
+    
+    return MatrixType
+
+
+
+def GetTxMatrixType(TxMatrix, LogToConsole=False):
+    """
+    08/07/21:
+        See get_tx_matrix_type in dro_tools.matrices.py
+    
+    Determine the Transformation Matrix Type from a list of transformation
+    parameters.
+    
+    Inputs:
+    ******
+    
+    TxMatrix : list of strings
+        The registration transform parameters.
+    
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+    
+        
+    Outputs:
+    *******
+    
+    MatrixType : string
+        A string containing the matrix type.  Possible outputs are:
+            - 'RIGID'
+            - 'RIGID_SCALE'
+            - 'AFFINE'
+        
+        
+    Notes:
+    -----
+    
+    1. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
+    TransformParameters.0.txt.  M only includes the elements that describe 
+    rotations, scaling and shearing, i.e not translations (hence only the
+    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxMatrix).
+    
+    TxMatrix has additional bottom row [0 0 0 1] (see 
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+    
+    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
+    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+    
+    3. There are three types of Registration matrices as defined in C.X.1.1.2
+    (page 27) in DICOM Standard Supplement 7.3:
+        
+        RIGID: 
+        - a registration involving only translations and rotations
+        - the matrix contains 6 degrees of freedom: 3 translations and 3 
+        rotations
+        - the matrix must be orthnormal
+        
+        RIGID_SCALE:
+        - a registration involving only translations, rotations and scaling
+        - the matrix contains 9 degrees of freedom: 3 translations, 3 rotations
+        and 3 scales
+        - the matrix must be orthogonal
+        
+        AFFINE:
+        - a registration involving translations, rotations, scaling and 
+        shearing
+        - the matrix contains 12 degrees of freedom: 3 translations, 3 
+        rotations, 3 scales and 3 shears
+        - there are no constraints on the matrix elements
+    """
+    
+    #import os
+    import numpy as np
+    #from ImageTools import ParseTransformParameterFile
+    from GeneralTools import IsMatrixOrthonormal, IsMatrixOrthogonal
+    
+    #print(f'TxParams = {TxParams}\n')
+    
+    #inds = [0, 1, 2, 4, 5, 6, 8, 9, 10] # 06/05/21
+    inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 04/06/21
+
+    #M = np.array([TxParams[i] for i in inds]) # 06/05/21
+    #M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
+    #M = np.array([float(TxParams[i]) for i in range(9)]) # 07/05/21
+    M = np.array([float(TxMatrix[i]) for i in inds]) # 04/06/21
+    
+    M = np.reshape(M, (3, 3))
+    
+    #print(f'M = {M}\n')
+    
+    IsOrthonormal = IsMatrixOrthonormal(M, LogToConsole)
+    
+    if IsOrthonormal:
+        MatrixType = 'RIGID'
+    else:
+        IsOrthogonal = IsMatrixOrthogonal(M, LogToConsole)
+        
+        if IsOrthogonal:
+            MatrixType = 'RIGID_SCALE'
+        
+        else:
+            MatrixType = 'AFFINE'
+            
+            
+    if LogToConsole:
+        print('Matrix type is', MatrixType)
+    
+    return MatrixType
 
 
 
@@ -2304,8 +2564,6 @@ def ReduceDictToKeysMatchingKeyword(Dict, Keyword='', KeepDirectories=True,
                 NewDict[Key] = Val
     
     return NewDict
-
-
 
 
 def ReduceDictToKeysMatchingKeywords(Dict, ListOfKeywords, 
@@ -2396,10 +2654,14 @@ def DisplayAttributesOfAllData(Keyword='Dcm', RemoveFromKeys='_DcmDir',
 
 
 
-
-def ExportDictionaryToJson(Dictionary, FileName, ExportDir='cwd'):
+def ExportDictionaryToCsv(Dictionary, FileName, ExportDir='cwd'):
     """
-    Export a dictionary to a JSON file.
+    06/07/21:
+        See export_dict_to_csv in io_tools.exports.py
+        
+    NOTE:  Not sure this works.
+    
+    Export a dictionary to a CSV file.
     
     Inputs:
     ******
@@ -2409,7 +2671,337 @@ def ExportDictionaryToJson(Dictionary, FileName, ExportDir='cwd'):
         
     FileName : string
         The file name to assign to the exported file. If FileName doesn't 
-        include the '.json' extension it will be added automatically.
+        include the '.csv' extension it will be added automatically.
+    
+    ExportDir : string (optional; 'cwd' by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    """
+    
+    import csv
+    import os
+    from pathlib import Path
+    
+    if not '.csv' in FileName:
+        FileName += '.csv'
+    
+    if ExportDir == 'cwd':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    with open(FilePath, 'wb') as output:
+        writer = csv.writer(output)
+        
+        for key, value in Dictionary.items():
+            print(f"{key} = {value}")
+            writer.writerow([key, value])
+    
+    return
+
+
+
+
+
+def ExportDictionaryToXlsx_OLD(Dictionary, FileName, ExportDir='cwd', 
+                           NameOfFirstColumn=''):
+    """
+    Export a dictionary to a XLSX file.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+        
+    FileName : string
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.xlsx' extension it will be added automatically.
+    
+    ExportDir : string (optional; 'cwd' by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    
+    NameOfFirstColumn : string (optional; '' by default)
+        The name to assign to the first column of the spreadsheet (i.e. the
+        first column of the pandas dataframe)
+    """
+    
+    import os
+    from pathlib import Path
+    import pandas as pd
+    
+    if not '.xlsx' in FileName:
+        FileName += '.xlsx'
+    
+    if ExportDir == 'cwd':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    
+    #df = pd.DataFrame(data=Dictionary)
+    
+    
+    """ Transpose to swap columns for rows, and remove apostrophes from strings
+    (e.g. lists of strings in the 'Co-investigators' column): """
+    #df = (df.T).replace('\'','', regex=True, inplace=True)
+    
+    #df = df.T # <-- pd.DataFrame.from_dict(data=Dictionary, orient='index') achieves this
+    
+    #df = df.replace('\'','', regex=True, inplace=True) # wrong/errors
+    
+    #df['Co-investigators'].replace('\'','', regex=True, inplace=True) # doesn't work
+    
+    #df['Co-investigators'] = df['Co-investigators'].replace('\'','', regex=True, inplace=True) # deletes everything in column!
+    
+    #df['Co-investigators'] = df['Co-investigators'].str.replace(r"[\"\',]", '')
+    
+    #for key in df['Co-investigators'].keys():
+    #    [item.replace(r"[\"\',]", '') for item in df['Co-investigators'][key]]
+    
+    
+    df = pd.DataFrame.from_dict(data=Dictionary, orient='index')
+    
+    
+    """ Add the name NameOfFirstColumn to the first column? """
+    if NameOfFirstColumn != '':
+        df.index.name = NameOfFirstColumn
+    
+    
+    df.to_excel(FilePath)
+    
+    return
+
+
+
+
+def DictionaryToDataFrame(Dictionary):
+    """
+    06/07/21:
+        See dict_to_dataframe in io_tools.exports.py
+        
+    Convert a dictionary to a Pandas dataframe.  Dictionary assumed to have a 
+    simple {key : value} structure.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+    
+    
+    Outputs:
+    *******
+    
+    DataFrame : Pandas Dataframe
+    """
+    
+    import pandas as pd
+    
+    DataFrame = pd.DataFrame.from_dict(data=Dictionary, orient='index', 
+                                       columns=[''])
+    
+    
+    return DataFrame
+
+
+
+def DictionaryOfDictionariesToDataFrame(Dictionary, NameOfFirstColumn=''):
+    """
+    06/07/21:
+        See dict_of_dicts_to_dataframe in io_tools.exports.py
+        
+    Convert a dictionary of dictionaries to a Pandas dataframe.  Dictionary 
+    assumed to have a nested {key : {key : value}} structure.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+    
+    NameOfFirstColumn : string (optional; '' by default)
+        The name to assign to the first column of the spreadsheet (i.e. the
+        first column of the pandas dataframe)
+    
+    
+    Outputs:
+    *******
+    
+    DataFrame : Pandas Dataframe
+    """
+    
+    import pandas as pd
+    
+    """
+    #df = pd.DataFrame(data=Dictionary)
+    
+    # Transpose to swap columns for rows, and remove apostrophes from strings
+    # (e.g. lists of strings in the 'Co-investigators' column): 
+    #df = (df.T).replace('\'','', regex=True, inplace=True)
+    
+    df = df.T # <-- pd.DataFrame.from_dict(data=Dictionary, orient='index') achieves this
+    
+    #df = df.replace('\'','', regex=True, inplace=True) # wrong/errors
+    
+    #df['Co-investigators'].replace('\'','', regex=True, inplace=True) # doesn't work
+    
+    #df['Co-investigators'] = df['Co-investigators'].replace('\'','', regex=True, inplace=True) # deletes everything in column!
+    
+    #df['Co-investigators'] = df['Co-investigators'].str.replace(r"[\"\',]", '')
+    
+    #for key in df['Co-investigators'].keys():
+    #    [item.replace(r"[\"\',]", '') for item in df['Co-investigators'][key]]
+    """
+    
+    DataFrame = pd.DataFrame.from_dict(data=Dictionary, orient='index')
+    
+    
+    """ Add the name NameOfFirstColumn to the first column? """
+    if NameOfFirstColumn != '':
+        DataFrame.index.name = NameOfFirstColumn
+    
+    return DataFrame
+
+
+
+
+def ExportDictionaryToXlsx(Dictionary, FileName, ExportDir='cwd'):
+    """
+    06/07/21:
+        See export_dict_to_xlsx in io_tools.exports.py
+        
+    Export a dictionary to a XLSX file.  Dictionary assumed to have a 
+    simple {key : value} structure.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+        
+    FileName : string
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.xlsx' extension it will be added automatically.
+    
+    ExportDir : string (optional; 'cwd' by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    """
+    
+    import os
+    from pathlib import Path
+    #import pandas as pd
+    
+    if not '.xlsx' in FileName:
+        FileName += '.xlsx'
+    
+    if ExportDir == 'cwd':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    
+    """ Convert from dictionary to Pandas dataframe: """
+    df = DictionaryToDataFrame(Dictionary)
+    
+    df.to_excel(FilePath)
+    
+    return
+
+
+
+
+def ExportDictionaryOfDictionariesToXlsx(Dictionary, FileName, ExportDir='cwd', 
+                                         NameOfFirstColumn=''):
+    """
+    06/07/21:
+        See export_dict_of_dicts_to_xlsx in io_tools.exports.py
+        
+    Export a dictionary of dictionaries to a XLSX file.  Dictionary 
+    assumed to have a nested {key : {key : value}} structure.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+        
+    FileName : string
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.xlsx' extension it will be added automatically.
+    
+    ExportDir : string (optional; 'cwd' by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    
+    NameOfFirstColumn : string (optional; '' by default)
+        The name to assign to the first column of the spreadsheet (i.e. the
+        first column of the pandas dataframe)
+    """
+    
+    import os
+    from pathlib import Path
+    #import pandas as pd
+    
+    if not '.xlsx' in FileName:
+        FileName += '.xlsx'
+    
+    if ExportDir == 'cwd':
+        FilePath = FileName
+    else:
+        if not os.path.isdir(ExportDir):
+            #os.mkdir(ExportDir)
+            Path(ExportDir).mkdir(parents=True)
+        
+        FilePath = os.path.join(ExportDir, FileName)
+    
+    
+    """ Convert from dictionary to Pandas dataframe: """
+    df = DictionaryOfDictionariesToDataFrame(Dictionary, NameOfFirstColumn)
+    
+    df.to_excel(FilePath)
+    
+    return
+
+
+
+
+def ExportDictionaryToJson(Dictionary, FileName=None, ExportDir='cwd'):
+    """
+    06/07/21:
+        See export_dict_to_json in io_tools.exports.py
+        
+    Export a dictionary to a JSON file.
+    
+    Inputs:
+    ******
+    
+    Dictionary : dictionary
+        The dictionary to be exported.
+        
+    FileName : string (optional; None by default)
+        The file name to assign to the exported file. If FileName doesn't 
+        include the '.json' extension it will be added automatically. If a
+        file name is not provided, a file name will be generated using the
+        current date-time followed by '_Dict2Json'.
     
     ExportDir : string (optional; 'cwd' by default)
         If provided the directory to which the file will be exported to. If not
@@ -2421,8 +3013,15 @@ def ExportDictionaryToJson(Dictionary, FileName, ExportDir='cwd'):
     import os
     from pathlib import Path
     
-    if not '.json' in FileName:
-        FileName += '.json'
+    if FileName == None:
+        import time
+        
+        CurrentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        FileName = CurrentDateTime + '_Dict2Json.json'
+    else:
+        if not '.json' in FileName:
+            FileName += '.json'
     
     if ExportDir == 'cwd':
         FilePath = FileName
@@ -2474,6 +3073,9 @@ def ImportDictionaryFromJson(FileName):
 
 def ExportListToTxt(Lst, FileName, ExportDir='cwd'):
     """
+    06/07/21:
+        See export_list_to_txt in io_tools.exports.py
+        
     Export a list to a txt file.
     
     Inputs:
@@ -2550,9 +3152,12 @@ def ImportListFromTxt(FileName):
     return Lst
 
 
-
-
 def DeleteFile(Filepath):
+    """
+    08/07/21:
+        See delete_file in io_tools.general.py
+    """
+    
     import os
     
     try:
@@ -2563,8 +3168,12 @@ def DeleteFile(Filepath):
         print(f'{Filepath} cannot be deleted\n')
 
 
-
 def DeleteDirectory(Dirpath):
+    """
+    08/07/21:
+        See delete_dir in io_tools.general.py
+    """
+    
     import shutil
     
     try:
@@ -2577,7 +3186,11 @@ def DeleteDirectory(Dirpath):
 
 
 def ReduceListOfStringFloatsTo16(OrigList):
-    """ Decimal strings (VR DS in DICOM standard) must be limited to 16 
+    """ 
+    08/07/21:
+        See reduce_list_of_str_floats_to_16 in general_tools.general.py
+    
+    Decimal strings (VR DS in DICOM standard) must be limited to 16 
     characters. Reduce a list of string floats to the required limit.
     
     Inputs:

@@ -25,56 +25,64 @@ def CreateCopyRoiConfigFile():
     """
     
     import os
+    from pathlib import Path
     from pypref import Preferences
     
     ConfigFname = 'CopyRoiDefaults.py'
     
     cwd = os.getcwd()
     
-    Dict = {'TrgRoiColMod' : None, 
-            'TrgRoiColName' : None, 
-            'TrgSliceNum' : None, 
-            'TxtToAddToTrgRoiColName' : '', 
-            'XnatSession' : None, 
-            'PathsDict' : None, 
-            'ExportRootDir' : 'cwd', 
-            'LogToConsole' : False, 
-            'ExportLogFiles' : False,
-            'ResInterp' : 'BlurThenLinear', 
+    erd = os.path.join(Path.home(), "Downloads", "XnatData")
+    
+    Dict = {'TrgRoiColMod' : None,
+            'TrgRoiColName' : None,
+            'TrgSliceNum' : None,
+            'TxtToAddToTrgRoiColName' : '',
+            'XnatSession' : None,
+            'PathsDict' : None,
+            'ResInterp' : 'BlurThenLinear',
             'PreResVar' : (1,1,1),
-            'ApplyPostResBlur' : False, 
+            'ApplyPostResBlur' : False,
             'PostResVar' : (1,1,1),
             'ForceReg' : False,
-            'TxMatrix' : None,
+            #'TxMatrix' : None,
             'SelxOrSitk' : 'Sitk',
             'Transform' : 'affine',
             'MaxIters' : '512',
             'InitMethod' : 'centerofgravity',
             'SrcFidsFpath' : 'moving_fiducials.txt',
             'TrgFidsFpath' : 'fixed_fiducials.txt',
-            'TxInterp' : 'NearestNeighbor', 
+            'TxInterp' : 'NearestNeighbor',
             'ApplyPostTxBin' : True,
-            'ApplyPostTxBlur' : True, 
+            'ApplyPostTxBlur' : True,
             'PostTxVar' : (1,1,1),
-            'ExportNewTrgRoiCol' : True,
-            'RtsExportDir' : os.path.join(cwd, 'new_RTS'),
-            'SegExportDir' : os.path.join(cwd, 'new_SEG'),
-            'ExportNewDro' : True,
-            'DroExportDir' : os.path.join(cwd, 'new_DRO'),
-            'UploadNewDro' : True,
-            'PlotAllSlices' : False,
-            'RtsPlotExportDir' : os.path.join(cwd, 'plots_RTS'),
-            'SegPlotExportDir' : os.path.join(cwd, 'plots_SEG'),
-            'LogExportDir' : os.path.join(cwd, 'logs'),
+            'UseDroForTx' : True,
             'LogToConsole' : False,
+            #'ExportRootDir' : 'cwd',
+            'ExportRootDir' : erd,
+            'ExportNewTrgRoiCol' : True,
+            #'RtsExportDir' : os.path.join(cwd, 'new_RTS'),
+            #'SegExportDir' : os.path.join(cwd, 'new_SEG'),
+            'ExportNewDro' : True,
+            #'DroExportDir' : os.path.join(cwd, 'new_DRO'),
+            'UploadNewDro' : True,
             'PlotResults' : False,
+            'PlotAllSlices' : False,
             'ExportPlot' : False,
+            #'RtsPlotExportDir' : os.path.join(cwd, 'plots_RTS'),
+            #'SegPlotExportDir' : os.path.join(cwd, 'plots_SEG'),
+            'ExportLogFiles' : False,
+            'LogExportDir' : os.path.join(cwd, 'logs'),
             'DevOutputs' : False
             }
     
     pref = Preferences(directory=cwd, filename=ConfigFname)
 
     pref.set_preferences(Dict)
+    
+    ConfigFpath = os.path.join(cwd, ConfigFname)
+    
+    print(f"Configuration file exported to:\n{ConfigFpath}")
     
     return
 

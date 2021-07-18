@@ -40,3 +40,4 @@ sample_DRO/
 *.jpg
 VirtualEnvs/
 Deformable_results/
+*.xlsx

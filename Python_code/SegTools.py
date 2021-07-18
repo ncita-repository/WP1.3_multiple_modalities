@@ -18,6 +18,9 @@ SEGMENT FUNCTIONS
 def GetSegDataOfInterest(SegFpath, SliceNum, SegLabel, DicomDir, 
                          LogToConsole=False):
     """
+    06/07/21:
+        See get_seg_data_of_interest in seg_tools.get_seg_data_of_interest.
+        
     Get data of interest from a SEG.
     
     Inputs:
@@ -102,7 +105,8 @@ def GetSegDataOfInterest(SegFpath, SliceNum, SegLabel, DicomDir,
         from GeneralTools import PrintIndsByRoi, PrintPixArrShapeBySeg
         
         print('\n\n', '-'*120)
-        print('Results of GetSegDataOfInterest():')
+        print('Running of GetSegDataOfInterest():')
+        print('\n\n', '-'*120)
         print(f'   SegLabel = {SegLabel}')
         print(f'   SliceNum = {SliceNum}')
     
@@ -266,14 +270,12 @@ def GetSegDataOfInterest(SegFpath, SliceNum, SegLabel, DicomDir,
     return PixArrBySeg, F2SindsBySeg
 
 
-
-
-
-
-
 def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir, 
                                TrgDicomDir, LogToConsole=False):
     """
+    07/07/21:
+        See prop_of_pixarr_in_extent in general_tools.geometry.py
+        
     COMMENT 29/01/2021:
         I was using the same image (i.e. same DICOM directory) to generate the
         pixel array (i.e. PixArr2PtsByContour()) and to generate the vertices
@@ -355,11 +357,11 @@ def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir,
         #print(f'   \nCntDataByFrame = {CntDataByFrame}')
         
         if False:
-            print(f'\n   The vertices of the image grid:')
+            print('\n   The vertices of the image grid:')
             for i in range(len(Vertices)):
                 print(f'   {Vertices[i]}')
             
-            print(f'\n   The points from the input indices:')
+            print('\n   The points from the input indices:')
             for i in range(len(PtsByObjByFrame[f][o])):
                 print(f'   {PtsByObjByFrame[f][o][i]}')
                 
@@ -367,7 +369,7 @@ def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir,
             print(f'   sum(IsInside) = {sum(IsInside)}')
             
         if FracProp < 1:
-            print(f'\n   The vertices of the image grid:')
+            print('\n   The vertices of the image grid:')
             for i in range(len(Vertices)):
                 print(f'   {Vertices[i]}')
             N = len(IsInside)
@@ -386,13 +388,12 @@ def ProportionOfPixArrInExtent(PixArr, FrameToSliceInds, SrcDicomDir,
     return FracProp
 
 
-
-
-
-
 def ProportionOfSegsInExtent(PixArrBySeg, F2SindsBySeg, SrcDicomDir, 
                              TrgDicomDir, LogToConsole=False):
     """
+    07/07/21:
+        See prop_of_segs_in_extent in general_tools.geometry.py
+        
     COMMENT 29/01/2021:
         I was using the same image (i.e. same DICOM directory) to generate the
         pixel array (i.e. PixArr2PtsByContour()) and to generate the vertices
@@ -449,14 +450,11 @@ def ProportionOfSegsInExtent(PixArrBySeg, F2SindsBySeg, SrcDicomDir,
     return FracProp
 
 
-
-
-
-
-
-
 def GetFrameNums(Seg, SearchString, DicomDir):
     """
+    06/07/21:
+        See get_frame_nums in seg_tools.metadata.py
+    
     Get the frame number(s) in a SEG's pixel array that matches the segment 
     label provided.
     
@@ -542,14 +540,11 @@ def GetFrameNums(Seg, SearchString, DicomDir):
     return FrameNums, PFFGStoSliceInds
 
 
-
-
-
-
-
-
 def GetRSOPuidsInRIS(Seg):
     """
+    06/07/21:
+        See get_RSOP_uids_in_RIS in seg_tools.metadata.py
+        
     Get the list of ReferencedSOPInstanceUIDs in the ReferencedInstanceSequence
     of a SEG.
     
@@ -580,11 +575,11 @@ def GetRSOPuidsInRIS(Seg):
     return RSOPuids
 
 
-
-
-
 def GetRIStoSliceInds(Seg, SOPuids):
     """
+    06/07/21:
+        See get_RIS_to_slice_inds in seg_tools.metadata.py
+        
     Get the slice numbers that correspond to each ReferencedInstanceSequence
     in a SEG.
     
@@ -618,11 +613,11 @@ def GetRIStoSliceInds(Seg, SOPuids):
     return RIStoSliceInds
 
 
-
-
-
 def GetRSOPuidsInPFFGS(Seg):
     """
+    06/07/21:
+        See get_RSOP_uids_in_PFFGS in seg_tools.metadata.py
+        
     Get the list of ReferencedSOPInstanceUIDs in the 
     Per-FrameFunctionalGroupsSequence of a SEG.
     
@@ -654,11 +649,11 @@ def GetRSOPuidsInPFFGS(Seg):
     return RSOPuids
 
 
-
-
-
 def GetPFFGStoSliceInds(Seg, SOPuids):
     """
+    06/07/21:
+        See get_PFFGS_to_slice_inds in seg_tools.metadata.py
+        
     Get a list of the slice numbers that correspond to each  
     Per-FrameFunctionalGroupsSequence in a SEG.
     
@@ -698,13 +693,11 @@ def GetPFFGStoSliceInds(Seg, SOPuids):
     return PFFGStoSliceInds
 
 
-
-
-
-
-
 def GetPFFGStoSliceIndsBySeg(Seg, SOPuids):
     """
+    06/07/21:
+        See get_PFFGS_to_slice_inds_by_seg in seg_tools.metadata.py
+        
     Get a list (per segment) of the slice numbers that correspond to each 
     Per-FrameFunctionalGroupsSequence in a SEG.
     
@@ -736,14 +729,11 @@ def GetPFFGStoSliceIndsBySeg(Seg, SOPuids):
     return PFFGStoSliceIndsBySeg
 
 
-
-
-
-
-    
-    
 def GetDIVs(Seg):
     """
+    06/07/21:
+        See get_DIVs in seg_tools.metadata.py
+        
     Get the DimensionIndexValues in a SEG.
     
     Inputs:
@@ -775,12 +765,11 @@ def GetDIVs(Seg):
     return DIVs
 
 
-
-
-
-
 def GroupListBySegment(ListToGroup, DIVs):
     """
+    06/07/21:
+        See group_list_by_seg in seg_tools.metadata.py
+        
     Group a list of items by common segment/ROI using the DimensionIndexValues.
     
     Inputs:
@@ -852,12 +841,6 @@ def GroupListBySegment(ListToGroup, DIVs):
     return GroupedList
 
 
-
-
-
-
-
-
 def AddToPFFGS(Seg):
     """
     Append the last item in the Per-FrameFunctionalGroupsSequence of the
@@ -892,10 +875,6 @@ def AddToPFFGS(Seg):
     return NewSeg
 
 
-
-
-
-
 def AddToSS(Seg):
     """
     Append the last item in the SegmentSequence of the SEG Object to itself 
@@ -927,11 +906,6 @@ def AddToSS(Seg):
     NewSeg.SegmentSequence.append(last)
              
     return NewSeg
-
-
-
-
-
 
 
 def ChangeNumOfSegSequences(Seg, Dicoms, NumOfFrames, LogToConsole=False):
@@ -1022,8 +996,6 @@ def ChangeNumOfSegSequences(Seg, Dicoms, NumOfFrames, LogToConsole=False):
             Seg.PerFrameFunctionalGroupsSequence.pop()
 
     
-    
-    
     if True:#LogToConsole:       
         R2 = len(Seg.ReferencedSeriesSequence[0].ReferencedInstanceSequence)
         
@@ -1045,14 +1017,11 @@ def ChangeNumOfSegSequences(Seg, Dicoms, NumOfFrames, LogToConsole=False):
     return Seg
 
 
-
-
-
-
-
-
 def GetFrameFromPixArr(Seg, DicomDir, SearchString, SliceNum, LogToConsole):
     """
+    09/07/21:
+        See get_frame_from_pixarr in general_tools.pixarr_ops.py
+    
     Extract a single (2D) frame from a 3D pixel array that matches a given
     segment label.  
     
@@ -1152,14 +1121,11 @@ def GetFrameFromPixArr(Seg, DicomDir, SearchString, SliceNum, LogToConsole):
     return Frame
 
 
-
-
-
-
-
-
 def GetFramesFromPixArr(Seg, DicomDir, SearchString, LogToConsole):
     """
+    09/07/21:
+        See get_frames_from_pixarr in general_tools.pixarr_ops.py
+    
     Extract all frames from a 3D pixel array that match a given segment label.  
     
     Inputs:
@@ -1248,13 +1214,11 @@ def GetFramesFromPixArr(Seg, DicomDir, SearchString, LogToConsole):
 
 
 
-
-
-
-
-
 def GetPixArrInSeg(Seg, DicomDir, SearchString):
     """
+    06/07/21:
+        See get_pixarr_in_seg in seg_tools.pixarrs
+        
     Get the frames in a SEG's pixel array that belong to a segment with
     specified label.
     
@@ -1307,12 +1271,11 @@ def GetPixArrInSeg(Seg, DicomDir, SearchString):
 
 
 
-
-
-
-
 def GetPixArrBySeg(Seg, DicomDir, LogToConsole=False):
     """
+    06/07/21:
+        See get_pixarr_by_seg in seg_tools.pixarrs
+        
     Get a list of pixel arrays grouped by segment in a SEG.
     
     Inputs:
@@ -1348,7 +1311,8 @@ def GetPixArrBySeg(Seg, DicomDir, LogToConsole=False):
         from GeneralTools import PrintIndsByRoi, PrintPixArrShapeBySeg
         
         print('\n\n', '-'*120)
-        print('Results of GetPixArrBySeg():')
+        print('Running of GetPixArrBySeg():')
+        print('\n\n', '-'*120)
         
     AllPixArr = Seg.pixel_array
     
@@ -1398,12 +1362,6 @@ def GetPixArrBySeg(Seg, DicomDir, LogToConsole=False):
         print('-'*120)
         
     return PixArrBySeg, F2SindsBySeg
-
-
-
-
-
-
 
 
 def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds, 
@@ -1493,17 +1451,13 @@ def AddCopiedPixArr(OrigPixArr, OrigPFFGStoSliceInds,
     return NewPixArr, NewPFFGStoSliceInds
 
 
-
-
-
-
-
-
-
 def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg, 
               TrgF2SindsBySeg, TrgDicomDir, SrcSegLabel, AddTxtToSegLabel='', 
               LogToConsole=False):
     """
+    09/07/21:
+        See create_seg in seg_tools.create.py
+    
     Create an SEG object for the target dataset.
          
     
@@ -1591,7 +1545,8 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of CreateSeg():')
+        print('Running of CreateSeg():')
+        print('\n\n', '-'*120)
         print(f'   TrgF2SindsBySeg = {TrgF2SindsBySeg}')
         print(f'   len(TrgPixArrBySeg) = {len(TrgPixArrBySeg)}')
     
@@ -1926,10 +1881,6 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg,
 
 
 
-
-
-
-
 def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     """
     Check a SEG for errors in dependencies based on provided directory of
@@ -1972,7 +1923,8 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of ErrorCheckSeg():')
+        print('Running of ErrorCheckSeg():')
+        print('\n\n', '-'*120)
         
     # The maximum allowed error between two lists/items:
     epsilon = 1e-05
@@ -2048,8 +2000,8 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
             if LogToConsole:
                 print(msg)
     else:
-        msg = f'INFO:  The ReferencedSOPInstanceUIDs in '\
-                  + f'ReferencedInstanceSequence matches the '\
+        msg = 'INFO:  The ReferencedSOPInstanceUIDs in '\
+                  + 'ReferencedInstanceSequence matches the '\
                   + 'SOPInstanceUIDs.\n'
         LogList.append(msg)
         if LogToConsole:
@@ -2057,12 +2009,12 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     
                            
     if Seg.ReferencedSeriesSequence[0].SeriesInstanceUID == Dicom.SeriesInstanceUID:
-        msg = f'INFO:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
+        msg = 'INFO:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
               + f'{Seg.ReferencedSeriesSequence[0].SeriesInstanceUID}, '\
               + 'matches DICOM SeriesInstanceUID, '\
               + f'{Dicom.SeriesInstanceUID}.\n'
     else:
-        msg = f'ERROR:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
+        msg = 'ERROR:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
               + f'{Seg.ReferencedSeriesSequence[0].SeriesInstanceUID}, does '\
               + 'not match DICOM SeriesInstanceUID '\
               + f'{Dicom.SeriesInstanceUID}.\n'
@@ -2359,11 +2311,11 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     PFFGS = Seg.PerFrameFunctionalGroupsSequence
     
     if len(PFFGS) == int(Seg.NumberOfFrames):
-        msg = f'INFO:  The number of sequences in '\
+        msg = 'INFO:  The number of sequences in '\
               + f'PerFrameFunctionGroupsSequence, {len(PFFGS)}, '\
               + f'matches NumberOfFrames {Seg.NumberOfFrames}.\n'
     else:
-        msg = f'ERROR:  The number of sequences in '\
+        msg = 'ERROR:  The number of sequences in '\
               + f'PerFrameFunctionGroupsSequence, {len(PFFGS)}, does not '\
               + f'match NumberOfFrames {Seg.NumberOfFrames}.\n'
         Nerrors = Nerrors + 1
@@ -2396,7 +2348,7 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
             LogList.append(msg)
             Nerrors = Nerrors + 1
     else:
-        msg = f'INFO:  The ReferencedSOPInstanceUIDs in '\
+        msg = 'INFO:  The ReferencedSOPInstanceUIDs in '\
               + 'PerFrameFunctionalGroupsSequence match the DICOM '\
               + 'SOPInstanceUIDs.\n'
         LogList.append(msg)
@@ -2453,8 +2405,8 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
             Nerrors = Nerrors + 1
     else:
         msg = 'INFO:  The second elements in DimensionalIndexValue '\
-                  + f'matches the number of sequences in '\
-                  + f'ReferencedInstanceSequence.\n'
+                  + 'matches the number of sequences in '\
+                  + 'ReferencedInstanceSequence.\n'
         LogList.append(msg)
     
     if LogToConsole:
@@ -2498,10 +2450,10 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
                   
     if n == 0:
         msg = 'INFO:  The ReferencedSOPInstanceUIDs referenced in '\
-                  + f'SourceImageSequence match the '\
+                  + 'SourceImageSequence match the '\
                   + 'ReferencedSOPInstanceUIDs referenced in '\
-                  + f'ReferencedInstanceSequence, as indexed by '\
-                  + f'DimensionalIndexValue.\n'
+                  + 'ReferencedInstanceSequence, as indexed by '\
+                  + 'DimensionalIndexValue.\n'
         LogList.append(msg)
     
     if LogToConsole:
@@ -2541,10 +2493,10 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
                 c += 1
         
         if c == 0:
-            msg = f'INFO: All ImagePositionPatient referenced in '\
+            msg = 'INFO: All ImagePositionPatient referenced in '\
                       + f'PlanePositionSequence are within {epsilon} of the '\
-                      + f'DICOM ImagePositionPatient indexed by the second '\
-                      + f'element in DimensionalIndexValue.\n'
+                      + 'DICOM ImagePositionPatient indexed by the second '\
+                      + 'element in DimensionalIndexValue.\n'
             LogList.append(msg)
             
         #else:
@@ -2570,7 +2522,7 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     
     if Inds:       
         for i in range(len(Inds)):
-            msg = f'ERROR:  ReferencedSegmentNumber in '\
+            msg = 'ERROR:  ReferencedSegmentNumber in '\
                   + 'SegmentIdentificationSequence of '\
                   + f'PerFrameFunctionalGroupsSequence[{Inds[i]}], '\
                   + f'{RSNs[Inds[i]]}, does not match the first element in '\
@@ -2627,12 +2579,7 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     return LogList, Nerrors
 
 
-
-
-
-
-
-def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString, 
+def GetSegDataFromListOfSegs_OLD(ListOfSegs, ListOfDicomDirs, SearchString, 
                              LogToConsole=False):
     """ 
     Note:
@@ -2658,7 +2605,8 @@ def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of GetSegDataFromListOfSegs():')
+        print('Running of GetSegDataFromListOfSegs():')
+        print('\n\n', '-'*120)
     
     ListOfPixArrBySeg = []
     ListOfF2SindsBySeg = []
@@ -2685,7 +2633,160 @@ def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString,
             F2SindsBySeg = None
             
             if LogToConsole:      
-                print(f'No segmentations for this dataset')
+                print('No segmentations for this dataset')
+        
+        
+        DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
+        
+        Size, Spacings, ST, IPPs, Dirs,\
+        ListOfWarnings = GetImageAttributes(ListOfDicomDirs[i])
+        
+        ListOfPixArrBySeg.append(PixArrBySeg)
+        ListOfF2SindsBySeg.append(F2SindsBySeg)
+        ListOfDcmFpaths.append(DcmFpaths)
+        #ListOfOrigins.append(IPPs[0])
+        ListOfIPPs.append(IPPs)
+        ListOfDirections.append(Dirs)
+        ListOfSpacings.append(Spacings)
+            
+        if LogToConsole:      
+            print(f'\nlen(ListOfF2SindsBySeg) = {len(ListOfF2SindsBySeg)}')
+            #print(f'\nPixArr.shape = {PixArr.shape}')
+            #[print(f'np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+        
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return ListOfPixArrBySeg, ListOfF2SindsBySeg, ListOfDcmFpaths,\
+           ListOfIPPs, ListOfDirections, ListOfSpacings
+
+
+
+def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString, 
+                             LogToConsole=False):
+    """ 
+    Note:
+    
+    ListOfSegs is a list (which could be of length 1) of SEG (Pydicom) objects.
+    
+    ListOfDicomDirs is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs that correspond to each SEG.
+    
+    ListOfPlotTitles is a list (which could be of length 1) of text for each
+    plot title.
+    """
+    
+    #import importlib
+    #import DicomTools
+    #importlib.reload(DicomTools)
+    
+    #import numpy as np
+    #from DicomTools import GetDicomFpaths
+    #from DicomTools import GetDicomSOPuids
+    #from DicomTools import GetRoiNums
+    #from ImageTools import GetImageAttributes
+    from ImageTools import GetImAttributesFromListOfDcmDirs
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Running of GetSegDataFromListOfSegs():')
+        print('\n\n', '-'*120)
+    
+    ListOfPixArrBySeg = []
+    ListOfF2SindsBySeg = []
+    #ListOfSegNums = []
+    
+    for i in range(len(ListOfSegs)):
+        if LogToConsole:
+            print(f'\n\nListOfSegs[{i}]:')
+        
+        if ListOfSegs[i]:
+            PixArrBySeg, F2SindsBySeg = GetPixArrBySeg(ListOfSegs[i], 
+                                                       ListOfDicomDirs[i], 
+                                                       LogToConsole)
+            
+            if LogToConsole:      
+                print(f'F2SindsBySeg = {F2SindsBySeg}')
+            
+        else:
+            PixArrBySeg = None
+            F2SindsBySeg = None
+            
+            if LogToConsole:      
+                print('No segmentations for this dataset')
+        
+        ListOfPixArrBySeg.append(PixArrBySeg)
+        ListOfF2SindsBySeg.append(F2SindsBySeg)
+            
+        if LogToConsole:      
+            print(f'\nlen(ListOfF2SindsBySeg) = {len(ListOfF2SindsBySeg)}')
+            #print(f'\nPixArr.shape = {PixArr.shape}')
+            #[print(f'np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+        
+    ListOfDcmFpaths, ListOfIPPs, ListOfDirections, ListOfSpacings\
+        = GetImAttributesFromListOfDcmDirs(ListOfDicomDirs)
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return ListOfPixArrBySeg, ListOfF2SindsBySeg, ListOfDcmFpaths,\
+           ListOfIPPs, ListOfDirections, ListOfSpacings
+
+
+
+def GetSegDataFromListOfLabImBySeg_OLD(ListOfLabImBySeg, ListOfDicomDirs, #SearchString, 
+                                   LogToConsole=False):
+    """ 
+    Note:  Modelled from GetSegDataFromListOfSegs.
+    
+    ListOfLabImBySeg is a list (for each dataset, which could be of length 1) 
+    of a list (for each segment) of label images (SimpleITK Images).
+    
+    ListOfDicomDirs is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs that correspond to each SEG.
+    """
+    
+    #import importlib
+    #import DicomTools
+    #importlib.reload(DicomTools)
+    
+    #import numpy as np
+    from ConversionTools import ImageBySeg2PixArrBySeg
+    from DicomTools import GetDicomFpaths
+    #from DicomTools import GetDicomSOPuids
+    #from DicomTools import GetRoiNums
+    from ImageTools import GetImageAttributes
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Running of GetSegDataFromListOfSegs():')
+        print('\n\n', '-'*120)
+    
+    ListOfPixArrBySeg = []
+    ListOfF2SindsBySeg = []
+    #ListOfSegNums = []
+    ListOfDcmFpaths = []
+    ListOfIPPs = []
+    ListOfDirections = []
+    ListOfSpacings = []
+    
+    for i in range(len(ListOfLabImBySeg)):
+        if LogToConsole:
+            print(f'\n\nListOfLabImBySeg[{i}]:')
+        
+        if ListOfLabImBySeg[i]:
+            PixArrBySeg, F2SindsBySeg = ImageBySeg2PixArrBySeg(ListOfLabImBySeg[i])
+            
+            if LogToConsole:      
+                print(f'F2SindsBySeg = {F2SindsBySeg}')
+            
+        else:
+            PixArrBySeg = None
+            F2SindsBySeg = None
+            
+            if LogToConsole:      
+                print('No segmentations for this dataset')
         
         
         DcmFpaths = GetDicomFpaths(ListOfDicomDirs[i])
@@ -2716,6 +2817,78 @@ def GetSegDataFromListOfSegs(ListOfSegs, ListOfDicomDirs, SearchString,
 
 
 
+def GetSegDataFromListOfLabImBySeg(ListOfLabImBySeg, ListOfDicomDirs, #SearchString, 
+                                   LogToConsole=False):
+    """ 
+    Note:  Modelled from GetSegDataFromListOfSegs.
+    
+    ListOfLabImBySeg is a list (for each dataset, which could be of length 1) 
+    of a list (for each segment) of label images (SimpleITK Images).
+    
+    ListOfDicomDirs is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs that correspond to each SEG.
+    """
+    
+    #import importlib
+    #import DicomTools
+    #importlib.reload(DicomTools)
+    
+    #import numpy as np
+    from ConversionTools import ImageBySeg2PixArrBySeg
+    #from DicomTools import GetDicomFpaths
+    #from DicomTools import GetDicomSOPuids
+    #from DicomTools import GetRoiNums
+    #from ImageTools import GetImageAttributes
+    from ImageTools import GetImAttributesFromListOfDcmDirs
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Running of GetSegDataFromListOfSegs():')
+        print('\n\n', '-'*120)
+    
+    ListOfPixArrBySeg = []
+    ListOfF2SindsBySeg = []
+    
+    for i in range(len(ListOfLabImBySeg)):
+        if LogToConsole:
+            print(f'\n\nListOfLabImBySeg[{i}]:')
+        
+        if ListOfLabImBySeg[i]:
+            PixArrBySeg, F2SindsBySeg = ImageBySeg2PixArrBySeg(ListOfLabImBySeg[i])
+            
+            if LogToConsole:      
+                print(f'F2SindsBySeg = {F2SindsBySeg}')
+            
+        else:
+            PixArrBySeg = None
+            F2SindsBySeg = None
+            
+            if LogToConsole:      
+                print('No segmentations for this dataset')
+        
+        
+        ListOfPixArrBySeg.append(PixArrBySeg)
+        ListOfF2SindsBySeg.append(F2SindsBySeg)
+            
+        if LogToConsole:      
+            print(f'\nlen(ListOfF2SindsBySeg) = {len(ListOfF2SindsBySeg)}')
+            #print(f'\nPixArr.shape = {PixArr.shape}')
+            #[print(f'np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+        
+    
+    ListOfDcmFpaths, ListOfIPPs, ListOfDirections, ListOfSpacings\
+        = GetImAttributesFromListOfDcmDirs(ListOfDicomDirs)
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return ListOfPixArrBySeg, ListOfF2SindsBySeg, ListOfDcmFpaths,\
+           ListOfIPPs, ListOfDirections, ListOfSpacings
+
+
+
+
+
 
 
 """
@@ -2730,13 +2903,14 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             UseCaseToApply, TrgSegFpath=None, TrgSegLabel=None, TrgSliceNum=None, 
             ResInterp='BlurThenLinear', PreResVariance=(1,1,1),
             ApplyPostResBlur=False, PostResVariance=(1,1,1),
-            ForceReg=False, SelxOrSitk='Sitk', Transform='affine', 
-            MaxIters='512', InitMethod='centerofgravity', 
+            ForceReg=False, UseDroForTx=True, SelxOrSitk='Sitk', 
+            Transform='affine', MaxIters='512', InitMethod='centerofgravity', 
             SrcFidsFpath='moving_fiducials.txt', 
             TrgFidsFpath='fixed_fiducials.txt', TxInterp='NearestNeighbor', 
             ApplyPostTxBin=True, ApplyPostTxBlur=True, PostTxVariance=(1,1,1), 
-            TxMatrix=None, GridDims=None, GridRes=None, VectGridData=None,
-            TxtToAddToSegLabel='', LogToConsole=False, 
+            #TxMatrix=None, GridDims=None, GridRes=None, VectGridData=None,
+            Dro=None, TxtToAddToSegLabel='', #OverwriteDro=False, 
+            LogToConsole=False, 
             DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
     """
     Note 09/02/2021:
@@ -2818,9 +2992,13 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         resampled labelmap image(s).
     
     ForceReg : boolean (optional; False by default)
-        If True the Source image will be registered to the Target image, and 
-        the Source labelmap will be transformed to the Target image grid
-        accordingly.  
+        If True the Source image will be registered to the Target image, even 
+        if the Source and Target images have the same FrameOfReferenceUID.  
+    
+    UseDroForTx : boolean (optional; True by default)
+        If True the transformation parameters from any suitable DRO (for the
+        required Transform) will be used instead of performing image
+        registration.
     
     SelxOrSitk : string (optional; 'Selx' by default)
         Denotes which package to use for image registration and transformation.
@@ -2873,34 +3051,42 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         The variance along all dimensions if Gaussian blurring the post-
         transformed labelmap image(s).
     
-    TxMatrix : list of float strings or None (optional; None by default)
-        List of float strings representing the non-deformable transformation 
-        that transforms the moving (Source) image to the fixed (Target) image. 
-        If not None, image registration will be skipped to save computational
-        time.
-    
-    GridDims : list of integers or None (optional; None by default)
-        List of integers representing the dimensions of the BSpline grid used 
-        to deform the moving (Source) image to the fixed (Target) image. 
-        If not None, image registration will be skipped to save computational
-        time.
-    
-    GridRes : list of floats or None (optional; None by default)
-        List of floats representing the resolution of the BSpline grid used to 
-        deform the moving (Source) image to the fixed (Target) image.
-        If not None, image registration will be skipped to save computational
-        time.
-    
-    VectGridData : list of float strings or None (optional; None by default)
-        List of floats representing the vector deformations that deform the
-        moving (Source) image to the fixed (Target) image.
-        If not None, image registration will be skipped to save computational
-        time.
-    
     TxtToAddToSegLabel : string (optional, '' by default)
         String of text to add to the segment label of the new Target SEG.
-        
-    LogToConsole : boolean (default False)
+    
+    #TxMatrix : list of float strings or None (optional; None by default)
+    #    List of float strings representing the non-deformable transformation 
+    #    that transforms the moving (Source) image to the fixed (Target) image;
+    #    or None.  If not None, image registration will be skipped to save 
+    #    computational time.
+    #
+    #GridDims : list of integers or None (optional; None by default)
+    #    List of integers representing the dimensions of the BSpline grid used 
+    #    to deform the moving (Source) image to the fixed (Target) image; 
+    #    or None.  If not None, image registration will be skipped to save 
+    #    computational time.
+    # 
+    #GridRes : list of floats or None (optional; None by default)
+    #    List of floats representing the resolution of the BSpline grid used to 
+    #    deform the moving (Source) image to the fixed (Target) image; or None.
+    #    If not None, image registration will be skipped to save computational
+    #    time.
+    #
+    #VectGridData : list of float strings or None (optional; None by default)
+    #    List of floats representing the vector deformations that deform the
+    #    moving (Source) image to the fixed (Target) image; or None.
+    #    If not None, image registration will be skipped to save computational
+    #    time.
+    
+    Dro : Pydicom Object (optional; None by default)
+        A Spatial or Deformable Spatial Registration Object that contains the
+        parameters required to register the moving (Source) image to the fixed
+        (Target) image.
+    
+    OverwriteDro : boolean (optional; False by default)
+        If True, Dro (if not None) will be overwritten.
+    
+    LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
     
     DictOfInputs : dictionary (optional; empty by default)
@@ -2987,7 +3173,8 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         from DicomTools import GetRoiLabels
         
         print('\n\n', '-'*120)
-        print(f'Running CopySeg():')
+        print('Running of CopySeg():')
+        print('\n\n', '-'*120)
         
         SrcSegLabels = GetRoiLabels(SrcSeg)
         
@@ -3031,6 +3218,11 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     ListOfTimings.append(msg)
     print(f'*{msg}')
     
+    
+    """ Load the Source SEG: """
+    SrcSeg = dcmread(SrcSegFpath)
+    
+    
     """ Raise exception if there is no data of interest from the Source SEG."""
     if not UniqueItems(SrcF2SindsBySeg):
         from DicomTools import GetRoiLabels, GetDicomSOPuids
@@ -3047,7 +3239,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         
         msg = f"There are no segmentations on slice {SrcSliceNum} in any "\
               + f"segment in the Source SEG. There are {L} segments in the "\
-              + f"Source SEG:"
+              + "Source SEG:"
         
         for i in range(L):
             msg += f"\nSegment {i+1} with label '{Labels[i]}' has "\
@@ -3139,6 +3331,9 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             
             if LogToConsole:
                 print(f'TrgF2SindsByRoi = {TrgF2SindsBySeg}.')
+        else:
+            TrgPixArrBySeg = None
+            TrgF2SindsBySeg = None
         
 
     #if UseCase in ['1', '2a']:
@@ -3216,7 +3411,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         
         if LogToConsole:
             print(f'\nSrcF2SindsBySeg = {SrcF2SindsBySeg}')
-            print(f'TrgF2SindsBySeg (= shifted SrcF2SindsBySeg) =',
+            print('TrgF2SindsBySeg (= shifted SrcF2SindsBySeg) =',
                   f'{SrcF2SindsBySeg}.')
     
     
@@ -3297,6 +3492,10 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                 
                 ListOfInputs.append(f'PostResThreshUsedForSeg{i} = {Thresh}')
                 DictOfInputs[f'PostResThreshUsedForSeg{i}'] = Thresh
+    else:
+        ResSrcLabImBySeg = None
+        ResSrcPixArrBySeg = None
+        ResSrcF2SindsBySeg = None
                 
         
     
@@ -3304,9 +3503,18 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         """ Direct or relationship-preserving copying with registration
         transformation. """
         
-        from ImageTools import RegisterImagesSelx, RegisterImagesSitk
-        from ImageTools import TransformLabImByRoi, CreateSitkTxFromTxMatrix
-        from ImageTools import GetParamFromSelxImFilt
+        if SelxOrSitk == 'Selx':
+            from SelxTools import RegisterImagesSelx, GetParamFromSelxImFilt
+        else:
+            from ImageTools import RegisterImagesSitk
+        from ImageTools import TransformImWithListOfSitkTxs
+        #from ImageTools import TransformLabImByRoi
+        from ImageTools import TransformLabImByRoiWithListOfSitkTxs
+        #from DroTools import CreateSitkTxFromTxMatrix
+        from DroTools import CreateSitkTxFromSpaDro
+        from DroTools import CreatePreDefSitkTxFromDefDro
+        from DroTools import CreateSitkTxFromDefDro
+        from GeneralTools import AreListsEqualToWithinEpsilon
         
         if not Transform in ['rigid', 'affine', 'bspline']:
             msg = f'The chosen transform, {Transform}, is not one of the '\
@@ -3314,11 +3522,18 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             
             raise Exception(msg)
         
-        if (Transform in ['rigid', 'affine'] and TxMatrix == None) \
-        or (Transform == 'bspline' and VectGridData == None):
+        #if (Transform in ['rigid', 'affine'] and TxMatrix == None) \
+        #or (Transform == 'bspline' and VectGridData == None):
+        #if Dro == None:
+        if Dro == None or (Dro != None and UseDroForTx):
             """ The transform parameters required to register SrcIm to TrgIm 
-            were not found from any matching subject assessors in XNAT. Perform
-            image registration: """
+            were not found from any matching subject assessors in XNAT, or
+            a suitable DRO was found but UseDroForTx = False. 
+            Image registration to be performed. """
+            
+            if Dro != None and UseDroForTx:
+                print('Image registration will be performed despite a',
+                      'suitable DRO found on XNAT.\n')
             
             if LogToConsole == False:
                 print(f'Performing image registration using {Transform}',
@@ -3346,13 +3561,12 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                                                   Param='TransformParameters')
                 
             if SelxOrSitk == 'Sitk':
-                RegIm, SelxImFiltOrSitkTx\
+                RegIm, LandmarkTx, SelxImFiltOrSitkTx\
                 = RegisterImagesSitk(FixIm=TrgIm, MovIm=SrcIm, 
-                                     Transform=Transform, InitMethod=InitMethod, 
-                                     FinalInterp='Linear',
+                                     Transform=Transform, InitMethod=InitMethod,
                                      FixFidsFpath=TrgFidsFpath, 
                                      MovFidsFpath=SrcFidsFpath,
-                                     FlipK=False, LogToConsole=LogToConsole)
+                                     LogToConsole=LogToConsole)
                 
                 """ Get the registration transform parameters: """
                 TxParams = [str(item) for item in SelxImFiltOrSitkTx.GetParameters()]
@@ -3375,70 +3589,132 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             #            str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
             #            str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
             
+            
+            """ 
+            04/06/2021:
+            
+            Due to issues with initialising a SimpleITK BSpline Transform
+            using fiducials, the workflow for deformable registrations using
+            fiducial pre-alignment consists of two resampling steps (as opposed 
+            to one for deformable registrations not using fiducial pre-alignment
+            or non-deformable registrations using fiducials or not). Hence
+            create a list ListOfSitkTxs containing SelxImFiltOrSitkTx so
+            that TransformLabImByRoi() can be looped for each item in the list.
+            """
+            ListOfSitkTxs = [SelxImFiltOrSitkTx]
+            
         else:
             """ The transform parameters required to register SrcIm to TrgIm 
             are obtained from the transform matrix, found from the DRO (subject
-            assessor) in XNAT. Create a SimpleITK transform from TxMatrix: 
-            
-            Note: 'bspline' transform is not currently catered for.
+            assessor) in XNAT. Create a SimpleITK transform from Dro: 
             """
             
-            if Transform in ['rigid' 'affine']:
-                SelxImFiltOrSitkTx = CreateSitkTxFromTxMatrix(TrgIm, TxMatrix, 
-                                                              Transform)
+            """ 04/06/21 Workaround described above. """
+            ListOfSitkTxs = []
+            
+            if Transform in ['rigid', 'affine']:
+                #SelxImFiltOrSitkTx = CreateSitkTxFromTxMatrix(TrgIm, TxMatrix, 
+                #                                              Transform)
+                #
+                #""" TxMatrix has additional bottom row [0 0 0 1] (see 
+                #http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+                #
+                #Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. 
+                #Hence:
+                #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+                #"""
+                #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 06/05/21
                 
-                """ TxMatrix has additional bottom row [0 0 0 1] (see 
-                http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
+                SitkTx = CreateSitkTxFromSpaDro(Dro, LogToConsole)
                 
-                Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. 
-                Hence:
-                TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
-                """
-                TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 06/05/21
+                TxParams = list(SitkTx.GetParameters())
+                
+                ListOfSitkTxs.append(SitkTx)
             else:
-                """ 10/05/21: Still need to create CreateSelxImFiltFromParams()
-                """
-                SelxImFiltOrSitkTx = CreateSelxImFiltFromParams(TrgIm, GridDims, 
-                                                                GridRes, 
-                                                                VectGridData,
-                                                                Transform)
+                PreRegTx = CreatePreDefSitkTxFromDefDro(Dro, LogToConsole)
+                
+                TxParams = list(PreRegTx.GetParameters())
+                
+                Identity = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+                
+                if not AreListsEqualToWithinEpsilon(TxParams, Identity):
+                    """ The pre-registration matrix is not the identity matrix
+                    so need to resample/transform the label image using 
+                    PreRegTx. """
+                
+                    ListOfSitkTxs.append(PreRegTx)
+                
+                SitkTx = CreateSitkTxFromDefDro(Dro, RefIm=TrgIm,
+                                                LogToConsole=LogToConsole)
+                
+                ListOfSitkTxs.append(SitkTx)
+            
+            
+            """ Since image registration was skipped, create RegIm by applying
+            ListOfSitkTxs iteratively: """
+            RegIm = TransformImWithListOfSitkTxs(MovIm=SrcIm, FixIm=TrgIm, 
+                                                 ListOfSitkTxs=ListOfSitkTxs, 
+                                                 Interp='Linear', 
+                                                 LogToConsole=LogToConsole)
+        
         
         """ Transform SrcLabImBySeg using the registration transformation. 
         
-        Note:
-            Even though the data is being transformed the prefix 'Res' will be
-            used since further operations below will need to be applied to
-            either resampled or transformed data. """
+        Notes:
             
-        """ 10/05/21: Need to test whether TransformLabImByRoi() works with
-        SelxImFilt passed by yet-to-be-developed GetSelxImFilterFromParams() """
+        Even though the data is being transformed the prefix 'Res' will be
+        used since further operations below will need to be applied to
+        either resampled or transformed data. 
+            
+        04/06/21: Workaround to issue with initialising a SimpleITK BSpline
+        transform using fiducials involves a list (of potentially length 1)
+        for the variable ListOfSitkTxs.  This is not ideal not only due to
+        stacking of resampling errors but also due to use of a nearest
+        neighbor interpolator.
+        """
+        
+        #ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
+        #= TransformLabImByRoi(LabImByRoi=SrcLabImBySeg,
+        #                      F2SindsByRoi=SrcF2SindsBySeg,
+        #                      TrgIm=TrgIm,
+        #                      SelxImFiltOrSitkTx=SelxImFiltOrSitkTx,
+        #                      Interp=TxInterp,
+        #                      ApplyPostTxBlur=ApplyPostTxBlur,
+        #                      PostTxVariance=PostTxVariance,
+        #                      ApplyPostTxBin=ApplyPostTxBin,
+        #                      #ThreshPostTx=ThreshPostTx, 
+        #                      LogToConsole=LogToConsole)
         
         ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg\
-        = TransformLabImByRoi(LabImByRoi=SrcLabImBySeg,
-                              F2SindsByRoi=SrcF2SindsBySeg,
-                              TrgIm=TrgIm,
-                              SelxImFiltOrSitkTx=SelxImFiltOrSitkTx,
-                              Interp=TxInterp,
-                              ApplyPostTxBlur=ApplyPostTxBlur,
-                              PostTxVariance=PostTxVariance,
-                              ApplyPostTxBin=ApplyPostTxBin,
-                              #ThreshPostTx=ThreshPostTx, 
-                              LogToConsole=LogToConsole)
+        = TransformLabImByRoiWithListOfSitkTxs(LabImByRoi=SrcLabImBySeg,
+                                               F2SindsByRoi=SrcF2SindsBySeg,
+                                               TrgIm=TrgIm,
+                                               ListOfSitkTxs=ListOfSitkTxs,
+                                               Interp=TxInterp,
+                                               ApplyPostTxBlur=ApplyPostTxBlur,
+                                               PostTxVariance=PostTxVariance,
+                                               ApplyPostTxBin=ApplyPostTxBin,
+                                               LogToConsole=LogToConsole)
         
         #times.append(time.time())
         #Dtime = round(times[-1] - times[-2], 1)
         #print(f'\n*Took {Dtime} s to transform the Source labelmap images',
         #      'from the registration transformation.')
         
-        """ Get the threshold used to re-binarise the transformed labelmap 
-        image: """
-        for i in range(len(ResSrcLabImBySeg)):
-            Thresh = ResSrcLabImBySeg[i].GetMetaData("PostTxThreshUsed")
-            
-            ListOfInputs.append(f'PostTxThreshUsedForSeg{i} = {Thresh}')
-            DictOfInputs[f'PostTxThreshUsedForSeg{i}'] = Thresh
+        
+        if ApplyPostTxBlur:
+            """ Get the threshold used to re-binarise the transformed label 
+            image: """
+            for i in range(len(ResSrcLabImBySeg)):
+                Thresh = ResSrcLabImBySeg[i].GetMetaData("PostTxThreshUsed")
+                
+                ListOfInputs.append(f'PostTxThreshUsedForSeg{i} = {Thresh}')
+                DictOfInputs[f'PostTxThreshUsedForSeg{i}'] = Thresh
     else:
+        RegIm = None
+        SelxImFiltOrSitkTx = None
         TxParams = None
+        ListOfSitkTxs = None
               
                 
     
@@ -3566,7 +3842,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                                    LogToConsole=LogToConsole)
         
         if LogToConsole:
-            print(f'After running ShiftFramesInPixArrBySeg():')
+            print('After running ShiftFramesInPixArrBySeg():')
             print(f'ResSrcF2SindsBySeg = {ResSrcF2SindsBySeg}')
             print(f'len(ResSrcPixArrBySeg) = {len(ResSrcPixArrBySeg)}')
             for r in range(len(ResSrcPixArrBySeg)):
@@ -3634,46 +3910,69 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     
     
     """ Create a DICOM Registration Object (if applicable). """
+    #if UseCaseToApply in ['5a', '5b'] and (Dro != None and OverwriteDro
+    #                                       or Dro == None):
     if UseCaseToApply in ['5a', '5b']:
+        from DroTools import CreateSpaDroFromSitkTx, CreateDefDroFromBsplineTx
+        
         # ContentDescription:
+        """ Consider adding this as an input variable for the user to specify.
+        """
         ContentDesc = ''
         
         if Transform in ['rigid', 'affine']:
             """ Create a Spatial Registration DRO. """
-            Dro = CreateSpaDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
-                               LogToConsole)
+            #Dro = CreateSpaDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
+            #                   LogToConsole)
+            Dro = CreateSpaDroFromSitkTx(SrcDcmDir, TrgDcmDir, 
+                                         SelxImFiltOrSitkTx, 
+                                         ContentDesc, LogToConsole)
         else:
-            """ Get the bspline grid related registration transform parameters 
-            for the final transform parameter map: (10/05/21) """
-            GridOrig = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1, 
-                                              'GridOrigin')
-            
-            GridDir = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
-                                             'GridDirection')
-            
-            GridDims = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
-                                              'GridSize')
-            GridDims = [int(item) for item in GridDims]
-            
-            GridRes = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
-                                             'GridSpacing')
-            GridRes = [float(item) for item in GridRes]
-            
-            VectGridData = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
-                                                  'TransformParameters')
-            VectGridData = [float(item) for item in VectGridData]
-            
-            """ Get the non-deformable registration transform parameters 
-            for the second-last transform parameter map: (12/05/21) """
-            TxParams = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -2,
-                                              'TransformParameters')
-            if TxParams != None:
-                TxParams = [float(item) for item in TxParams]
+            #""" Get the bspline grid related registration transform parameters 
+            #for the final transform parameter map: (10/05/21) """
+            #GridOrig = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1, 
+            #                                  'GridOrigin')
+            #
+            #GridDir = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+            #                                 'GridDirection')
+            #
+            #GridDims = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+            #                                  'GridSize')
+            #GridDims = [int(item) for item in GridDims]
+            #
+            #GridRes = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+            #                                 'GridSpacing')
+            #GridRes = [float(item) for item in GridRes]
+            #
+            #VectGridData = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
+            #                                      'TransformParameters')
+            #VectGridData = [float(item) for item in VectGridData]
+            #
+            #""" Get the non-deformable registration transform parameters 
+            #for the second-last transform parameter map: (12/05/21) """
+            #TxParams = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -2,
+            #                                  'TransformParameters')
+            #if TxParams != None:
+            #    TxParams = [float(item) for item in TxParams]
             
             """ Create a Deformable Spatial Registration DRO. """
-            Dro = CreateDefDro(SrcDcmDir, TrgDcmDir, GridOrig, GridDir, 
-                               GridDims, GridRes, VectGridData, TxParams,
-                               ContentDesc, LogToConsole)
+            #Dro = CreateDefDro(SrcDcmDir, TrgDcmDir, GridOrig, GridDir, 
+            #                   GridDims, GridRes, VectGridData, TxParams,
+            #                   ContentDesc, LogToConsole)
+            #Dro = CreateDefDroFromBsplineTx(SrcDcmDir, TrgDcmDir, 
+            #                                BsplineTx=SelxImFiltOrSitkTx, 
+            #                                PreRegTx=LandmarkTx, 
+            #                                Description=ContentDesc, 
+            #                                LogToConsole=LogToConsole)
+            """ Note:
+                The first Transform in ListOfSitkTxs is the landmark-based
+                Transform, the second/last one is the final BSpline Transform.
+            """
+            Dro = CreateDefDroFromBsplineTx(SrcDcmDir, TrgDcmDir, 
+                                            BsplineTx=ListOfSitkTxs[-1], 
+                                            PreRegTx=ListOfSitkTxs[0], 
+                                            Description=ContentDesc, 
+                                            LogToConsole=LogToConsole)
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
@@ -3688,8 +3987,13 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         print('\nEnd of CopySeg().')
         print('-'*120)
         
-    return TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
-    #return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
+    #return TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
+    ##return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
+    return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcSeg,\
+           SrcPixArrBySeg, SrcLabImBySeg, SrcF2SindsBySeg,\
+           RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+           ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+           TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
 
 
 

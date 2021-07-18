@@ -18,10 +18,11 @@ CONVERSION FUNCTIONS
 """       
 
 
-
-
 def Point2Index(Point, RefIm, Rounding=True):
     """
+    07/07/21:
+        See pt_to_ind in conversion_tools.inds_pts.py
+        
     Convert a physical point (in the Patient Coordinate System) to an index
     (in the Image Coordinate System).
     
@@ -56,13 +57,11 @@ def Point2Index(Point, RefIm, Rounding=True):
     return list(Index) # 29/01/2021
 
 
-
-
-
-
-
 def Points2Indices(Points, RefIm, Rounding=True):
     """
+    07/07/21:
+        See pts_to_inds in conversion_tools.inds_pts.py
+        
     Convert a list of physical points (in the Patient Coordinate System) to a
     list of indices (in the Image Coordinate System).
     
@@ -104,15 +103,13 @@ def Points2Indices(Points, RefIm, Rounding=True):
     return Indices
 
 
-
-
-
-
 def Index2Point(Index, RefIm):
     """
+    07/07/21:
+        See ind_to_pt in conversion_tools.inds_pts.py
+        
     Convert an index (in the Image Coordinate System) to a physical point (in 
     the Patient Coordinate System).
-    .
     
     Inputs:
     ******
@@ -208,12 +205,11 @@ def Index2Point(Index, RefIm):
     return list(Point) # 29/01/2021
 
 
-
-
-
-
 def Indices2Points(Indices, RefIm):
     """
+    07/07/21:
+        See inds_to_pts in conversion_tools.inds_pts.py
+        
     Convert a list of indices (in the Image Coordinate System) to a list of 
     physical points (in the Patient Coordinate System).
     
@@ -250,11 +246,11 @@ def Indices2Points(Indices, RefIm):
     return Points
     
 
-
-
-
 def ContourData2Points(ContourData):
     """
+    07/07/21:
+        See cntdata_to_pts in conversion_tools.inds_pts.py
+        
     Re-format a flat list of coordinates to a list of a list of [x, y, z]
     coordinates.
     
@@ -286,14 +282,11 @@ def ContourData2Points(ContourData):
     return Points
 
 
-
-
-
-
-
-
 def Points2ContourData(Points):
     """
+    07/07/21:
+        See pts_to_cntdata in conversion_tools.inds_pts.py
+       
     Re-format a list of points to a flat list as required for ContourData.
     
     Inputs:
@@ -321,12 +314,12 @@ def Points2ContourData(Points):
     return ContourData
 
 
-
-
-
-
 def PtsByCntByRoi2CntDataByCntByRoi(PtsByCntByRoi):
     """
+    07/07/21:
+        See ptsByCntByRoi_to_cntdataByCntByRoi in 
+        conversion_tools.inds_pts.py
+        
     Convert a list of points-by-contour-by-ROI to a list of 
     ContourData-by-contour-by-ROI, where ContourData is flat list of points in
     string format (as required for ContourData tag).
@@ -364,12 +357,11 @@ def PtsByCntByRoi2CntDataByCntByRoi(PtsByCntByRoi):
 
 
 
-
-
-
- 
 def IndsByContour2PixArr(IndsByCnt, RefImage):
     """
+    07/07/21:
+        See indsByCnt_to_pixarr in conversion_tools.inds_pts_pixarrs.py
+        
     Convert a list of indices grouped by contour to a pixel array.
        
     Adapted from https://programtalk.com/vs2/python/7636/sima/sima/ROI.py/
@@ -430,17 +422,14 @@ def IndsByContour2PixArr(IndsByCnt, RefImage):
                 if 0 <= y < ImSize[1] and 0 <= x < ImSize[0]:
                     PixArr[c, y, x] = 1
     
-        
     return PixArr
-
-
-
-
-
 
 
 def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
     """
+    07/07/21:
+        See ptsByCnt_to_pixarr in conversion_tools.inds_pts_pixarrs.py
+      
     Convert a list of points by contour to a pixel array.
     
     Inputs:
@@ -467,7 +456,8 @@ def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print('Results from PtsByCnt2PixArr():')
+        print('Running of PtsByCnt2PixArr():')
+        print('\n\n', '-'*120)
         
     IndsByCnt = []
     
@@ -496,20 +486,16 @@ def PtsByCnt2PixArr(PtsByCnt, RefIm, LogToConsole=False):
     return PixArr
 
 
-
-
-
-
-
 def PixArr2ListOfInds(PixArr, F2Sinds):
     """
+    07/07/21:
+        See pixarr_to_listOfInds in conversion_tools.inds_pts_pixarrs.py
+      
     Convert a binary pixel array to a list (for eachof a list of indices of non-zero 
     elements.  If PixArr is 2D, the function will return a list of length 1 of 
     a list of indices.  If PixArr is 3D, the function will return a list of
     length N of a list of indices, where N is the size of PixArr along the 
     third dimension. 
-    
-    
     
     Inputs:
     ******
@@ -522,7 +508,6 @@ def PixArr2ListOfInds(PixArr, F2Sinds):
         e.g. PFFGStoSliceInds = PerFrameFunctionalGroupsSequence-to-slice
         number.
     
-        
     Outputs:
     *******
     
@@ -563,15 +548,13 @@ def PixArr2ListOfInds(PixArr, F2Sinds):
         ListOfInds.append(Inds)
         
     return ListOfInds
-    
-    
-    
-
-
 
 
 def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
     """
+    07/07/21:
+        See ptsByCntByRoi_to_pixarrByRoi in conversion_tools.inds_pts_pixarrs.py
+     
     Convert a list of points in all contours in all ROIs to a list of pixel
     arrays grouped by ROI.
     
@@ -600,7 +583,8 @@ def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print('Results from PtsByCntByRoi2PixArrByRoi():')
+        print('Running of PtsByCntByRoi2PixArrByRoi():')
+        print('\n\n', '-'*120)
         
     PixArrByRoi = []
     
@@ -620,14 +604,11 @@ def PtsByCntByRoi2PixArrByRoi(PtsByCntByRoi, RefIm, LogToConsole=False):
     return PixArrByRoi
 
 
-
-
-
-
-
-
 def GetLabmapArrByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
     """
+    07/07/21:
+        See get_labarrByRoi in conversion_tools.inds_pts_pixarrs.py
+     
     Get a list of 3D labelmap Numpy arrays - one per ROI.  
     
     Inputs:
@@ -673,14 +654,11 @@ def GetLabmapArrByRoi(Rts, DicomDir, C2SindsByRoi, RefIm):
     return LabmapArrByRoi
 
 
-
-
-
-
-
-
 def PixArr2LabmapArr(PixArr, NumOfSlices, F2Sinds):
     """
+    07/07/21:
+        See pixarr_to_labarr in conversion_tools.inds_pts_pixarrs.py
+     
     Convert a 3D SEG pixel array to a 3D SEG labelmap array.  The array will 
     contain the 2D pixel arrays at the same frame position as the slice
     position of the corresponding DICOM series (with 2D zero masks in-between).
@@ -761,6 +739,9 @@ def PixArr2LabmapArr(PixArr, NumOfSlices, F2Sinds):
 
 def PixArr2Image(PixArr, F2Sinds, RefIm):
     """
+    07/07/21:
+        See pixarr_to_im in conversion_tools.pixarrs_ims.py
+        
     Convert a 3D pixel array to a 3D SimpleITK image.  
     
     Inputs:
@@ -810,12 +791,54 @@ def PixArr2Image(PixArr, F2Sinds, RefIm):
     return LabIm
 
 
-
-
+def Image2BinaryOnesImage(Image):
+    """
+    07/07/21:
+        See im_to_binary_ones_im in conversion_tools.pixarrs_ims.py
+        
+    Create a 3D binary ones SimpleITK image from a non-binary 3D SimpleITK image.  
+    
+    Inputs:
+    ******
+    
+    Image : SimpleITK image
+    
+        
+    Outputs:
+    *******
+        
+    MaskIm : SimpleITK image
+        A 3D ones SimpleITK image with the same image attributes as Image.
+    
+    
+    Notes:
+    *****
+    
+    This function is similar to PixArr2Image.
+    """
+    
+    import numpy as np
+    import SimpleITK as sitk
+    
+    C, R, F = Image.GetSize()
+    
+    PixArr = np.ones((F, R, C), dtype=np.uint8)
+    
+    MaskIm = sitk.GetImageFromArray(PixArr)
+    
+    # Set the Origin, Spacing and Direction of LabIm to that of Image:
+    MaskIm.SetOrigin(Image.GetOrigin())
+    MaskIm.SetSpacing(Image.GetSpacing())
+    MaskIm.SetDirection(Image.GetDirection())
+    
+    return MaskIm
 
 
 def PixArr2ImagesBySeg(PixArr, F2SindsBySeg, FrameNumsBySeg, RefIm):
     """
+    07/07/21:
+        See pixarr_to_imsBySeg in conversion_tools.pixarrs_ims.py
+    
     Convert a 3D pixel array to a list of 3D SimpleITK images - one per
     segment.  
     
@@ -869,12 +892,11 @@ def PixArr2ImagesBySeg(PixArr, F2SindsBySeg, FrameNumsBySeg, RefIm):
     return LabIms
 
 
-
-
-
-
 def Image2PixArr(Image, Non0FrameInds=None):
     """
+    06/07/21:
+        See conversion_tools.im_pixarr.py
+        
     Convert a 3D SimpleITK image to a 3D SEG pixel array.  
     
     Inputs:
@@ -931,14 +953,9 @@ def Image2PixArr(Image, Non0FrameInds=None):
         
     
     return PixArr, Non0FrameInds
-        
 
 
-
-
-
-
-def ImageBySeg2PixArrBySeg(ImageBySeg, Non0FrameIndsBySeg=None):
+def ImageBySeg2PixArrBySeg_OLD(ImageBySeg, Non0FrameIndsBySeg=None): # 08/06/21
     """
     Convert a list of 3D SimpleITK images to a list of 3D SEG pixel arrays.  
     
@@ -966,17 +983,73 @@ def ImageBySeg2PixArrBySeg(ImageBySeg, Non0FrameIndsBySeg=None):
         non-zero frames in each image in ImageBySeg.
     """
     
-    import SimpleITK as sitk
-    import numpy as np
+    #import SimpleITK as sitk
+    #import numpy as np
+    
+    PixArrBySeg = []
+    #Non0FrameIndsBySeg = [] # 08/06/21
+    
+    if Non0FrameIndsBySeg == None:
+        Non0FrameIndsBySeg_out = []
+    
+    for i in range(len(ImageBySeg)):
+        #if Non0FrameInds == None: # 08/06/21
+        if Non0FrameIndsBySeg == None: # 08/06/21
+            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i])
+        else:
+            #PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i], Non0FrameInds) # 08/06/21
+            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i], 
+                                                 Non0FrameIndsBySeg[i]) # 08/06/21
+            
+        PixArrBySeg.append(PixArr)
+        
+        #Non0FrameIndsBySeg.append(Non0FrameInds) # 08/06/21
+        Non0FrameIndsBySeg_out.append(Non0FrameInds) # 08/06/21
+    
+    
+    #return PixArrBySeg, Non0FrameIndsBySeg # 08/06/21
+    
+    # 08/06/21:
+    if Non0FrameIndsBySeg != None:
+        Non0FrameIndsBySeg_out = Non0FrameIndsBySeg 
+        
+    return PixArrBySeg, Non0FrameIndsBySeg_out # 08/06/21
+
+
+def ImageBySeg2PixArrBySeg(ImageBySeg):
+    """
+    07/07/21:
+        See imBySeg_to_pixarrBySeg in conversion_tools.pixarrs_ims.py
+    
+    Convert a list of 3D SimpleITK images to a list of 3D SEG pixel arrays.  
+    
+    Inputs:
+    ******
+    
+    ImageBySeg : List of SimpleITK images
+        A list (e.g. for each segment) of images (e.g. labelmap).
+        
+        
+    Outputs:
+    *******
+        
+    PixArrBySeg : List of Numpy arrays
+        A list (for each segment) of the non-zero frames in each image in
+        ImagebySeg.
+                           
+    Non0FrameIndsBySeg : List of a list of integers
+        List (for each segment) of a list (for each frame) of the indices of 
+        non-zero frames in each image in ImageBySeg.
+    """
+    
+    #import SimpleITK as sitk
+    #import numpy as np
     
     PixArrBySeg = []
     Non0FrameIndsBySeg = []
     
     for i in range(len(ImageBySeg)):
-        if Non0FrameInds == None:
-            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i])
-        else:
-            PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i], Non0FrameInds)
+        PixArr, Non0FrameInds = Image2PixArr(ImageBySeg[i])
             
         PixArrBySeg.append(PixArr)
         
@@ -984,18 +1057,13 @@ def ImageBySeg2PixArrBySeg(ImageBySeg, Non0FrameIndsBySeg=None):
     
     
     return PixArrBySeg, Non0FrameIndsBySeg
-        
-
-
-
-
-
-
-
 
 
 def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
     """
+    07/07/21:
+        See pixarr_to_inds_by_frame in conversion_tools.inds_pts_pixarrs
+        
     Convert a 3D pixel array to a list (for each frame) of a list of indices
     that define the equivalent contour for the mask in each frame.
     
@@ -1035,7 +1103,8 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print('Results of PixArr2IndsByFrame()')
+        print('Running of PixArr2IndsByFrame()')
+        print('\n\n', '-'*120)
         
     IndsByObjByFrame = []
     
@@ -1097,16 +1166,12 @@ def PixArr2IndsByFrame(PixArr, F2Sinds, Thresh=0.5, LogToConsole=False):
 
 
 
-
-
-
-
-
-
-
 def PixArrByRoi2LabImByRoi(PixArrByRoi, F2SindsByRoi, RefIm, 
                            LogToConsole=False):
     """
+    07/07/21:
+        See pixarrByRoi_to_imByRoi in conversion_tools.pixarrs_ims.py
+    
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each
     pixel array in a list of pixel-arrays-by-ROI.
@@ -1144,7 +1209,8 @@ def PixArrByRoi2LabImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of PixArrByRoi2LabImByRoi():')
+        print(f'Running of PixArrByRoi2LabImByRoi():')
+        print('\n\n', '-'*120)
         #print(f'   len(PixArrByRoi) = {len(PixArrByRoi)}')
         
     LabImByRoi = []
@@ -1190,12 +1256,11 @@ def PixArrByRoi2LabImByRoi(PixArrByRoi, F2SindsByRoi, RefIm,
 
 
 
-
-
-
-
 def PixArr2PtsByCnt(PixArr, F2Sinds, DicomDir, Thresh=0.5, LogToConsole=False):
     """
+    07/07/21:
+        See pixarr_to_ptsByCnt in conversion_tools.inds_pts_pixarrs
+        
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates.
  
@@ -1244,7 +1309,8 @@ def PixArr2PtsByCnt(PixArr, F2Sinds, DicomDir, Thresh=0.5, LogToConsole=False):
     if LogToConsole:
         from GeneralTools import PrintPixArrBySeg, PrintPtsByCnt
         print('\n\n', '-'*120)
-        print(f'Results of PixArr2PtsByCnt():')
+        print(f'Running of PixArr2PtsByCnt():')
+        print('\n\n', '-'*120)
         print(f'Prior to conversion: \nF2Sinds = {F2Sinds}')
         PrintPixArrBySeg(PixArr)
         
@@ -1298,13 +1364,12 @@ def PixArr2PtsByCnt(PixArr, F2Sinds, DicomDir, Thresh=0.5, LogToConsole=False):
 
 
 
-
-
-
-
 def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5, 
                               LogToConsole=False):
     """
+    07/07/21:
+        See pixarrByRoi_to_ptsByCntByRoi in conversion_tools.inds_pts_pixarrs
+        
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each
     pixel array in a list of pixel-arrays-by-ROI.
@@ -1352,7 +1417,8 @@ def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5,
     
     if LogToConsole:
         print('\n\n', '-'*120)
-        print(f'Results of PixArrByRoi2PtsByCntByRoi():')
+        print('Running of PixArrByRoi2PtsByCntByRoi():')
+        print('\n\n', '-'*120)
         
     PtsByCntByRoi = []
     CntDataByCntByRoi = []
@@ -1389,17 +1455,11 @@ def PixArrByRoi2PtsByCntByRoi(PixArrByRoi, F2SindsByRoi, DicomDir, Thresh=0.5,
     return PtsByCntByRoi, CntDataByCntByRoi, C2SindsByRoi
 
 
-
-
-
-
-
-
-
-
-
 def Indices2Mask(Inds, RefImage):
     """
+    07/07/21:
+        See inds_to_mask in conversion_tools.inds_pts_pixarrs
+      
     Convert a list of indices to a (filled) mask (pixel array).
        
     Adapted from https://programtalk.com/vs2/python/7636/sima/sima/ROI.py/
@@ -1466,75 +1526,6 @@ def Indices2Mask(Inds, RefImage):
 
 
 
-
-
-
-def ConvertImagePixelType(Image, NewPixelType):
-    """
-    Convert a 3D SimpleITK image to a new pixel type.
-    
-    Inputs:
-    ******                      
-        
-    Image : SimpleITK image
-        The 3D image whose pixel type is to be converted.
-        
-    NewPixelType : string
-        The pixel type to convert Image to.  Acceptable inputs are a subset of
-        the SimpleITK pixel types 
-        (https://simpleitk.org/SimpleITK-Notebooks/01_Image_Basics.html):
-            
-        - 'sitkUInt32' 	Unsigned 32 bit integer
-        - 'sitkFloat32' 	32 bit float
-
-    
-    
-    Outputs:
-    *******
-    
-    Image : SimpleITK image
-        The 3D image with modified pixel type.
-
-    
-    Note:
-    ----
-        While a linear (or BSpline) interpolator is appropriate for intensity 
-        images, only a NearestNeighbor interpolator is appropriate for binary 
-        images (e.g. segmentations) so that no new labels are introduced.
-    """
-    
-    import SimpleITK as sitk
-    
-    if NewPixelType == 'sitkUInt32':
-        OutputPixelType = sitk.sitkUInt32
-        
-    elif NewPixelType == 'sitkFloat32':
-        OutputPixelType = sitk.sitkFloat32
-    
-    else:
-        msg = '"NewPixelType" must be either "sitkUInt32" or "sitkFloat32".'
-        
-        raise Exception(msg)
-        
-    
-    Caster = sitk.CastImageFilter()
-    
-    Caster.SetOutputPixelType(OutputPixelType)
-    
-    Image = Caster.Execute(Image)
-    
-    return Image
-
-
-
-
-
-
-
-
-
-
-
 def BinaryIm2Labelmap(BinaryIm):
     import SimpleITK as sitk
 
@@ -1543,9 +1534,6 @@ def BinaryIm2Labelmap(BinaryIm):
     Labelmap = ImFilt.Execute(BinaryIm)
     
     return Labelmap
-
-
-
 
 
 

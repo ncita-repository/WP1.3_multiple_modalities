@@ -84,45 +84,39 @@ CHECK VALIDITY OF INPUTS TO COPYROI
 def CheckValidityOfInputs(SrcRoi, SrcRoiName, SrcSliceNum, TrgRoi, TrgRoiName, 
                           TrgSliceNum, LogToConsole=False):
     """
+    06/07/21:
+        See are_inputs_valid in inputs_checker.py
+        
     Establish whether the inputs SrcRoiName, SrcSliceNum, TrgRoiName and
     TrgSliceNum are valid combinations. If not raise exception.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     SrcRoi : Pydicom object
         The Source RTS/SEG object.
-        
     SrcRoiName : string
         The Source ROIName or SegmentLabel.
-    
     SrcSliceNum : integer or None
         The slice indeces within the Source DICOM stack corresponding to the
         contour to be copied (applies for the case of direct copies of a single 
         contour). The index is zero-indexed.
         If SrcSliceNum = None, a relationship-preserving copy will be made.
-    
     TrgRoi : Pydicom object or None
         The Target RTS/SEG object if applicable; None otherwise.
-        
     TrgRoiName : string or None
         The Target ROIName or SegmentLabel if applicable; None otherwise.
-        
     TrgSliceNum : integer or None
         The slice index within the Target DICOM stack corresponding to the 
         contour/segmentation to be copied to (applies only for the case of 
         direct copies of single entities). The index is zero-indexed.
         If TrgSliceNum = None, a relationship-preserving copy is to be made, 
         since the slice location(s) where the contour(s)/segmentation(s) will 
-        be copied to will not depend on user input.  
-                        
+        be copied to will not depend on user input.
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
-
-              
-    Outputs:
-    ******
-        
+    
+    Returns
+    -------
     IsValid : boolean
         True if the combinations of inputs are valid.
     """
@@ -131,11 +125,11 @@ def CheckValidityOfInputs(SrcRoi, SrcRoiName, SrcSliceNum, TrgRoi, TrgRoiName,
     if TrgRoi:
         from DicomTools import IsSameModalities
         
-        SrcModality = SrcRoi.Modality
-        TrgModality = TrgRoi.Modality
+        SrcRoiColMod = SrcRoi.Modality
+        TrgRoiColMod = TrgRoi.Modality
         
         if not IsSameModalities(SrcRoi, TrgRoi):
-            msg = f"The Source ({SrcModality}) and Target ({TrgModality}) " \
+            msg = f"The Source ({SrcRoiColMod}) and Target ({TrgRoiColMod}) " \
                   + "modalities are different. This is not valid."
             
             raise Exception(msg)
@@ -176,7 +170,7 @@ def CheckValidityOfInputs(SrcRoi, SrcRoiName, SrcSliceNum, TrgRoi, TrgRoiName,
             msg += f"SrcSliceNum = {SrcSliceNum} => All contours/segmentations"\
                    + f"in the ROI/segment with name/label '{SrcRoiName}' are "\
                    + f"to be copied. \nBut TrgSliceNum (= {TrgSliceNum}) is "\
-                   + f"specified. "
+                   + "specified. "
         
         #if SrcSliceNum != None and TrgSliceNum == None:
         if SrcSliceNum and not TrgSliceNum:
@@ -220,18 +214,18 @@ WHICH USE CASE APPLIES?
 def WhichUseCase(SrcSliceNum, TrgSliceNum, SrcDcmDir, TrgDcmDir, ForceReg, 
                  LogToConsole=False):
     """
+    06/07/21:
+        See which_use_case in inputs_checker.py
+        
     Determine which of 5 Use Cases applies.
     
-    Inputs:
-    ******
-        
+    Parameters
+    ----------
     SrcSliceNum : integer or None
         The slice indeces within the Source DICOM stack corresponding to the
         contour to be copied (applies for the case of direct copies of a single 
         contour). The index is zero-indexed.
         If SrcSliceNum = None, a relationship-preserving copy will be made.
-    
-    
     TrgSliceNum : integer or None
         The slice index within the Target DICOM stack corresponding to the 
         contour/segmentation to be copied to (applies only for the case of 
@@ -239,28 +233,21 @@ def WhichUseCase(SrcSliceNum, TrgSliceNum, SrcDcmDir, TrgDcmDir, ForceReg,
         If TrgSliceNum = None, a relationship-preserving copy is to be made, 
         since the slice location(s) where the contour(s)/segmentation(s) will 
         be copied to will not depend on user input.
-    
     SrcDcmDir : string
         Directory containing the Source DICOMs.
-                       
     TrgDcmDir : string
         Directory containing the Target DICOMs.
-    
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
-    
     LogToConsole : boolean (optional; False by default)
         Denotes whether some results will be logged to the console.
-
-              
-    Outputs:
-    ******
-        
+    
+    Returns
+    -------
     UseCaseThatApplies : string
         String that denotes the Use Case that applies.
-    
     UseCaseToApply : string
         String that denotes the Use Case that will be applied.  This will be
         the same as UseCaseThatApplies unless ForceRegistration is True and
@@ -408,6 +395,7 @@ def WhichUseCase(SrcSliceNum, TrgSliceNum, SrcDcmDir, TrgDcmDir, ForceReg,
         
         print('\n\n', '-'*120)
         print('Results of running WhichUseCase():')
+        print('\n\n', '-'*120)
         print('The Source and Target are in the/have:')
         
         if SameStudy:
@@ -482,7 +470,7 @@ def WhichUseCase(SrcSliceNum, TrgSliceNum, SrcDcmDir, TrgDcmDir, ForceReg,
             
             msg = f'\n*UseCase {UseCaseThatApplies} applies but since '\
                   + f'ForceReg = {ForceReg}, UseCase {UseCaseToApply} will '\
-                  + f'be applied.'
+                  + 'be applied.'
             
             print(msg)
         else:
@@ -634,40 +622,31 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
     Copy an ROI Collection (contour/ROI/RTSTRUCT/segmentation/segment/SEG) from 
     locally sourced data.
         
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     SrcRoiFpath : string
         Filepath of Source RTS/SEG file.
-    
     SrcSliceNum : integer
         Slice index of the Source DICOM stack corresponding to the contour/
         segmentation to be copied (counting from 0).
-        
     SrcRoiName : string
         All or part of the Source ROIName/SegmentLabel of the ROI/segment 
         containing the contour/segmentation to be copied.
-    
     SrcDcmDir : string
         Directory containing the Source DICOMs.
-    
     TrgDcmDir : string
         Directory containing the Target DICOMs.
-        
     TrgRoiFpath : string or None (optional; None by default)
         Filepath to the Target RTS/SEG file that the contour(s)/segmentation(s) 
         is/are to be copied to. TrgRoiFpath != None only if an existing Target 
         RTS/SEG exists and is to be added to. An existing RTS/SEG will be added 
         to only for Direct copy operations.        
-    
     TrgRoiName : string or None (optional; None by default)
         The ROIName or SegmentLabel of the destination ROI/segment.
-    
     TrgSliceNum : integer (optional; None by default)
         Slice index within the Target DICOM stack where the contour/
         segmentation is to be copied to (counting from 0).  This only applies 
         for Direct copies, hence the default value None.
-        
     ResInterp : string (optional; 'BlurThenLinear' by default)
         The interpolator to be used for (non-registration-based) resampling of
         the Source labelmap image(s) to the Target grid (if applicable). 
@@ -676,98 +655,77 @@ def CopyLocalRoiCol(SrcRoiFpath, SrcSliceNum, SrcRoiName, SrcDcmDir,
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
-    
     PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
-    
     ApplyPostResBlur : boolean (optional; True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-        
     PostResVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         resampled labelmap image(s).
-    
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
-    
     SelxOrSitk : string (optional; 'Selx' by default)
         Denotes which package to use for image registration and transformation.
         Acceptable values include:
             - 'Selx' for SimpleElastix
             - 'Sitk' for SimpleITK
-    
     Transform : string (optional; 'affine' by default)
         Denotes type of transformation to use for registration.  Acceptable 
         values include:
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
-    
     MaxIters : string (optional; '512' by default)
         If 'default', the maximum number of iterations used for the optimiser
         during image registration (if applicable) will be the pre-set default
         in the parameter map for Transform. If != 'default' it must be a string 
         representation of an integer.
-    
     TxInterp : string (optional; 'NearestNeighbor' by default)
         The interpolator to be used for registration-based resampling (i.e.
         transformation; if applicable).  Accepatable values are:
         - 'Default' which leaves unchanged whatever interpolator was used in
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
-    
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
-    
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image will be Gaussian blurred.
-        
     PostTxVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         transformed labelmap image(s).
-        
     TxtToAddToTrgRoiColName : string (optional, '' by default)
         String of text to pass to CreateRts()/CreateSeg(). The string will be
         appended to the RTS StructureSetLabel or SEG SeriesDescription, and to 
         the filename of the exported (new) Target RTS/SEG.
-            
     LogToConsole : boolean (default False)
         If True, some results will be logged to the console.
-    
     ExportLogFiles : boolean (default False)
         If True, log files will be exported.
-          
                   
-    Outputs:
-    *******
-        
+    Returns
+    -------
     TrgRoiCol : Pydicom object
         The new (if making a Relationship-preserving copy) or the modified (if
         making a Direct copy of a contour/segmentation to an existing RTS/SEG) 
         Target RTS/SEG object.
-    
     Dro : Pydicom object or None
         DICOM registration object if image registration was used to create 
         TrgRoi, None otherwise.
-    
     DictOfInputs : dictionary
         A dictionary containing the inputs that were called to CopyRoi().
-        
     ListOfInputs : list of strings
         A list containing the inputs that were called to CopyRoi().
-        
     ListOfTimings : list of strings
         A list of the time to execute certain tasks during the calling of 
         CopyRoi() and subsequent tasks called within CopyRts() or CopySeg().
         
-        
-    Notes:
-    *****
+    Notes
+    -----
     
     An example use of the ForceRegistration option is to overcome translations 
     in the patient that are not reflected in the ImagePositionPatient tag. If 
@@ -954,97 +912,76 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                    LogToConsole=False, ExportLogFiles=False,
                    ResInterp='BlurThenLinear', PreResVar=(1,1,1), 
                    ApplyPostResBlur=False, PostResVar=(1,1,1),
-                   ForceReg=False, SelxOrSitk='Sitk', Transform='affine', 
+                   ForceReg=False, UseDroForTx=True, 
+                   SelxOrSitk='Sitk', Transform='affine', 
                    MaxIters='512', InitMethod='centerofgravity',
                    SrcFidsFpath='moving_fiducials.txt',
                    TrgFidsFpath='fixed_fiducials.txt',
                    TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
-                   ApplyPostTxBlur=True, PostTxVar=(1,1,1)):
+                   ApplyPostTxBlur=True, PostTxVar=(1,1,1), DictOfInputs=None):
     
     """
     Copy a contour/ROI/RTSTRUCT/segmentation/segment/SEG from data downloaded
     from XNAT.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     XnatUrl : string
         URL of XNAT (e.g. 'http://10.1.1.20').
-        
     XnatSession : requests session or None
-        
     ProjId : string
         The project ID of interest.
-    
     SubjLabel : string
         The subject label of interest. 
-    
     SrcExpLabel : string
         The Source DICOM study / XNAT experiment label. 
-    
     SrcScanId : string
         The Source DICOM series label / XNAT scan ID.
-    
     SrcSliceNum : integer (0-indexed)
         Slice index of the Source DICOM stack corresponding to the contour/
         segmentation to be copied.
-    
     SrcRoiColMod : string
         The modality of the Source ROI Collection.
-        
     SrcRoiColName : string
         The Source ROI Collection name (StructureSetLabel or SeriesDescription).
-        
     SrcRoiName : string
         The Source ROIName or SegmentLabel.
-    
     TrgExpLabel : string
         The Target DICOM study / XNAT experiment label. 
-    
     TrgScanId : string
         The Target DICOM series label / XNAT scan ID.
-    
     TrgSliceNum : integer (optional unless making a direct copy; 0-indexed; 
     None by default)
         Slice index within the Target DICOM stack where the contour/
         segmentation is to be copied to.  This only applies for direct copies, 
         hence the default value None.
-    
     TrgRoiColMod : string (optional but required if TrgRoiColName != None; 
     None by default)
         The Target image assessor modality.
-        
     TrgRoiColName : string (optional but required if TrgRoiColMod != None; 
     None by default)
         The Target ROI Collection name (StructureSetLabel or SeriesDescription). 
         If provided and if a direct copy is to be made, existing contours/
         segmentations for the ROI/segment will be preserved.
-    
     TrgRoiName : string (optional; None by default)
         The Target ROIName or SegmentLabel.
-    
     TxtToAddToTrgRoiColName : string (optional, '' by default)
         If provided the string of text will be appended to the ROI Collection 
         name (StructureSetLabel or SeriesDescription), and to the filename of 
         the exported (new) Target RTS/SEG ROI Collection.
-    
     PathsDict : dictionary (optional; None by default)
         Dictionary containing paths of data downloaded. If provided, paths of
         newly downloaded data will be added to PathsDict. If not provided, a
         new dictionary will be initialised.
-    
     XnatDownloadDir : string (optional; 'default' by default)
         If provided the data will be downloaded to the chosen directory, 
         organised by sub-directories for ProjectLabel, SubjectLabel, Scans or
         Assessors, etc. If not provided, the data will be downloaded to the
         sub-directory "XnatDownloads" within the default downloads directory.
-    
     LogToConsole : boolean (optional; False by default)
         If True, some results will be logged to the console.
-    
     ExportLogFiles : boolean (optional; False by default)
         If True, log files will be exported.
-    
     ResInterp : string (optional; 'BlurThenLinear' by default)
         The interpolator to be used for (non-registration-based) resampling of
         the Source labelmap image(s) to the Target grid (if applicable). 
@@ -1053,108 +990,88 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         - 'LabelGaussian' (or 'Gaussian' or 'gaussian')
         - 'BlurThenLinear' (or 'Linear' or 'linear') after Gaussian blurring 
         (followed by binary thresholding)
-    
     PreResVar : tuple of floats (optional; (1, 1, 1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
-    
     ApplyPostResBlur : boolean (optional; True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-        
     PostResVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         resampled labelmap image(s).
-    
     ForceReg : boolean (optional; False by default)
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
         accordingly.  
-    
+    UseDroForTx : boolean (optional; True by default)
+        If True the transformation parameters from any suitable DRO (for the
+        required Transform) will be used instead of performing image
+        registration.
     #TxMatrix : None or list of float strings (optional; None by default)
     #    List of float strings representing the transformation that would 
     #    transform the moving (Source) image to the fixed (Target) image. 
     #    If not None, image registration will be skipped to save computational
     #    time.
-    
     SelxOrSitk : string (optional; 'Sitk' by default)
         Denotes which package to use for image registration and transformation.
         Acceptable values include:
             - 'Selx' for SimpleElastix
             - 'Sitk' for SimpleITK
-     
     Transform : string (optional; 'affine' by default)
         Denotes type of transformation to use for registration.  Acceptable 
         values include:
         - 'rigid'
         - 'affine'
         - 'bspline' (i.e. deformable)
-    
     MaxIters : string (optional; '512' by default)
         The maximum number of iterations used for the optimiser during image 
         registration (if applicable).
-    
     InitMethod : string (optional, 'centerofgravity' by default)
         The initialisation method used for initial alignment prior to image
         registration (if applicable).
-    
     SrcFidsFpath : string (optional; 'moving_fiducials.txt' by default)
         The full filepath (or filename within the current working directory)
         of the list of fiducials for the Source/Moving image.
-    
     TrgFidsFpath : string (optional; 'fixed_fiducials.txt' by default)
         The full filepath (or filename within the current working directory)
         of the list of fiducials for the Target/Fixed image.
-    
     TxInterp : string (optional; 'NearestNeighbor' by default)
         The interpolator to be used for registration-based resampling (i.e.
         transformation; if applicable).  Accepatable values are:
         - 'Default' which leaves unchanged whatever interpolator was used in
         the image registration (i.e. RegImFilt)
         - 'NearestNeighbor'
-    
     ApplyPostTxBin : boolean (optional; True by default)
         If True, the post-transformed (or post-transformed + Gaussian blurred)
         labelmap image will be binary thresholded.
-    
     ApplyPostTxBlur : boolean (optional; True by default)
         If True, the post-transformed labelmap image will be Gaussian blurred.
-        
     PostTxVar : tuple of floats (optional; (1,1,1) by default)
         The variance along all dimensions if Gaussian blurring the post-
         transformed labelmap image(s).
     
-                  
-    Outputs:
-    *******
-        
+    Returns
+    -------
     TrgRoiCol : Pydicom object
         The new (if making a Relationship-preserving copy) or the modified (if
         making a Direct copy of a contour/segmentation to an existing RTS/SEG) 
         Target ROI Collection (RTS/SEG) object.
-    
     Dro : Pydicom object or None
         DICOM registration object if image registration was used to create 
         TrgSeg, None otherwise.
-        
     PathsDict : dictionary
         Dictionary containing paths of data downloaded.
-        
     XnatSession : requests session
-        
     DictOfInputs : dictionary
         A dictionary containing the inputs that were called to CopyRoi().
-        
     ListOfInputs : list of strings
         A list containing the inputs that were called to CopyRoi().
-        
     TimingMsgs : list of strings
         A list of the time to execute certain tasks during the calling of 
         CopyRoi() and subsequent tasks called within CopyRts() or CopySeg().
-        
-        
-    Notes:
-    *****
+    
+    Notes
+    -----
     
     An example use of the ForceRegistration option is to overcome translations 
     in the patient that are not reflected in the ImagePositionPatient tag. If 
@@ -1163,6 +1080,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     """
 
     import time
+    from datetime import datetime
     import os
     #from pypref import Preferences
     #from pydicom import dcmread
@@ -1178,7 +1096,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     from RtsTools import CopyRts
     from SegTools import CopySeg
     
-    RunDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    #RunDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    TimeNow = datetime.now()
+    RunDateTime = TimeNow.strftime('%Y%m%d_%H%M%S.%f')
     
     #Defaults = Preferences(directory=os.getcwd(), filename='CopyRoiDefaults.py')
     #
@@ -1192,6 +1112,8 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     #PostTxVar = Defaults.get('PostTxVar')
     #ApplyPostTxBin = Defaults.get('ApplyPostTxBin')
     
+    """ 07/06/21 Unnecessary to have both ListOfInputs and DictOfInputs. Keep
+    the latter:
     ListOfInputs\
     = CreateListOfInputs(RunDateTime=RunDateTime, XnatUrl=XnatUrl, 
                          ProjId=ProjId, SubjLabel=SubjLabel, 
@@ -1210,7 +1132,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                          MaxIters=MaxIters, TxInterp=TxInterp, 
                          ApplyPostTxBin=ApplyPostTxBin, 
                          ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
+    """
     
+    """ 07/06/21: Moved to RunAll():
     DictOfInputs\
     = CreateDictOfInputs(RunDateTime=RunDateTime, XnatUrl=XnatUrl, 
                          ProjId=ProjId, SubjLabel=SubjLabel, 
@@ -1229,9 +1153,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                          MaxIters=MaxIters, TxInterp=TxInterp, 
                          ApplyPostTxBin=ApplyPostTxBin, 
                          ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
+    """
     
-    
-    TimingMsgs = [f'RunDateTime: {RunDateTime}\n']
+    ListOfTimings = [f'RunDateTime: {RunDateTime}\n']
     
     times = []
     
@@ -1246,29 +1170,37 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     
     """ Download data from XNAT. """
     PathsDict, XnatSession\
-    = DownloadScan(XnatUrl, ProjId, SubjLabel, SrcExpLabel, SrcScanId, 
-                   XnatSession, XnatDownloadDir, PathsDict)
+    = DownloadScan(XnatUrl=XnatUrl, ProjId=ProjId, SubjLabel=SubjLabel, 
+                   ExpLabel=SrcExpLabel, ScanId=SrcScanId, 
+                   XnatSession=XnatSession, ExportRootDir=XnatDownloadDir, 
+                   PathsDict=PathsDict)
     
     PathsDict, XnatSession\
-    = DownloadScan(XnatUrl, ProjId, SubjLabel, TrgExpLabel, TrgScanId, 
-                   XnatSession, XnatDownloadDir, PathsDict)
+    = DownloadScan(XnatUrl=XnatUrl, ProjId=ProjId, SubjLabel=SubjLabel, 
+                   ExpLabel=TrgExpLabel, ScanId=TrgScanId, 
+                   XnatSession=XnatSession, ExportRootDir=XnatDownloadDir, 
+                   PathsDict=PathsDict)
 
     PathsDict, XnatSession\
-    = DownloadImAsr(XnatUrl, ProjId, SubjLabel, SrcExpLabel, 
-                    SrcScanId, SrcRoiColMod, SrcRoiColName, 
-                    XnatSession, XnatDownloadDir, PathsDict)
+    = DownloadImAsr(XnatUrl=XnatUrl, ProjId=ProjId, SubjLabel=SubjLabel, 
+                    ExpLabel=SrcExpLabel, ScanId=SrcScanId,
+                    Mod=SrcRoiColMod, Name=SrcRoiColName, 
+                    XnatSession=XnatSession, ExportRootDir=XnatDownloadDir, 
+                    PathsDict=PathsDict, LogToConsole=LogToConsole)
     
     if TrgRoiColName != None:
         PathsDict, XnatSession\
-        = DownloadImAsr(XnatUrl, ProjId, SubjLabel, TrgExpLabel, 
-                        TrgScanId, TrgRoiColMod, TrgRoiColName, 
-                        XnatSession, XnatDownloadDir, PathsDict)
+        = DownloadImAsr(XnatUrl=XnatUrl, ProjId=ProjId, SubjLabel=SubjLabel, 
+                        ExpLabel=TrgExpLabel, ScanId=TrgScanId, 
+                        Mod=TrgRoiColMod, Name=TrgRoiColName, 
+                        XnatSession=XnatSession, ExportRootDir=XnatDownloadDir, 
+                        PathsDict=PathsDict, LogToConsole=LogToConsole)
         
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 1)
     if True:#LogToConsole:
         msg = f'Took {Dtime} s to download data from XNAT.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
     
     
@@ -1305,6 +1237,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                          ['Fpath']
     
     
+    print(f'SrcDcmDir = {SrcDcmDir}\n')
+    print(f'TrgDcmDir = {TrgDcmDir}\n')
+    
     #""" Establish whether the inputs are valid. """
     #CheckValidityOfInputs(SrcRoiName, SrcSliceNum, TrgRoiName, TrgSliceNum, 
     #                      LogToConsole)
@@ -1319,7 +1254,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     if True:#LogToConsole:
         #print(f'\n\nDone.  Took {Dtime} s to run.')
         msg = f'Took {Dtime} s to determine which UseCase applies.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
         
     
@@ -1332,22 +1267,30 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     if UseCaseToApply in ['5a', '5b']:
         times.append(time.time())
         
-        TxMatrix, GridDims, GridRes,\
-        VectGridData = SearchXnatForDro(XnatUrl, ProjId, SubjLabel, 
-                                        SrcExpLabel, SrcScanId, 
-                                        TrgExpLabel, TrgScanId,
-                                        Transform, XnatSession)
+        Dro, TxMatrix, GridDims, GridRes,\
+        VectGridData = SearchXnatForDro(XnatUrl=XnatUrl, ProjId=ProjId, 
+                                        SubjLabel=SubjLabel, 
+                                        SrcExpLabel=SrcExpLabel, 
+                                        SrcScanId=SrcScanId, 
+                                        TrgExpLabel=TrgExpLabel, 
+                                        TrgScanId=TrgScanId,
+                                        Transform=Transform, 
+                                        XnatSession=XnatSession, 
+                                        LogToConsole=LogToConsole)
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
         msg = f'Took {Dtime} s to search XNAT for an existing DRO.\n'
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
+        
+        #print(f"type(Dro) after SearchXnatForDro() = {type(Dro)}\n")
     else:
-        TxMatrix = None
-        GridDims = None
-        GridRes = None
-        VectGridData = None
+        Dro = None
+        #TxMatrix = None
+        #GridDims = None
+        #GridRes = None
+        #VectGridData = None
         
     #DictOfInputs['TxMatrix'] = TxMatrix
     #DictOfInputs['GridDims'] = GridDims
@@ -1360,26 +1303,79 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     
     
     if SrcRoiColMod == 'RTSTRUCT':
+        #print(f"type(Dro) before CopyRts() = {type(Dro)}\n")
+        
+        SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+        SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+        SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+        RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+        ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+        ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
-        = CopyRts(SrcRoiColFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
-                  UseCaseToApply, TrgRoiColFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVar, ApplyPostResBlur, PostResVar, 
-                  ForceReg, SelxOrSitk, Transform, MaxIters, InitMethod,
-                  SrcFidsFpath, TrgFidsFpath, TxInterp, ApplyPostTxBin, 
-                  ApplyPostTxBlur, PostTxVar, TxMatrix, GridDims, GridRes,
-                  VectGridData, TxtToAddToTrgRoiColName, LogToConsole,
-                  DictOfInputs, ListOfInputs, TimingMsgs)
+        = CopyRts(SrcRtsFpath=SrcRoiColFpath, SrcSliceNum=SrcSliceNum, 
+                  SrcRoiName=SrcRoiName, SrcDcmDir=SrcDcmDir, TrgDcmDir=TrgDcmDir, 
+                  UseCaseToApply=UseCaseToApply, TrgRtsFpath=TrgRoiColFpath, 
+                  TrgRoiName=TrgRoiName, TrgSliceNum=TrgSliceNum, 
+                  ResInterp=ResInterp, PreResVariance=PreResVar, 
+                  ApplyPostResBlur=ApplyPostResBlur, PostResVariance=PostResVar, 
+                  ForceReg=ForceReg, UseDroForTx=UseDroForTx, 
+                  SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                  MaxIters=MaxIters, InitMethod=InitMethod,
+                  SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
+                  TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin, 
+                  ApplyPostTxBlur=ApplyPostTxBlur, PostTxVariance=PostTxVar, 
+                  #TxMatrix, GridDims, GridRes, VectGridData, 
+                  Dro=Dro, TxtToAddToTrgRoiName=TxtToAddToTrgRoiColName, 
+                  LogToConsole=LogToConsole,
+                  DictOfInputs=DictOfInputs, #ListOfInputs=ListOfInputs, 
+                  ListOfTimings=ListOfTimings)
+        
+        SrcPixArrBySeg = None
+        SrcF2SindsBySeg = None
+        SrcLabImBySeg = None
+        TrgPixArrBySeg = None
+        TrgF2SindsBySeg = None
+        ResSrcLabImBySeg = None
+        ResSrcPixArrBySeg = None
+        ResSrcF2SindsBySeg = None
+        
+        #print(f"type(Dro) after CopyRts() = {type(Dro)}\n")
     
     elif SrcRoiColMod == 'SEG':
+        SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+        SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+        TrgPixArrBySeg, TrgF2SindsBySeg,\
+        RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+        ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
-        = CopySeg(SrcRoiColFpath, SrcSliceNum, SrcRoiName, SrcDcmDir, TrgDcmDir, 
-                  UseCaseToApply, TrgRoiColFpath, TrgRoiName, TrgSliceNum, 
-                  ResInterp, PreResVar, ApplyPostResBlur, PostResVar, 
-                  ForceReg, SelxOrSitk, Transform, MaxIters, InitMethod,
-                  SrcFidsFpath, TrgFidsFpath, TxInterp, ApplyPostTxBin, 
-                  ApplyPostTxBlur, PostTxVar, TxMatrix, GridDims, GridRes,
-                  VectGridData, TxtToAddToTrgRoiColName, LogToConsole,
-                  DictOfInputs, ListOfInputs, TimingMsgs)
+        = CopySeg(SrcSegFpath=SrcRoiColFpath, SrcSliceNum=SrcSliceNum, 
+                  SrcSegLabel=SrcRoiName, SrcDcmDir=SrcDcmDir, TrgDcmDir=TrgDcmDir, 
+                  UseCaseToApply=UseCaseToApply, TrgSegFpath=TrgRoiColFpath, 
+                  TrgSegLabel=TrgRoiName, TrgSliceNum=TrgSliceNum, 
+                  ResInterp=ResInterp, PreResVariance=PreResVar, 
+                  ApplyPostResBlur=ApplyPostResBlur, PostResVariance=PostResVar, 
+                  ForceReg=ForceReg, UseDroForTx=UseDroForTx,
+                  SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                  MaxIters=MaxIters, InitMethod=InitMethod,
+                  SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
+                  TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin, 
+                  ApplyPostTxBlur=ApplyPostTxBlur, PostTxVariance=PostTxVar, 
+                  #TxMatrix, GridDims, GridRes, VectGridData, 
+                  Dro=Dro, TxtToAddToTrgRoiName=TxtToAddToTrgRoiColName, 
+                  LogToConsole=LogToConsole,
+                  DictOfInputs=DictOfInputs, #ListOfInputs=ListOfInputs, 
+                  ListOfTimings=ListOfTimings)
+        
+        SrcPtsByCntByRoi = None
+        SrcC2SindsByRoi = None
+        TrgPtsByCntByRoi = None
+        TrgC2SindsByRoi = None
+        SrcPixArrByRoi = None
+        SrcLabImByRoi = None
+        SrcF2SindsByRoi = None
+        ResSrcLabImByRoi = None
+        ResSrcPixArrByRoi = None
+        ResSrcF2SindsByRoi = None
         
     else:
         msg = f'The modality of the Source ROI Collection ({SrcRoiColMod}) '\
@@ -1393,7 +1389,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
     if True:#LogToConsole:
         msg = f'Took {Dtime} s to copy the ROI(s) and create the '\
               + f'{SrcRoiColMod} object.\n'  
-        TimingMsgs.append(msg)
+        ListOfTimings.append(msg)
         print(f'*{msg}')
     
     
@@ -1416,8 +1412,18 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         print('Dictionary of inputs to CopyRoi() saved to:\n', JsonFpath, 
               '\nand list of inputs saved to:\n', TxtFpath, '\n')
         
-    return TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs,\
-           ListOfInputs, TimingMsgs
+    #return TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs,\
+    #       ListOfInputs, TimingMsgs
+    return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+           SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+           SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+           SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+           TrgPixArrBySeg, TrgF2SindsBySeg,\
+           RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+           ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+           ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+           ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
+           TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfTimings
 
 
 
@@ -1439,8 +1445,8 @@ def ErrorCheckRoiCol(RoiCol, DicomDir, LogToConsole=False, DictOfInputs=None,
     Check a ROI Collection (RTS/SEG) for errors in dependencies based on 
     provided directory of the DICOMs that relate to the RTS/SEG.  
     
-    Inputs:
-    ******
+    Parameters
+    ----------
     
     RoiCol : Pydicom object
         RTS/SEG ROI Collection to be error checked.
@@ -1459,8 +1465,8 @@ def ErrorCheckRoiCol(RoiCol, DicomDir, LogToConsole=False, DictOfInputs=None,
         If True, log files will be exported.
                            
     
-    Outputs:
-    *******
+    Returns
+    -------
     
     LogList : list of strings
         A list of strings that describe info or any errors that are found.
@@ -1548,8 +1554,8 @@ def ExportTrgRoiCol(TrgRoiCol, SrcRoiColFpath, ExportDir, Fname='',
     """
     Export ROI Collection (RTS/SEG) to disk.  
     
-    Inputs:
-    ******
+    Parameters
+    ----------
     
     TrgRoiCol : Pydicom object
         Target ROI Collection (RTS/SEG) to be exported.
@@ -1569,8 +1575,8 @@ def ExportTrgRoiCol(TrgRoiCol, SrcRoiColFpath, ExportDir, Fname='',
         CopyRoi().
                            
     
-    Outputs:
-    *******
+    Returns
+    -------
     
     TrgRoiColFpath : string
         Full path of the exported Target RTS/SEG file.
@@ -1578,6 +1584,7 @@ def ExportTrgRoiCol(TrgRoiCol, SrcRoiColFpath, ExportDir, Fname='',
     
     import os
     import time
+    from datetime import datetime
     from pathlib import Path
     
     # Get the filename of the original RTS/SEG file:
@@ -1587,10 +1594,18 @@ def ExportTrgRoiCol(TrgRoiCol, SrcRoiColFpath, ExportDir, Fname='',
         #os.mkdir(ExportDir)
         Path(ExportDir).mkdir(parents=True)
     
-    if not DictOfInputs == None:
-        DateTime = DictOfInputs['RunDateTime']
-    else:
+    if DictOfInputs == None:
         DateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    else:
+        DateTime = DictOfInputs['RunDateTime']
+        
+        """ Remove the decimal from the seconds (e.g. 20210611_145930.766799
+        to 20210611_145930): """
+        # Convert from string to datetime:
+        dateTime = datetime.strptime(DateTime, "%Y%m%d_%H%M%S.%f")
+        
+        # Convert back to string without fractional seconds:
+        DateTime = datetime.strftime(dateTime, "%Y%m%d_%H%M%S")
     
     #FnamePrefix = DateTime + '_' + NamePrefix + '_from_'
     #FnamePrefix = DateTime + '_' + TxtToAddToFname.replace(' ', '_')
@@ -1642,8 +1657,8 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
                     PlotAllSlices=False, ExportPlot=False, ExportLogFiles=True):
     """
     
-    Inputs:
-    ******
+    Parameters
+    ----------
     
     TestNums : list of strings
         A list of strings denoting the tests to run (as defined in 
@@ -1805,10 +1820,10 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
     
         """ Import the RTS or SEGs: """
         SrcRoiCol = dcmread(SrcRoiColFpath)
-        SrcModality = SrcRoiCol.Modality
+        SrcRoiColMod = SrcRoiCol.Modality
         
         #print(f'\n\nSrcRoiFpath = {SrcRoiFpath}')
-        #print(f'SrcModality = {SrcModality}')
+        #print(f'SrcRoiColMod = {SrcRoiColMod}')
     
         if TrgRoiColFpath:
             TrgRoiCol = dcmread(TrgRoiColFpath)
@@ -1874,7 +1889,7 @@ def RunCopyLocalRoi_NOT_UP_TO_DATE(TestNums, LogToConsole=False, TxtToAddTrgRoiC
         
         Times.append(time.time())
         Dtime = round(Times[-1] - Times[-2], 1)
-        msg = f'Took {Dtime} s to error check the {SrcModality}.  There were '\
+        msg = f'Took {Dtime} s to error check the {SrcRoiColMod}.  There were '\
               + f'{Nerrors} errors found.\n'
         ListOfTimings.append(msg)
         print(f'*{msg}')
@@ -2055,8 +2070,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
            TxtToAddToTrgRoiColName='default', 
            ResInterp='default', PreResVar='default', 
            ApplyPostResBlur='default', PostResVar='default',
-           ForceReg='default', SelxOrSitk='default', Transform='default', 
-           MaxIters='default', InitMethod='default',
+           ForceReg='default', UseDroForTx='default', SelxOrSitk='default', 
+           Transform='default', MaxIters='default', InitMethod='default',
            SrcFidsFpath='default', TrgFidsFpath='default',
            TxInterp='default', ApplyPostTxBin='default', 
            ApplyPostTxBlur='default', PostTxVar='default',
@@ -2073,8 +2088,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     provided (other than 'default'), the value stored for that variable in
     CopyRoiDefaults.py will be used.
     
-    Inputs:
-    ******
+    Parameters
+    ----------
     
     XnatSession : requests session or None(optional; None by default)
         
@@ -2163,8 +2178,9 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     XnatDownloadDir : string (optional; 'default' by default)
         If provided the data will be downloaded to the chosen directory, 
         organised by sub-directories for ProjectLabel, SubjectLabel, Scans or
-        Assessors, etc. If not provided, the data will be downloaded to the
-        sub-directory "XnatDownloads" within the default downloads directory.
+        Assessors, etc. If not provided, the data will be downloaded to
+        '{default_download_dir}\XnatDownloads\{todays_date}',
+        e.g. C:\...\Downloads\XnatDownloads\2021-05-27.
     
     LogToConsole : boolean or string (optional; 'default' by default)
         If True, some results will be logged to the console.
@@ -2199,6 +2215,11 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         If True the Source image will be registered to the Target image, and 
         the Source labelmap will be transformed to the Target image grid
         accordingly.
+    
+    UseDroForTx : boolean (optional; True by default)
+        If True the transformation parameters from any suitable DRO (for the
+        required Transform) will be used instead of performing image
+        registration.
     
     SelxOrSitk : string (optional; 'default' by default)
         Denotes which package to use for image registration and transformation.
@@ -2248,8 +2269,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         transformed labelmap image(s).
         
     
-    Outputs:
-    ********
+    Returns
+    -------
     
     XnatSession : requests session
     
@@ -2302,6 +2323,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     importlib.reload(XnatTools)
 
     import time
+    from datetime import datetime
     import os
     from pypref import Preferences
     from pydicom import dcmread
@@ -2309,6 +2331,11 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     #from XnatTools import DownloadScan, DownloadAssessor
     from XnatTools import GetFnameAndIdFromName, UploadSubjAsr#, SearchXnatForDro
     from GeneralTools import PrintTitle, ExportListToTxt#, ExportDictionaryToJson
+    
+    TimeNow = datetime.now()
+    
+    RunDateTime = TimeNow.strftime('%Y%m%d_%H%M%S.%f')
+    DateTime = TimeNow.strftime('%Y%m%d_%H%M%S') # for prefix of file names
     
     #print(f'XnatSession = {XnatSession}\n')
     
@@ -2353,11 +2380,12 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
                           filename='CopyRoiTestConfig.py')
     
     if LogToConsole:
-        print(f'\nThe pre-configured inputs for TestNum {TestNum}:')
-        for key, value in TestCfg.get(TestNum).items():
-            print(f'   {key} : {value}')
-        print('')
-        
+        if TestNum != None:
+            print(f'\nThe pre-configured inputs for TestNum {TestNum}:')
+            for key, value in TestCfg.get(TestNum).items():
+                print(f'   {key} : {value}')
+            print('')
+    
     
     if TestNum != None:
         if isinstance(TestNum, int):
@@ -2444,6 +2472,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         PostResVar = Defaults.get('PostResVar')
     if ForceReg == 'default':
         ForceReg = Defaults.get('ForceReg')
+    if UseDroForTx == 'default':
+        UseDroForTx = Defaults.get('UseDroForTx')
     if SelxOrSitk == 'default':
         SelxOrSitk = Defaults.get('SelxOrSitk')
     if Transform == 'default':
@@ -2466,14 +2496,14 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         PostTxVar = Defaults.get('PostTxVar')
     if ExportNewTrgRoiCol == 'default':
         ExportNewTrgRoiCol = Defaults.get('ExportNewTrgRoiCol')
-    if RtsExportDir == 'default':
-        RtsExportDir = Defaults.get('RtsExportDir')
-    if SegExportDir == 'default':
-        SegExportDir = Defaults.get('SegExportDir')
+    #if RtsExportDir == 'default':
+    #    RtsExportDir = Defaults.get('RtsExportDir')
+    #if SegExportDir == 'default':
+    #    SegExportDir = Defaults.get('SegExportDir')
     if ExportNewDro == 'default':
         ExportNewDro = Defaults.get('ExportNewDro')
-    if DroExportDir == 'default':
-        DroExportDir = Defaults.get('DroExportDir')
+    #if DroExportDir == 'default':
+    #    DroExportDir = Defaults.get('DroExportDir')
     if UploadNewDro == 'default':
         UploadNewDro = Defaults.get('UploadNewDro')
     if LogToConsole == 'default':
@@ -2489,17 +2519,57 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
           f"\n   ResInterp = {ResInterp}\n   PreResVar = {PreResVar}",
           f"\n   ApplyPostResBlur = {ApplyPostResBlur}",
           f"\n   PostResVar = {PostResVar}\n   ForceReg = {ForceReg}",
-          f"\n   SelxOrSitk = {SelxOrSitk}\n   Transform = {Transform}",
-          f"\n   MaxIters = {MaxIters}\n   InitMethod = {InitMethod}",
-          f"\n   SrcFidsFpath = {SrcFidsFpath}\n   TrgFidsFpath = {TrgFidsFpath}",
-          f"\n   TxInterp = {TxInterp}\n   ApplyPostTxBin = {ApplyPostTxBin}",
-          f"\n   ApplyPostTxBlur = {ApplyPostTxBlur}",
-          f"\n   PostTxVar = {PostTxVar}",
+          f"\n   UseDroForTx = {UseDroForTx}\n   SelxOrSitk = {SelxOrSitk}",
+          f"\n   Transform = {Transform}\n   MaxIters = {MaxIters}",
+          f"\n   InitMethod = {InitMethod}\n   SrcFidsFpath = {SrcFidsFpath}",
+          f"\n   TrgFidsFpath = {TrgFidsFpath}\n   TxInterp = {TxInterp}",
+          f"\n   ApplyPostTxBin = {ApplyPostTxBin}",
+          f"\n   ApplyPostTxBlur = {ApplyPostTxBlur}\n   PostTxVar = {PostTxVar}",
           f"\n   ExportNewTrgRoiCol = {ExportNewTrgRoiCol}",
           f"\n   ExportNewDro = {ExportNewDro}\n   UploadNewDro = {UploadNewDro}",
           f"\n   LogToConsole = {LogToConsole}\n   PlotResults = {PlotResults}",
           f"\n   ExportPlot = {ExportPlot}\n   DevOutputs = {DevOutputs}\n")
     
+    if XnatDownloadDir != 'default':
+        # Change other export directories so they are contained within
+        # XnatDownloadDir:
+        RtsExportDir = os.path.join(XnatDownloadDir, 'new_RTS')
+        SegExportDir = os.path.join(XnatDownloadDir, 'new_SEG')
+        DroExportDir = os.path.join(XnatDownloadDir, 'new_DRO')
+        RtsPlotExportDir = os.path.join(XnatDownloadDir, 'plots_RTS')
+        SegPlotExportDir = os.path.join(XnatDownloadDir, 'plots_SEG')
+        LogExportDir = os.path.join(XnatDownloadDir, 'logs')
+    
+    if ExportNewTrgRoiCol:
+        if SrcRoiColMod == 'RTSTRUCT':
+            print(f"The new Target ROI Collection will be exported to:\n  {RtsExportDir}\n")
+        else:
+            print(f"The new Target ROI Collection will be exported to:\n  {SegExportDir}\n")
+    else:
+        print("The new Target ROI Collection will not be exported\n")
+              
+    if ExportNewDro:
+        print(f"The new DRO will be exported to:\n  {DroExportDir}\n")
+    else:
+        print("The new DRO will not be exported\n")
+    
+    if UploadNewDro:
+        print(f"The new DRO will be uploaded to:\n  {XnatUrl}\n")
+    else:
+        print("The new DRO will not be uploaded to XNAT\n")
+    
+    if ExportPlot:
+        if SrcRoiColMod == 'RTSTRUCT':
+            print(f"The plot will be exported to:\n  {RtsPlotExportDir}\n")
+        else:
+            print(f"The plot will be exported to:\n  {SegPlotExportDir}\n")
+    else:
+        print("The plot will not be exported\n")
+      
+    if ExportLogFiles:
+        print(f"The log files will be exported to:\n{LogExportDir}\n")
+    else:
+        print("The log files will not be exported\n")
     
     #""" Check whether there exists a DRO for this set of Source and Target
     #images: """
@@ -2523,8 +2593,57 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     
     #print(f'XnatSession = {XnatSession}\n')
     
-    NewTrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfInputs,\
-    TimingMsgs\
+    
+    """ 07/06/21: Moved from CopyXnatRoiCol(): """
+    DictOfInputs\
+    = CreateDictOfInputs(RunDateTime=RunDateTime, XnatUrl=XnatUrl, 
+                         ProjId=ProjId, SubjLabel=SubjLabel, 
+                         SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
+                         SrcSliceNum=SrcSliceNum, SrcRoiColMod=SrcRoiColMod,
+                         SrcRoiColName=SrcRoiColName, SrcRoiName=SrcRoiName, 
+                         TrgExpLabel=TrgExpLabel, TrgScanId=TrgScanId, 
+                         TrgSliceNum=TrgSliceNum, TrgRoiColMod=TrgRoiColMod,
+                         TrgRoiColName=TrgRoiColName, TrgRoiName=TrgRoiName,  
+                         TxtToAddToTrgRoiColName=TxtToAddToTrgRoiColName, 
+                         LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles, 
+                         ResInterp=ResInterp, PreResVar=PreResVar, 
+                         ApplyPostResBlur=ApplyPostResBlur, 
+                         PostResVar=PostResVar, ForceReg=ForceReg, 
+                         SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                         MaxIters=MaxIters, TxInterp=TxInterp, 
+                         ApplyPostTxBin=ApplyPostTxBin, 
+                         ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
+    
+    """ Update DictOfInputs: 
+    To do: Update CreateDictOfInputs() to include below items.
+    """
+    if TestNum:
+        DictOfInputs.update({'TestNum' : TestNum})
+    DictOfInputs['ExportNewTrgRoiCol'] = ExportNewTrgRoiCol
+    DictOfInputs['RtsExportDir'] = RtsExportDir
+    DictOfInputs['SegExportDir'] = SegExportDir
+    DictOfInputs['ExportNewDro'] = ExportNewDro
+    DictOfInputs['DroExportDir'] = DroExportDir
+    DictOfInputs['UploadNewDro'] = UploadNewDro
+    DictOfInputs['PlotResults'] = PlotResults
+    DictOfInputs['ExportPlot'] = ExportPlot
+    DictOfInputs['RtsPlotExportDir'] = RtsPlotExportDir
+    DictOfInputs['SegPlotExportDir'] = SegPlotExportDir
+    DictOfInputs['LogExportDir'] = LogExportDir
+    DictOfInputs['DevOutputs'] = DevOutputs
+    
+    
+    
+    SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+    SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+    SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+    SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+    TrgPixArrBySeg, TrgF2SindsBySeg,\
+    RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+    ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+    ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+    ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
+    NewTrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfTimings\
     = CopyXnatRoiCol(XnatUrl=XnatUrl, XnatSession=XnatSession, 
                      ProjId=ProjId, SubjLabel=SubjLabel, 
                      SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
@@ -2538,16 +2657,18 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
                      LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles,
                      ResInterp=ResInterp, PreResVar=PreResVar, 
                      ApplyPostResBlur=ApplyPostResBlur, PostResVar=PostResVar, 
-                     ForceReg=ForceReg, SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                     ForceReg=ForceReg, UseDroForTx=UseDroForTx,
+                     SelxOrSitk=SelxOrSitk, Transform=Transform, 
                      MaxIters=MaxIters, InitMethod=InitMethod,
                      SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
                      TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin,
-                     ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar)
+                     ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar,
+                     DictOfInputs=DictOfInputs)
     
     
-    if TestNum:
-        # Add TestNum to DictOfInputs:
-        DictOfInputs.update({'TestNum' : TestNum})
+    #""" Update DictOfInputs: """
+    #if TestNum:
+    #    DictOfInputs.update({'TestNum' : TestNum})
     
     
     """ Error check the new Target RTS/SEG """
@@ -2568,7 +2689,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     print(f'*{msg}')
     
     
-    DateTime = DictOfInputs['RunDateTime']
+    #RunDateTime = DictOfInputs['RunDateTime']
     
     
     if ExportLogFiles:
@@ -2714,9 +2835,14 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     
     """ Export the DRO (if applicable) """
     
+    #print(f"ExportNewDro = {ExportNewDro}")
+    #print(f"type(Dro) = {type(Dro)}")
+    
     #if TxParams != None:
     #if UseCaseToApply in ['5a', '5b']:
     if Dro != None and ExportNewDro:
+        import DroTools
+        importlib.reload(DroTools)
         from DroTools import ExportDro
         
         DroLabel = f'Study_{SrcExpLabel}_Series_{SrcScanId}_to_'\
@@ -2728,6 +2854,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
             DroFname += f'{TestNum}_'
         
         DroFname += DroLabel + '.dcm'
+        
+        print(f"DroExportDir = {DroExportDir}\n")
             
         DroFpath = ExportDro(Dro, DroExportDir, DroFname, DictOfInputs)
         
@@ -2792,8 +2920,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         else:
             dpi = 80
 
-        RtsPlotExportDir = Defaults.get('RtsPlotExportDir')
-        SegPlotExportDir = Defaults.get('SegPlotExportDir')
+        #RtsPlotExportDir = Defaults.get('RtsPlotExportDir')
+        #SegPlotExportDir = Defaults.get('SegPlotExportDir')
         PlotAllSlices = Defaults.get('PlotAllSlices')
         
         #if TestNum:
@@ -2816,15 +2944,53 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
         Times.append(time.time())
         
         if NewTrgRoiCol.Modality == 'RTSTRUCT':
-            from PlottingTools import PlotContoursFromListOfRtss_v1
+            import PlottingTools
+            importlib.reload(PlottingTools)
+            #from PlottingTools import PlotContoursFromListOfRtss_v1
+            from PlottingTools import PlotContoursFromListOfRtss_v4
+            from PlottingTools import PlotResResults
+            from DicomTools import ImportDicom
             
-            PlotContoursFromListOfRtss_v1(ListOfRois, ListOfDicomDirs, 
+            #PlotContoursFromListOfRtss_v1(ListOfRois, ListOfDicomDirs, 
+            #                              ListOfPlotTitles,
+            #                              PlotAllSlices=PlotAllSlices,
+            #                              ExportPlot=ExportPlot, 
+            #                              ExportDir=RtsPlotExportDir,
+            #                              ExportFname=PlotFname,
+            #                              dpi=dpi, LogToConsole=False)
+            
+            SrcDcmMod = ImportDicom(SrcDcmDir).Modality
+            TrgDcmMod = ImportDicom(TrgDcmDir).Modality
+            
+            FixTitle = f'{TrgDcmMod} {TrgScanId} (fixed)' 
+            MovTitle = f'{SrcDcmMod} {SrcScanId} (moving)' 
+            
+            if DictOfInputs['SourceOfTransformation'] == 'ImageRegistration':
+                ResTitle = f'{SrcDcmMod} {SrcScanId} {Transform} registered '\
+                           + f'to {TrgDcmMod} {TrgScanId}'
+                TxtToAddToFname = f'{SrcExpLabel}_{Transform}_reg_to_{TrgExpLabel}'
+            else:
+                """ DictOfInputs['SourceOfTransformation'] = 'ParamsFromDRO' """
+                
+                ResTitle = f'{SrcDcmMod} {SrcScanId} {Transform} transformed '\
+                           + f'to {TrgDcmMod} {TrgScanId} from DRO'
+                TxtToAddToFname = f'{SrcExpLabel}_{Transform}_Tx_to_{TrgExpLabel}'\
+                                  + 'from_DRO'
+            
+            PlotResResults(FixIm=TrgIm, MovIm=SrcIm, ResIm=RegIm, 
+                           #FixInd=MrT2Im.GetSize()[2]//2,
+                           #FixInd=MrT2Im_S - 25, MovInd=CtIm_S - 242,
+                           FixInd=15, MovInd=223,
+                           FixTitle=FixTitle, MovTitle=MovTitle, ResTitle=ResTitle,
+                           ExportPlot=ExportPlot, ExportDir=RtsPlotExportDir, 
+                           TxtToAddToFname=TxtToAddToFname)
+            
+            PlotContoursFromListOfRtss_v4(ListOfRois, ListOfDicomDirs, 
                                           ListOfPlotTitles,
-                                          PlotAllSlices=PlotAllSlices,
                                           ExportPlot=ExportPlot, 
                                           ExportDir=RtsPlotExportDir,
-                                          ExportFname=PlotFname,
-                                          dpi=dpi, LogToConsole=False)
+                                          TxtToAddToFname='Contours',
+                                          LogToConsole=False)
 
         else:
             from PlottingTools import PlotPixArrsFromListOfSegs_v1
@@ -2848,7 +3014,11 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     
     
     Dtime = round(Times[-1] - Times[0], 1)
-    msg = f'Took {Dtime} s to run test {TestNum}.\n'
+    Dtime_min = round(Dtime/60, 1)
+    if TestNum == None:
+        msg = f'Took {Dtime} s ({Dtime_min} min) to run.\n'
+    else:
+        msg = f'Took {Dtime} s ({Dtime_min} min) to run test {TestNum}.\n'
     TimingMsgs.append(msg)
     print(f'*{msg}')
         
@@ -2878,7 +3048,20 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     
     
     if DevOutputs:
+        #return XnatSession, SrcRoiCol, TrgRoiCol, NewTrgRoiCol, Dro,\
+        #       PathsDict, DictOfInputs, ListOfInputs, TimingMsgs, Times
         return XnatSession, SrcRoiCol, TrgRoiCol, NewTrgRoiCol, Dro,\
-               PathsDict, DictOfInputs, ListOfInputs, TimingMsgs, Times
+               PathsDict, DictOfInputs, TimingMsgs, Times,\
+               SrcDcmDir, TrgDcmDir, SrcIm, TrgIm,\
+               SrcPtsByCntByRoi, SrcC2SindsByRoi,\
+               TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+               SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+               SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+               TrgPixArrBySeg, TrgF2SindsBySeg,\
+               RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+               ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+               ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+               ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi
+               
     else:
         return XnatSession
