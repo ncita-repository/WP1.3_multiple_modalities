@@ -284,13 +284,13 @@ def get_voxel_volume_ratio(image0, image1):
     
     return vol1/vol0
 
-def change_im_dtype(image, newPixType):
+def change_im_dtype(im, newPixType):
     """
     Convert a 3D SimpleITK Image to a new pixel type.
     
     Parameters
     ----------   
-    image : SimpleITK Image
+    im : SimpleITK Image
         The 3D image whose pixel type is to be converted.
     newPixType : str
         The pixel type to convert image to.  Acceptable inputs are a subset of
@@ -350,7 +350,7 @@ def change_im_dtype(image, newPixType):
     
     Caster.SetOutputPixelType(pixTypeOut)
     
-    return Caster.Execute(image)
+    return Caster.Execute(im)
 
 def find_thresh(binaryIm, nonBinaryIm, p2c=False):
     """

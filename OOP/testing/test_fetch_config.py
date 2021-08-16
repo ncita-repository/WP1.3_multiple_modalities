@@ -36,8 +36,7 @@ class ConfigFetcherTester:
         testResult = ConfigFetcherTester(runID)
     """
     
-    def __init__(self, runID):
-        cfgDir = r'C:\Code\WP1.3_multiple_modalities\Python_code\configs'
+    def __init__(self, cfgDir, runID):
         
         print('Fetching parameters from local drive...\n')
         

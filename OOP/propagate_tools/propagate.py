@@ -6,13 +6,20 @@ Created on Tue Aug 10 17:05:12 2021
 """
 
 from importlib import reload
+
 import general_tools.shifting
 reload(general_tools.shifting)
+import image_tools.resampling
+reload(image_tools.resampling)
 
 from copy import deepcopy
 
 from general_tools.shifting import get_voxel_shift_bt_slices, shift_frame
 from general_tools.general import get_unique_items, are_items_equal_to_within_eps
+from general_tools.general import does_instance_variable_exist
+from conversion_tools.pixarrs_ims import pixarr_to_im
+from image_tools.attrs_info import get_im_info
+from image_tools.resampling import resample_labimByRoi
 
 class Propagator:
     # TODO modify the docstrings
@@ -34,17 +41,16 @@ class Propagator:
     
     """
     
-    def __init__(self, params, srcDataset, trgDataset):
+    def __init__(self, params, srcDataset, trgDataset, dro=None):
         
-        cfgDict = params.cfgDict
+        #cfgDict = params.cfgDict
+        #useCase = cfgDict['useCaseToApply']
+        #useDroForTx = cfgDict['useDroForTx']
+        #regTxName = cfgDict['regTxName']
+        #p2c = cfgDict['p2c']
         
         # TODO where to import DRO?
-        dro = None # for now
-        
-        useCase = cfgDict['useCaseToApply']
-        useDroForTx = cfgDict['useDroForTx']
-        regTxName = cfgDict['regTxName']
-        p2c = cfgDict['p2c']
+        #dro = None # for now
         
         ## Create a new target dataset:
         #self.newDataset = deepcopy(trgDataset)
@@ -52,97 +58,25 @@ class Propagator:
         
         # Copy selected instance attributes from trgDataset:
         self.dicoms = trgDataset.dicoms
+        self.divs = trgDataset.divs
+        self.f2sIndsByRoi = trgDataset.f2sIndsByRoi
         self.foruid = trgDataset.foruid
         self.image = trgDataset.image
+        self.pixarrByRoi = trgDataset.pixarrByRoi
+        self.roiName = trgDataset.roiName
+        self.roiNames = trgDataset.roiNames
+        self.roiNums = trgDataset.roiNums
+        self.roicol = trgDataset.roicol
         self.seriesuid = trgDataset.seriesuid
         self.slcNum = trgDataset.slcNum
         self.sopuids = trgDataset.sopuids
         self.studyuid = trgDataset.studyuid
         
-        if p2c:
-            print(f'useCase = {useCase}')
+        # Copy srcDataset and trgDataset:
+        #self.srcDataset = srcDataset
+        #self.trgDataset = trgDataset
         
-        if useCase in ['1', '2a']:
-            # Make a non-relationship-preserving copy:
-            self.make_non_relationship_preserving_copy(
-                params, srcDataset, trgDataset
-                )
-            
-        if useCase == '2b':
-            # Make a relationship-preserving copy:
-            self.make_relationship_preserving_copy(params, srcDataset, trgDataset)
-        
-        if useCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
-            self.convert_pixarrs_to_images(params, srcDataset, trgDataset)
-        
-            if useCase in ['3a', '3b', '4a', '4b']:
-                self.resample_images()
-            else:
-                if dro == None or (dro != None and useDroForTx):
-                    """
-                    No suitable DRO was found on XNAT or user wishes to 
-                    override the DRO and perform image registration.
-                    """
-                    
-                    if (dro != None and useDroForTx):
-                        print('Image registeration will be performed instead',
-                              'of using the DRO from XNAT.\n')
-                    
-                    self.register_images()
-                    
-                    # Get the reg tx params
-                    
-                    # more...
-                else:
-                    """
-                    A suitable DRO was found on XNAT to bypass image 
-                    registration.
-                    """
-                    
-                    if regTxName in ['rigid', 'affine']:
-                        
-                        self.create_tx_from_spa_dro()
-                        
-                        # do other stuff
-                        
-                    else:
-                        self.create_tx_from_def_dro()
-                        
-                        self.create_pre_tx_from_def_dro()
-                        
-                        # do other stuff
-                        
-                        if are_items_equal_to_within_eps():
-                            self.resample_image()
-                        
-                        else:
-                            # Composite transforms
-                            
-                            self.resample_image()
-                            
-                            # TODO consider using only one call of resample_image
-                            # and instead modify self.sitkTx accordingly
-                            
-                    self.resample_labimByRoi()
-                        
-                    # TODO what is the else with RegIm = None, SitkTx = None...
-                    # at the bottom of page 10 for?
-            
-            if useCase in ['3a', '4a', '5a']:
-                self.reduce_frames()
-                
-                # shift_frames_in_pixarrByRoi (pg 12)
-            
-                # concatenate...
-                
-            #if useCase in ['3b', '4b', '5b']:
-                # deepcopying may not be required..
-            
-        
-        """ Create ROI and DRO in separate classes... """
-        # Create/overwrite the Target ROI Collection:
-        #trgDataset.create_roicol()
-        
+        self.propagate(params, srcDataset, trgDataset)
     
     def replace_ind_in_f2sIndsByRoi(self, srcDataset, trgDataset):
         # TODO modfy the docstrings
@@ -504,12 +438,60 @@ class Propagator:
         # Since the spatial relationships are not to be modified, 
         # trgPixarrByRoi = srcPixarrBySeg:
         self.pixarrByRoi = deepcopy(srcDataset.pixarrByRoi)
+    
+    def get_labimByRoi_MOVED(self, params, dataset):
+        # TODO update docstrings
+        """
+        This has been moved to get_seg_metadata() in io_tools.import_data.
         
-    #def propagate(self, params, srcDataset, trgDataset):
+        Get a list of label images-by-ROI from a list of pixel arrays-by-ROI in
+        a Dataset.
         
+        Parameters
+        ----------
+        params : DataDownloader Object
+            Contains various parameters.
+        dataset : DataImporter Object
+            DataImporter Object for a DICOM series.
+            
+        Returns
+        -------
+        None.
+        """
         
-    #def convert_pixarrs_to_images(self, params, srcDataset, trgDataset):
+        p2c = params.cfgDict['p2c']
         
+        if p2c:
+            print('\n\n', '-'*120)
+            print(' Running of get_labimByRoi():')
+            print('-'*120, '\n')
+        
+        pixarrByRoi = dataset.pixarrByRoi
+        f2sIndsByRoi = dataset.f2sIndsByRoi
+        refIm = dataset.image
+        
+        labimByRoi = []
+        f2sIndsByRoi_new = []
+    
+        for r in range(len(pixarrByRoi)):
+            labim = pixarr_to_im(
+                pixarr=pixarrByRoi[r], f2sInds=f2sIndsByRoi[r], refIm=refIm
+                )
+            
+            labimByRoi.append(labim)
+        
+            if p2c:
+                print(f'\n   Image info for labimByRoi[{r}]:')
+                
+            pixID, pixIDtypeAsStr, uniqueVals, f2sInds = \
+                get_im_info(labim, p2c)
+            
+            f2sIndsByRoi_new.append(f2sInds)
+        
+        if p2c:
+            print('-'*120)
+            
+        self.labimByRoi
         
     #def resample_images(self, ):
     
@@ -521,3 +503,155 @@ class Propagator:
         
     
     #def create_roicol(self, ):
+    
+    def propagate(self, params, srcDataset, trgDataset, dro):
+        
+        cfgDict = params.cfgDict
+        
+        useCase = cfgDict['useCaseToApply']
+        resInterp = cfgDict['resInterp']
+        applyPreResBlur = cfgDict['applyPreResBlur']
+        preResVariance = cfgDict['preResVariance']
+        applyPostResBlur = cfgDict['applyPostResBlur']
+        postResVariance = cfgDict['postResVariance']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        p2c = cfgDict['p2c']
+        
+        srcLabimByRoi = srcDataset.labimByRoi
+        srcF2SindsByRoi = srcDataset.f2sIndsByRoi
+        srcIm = srcDataset.image
+        trgIm = trgDataset.image
+        
+        
+        # TODO where to import DRO?
+        #dro = None # for now
+        
+        if p2c:
+            print(f"params.cfgDict['runID'] = {params.cfgDict['runID']}")
+            print(f'useCase = {useCase}')
+        
+        if useCase in ['1', '2a']:
+            # Make a non-relationship-preserving copy:
+            self.make_non_relationship_preserving_copy(
+                params, srcDataset, trgDataset
+                )
+            
+        if useCase == '2b':
+            # Make a relationship-preserving copy:
+            self.make_relationship_preserving_copy(
+                params, srcDataset, trgDataset
+                )
+        
+        #if useCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
+        #    doesExist = does_instance_variable_exist(
+        #        instanceObj=srcDataset, varName='labimByRoi', p2c=p2c
+        #        )
+        #    
+        #    # Get a list of label images-by-ROI for source:
+        #    #srcDataset.get_labimByRoi(params, srcDataset)
+        #    
+        #    """ 
+        #    Above line doesn't work since srcDataset -> DataImporter object,
+        #    does not have method get)labimByRoi. This has been moved to
+        #    get_seg_metadata() in io_tools.import_data, even though it's not
+        #    needed for use cases 1-2. 
+        #    """
+        #    
+        #    doesExist = does_instance_variable_exist(
+        #        instanceObj=srcDataset, varName='labimByRoi', p2c=p2c
+        #        )
+        
+        if useCase in ['3a', '3b', '4a', '4b']:
+            """
+            This used to be under:
+                if useCase in ['3a', '3b', '4a', '4b', '5a', '5b']
+            but the label images by ROI is fetched along with other data.
+            """
+            print('Need to do useCase 3a, 3b, 4a and 4b')
+            resSrcLabimByRoi, resSrcPixarrByRoi, resSrcF2SindsByRoi\
+                = resample_labimByRoi(
+                    labimByRoi=srcLabimByRoi, 
+                    f2sIndsByRoi=srcF2SindsByRoi, 
+                    im=srcIm, 
+                    refIm=trgIm,  
+                    interp=resInterp, 
+                    applyPreResBlur=applyPreResBlur, 
+                    preResVariance=preResVariance, 
+                    applyPostResBlur=applyPostResBlur, 
+                    postResVariance=postResVariance, 
+                    p2c=p2c
+                    )
+        
+        else:
+            if dro == None or (dro != None and useDroForTx):
+                """
+                No suitable DRO was found on XNAT or user wishes to 
+                override the DRO and perform image registration.
+                """
+                
+                if (dro != None and useDroForTx):
+                    print('Image registeration will be performed instead',
+                          'of using the DRO from XNAT.\n')
+                
+                print('Need to write register_images()')
+                #self.register_images()
+                
+                # Get the reg tx params
+                
+                # more...
+            else:
+                """
+                A suitable DRO was found on XNAT to bypass image 
+                registration.
+                """
+                
+                if regTxName in ['rigid', 'affine']:
+                    print('Need to write create_tx_from_spa_dro()')
+                    #self.create_tx_from_spa_dro()
+                    
+                    # do other stuff
+                    
+                else:
+                    print('Need to write create_tx_from_def_dro()')
+                    #self.create_tx_from_def_dro()
+                    
+                    print('Need to write create_pre_tx_from_def_dro()')
+                    #self.create_pre_tx_from_def_dro()
+                    
+                    # do other stuff
+                    
+                    if are_items_equal_to_within_eps():
+                        print('Need to write resample_image()')
+                        #self.resample_image()
+                    
+                    else:
+                        # Composite transforms
+                        print('Need to write resample_image()')
+                        #self.resample_image()
+                        
+                        # TODO consider using only one call of resample_image
+                        # and instead modify self.sitkTx accordingly
+                
+                print('Need to write resample_labimByRoi()')
+                #self.resample_labimByRoi()
+                    
+                # TODO what is the else with RegIm = None, SitkTx = None...
+                # at the bottom of page 10 for?
+            
+        if useCase in ['3a', '4a', '5a']:
+            print('Need to write reduce_frames()')
+            #self.reduce_frames()
+            
+            # shift_frames_in_pixarrByRoi (pg 12)
+        
+            # concatenate...
+            
+        #if useCase in ['3b', '4b', '5b']:
+            # deepcopying may not be required..
+            
+        
+        """ Create ROI and DRO in separate classes... """
+        # Create/overwrite the Target ROI Collection:
+        print('Need to write create_roicol()')
+        #trgDataset.create_roicol()

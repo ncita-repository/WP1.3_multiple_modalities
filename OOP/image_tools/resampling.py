@@ -18,31 +18,31 @@ from general_tools.fiducials import get_landmark_tx
 from plotting_tools.plotting import plot_two_ims
 
 
-def resample_im(Im, RefIm, sitkTx=sitk.Transform(), Interp='Linear', 
-                LogToConsole=False):
+def resample_im(im, refIm, sitkTx=sitk.Transform(), interp='Linear', 
+                p2c=False):
     """
     Resample a 3D SimpleITK image.
     
     Parameters
     ----------   
-    Im : SimpleITK Image
+    im : SimpleITK Image
         The 3D image to be resampled.
-    RefIm : SimpleITK Image
+    refIm : SimpleITK Image
         The 3D image reference image whose gridspace Im will be resampled to.
     sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
         The SimpleITK Transform to be used. The identity transform is default.
-    Interp : str, optional ('Linear' by default)
+    interp : str, optional ('Linear' by default)
         The type of interpolation to be used.  Acceptable inputs are:
         - 'Linear'
         - 'Bspline'
         - 'NearestNeighbor'
         - 'LabelGaussian'
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
         
     Returns
     -------
-    ResIm : SimpleITK image
+    resIm : SimpleITK image
         The resampled 3D image.
     
     Note
@@ -53,90 +53,90 @@ def resample_im(Im, RefIm, sitkTx=sitk.Transform(), Interp='Linear',
     """
     
     # Define which interpolator to use:
-    if Interp == 'NearestNeighbor':    
+    if interp == 'NearestNeighbor':    
         sitkInterp = sitk.sitkNearestNeighbor
         #sitkPixType = sitk.sitkUInt64
         sitkPixType = sitk.sitkUInt32
         
-    elif Interp == 'LabelGaussian':
+    elif interp == 'LabelGaussian':
         sitkInterp = sitk.sitkLabelGaussian
         #sitkPixType = sitk.sitkUInt64
         sitkPixType = sitk.sitkUInt32
         
-    elif Interp == 'Linear':
+    elif interp == 'Linear':
         sitkInterp = sitk.sitkLinear
         #sitkPixType = sitk.sitkFloat32
         sitkPixType = sitk.sitkUInt32
         
-    elif Interp == 'Bspline':
+    elif interp == 'Bspline':
         sitkInterp = sitk.sitkBSpline
         sitkPixType = sitk.sitkFloat32
         
     else:
-        msg = '"Interp" must be "Linear", "BSpline" or "LabelGaussian".'
+        msg = '"interp" must be "Linear", "BSpline" or "LabelGaussian".'
         
         raise Exception(msg)
     
     #print('\nUsing', Interpolation, 'interp\n')
     
-    Resampler = sitk.ResampleImageFilter()
-    Resampler.SetTransform(sitkTx)
-    Resampler.SetInterpolator(sitkInterp)
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetTransform(sitkTx)
+    resampler.SetInterpolator(sitkInterp)
     
-    Resampler.SetReferenceImage(RefIm)
-    Resampler.SetOutputPixelType(sitkPixType)
-    Resampler.SetDefaultPixelValue(0)
+    resampler.SetReferenceImage(refIm)
+    resampler.SetOutputPixelType(sitkPixType)
+    resampler.SetDefaultPixelValue(0)
     
-    ResIm = Resampler.Execute(Im)
+    resIm = resampler.Execute(im)
     
-    #if LogToConsole:
-    #    ResTx = Resampler.GetTransform()
-    #    print('\nResampling transform:\n', ResTx)
+    #if p2c:
+    #    resTx = resampler.GetTransform()
+    #    print('\nResampling transform:\n', resTx)
 
-    return ResIm
+    return resIm
 
-def resample_labim_OLD(LabIm, F2Sinds, SrcIm, TrgIm, Interp, 
-                   PreResVariance=(1,1,1), ApplyPostResBlur=True, 
-                   PostResVariance=(1,1,1), LogToConsole=False):
+def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp, 
+                   preResVariance=(1,1,1), applyPostResBlur=True, 
+                   postResVariance=(1,1,1), p2c=False):
     """
     Resample a 3D SimpleITK image.
     
     Parameters
     ----------  
-    LabIm : SimpleITK image
+    labim : SimpleITK image
         The 3D label image to be resampled.
-    F2Sinds : list of ints
+    f2sInds : list of ints
         List (for each frame) of slice numbers that correspond to each frame in 
-        LabIm.
-    SrcIm : SimpleITK image
-        The Source 3D image whose gridspace matches the gridspace of LabIm. 
-    TrgIm : SimpleITK image
-        The Target 3D image whose gridspace the LabIm will be resampled to.
-    Interp : str
+        labim.
+    srcIm : SimpleITK image
+        The Source 3D image whose gridspace matches the gridspace of labim. 
+    trgIm : SimpleITK image
+        The Target 3D image whose gridspace the labim will be resampled to.
+    interp : str
         The type of interpolation to be used.  Acceptable inputs are:
         - 'NearestNeighbor'
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
-    PreResVariance : tuple of floats, optional ((1,1,1) by default)
+    preResVariance : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior to resampling.
-    ApplyPostResBlur : bool, optional (True by default)
+    applyPostResBlur : bool, optional (True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+    postResVariance : tuple of floats (optional; (1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior after resampling.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
     -------
-    ResLabIm : SimpleITK images
+    resLabim : SimpleITK images
         The resampled 3D label image.
-    ResPixArr : Numpy arrays
-        The resampled pixel array (converted from ResLabIm).
-    ResF2Sinds : list of ints
-        The list (for each frame) of the frame-to-slice indices in ResPixArr.
+    resPixarr : Numpy arrays
+        The resampled pixel array (converted from resLabim).
+    resF2Sinds : list of ints
+        The list (for each frame) of the frame-to-slice indices in resPixarr.
     
     Note
     ----
@@ -145,7 +145,7 @@ def resample_labim_OLD(LabIm, F2Sinds, SrcIm, TrgIm, Interp,
     
     If resampling to a smaller grid size aliasing can occur, leading to the
     appearent disappearance of segmentations (i.e. an empty resampled label,
-    and hence an empty list of frame-to-slice indices, F2Sinds = []) even if 
+    and hence an empty list of frame-to-slice indices, f2sInds = []) even if 
     there were contours (i.e. if SrcC2Sinds != []). If this is the case try
     suggestions from Ziv Yaniv (See Link below):
             
@@ -177,307 +177,317 @@ def resample_labim_OLD(LabIm, F2Sinds, SrcIm, TrgIm, Interp,
     Link: https://github.com/SimpleITK/SimpleITK/issues/1277
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of resample_labim():')
         print('\n\n', '-'*120)
         
-    if not Interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
-        msg = f'The chosen interpolation, {Interp}, is not one of the '\
+    if not interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
+        msg = f'The chosen interpolation, {interp}, is not one of the '\
               + 'accepted inputs: \'NearestNeighbor\', \'LabelGaussian\', or '\
               + '\'BlurThenLinear\'.'
         
         raise Exception(msg)
     
     # Store the interpolation set as metadata:
-    LabIm.SetMetaData("ResInterpSet", Interp)
+    labim.SetMetaData("resInterpSet", interp)
     
-    #SrcSpacings = SrcIm.GetSpacing()
-    #TrgSpacings = TrgIm.GetSpacing()
+    #srcSpacings = srcIm.GetSpacing()
+    #trgSpacings = trgIm.GetSpacing()
     
-    #SpacingsRatio = tuple(tup1/tup0 for tup0, tup1 in zip(SrcSpacings, 
-    #                                                      TrgSpacings))
+    #spacingsRatio = tuple(tup1/tup0 for tup0, tup1 in zip(srcSpacings, 
+    #                                                      trgSpacings))
     
-    #SrcSpacings = np.array(SrcIm.GetSpacing())
-    #TrgSpacings = np.array(TrgIm.GetSpacing())
+    #srcSpacings = np.array(srcIm.GetSpacing())
+    #trgSpacings = np.array(trgIm.GetSpacing())
         
-    #SpacingsRatio = np.divide(TrgSpacings, SrcSpacings)
+    #spacingsRatio = np.divide(trgSpacings, srcSpacings)
     
-    #VolumeRatio = np.prod(SpacingsRatio)
+    #volumeRatio = np.prod(spacingsRatio)
     
     #""" 
     #The FWHM of the Gaussian is:
-    #    FWHM = 2*sqrt(2*ln(2))*sigma ~= 2.355*sigma
+    #    fwhm = 2*sqrt(2*ln(2))*sigma ~= 2.355*sigma
     #    
     #Due to the Nyquist-Shannon sampling theorem, the FWHM should be at
-    #least 2x the voxel spacings of TrgIm. For symmetry it makes sense for
+    #least 2x the voxel spacings of trgIm. For symmetry it makes sense for
     #one Source voxel width to be blurred to three Target voxels widths:
-    #    sigma = (3*TrgSpacings)/2.355
+    #    sigma = (3*trgSpacings)/2.355
     #"""
     
-    #if LogToConsole:
-    #    print(f'\nSrcSpacings = {SrcSpacings}')
-    #    print(f'TrgSpacings = {TrgSpacings}')
-    #    print(f'\nSpacingsRatio = {SpacingsRatio}')
+    #if p2c:
+    #    print(f'\nsrcSpacings = {srcSpacings}')
+    #    print(f'trgSpacings = {trgSpacings}')
+    #    print(f'\nspacingsRatio = {spacingsRatio}')
     
-    if Interp in ['NearestNeighbor', 'LabelGaussian']:
-        if LogToConsole:
-            print('Attempting to resample LabIm using the',
-                  f'{Interp} interpolator...\n')
+    if interp in ['NearestNeighbor', 'LabelGaussian']:
+        if p2c:
+            print('Attempting to resample labim using the',
+                  f'{interp} interpolator...\n')
         
-        """ Attempt to resample LabIm to the Target image's grid using the
+        """ Attempt to resample labim to the Target image's grid using the
         chosen labelmap interpolator. """
-        ResLabIm = resample_im(Im=LabIm, RefIm=TrgIm, Interp=Interp)
+        resLabim = resample_im(im=labim, refIm=trgIm, interp=interp)
         
-        if LogToConsole:
-            print('Image info for ResLabIm after resampling using',
-                  f'{Interp} interpolator:')
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-        if LogToConsole:
+        if p2c:
+            print('Image info for resLabim after resampling using',
+                  f'{interp} interpolator:')
+        pixID, pixIDTypeAsStr, uniqueVals,\
+        resF2Sinds = get_im_info(resLabim, p2c)
+        if p2c:
             print('')
         
-        if ApplyPostResBlur:
+        if applyPostResBlur:
             # Gaussian blur the image.
-            ResLabIm = gaussian_blur_im(Im=ResLabIm, 
-                                        Variance=PostResVariance)
+            resLabim = gaussian_blur_im(im=resLabim, 
+                                        Variance=postResVariance)
             
-            if LogToConsole:
-                print('Image info for ResLabIm after Gaussian blurring:')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-            if LogToConsole:
+            if p2c:
+                print('Image info for resLabim after Gaussian blurring:')
+            pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+                resLabim, p2c
+                )
+            if p2c:
                 print('')
             
             #""" The original binary pixel array: """
-            #PixArr_B, F2Sinds = im_to_pixarr(LabIm)
+            #PixArr_B, f2sInds = im_to_pixarr(labim)
             #
             #""" The non-binary pixel array following blur: """
-            #PixArr_NB, F2Sinds = im_to_pixarr(ResLabIm)
+            #pixArr_NB, f2sInds = im_to_pixarr(resLabim)
             #
-            #Ratio = GetVoxelVolumeRatio(LabIm, ResLabIm)
+            #ratio = GetVoxelVolumeRatio(labim, resLabim)
             #
-            #if LogToConsole:
-            #    print(f'PixArr_B.shape = {PixArr_B.shape}')
-            #    print(f'PixArr_NB.shape = {PixArr_NB.shape}\n')
+            #if p2c:
+            #    print(f'pixArr_B.shape = {pixArr_B.shape}')
+            #    print(f'pixArr_NB.shape = {pixArr_NB.shape}\n')
             
             # Binarise the resampled labelmap if required.
-            if len(UniqueVals) != 2 or sum(UniqueVals) != 1:
+            if len(uniqueVals) != 2 or sum(uniqueVals) != 1:
                 """Find suitable threshold value that approximately preserves
-                the number of pre-blurred truth values scaled by VolumeRatio: 
+                the number of pre-blurred truth values scaled by volumeRatio: 
                 """
-                Thresh = find_thresh(BinaryIm=LabIm, 
-                                     NonBinaryIm=ResLabIm,
-                                     LogToConsole=LogToConsole)
+                thresh = find_thresh(
+                    binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c
+                    )
                 
                 # Binary threshold the image.
-                ResLabIm = binarise_im(Im=ResLabIm, 
-                                       #Thresh=PostResThresh)
-                                       Thresh=Thresh) 
+                resLabim = binarise_im(
+                    im=resLabim, #thresh=postResThresh)
+                    thresh=thresh) 
                 
-                if LogToConsole:
-                    print('\nImage info for ResLabIm after binary',
-                          #f'thresholding at {PostResThresh}:')
-                          f'thresholding at {Thresh}:')
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                F2Sinds = get_im_info(ResLabIm, LogToConsole)
-                if LogToConsole:
+                if p2c:
+                    print('\nImage info for resLabim after binary',
+                          #f'thresholding at {postResThresh}:')
+                          f'thresholding at {thresh}:')
+                pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+                    resLabim, p2c
+                    )
+                if p2c:
                     print('')
         
-        #print(f'\n   ResF2Sinds = {ResF2Sinds}')
+        #print(f'\n   resF2Sinds = {resF2Sinds}')
         
-        """ Is ResF2Sinds empty and not expected to be? If so, try the 
+        """ Is resF2Sinds empty and not expected to be? If so, try the 
         "BlurThenLinear" approach.
         
         Note:
-            If F2Sinds isn't empty, ResF2Sinds shouldn't be empty either.
+            If f2sInds isn't empty, resF2Sinds shouldn't be empty either.
         
-            F2Sinds will be empty if there were no segmentations/contours 
-            of interest for the r^th ROI. In this case an empty ResF2Sinds 
+            f2sInds will be empty if there were no segmentations/contours 
+            of interest for the r^th ROI. In this case an empty resF2Sinds 
             is acceptable. """
         
-        if ResF2Sinds == []:
-            print(f'There are {len(F2Sinds)} non-empty masks in the input',
-                  f'labelmap image but {len(ResF2Sinds)} non-empty frames in',
-                  f'the resampled labelmap image using {Interp}.',
+        if resF2Sinds == []:
+            print(f'There are {len(f2sInds)} non-empty masks in the input',
+                  f'labelmap image but {len(resF2Sinds)} non-empty frames in',
+                  f'the resampled labelmap image using {interp}.',
                   'Try using the \'BlurThenLinear\' approach.\n')
             
-            Interp = 'BlurThenLinear'
+            interp = 'BlurThenLinear'
 
-    if Interp == 'BlurThenLinear':
-        if LogToConsole:
-            print('\nResampling LabIm by applying Gaussian blur,',
+    if interp == 'BlurThenLinear':
+        if p2c:
+            print('\nResampling labim by applying Gaussian blur,',
                   'resampling using a linear interpolator, then binary',
                   'thresholding...')
         
         #""" The original binary pixel array: """
-        #PixArr_B, F2Sinds = im_to_pixarr(LabIm)
+        #pixArr_B, f2sInds = im_to_pixarr(labim)
         
-        """ Convert LabIm from 32-bit unsigned integer to float.
+        """ Convert labim from 32-bit unsigned integer to float.
         Note:  Result of resampling results in empty labelmap unless
         image is converted to float prior to resampling. """
-        LabIm = change_im_dtype(Image=LabIm, NewPixelType='Float32')
+        labim = change_im_dtype(im=labim, newPixelType='Float32')
         
-        if LogToConsole:
-            print('\nImage info for LabIm after converting to float:')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = get_im_info(LabIm, LogToConsole)
+        if p2c:
+            print('\nImage info for labim after converting to float:')
+            pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+                labim, p2c
+                )
               
         # Gaussian blur the image.
-        LabIm = gaussian_blur_im(Im=LabIm, Variance=PreResVariance)
+        labim = gaussian_blur_im(im=labim, variance=preResVariance)
         
         # Use the RecursiveGaussian image filter:
-        #ResLabIm = recursive_gaussian_blur_im(ResLabIm, 
-        #                                      Sigma=3,
-        #                                      Direction=2)
+        #resLabim = recursive_gaussian_blur_im(
+        #    resLabim, sigma=3, direction=2
+        #    )
         
-        if LogToConsole:
-            print('\nImage info for LabIm after applying Gaussian blur:')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = get_im_info(LabIm, LogToConsole)
+        if p2c:
+            print('\nImage info for labim after applying Gaussian blur:')
+            pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+                labim, p2c
+                )
         
-        if LogToConsole:
-            print('\nLabIm prior to resampling:')
-            print(f'   LabIm.GetSize() = {LabIm.GetSize()}')
-            print(f'   LabIm.GetSpacing() = {LabIm.GetSpacing()}')
-            print(f'   TrgIm.GetSize() = {TrgIm.GetSize()}')
-            print(f'   TrgIm.GetSpacing() = {TrgIm.GetSpacing()}')
+        if p2c:
+            print('\nlabim prior to resampling:')
+            print(f'   labim.GetSize() = {labim.GetSize()}')
+            print(f'   labim.GetSpacing() = {labim.GetSpacing()}')
+            print(f'   trgIm.GetSize() = {trgIm.GetSize()}')
+            print(f'   trgIm.GetSpacing() = {trgIm.GetSpacing()}')
         
-        # Linearly resample LabIm to the Target image's grid.
-        ResLabIm = resample_im(Im=LabIm, RefIm=TrgIm, Interp='Linear')
+        # Linearly resample labim to the Target image's grid.
+        resLabim = resample_im(im=labim, refIm=trgIm, interp='Linear')
         
-        if LogToConsole:
-            print('\nImage info for ResLabIm after resampling using a',
+        if p2c:
+            print('\nImage info for resLabim after resampling using a',
                   'linear interpolator:')
             
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = get_im_info(ResLabIm, LogToConsole)
+        pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+            resLabim, p2c
+            )
         
-        if ApplyPostResBlur:
+        if applyPostResBlur:
             # Gaussian blur the image.
-            ResLabIm = gaussian_blur_im(Im=ResLabIm, 
-                                        Variance=PostResVariance)
+            resLabim = gaussian_blur_im(
+                im=resLabim, variance=postResVariance
+                )
         
         #""" The non-binary pixel array following blur + linear resampling: """
-        #PixArr_NB, F2Sinds = im_to_pixarr(ResLabIm)
+        #pixArr_NB, f2sInds = im_to_pixarr(resLabim)
         #
-        #if LogToConsole:
-        #        print(f'PixArr_B.shape = {PixArr_B.shape}')
-        #        print(f'PixArr_NB.shape = {PixArr_NB.shape}\n')
+        #if p2c:
+        #        print(f'pixArr_B.shape = {pixArr_B.shape}')
+        #        print(f'pixArr_NB.shape = {pixArr_NB.shape}\n')
             
         """Find suitable threshold value that approximately preserves the
         number of pre-blurred + linear resampled truth values scaled by
-        VolumeRatio: """
-        Thresh = find_thresh(BinaryIm=LabIm, NonBinaryIm=ResLabIm,
-                             LogToConsole=LogToConsole)
+        volumeRatio: """
+        thresh = find_thresh(
+            binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c
+            )
         
         # Binary threshold the image. 
-        ResLabIm = binarise_im(Im=ResLabIm, 
-                               #Thresh=PostResThresh)
-                               Thresh=Thresh) 
+        resLabim = binarise_im(
+            im=resLabim, #thresh=postResThresh)
+            thresh=thresh
+            ) 
         
-        if LogToConsole:
-            print('\nImage info for ResLabIm after binary thresholding',
-                  #f'at {PostResThresh}:')
-                  f'at {Thresh}:')
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = get_im_info(ResLabIm, LogToConsole)
+        if p2c:
+            print('\nImage info for resLabim after binary thresholding',
+                  #f'at {postResThresh}:')
+                  f'at {thresh}:')
+        pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+            resLabim, p2c
+            )
     
-    # Ensure that ResLabIm is a 32-bit unsigned integer (PixID = 5).
-    if PixID != 5: 
-        if LogToConsole:
-            print(f'\nResLabIm has PixelID = {PixID} ({PixIDTypeAsStr})).')
+    # Ensure that resLabim is a 32-bit unsigned integer (pixID = 5).
+    if pixID != 5: 
+        if p2c:
+            print(f'\nresLabim has PixelID = {pixID} ({pixIDTypeAsStr})).')
         
-        # Convert ResLabIm from float to 32-bit unsigned integer. 
-        ResLabIm = change_im_dtype(Image=ResLabIm, NewPixelType='UInt32')
+        # Convert resLabim from float to 32-bit unsigned integer. 
+        resLabim = change_im_dtype(im=resLabim, newPixelType='UInt32')
         
-        if LogToConsole:
-            print('\nImage info for ResLabIm after converting to 32-bit',
+        if p2c:
+            print('\nImage info for resLabim after converting to 32-bit',
                   'unsigned int:')
-        #print(f'\nThe metadata keys are:', ResLabIm.GetMetaDataKeys())
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        F2Sinds = get_im_info(ResLabIm, LogToConsole)
+        #print(f'\nThe metadata keys are:', resLabim.GetMetaDataKeys())
+        pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+            resLabim, p2c
+            )
     
-    # Convert ResLabIm to a pixel array. 
-    ResPixArr, ResF2Sinds = im_to_pixarr(ResLabIm)
+    # Convert resLabim to a pixel array. 
+    resPixarr, resF2Sinds = im_to_pixarr(resLabim)
     
     # Store the interpolation used as metadata (which may be the same or 
     # different from the interpolation set): 
-    ResLabIm.SetMetaData("ResInterpUsed", Interp)
+    resLabim.SetMetaData("resInterpUsed", interp)
     
-    if LogToConsole:
-        print(f'\nThe key "ResInterpUsed" with value "{Interp}" was',
-              'added to the metadata of ResLabIm. \nThe metadata keys are:',
-              ResLabIm.GetMetaDataKeys())
+    if p2c:
+        print(f'\nThe key "resInterpUsed" with value "{interp}" was',
+              'added to the metadata of resLabim. \nThe metadata keys are:',
+              resLabim.GetMetaDataKeys())
     
-    if Interp == 'BlurThenLinear':
+    if interp == 'BlurThenLinear':
         """ Store the threshold used as metadata: """
-        ResLabIm.SetMetaData("PostResThreshUsed", f"{Thresh}")
+        resLabim.SetMetaData("postResThreshUsed", f"{thresh}")
         
-        if LogToConsole:
-            print(f'\nThe key "PostResThreshUsed" with value "{Thresh}" was',
-                  'added to the metadata of ResLabIm. \nThe metadata keys:',
-                  ResLabIm.GetMetaDataKeys())
+        if p2c:
+            print(f'\nThe key "postResThreshUsed" with value "{thresh}" was',
+                  'added to the metadata of resLabim. \nThe metadata keys:',
+                  resLabim.GetMetaDataKeys())
             
-    if LogToConsole:
-        print('\nAfter converting ResLabIm to a pixel array:')
-        print(f'ResPixArr.shape = {ResPixArr.shape}')
-        print(f'ResF2Sinds = {ResF2Sinds}')
+    if p2c:
+        print('\nAfter converting resLabim to a pixel array:')
+        print(f'resPixarr.shape = {resPixarr.shape}')
+        print(f'resF2Sinds = {resF2Sinds}')
         print('-'*120)
         
-    return ResLabIm, ResPixArr, ResF2Sinds
+    return resLabim, resPixarr, resF2Sinds
 
-def resample_labim(LabIm, F2Sinds, SrcIm, TrgIm,  
-                   sitkTx=sitk.Transform(), Interp='NearestNeighbor', 
-                   ApplyPreResBlur=False, PreResVariance=(1,1,1), 
-                   ApplyPostResBlur=True, PostResVariance=(1,1,1), 
-                   LogToConsole=False):
+def resample_labim(
+        labim, f2sInds, im, refIm, sitkTx=sitk.Transform(), 
+        interp='NearestNeighbor', applyPreResBlur=False, preResVariance=(1,1,1), 
+        applyPostResBlur=True, postResVariance=(1,1,1), p2c=False
+        ):
     """
     Resample a 3D label image.
     
     Parameters
     ----------  
-    LabIm : SimpleITK image
+    labim : SimpleITK image
         The 3D label image to be resampled.
-    F2Sinds : list of ints
+    f2sInds : list of ints
         List (for each frame) of slice numbers that correspond to each frame in 
-        LabIm.
-    SrcIm : SimpleITK image
-        The Source 3D image whose gridspace matches the gridspace of LabIm. 
-    TrgIm : SimpleITK image
-        The Target 3D image whose gridspace the LabIm will be resampled to.
+        labim.
+    im : SimpleITK image
+        The 3D image whose gridspace matches the gridspace of labim. 
+    refIm : SimpleITK image
+        The 3D image whose gridspace the labim will be resampled to.
     sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
         The SimpleITK Transform to be used. The identity transform is default.
-    Interp : str, optional ('NearestNeighbor' by default)
+    interp : str, optional ('NearestNeighbor' by default)
         The type of interpolation to be used.  Acceptable inputs are:
         - 'NearestNeighbor'
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
-    ApplyPreResBlur : bool, optional (False by default)
-        If True, the pre-resampled LabIm will be Gaussian blurred. This 
-        argument is only applicable if Interp is 'NearestNeighbor' or
-        'LabelGaussian', since LabIm will be blurred prior to resampling if
-        Interp is 'BlurThenLinear' regardless of the argument's value.
-    PreResVariance : tuple of floats, optional ((1,1,1) by default)
+    applyPreResBlur : bool, optional (False by default)
+        If True, the pre-resampled labim will be Gaussian blurred. This 
+        argument is only applicable if interp is 'NearestNeighbor' or
+        'LabelGaussian', since labim will be blurred prior to resampling if
+        interp is 'BlurThenLinear' regardless of the argument's value.
+    preResVariance : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior to resampling.
-    ApplyPostResBlur : bool, optional (True by default)
+    applyPostResBlur : bool, optional (True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    PostResVariance : tuple of floats (optional; (1,1,1) by default)
+    postResVariance : tuple of floats (optional; (1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior after resampling.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
     -------
-    ResLabIm : SimpleITK Images
+    resLabim : SimpleITK Images
         The resampled 3D label image.
-    ResPixArr : Numpy arrays
-        The pixel array representation of ResLabIm.
-    ResF2Sinds : list of ints
-        The list (for each frame) of the frame-to-slice indices in ResPixArr.
+    resPixarr : Numpy arrays
+        The pixel array representation of resLabim.
+    resF2Sinds : list of ints
+        The list (for each frame) of the frame-to-slice indices in resPixarr.
     
     Note
     ----
@@ -486,7 +496,7 @@ def resample_labim(LabIm, F2Sinds, SrcIm, TrgIm,
     
     If resampling to a smaller grid size aliasing can occur, leading to the
     appearent disappearance of segmentations (i.e. an empty resampled label,
-    and hence an empty list of frame-to-slice indices, F2Sinds = []) even if 
+    and hence an empty list of frame-to-slice indices, f2sInds = []) even if 
     there were contours (i.e. if SrcC2Sinds != []). If this is the case try
     suggestions from Ziv Yaniv (See Link below):
             
@@ -518,345 +528,359 @@ def resample_labim(LabIm, F2Sinds, SrcIm, TrgIm,
     Link: https://github.com/SimpleITK/SimpleITK/issues/1277
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of resample_labim():')
         print('\n\n', '-'*120)
         
-    if not Interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
-        msg = f"The chosen interpolation, {Interp}, is not one of the "\
+    if not interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
+        msg = f"The chosen interpolation, {interp}, is not one of the "\
               + "accepted arguments: 'NearestNeighbor', 'LabelGaussian', or "\
               + "'BlurThenLinear'."
         raise Exception(msg)
     
     # Store the interpolation set as metadata:
-    LabIm.SetMetaData("ResInterpSet", Interp)
+    labim.SetMetaData("resInterpSet", interp)
     
-    if Interp in ['NearestNeighbor', 'LabelGaussian']:
-        if LogToConsole:
-            print(f'Attempting to resample LabIm using {Interp} interpolator\n')
+    if interp in ['NearestNeighbor', 'LabelGaussian']:
+        if p2c:
+            print(f'Attempting to resample labim using {interp} interpolator\n')
         
-        if ApplyPreResBlur:
-            # Gaussian blur LabIm:
-            BlurLabIm = gaussian_blur_im(Im=LabIm, Variance=PostResVariance)
+        if applyPreResBlur:
+            # Gaussian blur labim:
+            blurLabIm = gaussian_blur_im(im=labim, variance=postResVariance)
             
-            # Resample BlurLabIm using the chosen interpolator:
-            ResLabIm = resample_im(Im=BlurLabIm, RefIm=TrgIm, sitkTx=sitkTx,
-                                   Interp=Interp)
+            # Resample blurLabIm using the chosen interpolator:
+            resLabim = resample_im(
+                im=blurLabIm, refIm=refIm, sitkTx=sitkTx, interp=interp
+                )
             
             msg = 'Image info for resampled blurred image:'
         else:
-            # Resample LabIm using the chosen interpolator:
-            ResLabIm = resample_im(Im=LabIm, RefIm=TrgIm, sitkTx=sitkTx,
-                                   Interp=Interp)
+            # Resample labim using the chosen interpolator:
+            resLabim = resample_im(
+                im=labim, refIm=refIm, sitkTx=sitkTx, interp=interp
+                )
             
             msg = 'Image info for resampled image:'
             
-        if LogToConsole:
+        if p2c:
             print(msg)
         
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-        if LogToConsole:
+        pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+            resLabim, p2c
+            )
+        if p2c:
             print('')
         
-        if ApplyPostResBlur:
-            # Gaussian blur ResLabIm:
-            ResLabIm = gaussian_blur_im(Im=ResLabIm, Variance=PostResVariance)
+        if applyPostResBlur:
+            # Gaussian blur resLabim:
+            resLabim = gaussian_blur_im(
+                im=resLabim, variance=postResVariance
+                )
             
-            if LogToConsole:
+            if p2c:
                 print('Image info for blurred resampled image:')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-            if LogToConsole:
+            pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+                resLabim, p2c
+                )
+            if p2c:
                 print('')
             
-            # Binarise ResLabIm if required:
-            if len(UniqueVals) != 2 or sum(UniqueVals) != 1:
+            # Binarise resLabim if required:
+            if len(uniqueVals) != 2 or sum(uniqueVals) != 1:
                 """
-                ResLabIm is not binary. Find suitable threshold value that 
+                resLabim is not binary. Find suitable threshold value that 
                 approximately preserves the number of pre-blurred truth values
-                scaled by VolumeRatio: 
+                scaled by volumeRatio: 
                 """
-                Thresh = find_thresh(BinaryIm=LabIm, NonBinaryIm=ResLabIm,
-                                     LogToConsole=LogToConsole)
+                thresh = find_thresh(
+                    binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c
+                    )
                 
-                # Binary threshold ResLabIm:
-                ResLabIm = binarise_im(Im=ResLabIm, Thresh=Thresh) 
+                # Binary threshold resLabim:
+                resLabim = binarise_im(im=resLabim, thresh=thresh) 
                 
-                if LogToConsole:
-                    print(f'\nImage info after binary thresholding at {Thresh}:')
-                PixID, PixIDTypeAsStr, UniqueVals,\
-                ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-                if LogToConsole:
+                if p2c:
+                    print(f'\nImage info after binary thresholding at {thresh}:')
+                pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+                    resLabim, p2c
+                    )
+                if p2c:
                     print('')
         
-        #print(f'\n   ResF2Sinds = {ResF2Sinds}')
+        #print(f'\n   resF2Sinds = {resF2Sinds}')
         
         """ 
-        Is ResF2Sinds empty and not expected to be? If so try the 
+        Is resF2Sinds empty and not expected to be? If so try the 
         "BlurThenLinear" approach.
         
-        If F2Sinds isn't empty, ResF2Sinds shouldn't be empty either.
+        If f2sInds isn't empty, resF2Sinds shouldn't be empty either.
         
-        F2Sinds will be empty if there were no segmentations/contours of 
-        interest for the r^th ROI. In this case an empty ResF2Sinds is
+        f2sInds will be empty if there were no segmentations/contours of 
+        interest for the r^th ROI. In this case an empty resF2Sinds is
         acceptable. 
         """
         
-        if ResF2Sinds == []:
-            print(f"There are {len(F2Sinds)} non-empty masks in the input",
-                  f"label image but {len(ResF2Sinds)} non-empty frames in the",
-                  f"resampled label image using {Interp}. Will Gaussian blur,",
+        if resF2Sinds == []:
+            print(f"There are {len(f2sInds)} non-empty masks in the input",
+                  f"label image but {len(resF2Sinds)} non-empty frames in the",
+                  f"resampled label image using {interp}. Will Gaussian blur,",
                   "linearly resample and binarise...\n")
             
-            Interp = 'BlurThenLinear'
+            interp = 'BlurThenLinear'
 
-    if Interp == 'BlurThenLinear':
-        # Gaussian blur LabIm:
-        BlurLabIm = gaussian_blur_im(Im=LabIm, Variance=PreResVariance)
+    if interp == 'BlurThenLinear':
+        # Gaussian blur labim:
+        blurLabIm = gaussian_blur_im(im=labim, variance=preResVariance)
         
-        if LogToConsole:
-            print('\nImage info for BlurLabIm:')
-            PixID, PixIDTypeAsStr, UniqueVals,\
-            F2Sinds = get_im_info(BlurLabIm, LogToConsole)
-            print('\n\nBlurLabIm prior to resampling:')
-            print(f'   BlurLabIm.GetSize() = {BlurLabIm.GetSize()}')
-            print(f'   BlurLabIm.GetSpacing() = {BlurLabIm.GetSpacing()}')
-            print(f'   TrgIm.GetSize() = {TrgIm.GetSize()}')
-            print(f'   TrgIm.GetSpacing() = {TrgIm.GetSpacing()}')
+        if p2c:
+            print('\nImage info for blurLabIm:')
+            pixID, pixIDTypeAsStr, uniqueVals, f2sInds = get_im_info(
+                blurLabIm, p2c
+                )
+            print('\n\nblurLabIm prior to resampling:')
+            print(f'   blurLabIm.GetSize() = {blurLabIm.GetSize()}')
+            print(f'   blurLabIm.GetSpacing() = {blurLabIm.GetSpacing()}')
+            print(f'   refIm.GetSize() = {refIm.GetSize()}')
+            print(f'   refIm.GetSpacing() = {refIm.GetSpacing()}')
         
-        # Linearly resample BlurLabIm:
-        ResLabIm = resample_im(Im=BlurLabIm, RefIm=TrgIm, sitkTx=sitkTx, 
-                               Interp='Linear')
+        # Linearly resample blurLabIm:
+        resLabim = resample_im(
+            im=blurLabIm, refIm=refIm, sitkTx=sitkTx, interp='Linear'
+            )
         
-        if LogToConsole:
+        if p2c:
             print('\nImage info after resampling using linear interpolator:')
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-        if LogToConsole:
+        pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+            resLabim, p2c
+            )
+        if p2c:
             print('')
         
-        if ApplyPostResBlur:
-            # Gaussian blur ResLabIm:
-            ResLabIm = gaussian_blur_im(Im=ResLabIm, Variance=PostResVariance)
+        if applyPostResBlur:
+            # Gaussian blur resLabim:
+            resLabim = gaussian_blur_im(
+                im=resLabim, variance=postResVariance
+                )
             
         # Find suitable threshold value:
-        Thresh = find_thresh(BinaryIm=LabIm, NonBinaryIm=ResLabIm,
-                             LogToConsole=LogToConsole)
+        thresh = find_thresh(
+            binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c
+            )
         
-        # Binary threshold ResLabIm:
-        ResLabIm = binarise_im(Im=ResLabIm, Thresh=Thresh) 
+        # Binary threshold resLabim:
+        resLabim = binarise_im(im=resLabim, thresh=thresh) 
         
-        if LogToConsole:
-            print(f'\nImage info after binary thresholding {Thresh}:')
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-        if LogToConsole:
+        if p2c:
+            print(f'\nImage info after binary thresholding {thresh}:')
+        pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+            resLabim, p2c
+            )
+        if p2c:
             print('')
     
-    # Ensure that ResLabIm is a 32-bit unsigned integer (PixID = 5):
-    if PixID != 5: 
-        if LogToConsole:
-            print(f'\nResLabIm has PixelID = {PixID} ({PixIDTypeAsStr})).')
+    # Ensure that resLabim is a 32-bit unsigned integer (pixID = 5):
+    if pixID != 5: 
+        if p2c:
+            print(f'\nresLabim has PixelID = {pixID} ({pixIDTypeAsStr})).')
         
-        # Convert ResLabIm from float to 32-bit unsigned integer:
-        ResLabIm = change_im_dtype(Image=ResLabIm, NewPixelType='UInt32')
+        # Convert resLabim from float to 32-bit unsigned integer:
+        resLabim = change_im_dtype(im=resLabim, newPixelType='UInt32')
         
-        if LogToConsole:
+        if p2c:
             print('\nImage info after converting to 32-bit unsigned int:')
-        #print(f'\nThe metadata keys are:', ResLabIm.GetMetaDataKeys())
-        PixID, PixIDTypeAsStr, UniqueVals,\
-        ResF2Sinds = get_im_info(ResLabIm, LogToConsole)
-        if LogToConsole:
+        #print(f'\nThe metadata keys are:', resLabim.GetMetaDataKeys())
+        pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
+            resLabim, p2c
+            )
+        if p2c:
             print('')
     
-    # Convert ResLabIm to a pixel array:
-    ResPixArr, ResF2Sinds = im_to_pixarr(ResLabIm)
+    # Convert resLabim to a pixel array:
+    resPixarr, resF2Sinds = im_to_pixarr(resLabim)
     
     # Store the interpolation used as metadata (which may be the same or 
     # different from the interpolation set): 
-    ResLabIm.SetMetaData("ResInterpUsed", Interp)
+    resLabim.SetMetaData("resInterpUsed", interp)
     
-    if Interp == 'BlurThenLinear':
+    if interp == 'BlurThenLinear':
         # Store the threshold used as metadata:
-        ResLabIm.SetMetaData("PostResThreshUsed", f"{Thresh}")
+        resLabim.SetMetaData("postResThreshUsed", f"{thresh}")
             
-    if LogToConsole:
+    if p2c:
         # The number of frames before and after:
-        N_before = len(F2Sinds)
-        N_after = len(ResF2Sinds)
+        N_before = len(f2sInds)
+        N_after = len(resF2Sinds)
         
         print(f'\nThere were {N_before} frames in the label image')
         print(f'There are {N_after} frames in the resampled label image')
-        print('After converting ResLabIm to a pixel array:')
-        print(f'ResPixArr.shape = {ResPixArr.shape}')
-        print(f'ResF2Sinds = {ResF2Sinds}')
-        plot_two_ims(Im0=LabIm, Ind0=F2Sinds[0], 
-                         PlotLabel0='Original label image', 
-                         Im1=ResLabIm, Ind1=ResF2Sinds[0], 
-                         PlotLabel1='Resampled label image')
+        print('After converting resLabim to a pixel array:')
+        print(f'resPixarr.shape = {resPixarr.shape}')
+        print(f'resF2Sinds = {resF2Sinds}')
+        plot_two_ims(
+            im0=labim, ind0=f2sInds[0], plotLabel0='Original label image', 
+            im1=resLabim, ind1=resF2Sinds[0], plotLabel1='Resampled label image')
         print('-'*120)
         
-    return ResLabIm, ResPixArr, ResF2Sinds
+    return resLabim, resPixarr, resF2Sinds
 
-def resample_labimByRoi(LabImByRoi, F2SindsByRoi, SrcIm, TrgIm, 
-                        sitkTx=sitk.Transform(), Interp='NearestNeighbor', 
-                        ApplyPreResBlur=False, PreResVariance=(1,1,1), 
-                        ApplyPostResBlur=True, PostResVariance=(1,1,1), 
-                        LogToConsole=False):
+def resample_labimByRoi(
+        labimByRoi, f2sIndsByRoi, im, refIm, sitkTx=sitk.Transform(), 
+        interp='NearestNeighbor', applyPreResBlur=False, preResVariance=(1,1,1), 
+        applyPostResBlur=True, postResVariance=(1,1,1), p2c=False
+        ):
     """
     Resample a list 3D SimpleITK images representing binary label images. 
     
     Parameters
     ----------  
-    LabImByRoi : list of SimpleITK Images
+    labimByRoi : list of SimpleITK Images
         A list (for each ROI) of 3D label images to be resampled.
-    F2SindsByRoi : list of a list of ints
+    f2sIndsByRoi : list of a list of ints
         List (for each ROI) of a list (for each frame) of slice numbers that 
         correspond to each frame in the label images.
-    SrcIm : SimpleITK Image
-        The Source 3D image whose gridspace matches the gridspace of the 
-        label images.
-    TrgIm : SimpleITK Image
-        The Target 3D image whose gridspace the Source label images will be
-        resampled to.
+    srcIm : SimpleITK Image
+        The 3D image whose gridspace matches the gridspace of labimByRoi.
+    refIm : SimpleITK Image
+        The 3D image whose gridspace labimByRoi will be resampled to.
     sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
         The SimpleITK Transform to be used. The identity transform is default.
-    Interp : str, optional ('NearestNeighbor' by default)
+    interp : str, optional ('NearestNeighbor' by default)
         The type of interpolation to be used.  Acceptable inputs are:
         - 'NearestNeighbor'
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
-    ApplyPreResBlur : bool, optional (False by default)
-        If True, the pre-resampled LabIm will be Gaussian blurred. This 
-        argument is only applicable if Interp is 'NearestNeighbor' or
-        'LabelGaussian', since LabIm will be blurred prior to resampling if
-        Interp is 'BlurThenLinear' regardless of the argument's value.
-    PreResVariance : tuple of floats, optional ((1,1,1) by default)
+    applyPreResBlur : bool, optional (False by default)
+        If True, the pre-resampled labim will be Gaussian blurred. This 
+        argument is only applicable if interp is 'NearestNeighbor' or
+        'LabelGaussian', since labim will be blurred prior to resampling if
+        interp is 'BlurThenLinear' regardless of the argument's value.
+    preResVariance : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
-    ApplyPostResBlur : bool, optional (True by default)
+    applyPostResBlur : bool, optional (True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    PostResVariance : tuple of floats, optional ((1,1,1) by default)
+    postResVariance : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         resampled labelmap image(s) is/are to be Gaussian blurred after  
         resampling.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
     -------
-    ResLabImByRoi : list of SimpleITK Images
+    resLabimByRoi : list of SimpleITK Images
         The list (for each ROI) of resampled 3D label image.
-    ResPixArrByRoi : list of Numpy arrays
+    resPixarrByRoi : list of Numpy arrays
         The list (for each ROI) of the pixel array representations of
-        ResLabImByRoi.
-    ResF2SindsByRoi : list of a list of ints
+        resLabimByRoi.
+    resF2SindsByRoi : list of a list of ints
         The list (for each ROI) of a list (for each frame) of the
-        frame-to-slice indices in ResPixArrByRoi.
+        frame-to-slice indices in resPixarrByRoi.
     
     Note
     ----
     See Notes in resample_labim. 
     """
         
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of resample_labimByRoi():')
         print('\n\n', '-'*120)
         
-    ResLabImByRoi = []
-    ResPixArrByRoi = []
-    ResF2SindsByRoi = []
+    resLabimByRoi = []
+    resPixarrByRoi = []
+    resF2SindsByRoi = []
     
-    for r in range(len(LabImByRoi)):
-        if LogToConsole:
-            print(f'   Resampling of LabImByRoi[{r}]...')
+    for r in range(len(labimByRoi)):
+        if p2c:
+            print(f'   Resampling of labimByRoi[{r}]...')
         
-        ResLabIm, ResPixArr,ResF2Sinds\
-            = resample_labim(LabIm=LabImByRoi[r], F2Sinds=F2SindsByRoi[r], 
-                             SrcIm=SrcIm, TrgIm=TrgIm, sitkTx=sitkTx,
-                             Interp=Interp, ApplyPreResBlur=ApplyPreResBlur, 
-                             PreResVariance=PreResVariance, 
-                             ApplyPostResBlur=ApplyPostResBlur, 
-                             PostResVariance=PostResVariance, 
-                             LogToConsole=LogToConsole)
+        resLabim, resPixarr, resF2Sinds\
+            = resample_labim(
+                labim=labimByRoi[r], f2sInds=f2sIndsByRoi[r], im=im, 
+                refIm=refIm, sitkTx=sitkTx, interp=interp, 
+                applyPreResBlur=applyPreResBlur, preResVariance=preResVariance, 
+                applyPostResBlur=applyPostResBlur, 
+                postResVariance=postResVariance, p2c=p2c
+                )
         
-        ResLabImByRoi.append(ResLabIm)
-        ResPixArrByRoi.append(ResPixArr)
-        ResF2SindsByRoi.append(ResF2Sinds)
+        resLabimByRoi.append(resLabim)
+        resPixarrByRoi.append(resPixarr)
+        resF2SindsByRoi.append(resF2Sinds)
         
-    if LogToConsole:
+    if p2c:
             print('-'*120)
         
-    return ResLabImByRoi, ResPixArrByRoi, ResF2SindsByRoi
+    return resLabimByRoi, resPixarrByRoi, resF2SindsByRoi
 
-def align_ims_using_landmarks(Transform, FixFidsFpath, MovFidsFpath, 
-                              FixIm, MovIm, FlipK=False, Buffer=3, 
-                              LogToConsole=False):
+def align_ims_using_landmarks(
+        transform, fixFidsFpath, movFidsFpath, fixIm, movIm, 
+        flipK=False, buffer=3, p2c=False
+        ):
     """
     Return the landmark-based aligned image and transform based on fiducials.
     
     Parameters
     ----------
-    FixIm : SimpleITK Image 
-        The 3D image that MovIm will be aligned to.
-    MovIm : SimpleITK Image
-        The 3D image that will be aligned to FixIm.
-    FixFidsFpath : str, optional ('fixed_fiducials.txt' by default)
+    fixIm : SimpleITK Image 
+        The 3D image that movIm will be aligned to.
+    movIm : SimpleITK Image
+        The 3D image that will be aligned to fixIm.
+    fixFidsFpath : str, optional ('fixed_fiducials.txt' by default)
         The file path (or file name if the file is present in the current 
-        working directory) of the text file containing fiducials for FixIm. 
+        working directory) of the text file containing fiducials for fixIm. 
         The string need not contain the .txt extension.
-    MovFidsFpath : str, optional ('moving_fiducials.txt' by default)
+    movFidsFpath : str, optional ('moving_fiducials.txt' by default)
         The file path (or file name if the file is present in the current 
-        working directory) of the text file containing fiducials for MovIm. 
+        working directory) of the text file containing fiducials for movIm. 
         The string need not contain the .txt extension.
-    FlipK : bool, optional (False by default)
-        Set to True if the fiducials specified in FixFidsFpath and MovFidsFpath
+    flipK : bool, optional (False by default)
+        Set to True if the fiducials specified in fixFidsFpath and movFidsFpath
         are indices obtained from ImageJ.
-    Buffer : int, optional (3 by default)
+    buffer : int, optional (3 by default)
         Fiducials at or within this number of pixels within the image 
         boundaries will be rejected.
-    Transform : str, optional ('affine' by default)
+    transform : str, optional ('affine' by default)
         Denotes type of transformation to set up the landmark transform.  
         Acceptable values include:
         - 'rigid'
         - 'affine'
         - 'bspline'
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether intermediate results will be logged to the console.
     
     Returns
     -------
-    AlignedIm : SimpleITK Image
+    alignedIm : SimpleITK Image
         The 3D aligned image.
-    LandmarkTx : SimpleITK Transform
+    landmarkTx : SimpleITK Transform
         The transform used to perform landmark-based alignment.
         
     Note
     ----
     Supported 3D transforms for LandmarkBasedTransformInitializer are:
         sitk.VersorRigid3DTransform()
-        sitk.AffineTransform(FixIm.GetDimension())
-        sitk.BSplineTransform(FixIm.GetDimension())
+        sitk.AffineTransform(fixIm.GetDimension())
+        sitk.BSplineTransform(fixIm.GetDimension())
         
-    NumControlPts must be greater than the spline order (=3), i.e. 4.
+    numControlPts must be greater than the spline order (=3), i.e. 4.
     But any value greater than 4 results in a highly distorted aligned image.
     """
     
-    LandmarkTx, FixPts, MovPts\
-        = get_landmark_tx(Transform=Transform, 
-                          FixFidsFpath=FixFidsFpath, 
-                          MovFidsFpath=MovFidsFpath, 
-                          FixIm=FixIm, MovIm=MovIm, FlipK=FlipK,
-                          Buffer=Buffer, LogToConsole=LogToConsole)
+    landmarkTx, fixPts, movPts\
+        = get_landmark_tx(
+            transform=transform, fixFidsFpath=fixFidsFpath, 
+            movFidsFpath=movFidsFpath, fixIm=fixIm, movIm=movIm, 
+            flipK=flipK, buffer=buffer, p2c=p2c)
     
     #print(f'LandmarkTx.GetName() = {LandmarkTx.GetName()}\n')
     
-    AlignedIm = sitk.Resample(MovIm, FixIm, LandmarkTx, sitk.sitkLinear, 0.0, 
-                              MovIm.GetPixelID())
+    alignedIm = sitk.Resample(
+        movIm, fixIm, landmarkTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
+        )
     
-    return AlignedIm, LandmarkTx
+    return alignedIm, landmarkTx

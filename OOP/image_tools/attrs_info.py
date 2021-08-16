@@ -23,8 +23,8 @@ from image_tools.imports import import_im
 #from image_tools.operations import im_min, im_max
 from dicom_tools.imports import import_dcms
 from general_tools.general import get_items_unique_to_within, get_unique_items
-#from conversion_tools.im_pixarr import im_to_pixarr
-
+from conversion_tools.pixarrs_ims import im_to_pixarr
+from image_tools.operations import im_min, im_max
 
 def get_im_attrs(dicomDir, package='pydicom', p2c=False):
     """
@@ -250,8 +250,8 @@ def get_im_info(image, p2c=False):
     https://simpleitk.org/doxygen/latest/html/classitk_1_1simple_1_1Image.html#ad195963d0b257560819b833b9cfe18d6
     """
     
-    from conversion_tools.im_pixarr import im_to_pixarr
-    from image_tools.operations import im_min, im_max
+    #from conversion_tools.pixarrs_ims import im_to_pixarr
+    #from image_tools.operations import im_min, im_max
     
     pixarr, f2sInds = im_to_pixarr(image)
     
@@ -260,7 +260,7 @@ def get_im_info(image, p2c=False):
     #print(f'\npixarr = {pixarr}')
     #print(f'\ntype(pixarr) = {type(pixarr)}')
     
-    uniqueVals = get_unique_items(items=pixarr, IgnoreZero=False)
+    uniqueVals = get_unique_items(items=pixarr, ignoreZero=False)
     
     #print(f'uniqueVals = {uniqueVals}')
     #print(f'type(uniqueVals) = {type(uniqueVals)}')

@@ -20,7 +20,7 @@ def pixarr_to_im(pixarr, f2sInds, refIm):
     Parameters
     ----------
     pixarr : Numpy array
-        SEG PixelData as a Numpy array.
+        PixelData as a Numpy array.
     f2sInds : list of ints
         The DICOM slice numbers that correspond to each frame in pixarr,
         e.g. PFFGStoSliceInds = PerFrameFunctionalGroupsSequence-to-slice
@@ -41,8 +41,9 @@ def pixarr_to_im(pixarr, f2sInds, refIm):
     #print(f'imSize[2] = {imSize[2]}')
     #print(f'FrameToSliceInds = {FrameToSliceInds}')
     
-    labarr = pixarr_to_labarr(pixarr=pixarr, NumOfSlices=imSize[2], 
-                              f2sInds=f2sInds)
+    labarr = pixarr_to_labarr(
+        pixarr=pixarr, numOfSlices=imSize[2], f2sInds=f2sInds
+        )
     
     labim = sitk.GetImageFromArray(labarr)
     
@@ -64,7 +65,7 @@ def pixarr_to_imsBySeg(pixarr, f2sIndsBySeg, frameNumsBySeg, refIm):
     Parameters
     ----------
     pixarr : Numpy array
-        SEG PixelData as a Numpy array.
+        PixelData as a Numpy array.
     f2sIndsBySeg : list of list of ints
         List of the DICOM slice numbers that correspond to each frame in pixarr 
         (e.g. PFFGStoSliceInds = PerFrameFunctionalGroupsSequence-to-slice
@@ -143,9 +144,9 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     f2sIndsByRoi_new = []
 
     for r in range(len(pixarrByRoi)):
-        labim = pixarr_to_im(pixarr=pixarrByRoi[r],
-                             f2sInds=f2sIndsByRoi[r],
-                             refIm=refIm)
+        labim = pixarr_to_im(
+            pixarr=pixarrByRoi[r], f2sInds=f2sIndsByRoi[r], refIm=refIm
+            )
         
         labimByRoi.append(labim)
     

@@ -40,9 +40,9 @@ class DataDownloaderTester:
         testResult = FetcherTester(runID)
     """
     
-    def __init__(self, runID):
+    def __init__(self, cfgDir, runID):
         # Run ConfigFetcherTester to get the config parameters:
-        cfgObj = ConfigFetcherTester(runID=runID)
+        cfgObj = ConfigFetcherTester(cfgDir=cfgDir, runID=runID)
         
         print('Downloading data from XNAT...\n')
         

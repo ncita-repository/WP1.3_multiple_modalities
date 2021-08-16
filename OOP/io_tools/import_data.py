@@ -34,6 +34,8 @@ import dicom_tools.imports
 reload(dicom_tools.imports)
 import image_tools.imports
 reload(image_tools.imports)
+import conversion_tools.pixarrs_ims
+reload(conversion_tools.pixarrs_ims)
 
 #from xnat_tools.sessions import create_session
 #from io_tools.fetch_params_and_data import Params
@@ -55,6 +57,7 @@ from seg_tools.metadata import (
 from seg_tools.seg_data import (
     get_seg_data_of_interest, raise_error_if_no_seg_data_of_interest
     )
+from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
 from dicom_tools.imports import import_dcms
 from image_tools.imports import import_im
 
@@ -160,18 +163,18 @@ class DataImporter:
             raise Exception(errMsg)
         """
         
-        # TODO continue modifying code below to deal with only one dataset 
-        # (source or target), and necessary modification to functions to allow
-        # for input = None:
-        
-        # Get the RTS/SEG data of interest:
-        self.get_seg_metadata(cfgDict, srcORtrg)
-        
         # Import a DICOM series as a list of Pydicom Objects:
         self.import_dicoms(dicomDir, p2c)
         
         # Import a DICOM series as a SimpleITK Image:
         self.import_image(dicomDir)
+        
+        # Get the RTS/SEG data of interest:
+        self.get_seg_metadata(cfgDict, srcORtrg)
+        
+        #print(f'type(self.labimByRoi) = {type(self.labimByRoi)}')
+        #if not self.labimByRoi is None:
+        #    print(f'type(self.labimByRoi[0]) = {type(self.labimByRoi[0])}')
     
     def __init__210809(self, xnatParams, genParams):
         
@@ -222,7 +225,6 @@ class DataImporter:
         self.get_image(self, xnatParams['dicomDir'])
     
     def __init__210805(self, params):
-        
         
         #srcDcmDir = params.srcXnatParams['dicomDir']
         
@@ -505,6 +507,7 @@ class DataImporter:
             self.roiNums = None
             self.pixarrByRoi = None
             self.f2sIndsByRoi = None
+            self.labimByRoi = None
         else:
             #print(self.roicol)
             print(type(self.roicol), '\n')
@@ -539,22 +542,34 @@ class DataImporter:
             
             # Get the pixel array by segment and frame-to-slice indices by
             # segment for the data of interest (to be copied):
-            self.pixarrByRoi, self.f2sIndsByRoi\
-                = get_seg_data_of_interest(
-                    seg=self.roicol, 
-                    allF2SindsBySeg=self.allF2SindsByRoi, 
-                    segNums=self.roiNums, 
-                    segLabs=self.roiNames,
-                    segLab=self.roiName,
-                    slcNum=self.slcNum,
-                    p2c=cfgDict['p2c'])
+            self.pixarrByRoi, self.f2sIndsByRoi = get_seg_data_of_interest(
+                seg=self.roicol, 
+                allF2SindsBySeg=self.allF2SindsByRoi, 
+                segNums=self.roiNums, 
+                segLabs=self.roiNames,
+                segLab=self.roiName,
+                slcNum=self.slcNum,
+                p2c=cfgDict['p2c']
+                )
             
             # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
             # there were no segmentations that matched the input parameters)
             raise_error_if_no_seg_data_of_interest(
                 f2sIndsBySeg=self.f2sIndsByRoi, 
                 segLabs=self.roiNames, 
-                slcNum=self.slcNum)
+                slcNum=self.slcNum
+                )
+            
+            # Get list of label images-by-ROI:
+            """ 
+            Note this won't be used for use cases 1-2 but is needed for 3-5.
+            """
+            self.labimByRoi = pixarrByRoi_to_imByRoi(
+                pixarrByRoi=self.pixarrByRoi, 
+                f2sIndsByRoi=self.f2sIndsByRoi, 
+                refIm=self.image,
+                p2c=cfgDict['p2c']
+                )
     
     def get_seg_metadata_210809(self, xnatParams, p2c=False):
         """

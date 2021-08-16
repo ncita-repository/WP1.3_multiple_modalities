@@ -445,8 +445,9 @@ def pixarr_to_listOfInds(pixarr, f2sInds):
         
     return listOfInds
 
-def pixarr_to_ptsByCnt(pixarr, f2sInds, dicomDir, thresh=0.5, 
-                       p2c=False):
+def pixarr_to_ptsByCnt(
+        pixarr, f2sInds, dicomDir, thresh=0.5, p2c=False
+        ):
     """
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates.
@@ -538,8 +539,9 @@ def pixarr_to_ptsByCnt(pixarr, f2sInds, dicomDir, thresh=0.5,
  
     return ptsByCnt, cntdataByCnt, c2sInds
 
-def pixarrByRoi_to_ptsByCntByRoi(pixarrByRoi, f2sIndsByRoi, dicomDir, 
-                                 thresh=0.5, p2c=False):
+def pixarrByRoi_to_ptsByCntByRoi(
+        pixarrByRoi, f2sIndsByRoi, dicomDir, thresh=0.5, p2c=False
+        ):
     """
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each

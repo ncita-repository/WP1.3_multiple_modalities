@@ -57,12 +57,12 @@ class DataImporterTester:
         testResult = ImporterTester(runID)
     """
     
-    def __init__(self, runID, params=None):
+    def __init__(self, cfgDir, runID, params=None):
         
         if params == None:
             # Run DataDownloaderTester to get the config parameters and 
             # download the data from XNAT:
-            params = DataDownloaderTester(runID=runID)
+            params = DataDownloaderTester(cfgDir=cfgDir, runID=runID)
         
         print('Importing source dataset...\n')
         #self.DataImporter(params=params, srcORtrg='src')

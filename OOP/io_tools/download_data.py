@@ -51,6 +51,8 @@ class DataDownloader:
     
     def __init__(self, cfgDict, xnatSession=None):
         
+        p2c = cfgDict['p2c']
+        
         self.cfgDict = cfgDict
         
         if xnatSession == None:
@@ -69,6 +71,11 @@ class DataDownloader:
         # Determine which use case applies and which to apply:
         useCaseThatApplies, useCaseToApply\
             = which_use_case(config=self.cfgDict)
+        
+        if p2c:
+            print(f"cfgDict['runID'] = {cfgDict['runID']}")
+            print(f'useCaseThatApplies = {useCaseThatApplies}')
+            print(f'useCaseToApply = {useCaseToApply}')
         
         # Update cfgDict:
         self.cfgDict['useCaseThatApplies'] = useCaseThatApplies

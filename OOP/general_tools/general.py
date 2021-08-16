@@ -329,3 +329,36 @@ def check_fileExt(filePath, fileExt):
             isMatch = False
             
     return isMatch
+
+def does_instance_variable_exist(instanceObj, varName, p2c=False):
+    # TODO update docstrings
+    """
+    Check if an instance variable exists within an instance.
+    
+    Parameters
+    ----------
+    instanceObj : instance object
+        Instance object.
+    varName : str
+        Name of the instance variable to check existance in instanceObj.
+    p2c : bool
+        If True result will be printed to the console.
+        
+    Returns
+    -------
+    doesExist : bool
+        True if the instance variable exists, False otherwise.
+    """
+    
+    if varName in dir(instanceObj):
+        doesExist = True
+        
+        if p2c:
+            print(f'Instance variable {varName} exists.\n')
+    else:
+        doesExist = False
+        
+        if p2c:
+            print(f'Instance variable {varName} does not exist.\n')
+    
+    return doesExist

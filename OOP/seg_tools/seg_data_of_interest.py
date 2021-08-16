@@ -96,9 +96,9 @@ def get_seg_data_of_interest(seg, allF2SindsBySeg, segNums, segLabs,
     
     # Get all pixel arrays by seg:
     """ 16/07: making changes to get_pixarrBySeg... """
-    allPixarrBySeg = get_pixarrBySeg(seg=seg, 
-                                     f2sIndsBySeg=allF2SindsBySeg, 
-                                     p2c=p2c)
+    allPixarrBySeg = get_pixarrBySeg(
+        seg=seg, f2sIndsBySeg=allF2SindsBySeg, p2c=p2c
+        )
     
     #print('\n\nallPixarrBySeg =', allPixarrBySeg)
     #print(f'\n\nallF2SindsBySeg = {allF2SindsBySeg}')

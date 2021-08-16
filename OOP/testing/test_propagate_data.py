@@ -14,7 +14,7 @@ from importlib import reload
 
 import testing.test_import_data
 reload(testing.test_import_data)
-from testing.test_import_data import ImporterTester
+from testing.test_import_data import DataImporterTester
 
 import propagate_tools.propagate
 reload(propagate_tools.propagate)
@@ -56,11 +56,11 @@ class PropagatorTester:
         testResult = PropagatorTester(runID)
     """
     
-    def __init__(self, runID, params=None, srcDataset=None, trgDataset=None):
+    def __init__(self, cfgDir, runID, params=None, srcDataset=None, trgDataset=None):
         if (params == None or srcDataset == None or trgDataset == None):
             # Import data for source:
             print('Running ImporterTester...\n')
-            testResult = ImporterTester(runID=runID)
+            testResult = DataImporterTester(cfgDir=cfgDir, runID=runID)
             
             params = testResult.params
             srcDataset = testResult.srcDataset
