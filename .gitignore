@@ -4,12 +4,13 @@ __pycache__/
 data
 Python_code
 sample_DROs
-trying_stuff
-various_functions
+#trying_stuff
+#various_functions
 OOP/configs/old
 OOP/docs
 OOP/notebooks
 OOP/outputs
+trying_stuff/xnat_dashboards
 *.log
 *.txt
 *.[0-9].txt
