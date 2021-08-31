@@ -40,12 +40,43 @@ class ConfigFetcher:
         specified runID.
     """
     
-    def __init__(self, cfgDir, runID, xnatSession=None):
+    def __init__(self, cfgDir, runID):
+        # xnatSession=None removed from inputs (17/08)
         self.cfgDir = cfgDir
+        self.runID = runID
+        self.cfgDict = {} # will update later
         
-        self.get_config(runID)
+        #self.get_config(runID)
     
-    def get_config(self, runID):
+    #@classmethod
+    def check_url_username_password(self):
+        """
+        Checks if the 'url', 'username' or 'password' keys within cfgDict are
+        empty, and if so, prompt user to input.
+        
+        If all enteries are not empty, cfgDict will be returned unchanged.
+        
+        Parameters
+        ----------
+        cfgDict : dict
+            Dictionary containing the parameters for the desired run.
+        
+        Returns
+        -------
+        None
+        """
+        
+        keys = ['url', 'username', 'password']
+        
+        prompts = ['Enter XNAT url: ', 'Enter user name: ', 'Enter password: ']
+        
+        for i in range(len(keys)):
+            if self.cfgDict[keys[i]] == '':
+                entry = getpass(prompts[i])
+                
+                self.cfgDict[keys[i]] = entry
+    
+    def get_config(self):
         """
         Fetches the configuration parameters from an appropriate JSON.
         
@@ -65,6 +96,7 @@ class ConfigFetcher:
         
         cfgDir = self.cfgDir
         #print(f'cfgDir = {cfgDir}\n')
+        runID = self.runID
 
         fpath = os.path.join(cfgDir, f'{runID}.json')
         
@@ -96,19 +128,11 @@ class ConfigFetcher:
             fpath = fpaths[choice - 1] # choice is 1-indexed
             
             cfgDict = import_dict_from_json(filepath=fpath)
-        
-        # url and/or username and/or password may be blank (e.g. for security
-        # reasons). If so prompt user for input and update cfgDict:
-        if cfgDict['url'] == '':
-            url = getpass("Enter XNAT url: ")
-            cfgDict['url'] = url
-        
-        if cfgDict['username'] == '':
-            username = getpass("Enter user name: ")
-            cfgDict['username'] = username
-        
-        if cfgDict['password'] == '':
-            password = getpass("Enter password: ")
-            cfgDict['password'] = password
-        
+            
         self.cfgDict = cfgDict
+        
+        # Check url, username and password entries:
+        """
+        url and/or username and/or password may be blank (e.g. for security).
+        """
+        self.check_url_username_password()

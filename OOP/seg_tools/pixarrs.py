@@ -9,8 +9,9 @@ Created on Tue Jul  6 17:19:16 2021
 import numpy as np
 from dicom_tools.metadata import get_dcm_uids
 from seg_tools.metadata import get_frameNums, get_p2sIndsBySeg
-from general_tools.console_printing import print_inds_by_roi
-from general_tools.console_printing import print_pixarr_shape_by_seg
+from general_tools.console_printing import (
+    print_inds_by_roi, print_pixarr_shape_by_seg
+    )
 
 def get_pixarr_in_seg(seg, dicomDir, searchStr):
     """
@@ -103,8 +104,8 @@ def get_pixarrBySeg(seg, f2sIndsBySeg, p2c=False):
     Nsegs = len(f2sIndsBySeg)
     
     if p2c:
-        print(f'   pixarr_all.shape = {pixarr_all.shape}')
-        #print('   f2sIndsBySeg =')
+        print(f'pixarr_all.shape = {pixarr_all.shape}')
+        #print('f2sIndsBySeg =')
         print_inds_by_roi(f2sIndsBySeg)
         
     pixarrBySeg = []

@@ -72,8 +72,9 @@ def get_insert_dates_by_proj(url, session):
     return dates_by_proj
 
 
-def get_first_last_im_session_uploads_by_proj(url, session, 
-                                             data_by_proj=None):
+def get_first_last_im_session_uploads_by_proj(
+        url, session, data_by_proj=None
+        ):
     """
     Return a dictionary containing the first and last dates of image session
     uploads organised by project. 

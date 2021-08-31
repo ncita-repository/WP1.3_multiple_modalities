@@ -40,10 +40,14 @@ class ConfigFetcherTester:
         
         print('Fetching parameters from local drive...\n')
         
+        # Instanstantiate a ConfigFetcher object:
         cfgObj = ConfigFetcher(cfgDir=cfgDir, runID=runID)
         
         #print('\n\n\nFetching parameters and data using pre-existing XNAT session...\n')
         #params = Fetcher(cfgDir, params.xnatSession)
+        
+        # Get the config settings:
+        cfgObj.get_config()
         
         self.cfgDir = cfgObj.cfgDir
         self.cfgDict = cfgObj.cfgDict

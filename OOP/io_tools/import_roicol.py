@@ -14,7 +14,8 @@ class RoicollectionImporter:
         Rather than use a separate class for ROI collections I've decided to 
         import them within the Dataset class.
     
-    THIS IS OBSOLETE:
+    THIS IS OBSOLETE because the ROI Collection is imported along with other 
+    data using the DataImporter class (io_tools.import_data.py).
         
     This class creates an roicolData Object from a SEG downloaded from XNAT.
     

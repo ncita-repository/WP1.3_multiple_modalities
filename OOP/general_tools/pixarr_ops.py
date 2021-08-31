@@ -9,91 +9,95 @@ Created on Fri Jul  9 12:42:57 2021
 """ Functions that apply basic operations on pixel arrays. """
 
 import numpy as np
-from dicom_tools.metadata import get_dcm_uids, get_roicol_nums, get_roicol_labels
-from seg_tools.metadata import get_PFFGS_to_sliceindsBySeg
+from dicom_tools.metadata import (
+    get_dcm_uids, get_roicol_nums, get_roicol_labels
+    )
+from seg_tools.metadata import get_p2sIndsBySeg
 
 
-def mean_frame_in_pixarr(PixArr, F2Sinds, MakeBinary=True, BinaryThresh=0.5,
-                         LogToConsole=False):
+def mean_frame_in_pixarr(
+        pixarr, f2sInds, makeBinary=True, binaryThresh=0.5, p2c=False
+        ):
     """
     Perform pixel-by-pixel mean of all frames in a pixel array. Output a 
     binary pixel array if binary=True (or undefined).
     
     Parameters
     ----------
-    PixArr : Numpy array
+    pixarr : Numpy array
         PixelData from a SEG file loaded as a Numpy array
-    F2Sinds : List of ints
+    f2sInds : List of ints
         A list (for each frame) of the slice numbers that correspond to each 
-        frame in PixArr.
-    MakeBinary : bool, optional (True by default)
-        If MakeBinary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by BinaryThreshold.
-    BinaryThreshold : float, optional (0.5 by default)
+        frame in pixarr.
+    makeBinary : bool, optional (True by default)
+        If makeBinary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by binaryThresh.
+    binaryThresh : float, optional (0.5 by default)
         The threshold that will be used when converting to a binary pixel array
-        if MakeBinary = True.
-    LogToConsole : bool, optional (False by default)
+        if makeBinary = True.
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
         
     Returns
     -------
-    MeanPixArr : Numpy array
+    meanPixarr : Numpy array
         Mean pixel array.
-    MeanF2Sind : int or float
+    meanF2Sind : int or float
         The integer or fractional frame-to-slice index corresponding to the 
-        mean pixel array.  MeanF2Sind will be an integer if MeanF2Sind % 1 = 0,
+        mean pixel array.  meanF2Sind will be an integer if meanF2Sind % 1 = 0,
         and a fractional float otherwise.
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of mean_frame_in_pixarr():')
         print('\n\n', '-'*120)
         
-    F, R, C = PixArr.shape
+    F, R, C = pixarr.shape
     
-    if LogToConsole:
-        print(f'\nPixArr.shape = {PixArr.shape}')
-        #print(f'np.amax(PixArr, axis=0) = {np.amax(PixArr, axis=0)}')
-        #print(f'np.max(PixArr, axis=0) = {np.max(PixArr, axis=0)}')
-        print(f'Max along each frame = {[np.amax(PixArr[f]) for f in range(PixArr.shape[0])]}')
+    if p2c:
+        print(f'\npixarr.shape = {pixarr.shape}')
+        #print(f'np.amax(pixarr, axis=0) = {np.amax(pixarr, axis=0)}')
+        #print(f'np.max(pixarr, axis=0) = {np.max(pixarr, axis=0)}')
+        print(f'Max along each frame = {[np.amax(pixarr[f]) for f in range(pixarr.shape[0])]}')
     
-    MeanPixArr = np.mean(PixArr, axis=0)
+    meanPixarr = np.mean(pixarr, axis=0)
     
-    if LogToConsole:
-        print(f'Max of MeanPixArr after averaging = {np.amax(MeanPixArr)}')
+    if p2c:
+        print(f'Max of meanPixarr after averaging = {np.amax(meanPixarr)}')
             
-    if MakeBinary:
-        #MeanPixArr = (MeanPixArr >= BinaryThresh) * MeanPixArr
-        MeanPixArr = (MeanPixArr >= BinaryThresh) * 1
+    if makeBinary:
+        #meanPixarr = (meanPixarr >= binaryThresh) * meanPixarr
+        meanPixarr = (meanPixarr >= binaryThresh) * 1
         
-        if LogToConsole:
-            print('Max of MeanPixArr after binary thresholding =',
-                  f'{np.amax(MeanPixArr)}')
+        if p2c:
+            print('Max of meanPixarr after binary thresholding =',
+                  f'{np.amax(meanPixarr)}')
     
-    MeanPixArr = np.reshape(MeanPixArr, (1, R, C))
+    meanPixarr = np.reshape(meanPixarr, (1, R, C))
     
-    if LogToConsole:
-        print(f'Max of MeanPixArr after reshape = {np.amax(MeanPixArr)}')
+    if p2c:
+        print(f'Max of meanPixarr after reshape = {np.amax(meanPixarr)}')
     
-    MeanPixArr = MeanPixArr.astype(dtype='uint8')
+    meanPixarr = meanPixarr.astype(dtype='uint8')
     
-    if LogToConsole:
-        print(f'Max of MeanPixArr after change to uint8 = {np.amax(MeanPixArr)}')
+    if p2c:
+        print(f'Max of meanPixarr after change to uint8 = {np.amax(meanPixarr)}')
     
-    """ Find the mean slice index: """
-    MeanF2Sind = sum(F2Sinds)/len(F2Sinds)
+    # Find the mean slice index:
+    meanF2Sind = sum(f2sInds)/len(f2sInds)
     
-    if MeanF2Sind % 1 == 0:
-        MeanF2Sind = int(MeanF2Sind)
+    if meanF2Sind % 1 == 0:
+        meanF2Sind = int(meanF2Sind)
     
-    if LogToConsole:
+    if p2c:
         print('-'*120)
         
-    return MeanPixArr, MeanF2Sind
+    return meanPixarr, meanF2Sind
 
-def mean_frame_in_pixarrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True, 
-                              BinaryThresh=0.5, LogToConsole=False):
+def mean_frame_in_pixarrBySeg(
+        pixarrBySeg, f2sIndsBySeg, makeBinary=True, binaryThresh=0.5, p2c=False
+        ):
     """
     Perform pixel-by-pixel mean of all frames in all pixel arrays in a list
     of pixel arrays. 
@@ -104,77 +108,77 @@ def mean_frame_in_pixarrBySeg(PixArrBySeg, F2SindsBySeg, MakeBinary=True,
     
     Parameters
     ----------
-    PixArrBySeg : list of Numpy arrays
+    pixarrBySeg : list of Numpy arrays
         A list (for each ROI/segment) of pixel arrays.
-    F2SindsBySeg : list of a list of ints
+    f2sIndsBySeg : list of a list of ints
         A list (for each ROI/segment) of a list (for each contour/frame) of the 
         slice numbers that correspond to each contour/frame in each pixel array
-        in PixArrBySeg.
-    MakeBinary : bool, optional (True by default)
-        If MakeBinary = True the mean pixel array will be converted to a binary
-        pixel array by thresholding pixel values by BinaryThreshold.
-    BinaryThreshold : float, optional (0.5 by default)
+        in pixarrBySeg.
+    makeBinary : bool, optional (True by default)
+        If makeBinary = True the mean pixel array will be converted to a binary
+        pixel array by thresholding pixel values by binaryThreshold.
+    binaryThresh : float, optional (0.5 by default)
         The threshold that will be used when converting to a binary pixel array
-        if MakeBinary = True.
-    LogToConsole : bool, optional (False by default)
+        if makeBinary = True.
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
     -------
-    MeanPixArrByRoi : list of Numpy arrays
+    meanPixarrByRoi : list of Numpy arrays
         A list (for each ROI/segment) of pixel arrays averaged to a single-
         framed pixel array.
-    MeanF2SindByRoi : list of a list of an int or float
+    meanF2SindByRoi : list of a list of an int or float
         A list (for each ROI/segment) of a list (of length 1, since there is 
         only 1 frame per pixel array) of the integer or fractional frame-to-
-        slice index corresponding to the mean pixel array.  MeanF2Sind will be 
-        an integer if MeanF2Sind % 1 = 0, and a fractional float otherwise.
+        slice index corresponding to the mean pixel array.  meanF2Sind will be 
+        an integer if meanF2Sind % 1 = 0, and a fractional float otherwise.
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of mean_frame_in_pixarrBySeg():')
         print('\n\n', '-'*120)
         
-    MeanPixArrBySeg = []
-    MeanF2SindBySeg = []
+    meanPixarrBySeg = []
+    meanF2SindBySeg = []
     
-    for s in range(len(PixArrBySeg)):
-        PixArr = PixArrBySeg[s]
-        F2Sinds = F2SindsBySeg[s]
+    for s in range(len(pixarrBySeg)):
+        pixarr = pixarrBySeg[s]
+        f2sInds = f2sIndsBySeg[s]
         
-        """ The number of frames in PixArr """
-        F = PixArr.shape[0]
+        # The number of frames in pixarr:
+        F = pixarr.shape[0]
         
         if F > 1: 
-            if LogToConsole:
-                print(f'\nPixArrBySeg[{s}] has {F} frames so the pixel arrays',
+            if p2c:
+                print(f'\npixarrBySeg[{s}] has {F} frames so the pixel arrays',
                       'will be averaged.')
             
-            MeanPixArr, MeanF2Sind\
-                = mean_frame_in_pixarr(PixArr, F2Sinds, MakeBinary, 
-                                       BinaryThresh, LogToConsole)
+            meanPixarr, meanF2Sind = mean_frame_in_pixarr(
+                pixarr, f2sInds, makeBinary, binaryThresh, p2c
+                )
             
-            MeanPixArrBySeg.append(MeanPixArr)
-            MeanF2SindBySeg.append([MeanF2Sind])
+            meanPixarrBySeg.append(meanPixarr)
+            meanF2SindBySeg.append([meanF2Sind])
             
-            if LogToConsole:
-                print(f'\nPixArr had {F} frames but now has',
-                      f'{MeanPixArr.shape[0]}.')
+            if p2c:
+                print(f'\npixarr had {F} frames but now has',
+                      f'{meanPixarr.shape[0]}.')
         else:
-            MeanPixArrBySeg.append(PixArr)
+            meanPixarrBySeg.append(pixarr)
             
-            MeanF2SindBySeg.append(F2Sinds)
+            meanF2SindBySeg.append(f2sInds)
             
-            if LogToConsole:
-                print(f'\nPixArr has {F} frames so no frame averaging required.')
+            if p2c:
+                print(f'\npixarr has {F} frames so no frame averaging required.')
     
-    if LogToConsole:
+    if p2c:
         print('-'*120)
         
-    return MeanPixArrBySeg, MeanF2SindBySeg
+    return meanPixarrBySeg, meanF2SindBySeg
 
-def or_frame_of_pixarrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
+def or_frame_of_pixarrBySeg(pixarrBySeg, f2sIndsBySeg, p2c=False):
     """
     Perform pixel-by-pixel logical OR of all frames in all pixel arrays in a 
     list of pixel arrays. 
@@ -185,253 +189,253 @@ def or_frame_of_pixarrBySeg(PixArrBySeg, F2SindsBySeg, LogToConsole=False):
     
     Parameters
     ----------
-    PixArrBySeg : list of Numpy arrays
+    pixarrBySeg : list of Numpy arrays
         A list (for each ROI/segment) of pixel arrays.
-    F2SindsBySeg : list of a list of ints
+    f2sIndsBySeg : list of a list of ints
         A list (for each ROI/segment) of a list (for each contour/frame) of the 
         slice numbers that correspond to each contour/frame in each pixel array
-        in PixArrBySeg.
-    LogToConsole : bool, optional (False by default)
+        in pixarrBySeg.
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
     -------
-    OrPixArrBySeg : list of Numpy arrays
+    orPixarrBySeg : list of Numpy arrays
         A list (for each ROI/segment) of pixel arrays averaged to a single-
         framed pixel array.
-    MeanF2SindBySeg : list of a list of an int or float
+    meanF2SindBySeg : list of a list of an int or float
         A list (for each ROI/segment) of a list (of length 1, since there is 
         only 1 frame per pixel array) of the integer or fractional frame-to-
-        slice index corresponding to the OR pixel array.  MeanF2Sind will be 
-        an integer if MeanF2Sind % 1 = 0, and a fractional float otherwise.
+        slice index corresponding to the OR pixel array.  meanF2Sind will be 
+        an integer if meanF2Sind % 1 = 0, and a fractional float otherwise.
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of or_frame_of_pixarrBySeg():')
         print('\n\n', '-'*120)
         
-    # Get the shape of any pixel array:
-    F, R, C = PixArrBySeg[0].shape
+    # Get the shape the pixel arrays (the first will do):
+    F, R, C = pixarrBySeg[0].shape
     
-    OrPixArrBySeg = []
-    MeanF2SindBySeg = []
+    orPixarrBySeg = []
+    meanF2SindBySeg = []
     
-    for s in range(len(PixArrBySeg)):
-        PixArr = PixArrBySeg[s]
-        F2Sinds = F2SindsBySeg[s]
+    for s in range(len(pixarrBySeg)):
+        pixarr = pixarrBySeg[s]
+        f2sInds = f2sIndsBySeg[s]
         
-        """ The number of frames in PixArr """
-        F = PixArr.shape[0]
+        F = pixarr.shape[0] # number of frames in pixarr
         
         if F > 1: 
-            if LogToConsole:
-                print(f'\nPixArrBySeg[{s}] has {F} frames so the pixel arrays',
+            if p2c:
+                print(f'\npixarrBySeg[{s}] has {F} frames so the pixel arrays',
                       'will be logically ORed.')
             
-            OrPixArr = PixArr.any(axis=0)
+            orPixarr = pixarr.any(axis=0)
             
-            """ Reshape to a (1, R, C) pixel array: """
-            OrPixArr = np.reshape(OrPixArr, (1, R, C))
+            # Reshape to a (1, R, C) pixel array:
+            orPixarr = np.reshape(orPixarr, (1, R, C))
             
-            """ Convert from boolean to uint8: """
-            OrPixArr = OrPixArr.astype('uint8')
+            # Convert from boolean to uint8:
+            orPixarr = orPixarr.astype('uint8')
             
-            OrPixArrBySeg.append(OrPixArr)
+            orPixarrBySeg.append(orPixarr)
             
-            """ Find the mean slice index: """
-            MeanF2Sind = sum(F2Sinds)/len(F2Sinds)
+            # Find the mean slice index:
+            meanF2Sind = sum(f2sInds)/len(f2sInds)
             
             """
-            14/02: It may be useful to return the fractional index but for now
+            14/02: 
+            It may be useful to return the fractional index but for now
             I'll simply round it to the nearest integer...
-            if MeanF2Sind % 1 == 0:
-                MeanF2Sind = int(MeanF2Sind)
+            if meanF2Sind % 1 == 0:
+                meanF2Sind = int(meanF2Sind)
             """
-            MeanF2Sind = round(MeanF2Sind)
+            meanF2Sind = round(meanF2Sind)
             
-            MeanF2SindBySeg.append([MeanF2Sind])
+            meanF2SindBySeg.append([meanF2Sind])
             
-            if LogToConsole:
-                print(f'\nPixArr had {F} frames but now has,',
-                      f'{OrPixArr.shape[0]}.')
+            if p2c:
+                print(f'\npixarr had {F} frames but now has,',
+                      f'{orPixarr.shape[0]}.')
         else:
-            OrPixArrBySeg.append(PixArr)
+            orPixarrBySeg.append(pixarr)
             
-            MeanF2SindBySeg.append(F2Sinds)
+            meanF2SindBySeg.append(f2sInds)
             
-            if LogToConsole:
-                print(f'\nPixArr has {F} frames so no logical ORing required.')
+            if p2c:
+                print(f'\npixarr has {F} frames so no logical ORing required.')
     
-    if LogToConsole:
-        print(f'MeanF2SindBySeg = {MeanF2SindBySeg}')
+    if p2c:
+        print(f'meanF2SindBySeg = {meanF2SindBySeg}')
         print('-'*120)
         
-    return OrPixArrBySeg, MeanF2SindBySeg
+    return orPixarrBySeg, meanF2SindBySeg
 
-def get_frame_from_pixarr(Seg, DicomDir, SearchString, SliceNum, LogToConsole):
+def get_frame_from_pixarr(seg, dicomDir, searchStr, slcNum, p2c):
     """
     Extract a single (2D) frame from a 3D pixel array that matches a given
     segment label.  
     
     Parameters
     ----------
-    Seg : Pydicom Object
+    seg : Pydicom Object
         SEG object.
-    DicomDir : str
+    dicomDir : str
         Directory containing the corresponding DICOMs.
-    SearchString : str
+    searchStr : str
         All or part of the Segment label containing the segmentation to be
         copied.
-    SliceNum : int
+    slcNum : int
         Slice index of the Source DICOM stack corresponding to the segmentation
         to be copied (counting from 0).
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
         
     Returns
     -------
-    Frame : Numpy array
-        Frame from PixArr.
+    frame : Numpy array
+        The desired frame from pixarr.
     """
     
-    SegLabels = get_roicol_labels(Seg)
+    segLabels = get_roicol_labels(seg)
     
     # Determine which segment contains the segmentation to be copied, and
     # the corresponding frame number in the pixel array:
-    """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
-    SegNum = get_roicol_nums(Seg, SearchString)
-    SegNum = SegNum[0] # 09/07/21 Not sure about this
+    """ Note:  segNum is equivalent to SegmentNumber in SegmentSequence. """
+    segNum = get_roicol_nums(seg, searchStr)
+    segNum = segNum[0] # 09/07/21 Not sure about this
     
-    Studyuid, Seriesuid, FORuid, SOPuids = get_dcm_uids(DicomDir)
+    studyuid, seriesuid, FORuid, SOPuids = get_dcm_uids(dicomDir)
     
-    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(Seg, SOPuids)
+    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(seg, SOPuids)
     
-    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[SegNum]
+    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[segNum]
     
-    if not SliceNum in PFFGStoSliceIndsInSeg:
+    if not slcNum in PFFGStoSliceIndsInSeg:
         msg = 'There is no segmentation in the segment matching the term '\
-              + f'"{SearchString}" for slice {SliceNum} in the SEG.'
+              + f'"{searchStr}" for slice {slcNum} in the SEG.'
               
         raise Exception(msg)
     
-    # Get the corresponding FrameNum:
+    # Get the corresponding frameNum:
     
     n = 0 # initialise frame number counter
     
-    for i in range(len(SegLabels)):
-        if i == SegNum:
+    for i in range(len(segLabels)):
+        if i == segNum:
             """ 
             This segment contains the frame to be copied, whose position is
-            given by the index of FromSliceNum in 
+            given by the index of slcNum in 
             SrcPFFGStoSliceIndsBySeg[i] plus any frames that preceeded it 
             (i.e. the frame counter n).
             """
-            FrameNum = n + PFFGStoSliceIndsBySeg[i].index(SliceNum)
+            frameNum = n + PFFGStoSliceIndsBySeg[i].index(slcNum)
             
         else:
             # Add to the frame counter the number of frames in this segment:
             n += len(PFFGStoSliceIndsBySeg[i]) 
     
-    
-    if LogToConsole:
-        print('\n\nResults of GetFrameFromPixArr:')
-        print(f'   SliceNum = {SliceNum} relates to FrameNum = {FrameNum} in',
+    if p2c:
+        print('\n\nResults of get_frame_from_pixarr:')
+        print(f'   slcNum = {slcNum} relates to frameNum = {frameNum} in',
               'PixelArray')
     
-    PixArr = Seg.pixel_array
+    pixarr = seg.pixel_array
     
-    if len(PixArr.shape) < 3:
-        # This is a single-frame PixArr, i.e. shape (R, C). Reshape it to 
+    if len(pixarr.shape) < 3:
+        # This is a single-frame pixarr, i.e. shape (R, C). Reshape it to 
         # shape (1, R, C):
-        R, C = PixArr.shape
+        R, C = pixarr.shape
         
-        PixArr = np.reshape(PixArr, (1, R, C))
+        pixarr = np.reshape(pixarr, (1, R, C))
     else:
-        # This is a multi-frame PixArr, i.e. shape (AllF, R, C).
-        AllF, R, C = PixArr.shape
+        # This is a multi-frame pixarr, i.e. shape (AllF, R, C).
+        AllF, R, C = pixarr.shape
     
-    # Initialise Frame:
-    Frame = np.zeros((1, R, C), dtype='uint')
+    # Initialise frame:
+    frame = np.zeros((1, R, C), dtype='uint')
     
-    Frame[0] = PixArr[FrameNum]
+    frame[0] = pixarr[frameNum]
             
-    return Frame
+    return frame
 
-def get_frames_from_pixarr(Seg, DicomDir, SearchString, LogToConsole):
+def get_frames_from_pixarr(seg, dicomDir, searchStr, p2c):
     """
     Extract all frames from a 3D pixel array that match a given segment label.  
     
     Parameters
     ----------
-    Seg : Pydicom Object
+    seg : Pydicom Object
         SEG object.
-    DicomDir : str
+    dicomDir : str
         Directory containing the corresponding DICOMs.
-    SearchString : str
+    searchStr : str
         All or part of the Segment Label of the segment containing the 
         segmentation to be copied.
-    SliceNum : int
+    slcNum : int
         Slice index of the Source DICOM stack corresponding to the segmentation
         to be copied (counting from 0).
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
         
     Returns
     -------
-    Frame : Numpy array
-        Frame from PixArr.
+    frames : Numpy array
+        The desired frames from pixarr.
     """
     
     # Determine which segment contains the segmentation to be copied, and
     # the corresponding frame number in the pixel array:
-    """ Note:  SegNum is equivalent to SegmentNumber in SegmentSequence. """
-    SegNum = get_roicol_nums(Seg, SearchString)
-    SegNum = SegNum[0] # 09/07/21 Not sure about this
+    """ Note:  segNum is equivalent to SegmentNumber in SegmentSequence. """
+    segNum = get_roicol_nums(seg, searchStr)
+    segNum = segNum[0] # 09/07/21 Not sure about this
     
-    Studyuid, Seriesuid, FORuid, SOPuids = get_dcm_uids(DicomDir)
+    studyuid, seriesuid, foruid, SOPuids = get_dcm_uids(dicomDir)
     
-    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(Seg, SOPuids)
+    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(seg, SOPuids)
     
-    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[SegNum]
+    PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[segNum]
     
     # The number of frames in the segment of interest:
     F = len(PFFGStoSliceIndsInSeg)
     
-    # Get the number of rows and columns required for Frames:
-    PixArr = Seg.pixel_array
+    # Get the number of rows and columns required for frames:
+    pixarr = seg.pixel_array
     
-    if len(PixArr.shape) < 3:
-        """ This is a single-frame PixArr, i.e. shape (1, R, C). """
-        R, C = PixArr.shape
+    if len(pixarr.shape) < 3:
+        # This is a single-frame pixarr, i.e. shape (1, R, C).
+        R, C = pixarr.shape
     else:
-        """ This is a multi-frame PixArr, i.e. shape (AllF, R, C). """
-        AllF, R, C = PixArr.shape
+        # This is a multi-frame pixarr, i.e. shape (AllF, R, C).
+        AllF, R, C = pixarr.shape
     
-    Frames = np.zeros((F, R, C), dtype='uint')
+    frames = np.zeros((F, R, C), dtype='uint')
     
     for f in range(F):
-        SliceNum = PFFGStoSliceIndsInSeg[f]
+        slcNum = PFFGStoSliceIndsInSeg[f]
         
-        Frame = get_frame_from_pixarr(Seg, DicomDir, SearchString, SliceNum, 
-                                      LogToConsole)
+        frame = get_frame_from_pixarr(
+            seg, dicomDir, searchStr, slcNum, p2c
+            )
         
-        Frames[f] = Frame
+        frames[f] = frame
     
-    if LogToConsole:
-        print('\n\n***Result from GetFramesFromPixArr:')
+    if p2c:
+        print('\n\n***Result from get_frames_from_pixarr:')
         print(f'   There are {F} frames in the segment matching',
-              f'"{SearchString}".')
+              f'"{searchStr}".')
         print(f'   PFFGStoSliceIndsInSeg = {PFFGStoSliceIndsInSeg}')
-        print(f'   PixArr.shape = {PixArr.shape}')
-        if len(PixArr.shape) > 2:
-            [print(f'   np.amax(PixArr[{i}]) = {np.amax(PixArr[i])}') for i in range(PixArr.shape[0])]
+        print(f'   pixarr.shape = {pixarr.shape}')
+        if len(pixarr.shape) > 2:
+            [print(f'   np.amax(pixarr[{i}]) = {np.amax(pixarr[i])}') for i in range(pixarr.shape[0])]
         else:
-            print(f'   np.amax(PixArr) = {np.amax(PixArr)}')
-        print(f'   Frames.shape = {Frames.shape}')
-        if len(Frames.shape) > 2:
-            [print(f'   np.amax(Frames[{i}]) = {np.amax(Frames[i])}') for i in range(Frames.shape[0])]
+            print(f'   np.amax(pixarr) = {np.amax(pixarr)}')
+        print(f'   frames.shape = {frames.shape}')
+        if len(frames.shape) > 2:
+            [print(f'   np.amax(frames[{i}]) = {np.amax(frames[i])}') for i in range(frames.shape[0])]
         else:
-            print(f'   np.amax(Frames) = {np.amax(Frames)}')
+            print(f'   np.amax(frames) = {np.amax(frames)}')
             
-    return Frames
+    return frames

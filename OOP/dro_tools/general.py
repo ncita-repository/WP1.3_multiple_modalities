@@ -11,28 +11,29 @@ Created on Thu Jul  8 20:38:51 2021
 import time
 from copy import deepcopy
 
-def modify_ref_im_seq(Sequence, Dicoms, RefAllSOPs=False, LogToConsole=False):
+def modify_ref_im_seq(seq, dicoms, refAllSOPs=False, p2c=False):
     """
     Modify a ReferencedImageSequence (or ReferencedInstanceSequence).  
     
     Parameters
     ----------
-    Sequence : Sequence of a Pydicom Object
+    seq : Sequence of a Pydicom Object
         A ReferencedImageSequence to be modified.
     SeqNum : int
         The (zero-indexed) integer of the sequence to modify.
-    Dicoms : list of Pydicom Objects
+    dicoms : list of Pydicom Objects
         The DICOMs that related to the sequence.
-    RefAllSOPs : bool, optional (False by default)
-        If True, all SOPInstanceUIDs in Dicoms will be referenced in the
+    refAllSOPs : bool, optional
+        If True, all SOPInstanceUIDs in dicoms will be referenced in the
         sequence.  If False, only the SOPInstanceUID of the first DICOM will be
-        referenced.
-    LogToConsole : bool, optional (False by default)
+        referenced. The default value is False.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
     
     Returns
     -------
-    Sequence : Sequence of a Pydicom Object
+    seq : Sequence of a Pydicom Object
         The modified ReferencedImageSequence.
     """
     
@@ -41,72 +42,72 @@ def modify_ref_im_seq(Sequence, Dicoms, RefAllSOPs=False, LogToConsole=False):
     times.append(time.time())
        
     # The number of sequences:
-    N0 = len(Sequence)
+    N0 = len(seq)
     
     # The required number of sequences:
-    if RefAllSOPs:
-        N1 = len(Dicoms)
+    if refAllSOPs:
+        N1 = len(dicoms)
         
-        if LogToConsole:
+        if p2c:
             print(f'\nThere are {N0} sequences in ReferencedImageSequence,',
                   f'and {N1} (= no. of DICOMs) required sequences.')
     else:
         N1 = 1
         
-        if LogToConsole:
+        if p2c:
             print(f'\nThere are {N0} sequences in ReferencedImageSequence',
                   f'and {N1} (the first DICOM) required sequence.')
     
     # Add/remove sequences:
     if N1 > N0:
         for i in range(N1 - N0):           
-            Sequence.append(Sequence[-1])          
+            seq.append(seq[-1])          
     else:
         for i in range(N0 - N1):
-            Sequence.pop()
+            seq.pop()
     
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        print(f'\n   *Took {Dtime} s to add sequences to ReferencedImageSequence.')
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        print(f'\n   *Took {dtime} s to add sequences to ReferencedImageSequence.')
         
     # Update the sequences:
     for i in range(N1):
-        Sequence[i].ReferencedSOPClassUID = Dicoms[i].SOPClassUID
+        seq[i].ReferencedSOPClassUID = dicoms[i].SOPClassUID
            
-        Sequence[i].ReferencedSOPInstanceUID = Dicoms[i].SOPInstanceUID
+        seq[i].ReferencedSOPInstanceUID = dicoms[i].SOPInstanceUID
                       
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        print(f'\n   *Took {Dtime} s to update ReferencedImageSequence.')
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        print(f'\n   *Took {dtime} s to update ReferencedImageSequence.')
     
-    return Sequence
+    return seq
 
-def modify_ref_ser_seq(Dro, SeqNum, Dicoms, RefAllSOPs=False, 
-                       LogToConsole=False):
+def modify_ref_ser_seq(dro, seqNum, dicoms, refAllSOPs=False, p2c=False):
     """
     Modify the ReferencedSeriesSequence in a DICOM Spatial or Deformable
     Spatial Registration Object (DRO) for a chosen sequence number.  
     
     Parameters
     ----------
-    Dro : Pydicom Object
+    dro : Pydicom Object
         The DICOM Registration Object to be modified.
-    SeqNum : int
+    seqNum : int
         The (zero-indexed) integer of the sequence to modify.
-    Dicoms : list of Pydicom Objects
+    dicoms : list of Pydicom Objects
         The DICOMs that related to the sequence.
-    RefAllSOPs : bool, optional (False by default)
-        If True, all SOPInstanceUIDs in Dicoms will be referenced in the
+    refAllSOPs : bool, optional
+        If True, all SOPInstanceUIDs in dicoms will be referenced in the
         sequence.  If False, only the SOPInstanceUID of the first DICOM will be
-        referenced.
-    LogToConsole : bool, optional (False by default)
+        referenced. The default value is False.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
     
     Returns
     -------
-    Dro : Pydicom Object
+    dro : Pydicom Object
         The modified DICOM Registration Object.
     """
     
@@ -114,68 +115,69 @@ def modify_ref_ser_seq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
     times = []
     times.append(time.time())
     
-    Dro.ReferencedSeriesSequence[SeqNum]\
-       .SeriesInstanceUID = Dicoms[0].SeriesInstanceUID
+    dro.ReferencedSeriesSequence[seqNum]\
+       .SeriesInstanceUID = dicoms[0].SeriesInstanceUID
        
     # The number of sequences:
-    OrigRIS = len(Dro.ReferencedSeriesSequence[SeqNum]\
+    origRIS = len(dro.ReferencedSeriesSequence[seqNum]\
                      .ReferencedInstanceSequence)
     
     # The required number of sequences:
-    if RefAllSOPs:
-        ReqRIS = len(Dicoms)
+    if refAllSOPs:
+        reqRIS = len(dicoms)
         
-        if LogToConsole:
-            print(f'\nThere are {OrigRIS} sequences in',
-                  f'ReferencedSeriesSequence[{SeqNum}].ReferencedInstanceSequence,',
-                  f'and {ReqRIS} (= no. of DICOMs) required sequences.')
+        if p2c:
+            print(f'\nThere are {origRIS} sequences in',
+                  f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
+                  f'and {reqRIS} (= no. of DICOMs) required sequences.')
     else:
-        ReqRIS = 1
+        reqRIS = 1
         
-        if LogToConsole:
-            print(f'\nThere are {OrigRIS} sequences in',
-                  f'ReferencedSeriesSequence[{SeqNum}].ReferencedInstanceSequence,',
-                  f'and {ReqRIS} (the first DICOM) required sequence.')
+        if p2c:
+            print(f'\nThere are {origRIS} sequences in',
+                  f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
+                  f'and {reqRIS} (the first DICOM) required sequence.')
     
     # Add/remove sequences:
-    if ReqRIS > OrigRIS:
-        for i in range(ReqRIS - OrigRIS):
-            LastItem = deepcopy(Dro.ReferencedSeriesSequence[SeqNum]\
+    if reqRIS > origRIS:
+        for i in range(reqRIS - origRIS):
+            lastItem = deepcopy(dro.ReferencedSeriesSequence[seqNum]\
                                    .ReferencedInstanceSequence[-1])
             
-            Dro.ReferencedSeriesSequence[SeqNum]\
-               .ReferencedInstanceSequence.append(LastItem)          
+            dro.ReferencedSeriesSequence[seqNum]\
+               .ReferencedInstanceSequence.append(lastItem)          
     else:
-        for i in range(OrigRIS - ReqRIS):
-            Dro.ReferencedSeriesSequence[SeqNum]\
+        for i in range(origRIS - reqRIS):
+            dro.ReferencedSeriesSequence[seqNum]\
                .ReferencedInstanceSequence.pop()
     
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        print(f'\n   *Took {Dtime} s to add sequences to',
-              f'ReferencedSeriesSequence[{SeqNum}].ReferencedInstanceSequence.')
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        print(f'\n   *Took {dtime} s to add sequences to',
+              f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.')
         
     # Update the sequences:
-    for i in range(ReqRIS):
-        Dro.ReferencedSeriesSequence[SeqNum]\
+    for i in range(reqRIS):
+        dro.ReferencedSeriesSequence[seqNum]\
            .ReferencedInstanceSequence[i]\
-           .ReferencedSOPClassUID = Dicoms[i].SOPClassUID
+           .ReferencedSOPClassUID = dicoms[i].SOPClassUID
            
-        Dro.ReferencedSeriesSequence[SeqNum]\
+        dro.ReferencedSeriesSequence[seqNum]\
            .ReferencedInstanceSequence[i]\
-           .ReferencedSOPInstanceUID = Dicoms[i].SOPInstanceUID
+           .ReferencedSOPInstanceUID = dicoms[i].SOPInstanceUID
                       
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        print(f'\n   *Took {Dtime} s to update',
-              f'ReferencedSeriesSequence[{SeqNum}].ReferencedInstanceSequence.')
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        print(f'\n   *Took {dtime} s to update',
+              f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.')
     
-    return Dro
+    return dro
 
-def modify_stu_con_oth_ref_ins_seq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
-                                   LogToConsole=False):
+def modify_stu_con_oth_ref_ins_seq(
+        dro, seqNum, dicoms, refAllSOPs=False, p2c=False
+        ):
     """
     Modify the StudiesContainingOtherReferencedInstancesSequence in a DICOM 
     Spatial or Deformable Spatial Registration Object (DRO) for a chosen 
@@ -183,22 +185,23 @@ def modify_stu_con_oth_ref_ins_seq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
     
     Parameters
     ----------
-    Dro : Pydicom Object
+    dro : Pydicom Object
         The DICOM Registration Object to be modified.
-    SeqNum : int
+    seqNum : int
         The (zero-indexed) integer of the sequence to modify.
-    Dicoms : list of Pydicom Objects
+    dicoms : list of Pydicom Objects
         The DICOMs that related to the sequence.
-    RefAllSOPs : bool, optional (False by default)
-        If True, all SOPInstanceUIDs in Dicoms will be referenced in the
+    refAllSOPs : bool, optional
+        If True, all SOPInstanceUIDs in dicoms will be referenced in the
         sequence.  If False, only the SOPInstanceUID of the first DICOM will be
-        referenced.
-    LogToConsole : bool, optional (False by default)
+        referenced. The default value is False.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
     
     Returns
     -------
-    Dro : Pydicom Object
+    dro : Pydicom Object
         The modified DICOM Registration Object.
     """
     
@@ -206,80 +209,84 @@ def modify_stu_con_oth_ref_ins_seq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
     times = []
     times.append(time.time())
     
-    Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
-       .StudyInstanceUID = Dicoms[0].StudyInstanceUID
+    dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
+       .StudyInstanceUID = dicoms[0].StudyInstanceUID
     
-    Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
+    dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
        .ReferencedSeriesSequence[0]\
-       .SeriesInstanceUID = Dicoms[0].SeriesInstanceUID
+       .SeriesInstanceUID = dicoms[0].SeriesInstanceUID
        
     # The number of sequences:
-    OrigRIS = len(Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
-                     .ReferencedSeriesSequence[0]\
-                     .ReferencedInstanceSequence)
+    origRIS = len(
+        dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
+            .ReferencedSeriesSequence[0]\
+            .ReferencedInstanceSequence
+            )
     
     # The required number of sequences:
-    if RefAllSOPs:
-        ReqRIS = len(Dicoms)
+    if refAllSOPs:
+        reqRIS = len(dicoms)
         
-        if LogToConsole:
-            msg = f'\nThere are {OrigRIS} sequences in '\
-                  + f'StudiesContainingOtherReferencedInstancesSequence[{SeqNum}]'\
-                  + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
-                  + f' and {ReqRIS} (= no. of DICOMs) required sequences.'
+        if p2c:
+            msg = f'\nThere are {origRIS} sequences in '\
+                + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
+                + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
+                + f' and {reqRIS} (= no. of DICOMs) required sequences.'
             print(msg)
     else:
-        ReqRIS = 1
+        reqRIS = 1
         
-        if LogToConsole:
-            msg = f'\nThere are {OrigRIS} sequences in '\
-                  + f'StudiesContainingOtherReferencedInstancesSequence[{SeqNum}]'\
-                  + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
-                  + f' and {ReqRIS} (the first DICOM) required sequence.'
+        if p2c:
+            msg = f'\nThere are {origRIS} sequences in '\
+                + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
+                + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
+                + f' and {reqRIS} (the first DICOM) required sequence.'
             print(msg)
     
     # Add/remove sequences:
-    if ReqRIS > OrigRIS:
-        for i in range(ReqRIS - OrigRIS):
-            LastItem = deepcopy(Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
-                                   .ReferencedSeriesSequence[0]\
-                                   .ReferencedInstanceSequence[-1])
+    if reqRIS > origRIS:
+        for i in range(reqRIS - origRIS):
+            lastItem = deepcopy(
+                dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
+                    .ReferencedSeriesSequence[0]\
+                    .ReferencedInstanceSequence[-1]
+                    )
             
-            Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
+            dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
                .ReferencedSeriesSequence[0]\
-               .ReferencedInstanceSequence.append(LastItem)          
+               .ReferencedInstanceSequence.append(lastItem)          
     else:
-        for i in range(OrigRIS - ReqRIS):
-            Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
+        for i in range(origRIS - reqRIS):
+            dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
                .ReferencedSeriesSequence[0]\
                .ReferencedInstanceSequence.pop()
     
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        msg = f'\n   *Took {Dtime} s to add sequences to '\
-              + f'StudiesContainingOtherReferencedInstancesSequence[{SeqNum}]'\
-              + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        msg = f'\n   *Took {dtime} s to add sequences to '\
+            + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
+            + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
         print(msg)
         
     # Update the sequences:
-    for i in range(ReqRIS):
-        Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
+    for i in range(reqRIS):
+        dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
            .ReferencedSeriesSequence[0]\
            .ReferencedInstanceSequence[i]\
-           .ReferencedSOPClassUID = Dicoms[i].SOPClassUID
+           .ReferencedSOPClassUID = dicoms[i].SOPClassUID
            
-        Dro.StudiesContainingOtherReferencedInstancesSequence[SeqNum]\
+        dro.StudiesContainingOtherReferencedInstancesSequence[seqNum]\
            .ReferencedSeriesSequence[0]\
            .ReferencedInstanceSequence[i]\
-           .ReferencedSOPInstanceUID = Dicoms[i].SOPInstanceUID
+           .ReferencedSOPInstanceUID = dicoms[i].SOPInstanceUID
                       
     times.append(time.time())
-    Dtime = round(times[-1] - times[-2], 3)
-    if LogToConsole:
-        msg = f'\n   *Took {Dtime} s to update '\
-              + f'StudiesContainingOtherReferencedInstancesSequence[{SeqNum}]'\
-              + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
+    dtime = round(times[-1] - times[-2], 3)
+    if p2c:
+        msg = f'\n   *Took {dtime} s to update '\
+            + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
+            + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
         print(msg)
     
-    return Dro
+    return dro

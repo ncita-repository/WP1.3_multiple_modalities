@@ -4,7 +4,8 @@ import SimpleITK as sitk
 
 from IPython.display import clear_output
 from scipy import linalg 
-from registration_utilities import registration_errors
+#from registration_utilities import registration_errors
+from image_tools.registration_utilities import registration_errors
 
 
 # Callback we associate with the StartEvent, sets up our new data.

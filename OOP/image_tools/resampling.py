@@ -8,6 +8,10 @@ Created on Wed Jul  7 20:24:22 2021
 
 """ Resampling functions for SimpleITK images. """
 
+from importlib import reload
+import image_tools.operations
+reload(image_tools.operations)
+
 import SimpleITK as sitk
 
 from image_tools.attrs_info import get_im_info
@@ -18,8 +22,9 @@ from general_tools.fiducials import get_landmark_tx
 from plotting_tools.plotting import plot_two_ims
 
 
-def resample_im(im, refIm, sitkTx=sitk.Transform(), interp='Linear', 
-                p2c=False):
+def resample_im(im, refIm, sitkTx=sitk.Transform(3, sitk.sitkIdentity),
+                #sitkTx=sitk.Transform(), 
+                interp='Linear', p2c=False):
     """
     Resample a 3D SimpleITK image.
     
@@ -29,16 +34,19 @@ def resample_im(im, refIm, sitkTx=sitk.Transform(), interp='Linear',
         The 3D image to be resampled.
     refIm : SimpleITK Image
         The 3D image reference image whose gridspace Im will be resampled to.
-    sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
-        The SimpleITK Transform to be used. The identity transform is default.
-    interp : str, optional ('Linear' by default)
+    sitkTx : SimpleITK Transform, optional
+        The SimpleITK Transform to be used. The default value is
+        sitk.Transform(3, sitk.sitkIdentity) (identity transform).
+    interp : str, optional
         The type of interpolation to be used.  Acceptable inputs are:
         - 'Linear'
         - 'Bspline'
         - 'NearestNeighbor'
         - 'LabelGaussian'
-    p2c : bool, optional (False by default)
-        Denotes whether some results will be logged to the console.
+        The default value is 'Linear'.
+    p2c : bool, optional
+        Denotes whether some results will be logged to the console. The default
+        value is False.
         
     Returns
     -------
@@ -65,8 +73,8 @@ def resample_im(im, refIm, sitkTx=sitk.Transform(), interp='Linear',
         
     elif interp == 'Linear':
         sitkInterp = sitk.sitkLinear
-        #sitkPixType = sitk.sitkFloat32
-        sitkPixType = sitk.sitkUInt32
+        sitkPixType = sitk.sitkFloat32 # 20/08/21
+        #sitkPixType = sitk.sitkUInt32 # 20/08/21
         
     elif interp == 'Bspline':
         sitkInterp = sitk.sitkBSpline
@@ -96,8 +104,8 @@ def resample_im(im, refIm, sitkTx=sitk.Transform(), interp='Linear',
     return resIm
 
 def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp, 
-                   preResVariance=(1,1,1), applyPostResBlur=True, 
-                   postResVariance=(1,1,1), p2c=False):
+                   preResVar=(1,1,1), applyPostResBlur=True, 
+                   postResVar=(1,1,1), p2c=False):
     """
     Resample a 3D SimpleITK image.
     
@@ -118,12 +126,12 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
-    preResVariance : tuple of floats, optional ((1,1,1) by default)
+    preResVar : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior to resampling.
     applyPostResBlur : bool, optional (True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    postResVariance : tuple of floats (optional; (1,1,1) by default)
+    postResVar : tuple of floats (optional; (1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         labelmap image is to be Gaussian blurred prior after resampling.
     p2c : bool, optional (False by default)
@@ -239,8 +247,7 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
         
         if applyPostResBlur:
             # Gaussian blur the image.
-            resLabim = gaussian_blur_im(im=resLabim, 
-                                        Variance=postResVariance)
+            resLabim = gaussian_blur_im(im=resLabim, var=postResVar)
             
             if p2c:
                 print('Image info for resLabim after Gaussian blurring:')
@@ -318,7 +325,7 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
         """ Convert labim from 32-bit unsigned integer to float.
         Note:  Result of resampling results in empty labelmap unless
         image is converted to float prior to resampling. """
-        labim = change_im_dtype(im=labim, newPixelType='Float32')
+        labim = change_im_dtype(im=labim, newPixType='Float32')
         
         if p2c:
             print('\nImage info for labim after converting to float:')
@@ -327,7 +334,7 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
                 )
               
         # Gaussian blur the image.
-        labim = gaussian_blur_im(im=labim, variance=preResVariance)
+        labim = gaussian_blur_im(im=labim, variance=preResVar)
         
         # Use the RecursiveGaussian image filter:
         #resLabim = recursive_gaussian_blur_im(
@@ -361,7 +368,7 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
         if applyPostResBlur:
             # Gaussian blur the image.
             resLabim = gaussian_blur_im(
-                im=resLabim, variance=postResVariance
+                im=resLabim, var=postResVar
                 )
         
         #""" The non-binary pixel array following blur + linear resampling: """
@@ -398,7 +405,7 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
             print(f'\nresLabim has PixelID = {pixID} ({pixIDTypeAsStr})).')
         
         # Convert resLabim from float to 32-bit unsigned integer. 
-        resLabim = change_im_dtype(im=resLabim, newPixelType='UInt32')
+        resLabim = change_im_dtype(im=resLabim, newPixType='UInt32')
         
         if p2c:
             print('\nImage info for resLabim after converting to 32-bit',
@@ -438,9 +445,10 @@ def resample_labim_OLD(labim, f2sInds, srcIm, trgIm, interp,
     return resLabim, resPixarr, resF2Sinds
 
 def resample_labim(
-        labim, f2sInds, im, refIm, sitkTx=sitk.Transform(), 
-        interp='NearestNeighbor', applyPreResBlur=False, preResVariance=(1,1,1), 
-        applyPostResBlur=True, postResVariance=(1,1,1), p2c=False
+        labim, f2sInds, im, refIm, sitkTx=sitk.Transform(3, sitk.sitkIdentity),
+        #sitkTx=sitk.Transform(), 
+        interp='NearestNeighbor', applyPreResBlur=False, preResVar=(1,1,1), 
+        applyPostResBlur=True, postResVar=(1,1,1), p2c=False
         ):
     """
     Resample a 3D label image.
@@ -456,29 +464,36 @@ def resample_labim(
         The 3D image whose gridspace matches the gridspace of labim. 
     refIm : SimpleITK image
         The 3D image whose gridspace the labim will be resampled to.
-    sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
-        The SimpleITK Transform to be used. The identity transform is default.
-    interp : str, optional ('NearestNeighbor' by default)
+    sitkTx : SimpleITK Transform, optional
+        The SimpleITK Transform to be used. The default value is 
+        sitk.Transform(3, sitk.sitkIdentity) (identity transform).
+    interp : str, optional
         The type of interpolation to be used.  Acceptable inputs are:
         - 'NearestNeighbor'
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
         using a linear interpolator + binary thresholding)
-    applyPreResBlur : bool, optional (False by default)
+        The default value is 'NearestNeighbor'.
+    applyPreResBlur : bool, optional
         If True, the pre-resampled labim will be Gaussian blurred. This 
         argument is only applicable if interp is 'NearestNeighbor' or
         'LabelGaussian', since labim will be blurred prior to resampling if
-        interp is 'BlurThenLinear' regardless of the argument's value.
-    preResVariance : tuple of floats, optional ((1,1,1) by default)
+        interp is 'BlurThenLinear' regardless of the argument's value. The
+        default value is False.
+    preResVar : tuple of floats, optional
         A tuple (for each dimension) of the variance to be applied if the 
-        labelmap image is to be Gaussian blurred prior to resampling.
-    applyPostResBlur : bool, optional (True by default)
+        labelmap image is to be Gaussian blurred prior to resampling. The
+        default value is (1,1,1).
+    applyPostResBlur : bool, optional
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    postResVariance : tuple of floats (optional; (1,1,1) by default)
+        The default value is True.
+    postResVar : tuple of floats, optional
         A tuple (for each dimension) of the variance to be applied if the 
-        labelmap image is to be Gaussian blurred prior after resampling.
-    p2c : bool, optional (False by default)
-        Denotes whether some results will be logged to the console.
+        labelmap image is to be Gaussian blurred prior after resampling. The
+        default value is (1,1,1).
+    p2c : bool, optional
+        Denotes whether some results will be logged to the console. The 
+        default value is False.
     
     Returns
     -------
@@ -532,6 +547,11 @@ def resample_labim(
         print('\n\n', '-'*120)
         print('Running of resample_labim():')
         print('\n\n', '-'*120)
+        print('The chosen resampler (transform) sitkTx:')
+        print(f'  sitkTx Name is {sitkTx.GetName()}')
+        print(f'  sitkTx Parameters is {sitkTx.GetParameters()}')
+        print(f'  sitkTx Fixed Parameters is {sitkTx.GetFixedParameters()}')
+        print(f'The chosen interpolation is {interp}.\n')
         
     if not interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
         msg = f"The chosen interpolation, {interp}, is not one of the "\
@@ -548,7 +568,7 @@ def resample_labim(
         
         if applyPreResBlur:
             # Gaussian blur labim:
-            blurLabIm = gaussian_blur_im(im=labim, variance=postResVariance)
+            blurLabIm = gaussian_blur_im(im=labim, var=postResVar)
             
             # Resample blurLabIm using the chosen interpolator:
             resLabim = resample_im(
@@ -575,9 +595,7 @@ def resample_labim(
         
         if applyPostResBlur:
             # Gaussian blur resLabim:
-            resLabim = gaussian_blur_im(
-                im=resLabim, variance=postResVariance
-                )
+            resLabim = gaussian_blur_im(im=resLabim, var=postResVar)
             
             if p2c:
                 print('Image info for blurred resampled image:')
@@ -632,7 +650,7 @@ def resample_labim(
 
     if interp == 'BlurThenLinear':
         # Gaussian blur labim:
-        blurLabIm = gaussian_blur_im(im=labim, variance=preResVariance)
+        blurLabIm = gaussian_blur_im(im=labim, var=preResVar)
         
         if p2c:
             print('\nImage info for blurLabIm:')
@@ -650,6 +668,18 @@ def resample_labim(
             im=blurLabIm, refIm=refIm, sitkTx=sitkTx, interp='Linear'
             )
         
+        """ 
+        20/08/21: All zero value in resLabim, so instead try:
+        """
+        # TODO resolve this
+        #print('\n\n*** Running sitk.Resample() rather than resample_im()..\n')
+        #
+        #resLabim = sitk.Resample(blurLabIm, refIm, sitkTx, 'Linear')
+        """
+        It was because sitkPixType was set to sitkUint32 instead of 
+        sitkFloat32 in resample_im().
+        """
+        
         if p2c:
             print('\nImage info after resampling using linear interpolator:')
         pixID, pixIDTypeAsStr, uniqueVals, resF2Sinds = get_im_info(
@@ -660,14 +690,10 @@ def resample_labim(
         
         if applyPostResBlur:
             # Gaussian blur resLabim:
-            resLabim = gaussian_blur_im(
-                im=resLabim, variance=postResVariance
-                )
+            resLabim = gaussian_blur_im(im=resLabim, var=postResVar)
             
         # Find suitable threshold value:
-        thresh = find_thresh(
-            binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c
-            )
+        thresh = find_thresh(binaryIm=labim, nonBinaryIm=resLabim, p2c=p2c)
         
         # Binary threshold resLabim:
         resLabim = binarise_im(im=resLabim, thresh=thresh) 
@@ -686,7 +712,7 @@ def resample_labim(
             print(f'\nresLabim has PixelID = {pixID} ({pixIDTypeAsStr})).')
         
         # Convert resLabim from float to 32-bit unsigned integer:
-        resLabim = change_im_dtype(im=resLabim, newPixelType='UInt32')
+        resLabim = change_im_dtype(im=resLabim, newPixType='UInt32')
         
         if p2c:
             print('\nImage info after converting to 32-bit unsigned int:')
@@ -727,8 +753,8 @@ def resample_labim(
 
 def resample_labimByRoi(
         labimByRoi, f2sIndsByRoi, im, refIm, sitkTx=sitk.Transform(), 
-        interp='NearestNeighbor', applyPreResBlur=False, preResVariance=(1,1,1), 
-        applyPostResBlur=True, postResVariance=(1,1,1), p2c=False
+        interp='NearestNeighbor', applyPreResBlur=False, preResVar=(1,1,1), 
+        applyPostResBlur=True, postResVar=(1,1,1), p2c=False
         ):
     """
     Resample a list 3D SimpleITK images representing binary label images. 
@@ -757,13 +783,13 @@ def resample_labimByRoi(
         argument is only applicable if interp is 'NearestNeighbor' or
         'LabelGaussian', since labim will be blurred prior to resampling if
         interp is 'BlurThenLinear' regardless of the argument's value.
-    preResVariance : tuple of floats, optional ((1,1,1) by default)
+    preResVar : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
         resampling.
     applyPostResBlur : bool, optional (True by default)
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    postResVariance : tuple of floats, optional ((1,1,1) by default)
+    postResVar : tuple of floats, optional ((1,1,1) by default)
         A tuple (for each dimension) of the variance to be applied if the 
         resampled labelmap image(s) is/are to be Gaussian blurred after  
         resampling.
@@ -774,7 +800,7 @@ def resample_labimByRoi(
     -------
     resLabimByRoi : list of SimpleITK Images
         The list (for each ROI) of resampled 3D label image.
-    resPixarrByRoi : list of Numpy arrays
+    resPixarrByRoi : list of Numpy Arrays
         The list (for each ROI) of the pixel array representations of
         resLabimByRoi.
     resF2SindsByRoi : list of a list of ints
@@ -803,9 +829,9 @@ def resample_labimByRoi(
             = resample_labim(
                 labim=labimByRoi[r], f2sInds=f2sIndsByRoi[r], im=im, 
                 refIm=refIm, sitkTx=sitkTx, interp=interp, 
-                applyPreResBlur=applyPreResBlur, preResVariance=preResVariance, 
-                applyPostResBlur=applyPostResBlur, 
-                postResVariance=postResVariance, p2c=p2c
+                applyPreResBlur=applyPreResBlur, preResVar=preResVar, 
+                applyPostResBlur=applyPostResBlur, postResVar=postResVar, 
+                p2c=p2c
                 )
         
         resLabimByRoi.append(resLabim)

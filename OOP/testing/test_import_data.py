@@ -62,15 +62,29 @@ class DataImporterTester:
         if params == None:
             # Run DataDownloaderTester to get the config parameters and 
             # download the data from XNAT:
-            params = DataDownloaderTester(cfgDir=cfgDir, runID=runID)
+            testResult = DataDownloaderTester(cfgDir=cfgDir, runID=runID)
+            params = testResult.params
+            
+            # Or run the internal operations within DataDownloaderTester:
+            """
+            # Run ConfigFetcherTester:
+            cfgObj = ConfigFetcherTester(cfgDir=cfgDir, runID=runID)
+            
+            # Instantiate a DataDownloader object:
+            params = DataDownloader(cfgDict=cfgObj.cfgDict)
+            """
         
-        print('Importing source dataset...\n')
+        # Initialise a DataImporter objects for source and target:
         #self.DataImporter(params=params, srcORtrg='src')
         srcDataset = DataImporter(params=params, srcORtrg='src')
-        
-        print('Importing target dataset...\n')
         #self.DataImporter(params=params, srcORtrg='trg')
         trgDataset = DataImporter(params=params, srcORtrg='trg')
+        
+        # Import source and target data:
+        print('Importing source dataset...\n')
+        srcDataset.import_data(params)
+        print('Importing target dataset...\n')
+        trgDataset.import_data(params)
         
         self.params = params
         self.srcDataset = srcDataset

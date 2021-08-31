@@ -303,10 +303,16 @@ def which_use_case(config):
     """
     Determine which of 5 Use Cases applies.
     
+    Various data is imported based on file paths and directories stored in the
+    config dictionary.
+    
     Parameters
     ----------
     config : dict
         Dictionary of parameters for run.
+    params : DataDownloader Object, optional
+        Contains parameters (cfgDict), file paths (pathsDict), timestamps
+        (timings) and timing messages (timingMsgs). The default value is None.
     
     Returns
     -------
@@ -389,7 +395,7 @@ def which_use_case(config):
     if sameFOR:
         if sameDirs:
             """ 
-            Comment 11/02:
+            Comment 11/02 #1:
                 
             It's not entirely necessary to resample the Source image to the 
             Target domain just because their origins differ. It depends on
@@ -424,7 +430,7 @@ def which_use_case(config):
                         useCaseThatApplies = '2b' # Relationship-preserving copy
             else:
                 """ 
-                Comment 11/02:
+                Comment 11/02 #2:
                     
                 Arguably resampling is only required if the spacings along any
                 direction are different when dealing with segmentations.  When

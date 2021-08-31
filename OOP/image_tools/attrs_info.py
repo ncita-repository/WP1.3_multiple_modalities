@@ -49,7 +49,9 @@ def get_im_attrs(dicomDir, package='pydicom', p2c=False):
         e.g. [Columns, Rows, NumOfSlices]
     spacings : list of float
         The pixel spacings along x, y and z (= SliceThickness appended to 
-        PixelSpacing), e.g. [di, dj, dk]              
+        PixelSpacing), e.g. [di, dj, dk]
+    slcThick : float
+        The slice thickness.
     positions : list of list of float
         The ImagePositionPatient of all slices in the DICOM series, 
         e.g. [[x0_0, y0_0, z0_0], [x1_0, y1_0, z1_0], ...]
@@ -213,7 +215,7 @@ def get_im_attrs(dicomDir, package='pydicom', p2c=False):
         
     if p2c:
         print(f'\nsize = {size} \nspacings = {spacings}',
-              f'\nslcThick = {slcThick} \npositions = {positions}',
+              f'\nslcThick = {slcThick}', # \npositions = {positions}',
               f'\ndirections = {directions}')
     
     return size, spacings, slcThick, positions, directions, warnings
@@ -271,11 +273,11 @@ def get_im_info(image, p2c=False):
     if p2c:
         #print('\nImage info:')
         #print(f'type(image) = {type(image)}')
-        print(f'    Image PixID = {pixID}')
-        print(f'    Image PixIDTypeAsString = {pixIDtypeAsStr}')
+        print(f'    Image pixID = {pixID}')
+        print(f'    Image pixIDTypeAsString = {pixIDtypeAsStr}')
         print(f'    Image size = {image.GetSize()}')
-        print(f'    Image Max = {im_max(image)}')
-        print(f'    Image Min = {im_min(image)}')
+        print(f'    Image max = {im_max(image)}')
+        print(f'    Image min = {im_min(image)}')
         print('\n    Conversion of image to pixarr:')
         print(f'    pixarr shape = {pixarr.shape}')
         if isinstance(uniqueVals, np.ndarray):

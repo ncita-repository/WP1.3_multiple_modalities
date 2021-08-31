@@ -9,8 +9,8 @@ Created on Tue Jul  6 14:20:01 2021
 
 import numpy as np
 import SimpleITK as sitk
-#from conversion_tools.pixarrs_ims import im_to_pixarr
-#from image_tools.attrs_info import get_im_info
+from conversion_tools.pixarrs_ims import im_to_pixarr
+from image_tools.attrs_info import get_im_info
 
 def initialise_im(refIm, dtype='sameAsRefIm'):
     """
@@ -85,13 +85,13 @@ def initialise_im(refIm, dtype='sameAsRefIm'):
     
     return newIm
 
-def copy_im(image):
+def copy_im(im):
     """
     Copy a SimpleITK Image.  
     
     Parameters
     ----------
-    image : SimpleITK Image
+    im : SimpleITK Image
         The image to be copied.
         
     Returns
@@ -104,69 +104,69 @@ def copy_im(image):
     https://simpleitk.org/SimpleITK-Notebooks/01_Image_Basics.html
     """
     
-    imCopy = sitk.Image(image.GetSize(), image.GetPixelID())
+    imCopy = sitk.Image(im.GetSize(), im.GetPixelID())
     
-    #imCopy.SetOrigin(image.GetOrigin())
-    #imCopy.SetDirection(image.GetDirection())
-    #imCopy.SetSpacing(image.GetSpacing())
+    #imCopy.SetOrigin(im.GetOrigin())
+    #imCopy.SetDirection(im.GetDirection())
+    #imCopy.SetSpacing(im.GetSpacing())
     
-    imCopy = sitk.Paste(image, imCopy)
+    imCopy = sitk.Paste(im, imCopy)
     
     return imCopy
 
-def im_max(image):
+def im_max(im):
     """
     Find maximum of an SimpleITK Image.  
     
     Parameters
     ----------  
-    image : SimpleITK Image
+    im : SimpleITK Image
         
     Returns
     -------
-    Maximum : float or int
-        Maximum value of image.
+    maximum : float or int
+        Maximum value of im.
     """
     
     imFilt = sitk.MinimumMaximumImageFilter()
-    imFilt.Execute(image)
+    imFilt.Execute(im)
     
     return imFilt.GetMaximum()
 
-def im_min(image):
+def im_min(im):
     """
     Find minimum of an SimpleITK Image.  
     
     Parameters
     ----------  
-    image : SimpleITK Image
+    im : SimpleITK Image
     
     Returns
     -------
-    Minimum : float or int
-        Maximum value of image.
+    minimum : float or int
+        Maximum value of im.
     """
     
     imFilt = sitk.MinimumMaximumImageFilter()
-    imFilt.Execute(image)
+    imFilt.Execute(im)
     
     return imFilt.GetMinimum()
 
-def im_max_by_frame(image):
+def im_max_by_frame(im):
     """
-    Return a list of the maximum value of each frame in a SimpleITK image .  
+    Return a list of the maximum value of each frame in a SimpleITK Image .  
     
     Parameters
     ----------
-    image : SimpleITK Image
+    im : SimpleITK Image
         
     Returns
     -------
     maxima : list of float or int
-        A list of the maximum value of each frame in image.
+        A list of the maximum value of each frame in im.
     """
     
-    F = image.GetSize()[2]
+    F = im.GetSize()[2]
     
     maxima = []
     
@@ -175,47 +175,47 @@ def im_max_by_frame(image):
     
     return maxima
 
-def im_or(image0, image1):
+def im_or(im0, im1):
     """
     Perform pixel-wise OR operation on two SimpleITK images.  
     
     Parameters
     ----------
-    image0 : SimpleITK Image
-    image1 : SimpleITK Image
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
         
     Returns
     -------
-    imageOr : SimpleITK Image
-        The pixel-wise OR of image0 and image1.
+    imOr : SimpleITK Image
+        The pixel-wise OR of im0 and im1.
     """
             
     imFilt = sitk.OrImageFilter()
-    imageOr = imFilt.Execute(image0, image1)
+    imOr = imFilt.Execute(im0, im1)
     
-    return imageOr
+    return imOr
 
-def im_add(image0, image1):
+def im_add(im0, im1):
     """
     Perform pixel-wise addition of two SimpleITK images.  
     
     Parameters
     ----------
-    image0 : SimpleITK Image
-    image1 : SimpleITK Image
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
     
     Returns
     -------
-    imageSum : SimpleITK Image
+    imSum : SimpleITK Image
         The pixel-wise sum of image0 and image1.
     """
     
     imFilt = sitk.AddImageFilter()
-    imageSum = imFilt.Execute(image0, image1)
+    imSum = imFilt.Execute(im0, im1)
     
-    return imageSum
+    return imSum
 
-def pixarr_sum_of_ims(images):
+def pixarr_sum_of_ims(ims):
     """
     Return Numpy pixel array representation of the sum of a list of images.
     
@@ -232,55 +232,55 @@ def pixarr_sum_of_ims(images):
     """
     
     # Initialise sumIm:
-    sumIm = initialise_im(images[0])
+    sumIm = initialise_im(ims[0])
     
-    for i in range(1, len(images)):
-        sumIm = im_add(sumIm, images[i])
+    for i in range(1, len(ims)):
+        sumIm = im_add(sumIm, ims[i])
 
     # Convert to numpy arrays:
     sumPixarr = sitk.GetArrayFromImage(sumIm)
     
     return sumPixarr
 
-def get_pixel_area_ratio(image0, image1):
+def get_pixel_area_ratio(im0, im1):
     """
     Get the pixel area ratio of SimpleITK images.
     
     Parameters
     ----------
-    image0 : SimpleITK Image
-    image1 : SimpleITK Image
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
     
     Returns
     -------
     ratio : float
-        The ratio of the pixel area of image1 to image0.
+        The ratio of the pixel area of im1 to im0.
     """
     
-    area0 = np.prod(np.array(image0.GetSpacing())[0:2])
+    area0 = np.prod(np.array(im0.GetSpacing())[0:2])
     
-    area1 = np.prod(np.array(image1.GetSpacing())[0:2])
+    area1 = np.prod(np.array(im1.GetSpacing())[0:2])
     
     return area1/area0
 
-def get_voxel_volume_ratio(image0, image1):
+def get_voxel_volume_ratio(im0, im1):
     """
     Get the voxel volume ratio of SimpleITK images.
     
     Parameters
     ----------
-    image0 : SimpleITK Image
-    image1 : SimpleITK Image
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
     
     Returns
     -------
     ratio : float
-        The ratio of the voxel volume of image1 to image0.
+        The ratio of the voxel volume of im1 to im0.
     """
     
-    vol0 = np.prod(np.array(image0.GetSpacing()))
+    vol0 = np.prod(np.array(im0.GetSpacing()))
     
-    vol1 = np.prod(np.array(image1.GetSpacing()))
+    vol1 = np.prod(np.array(im1.GetSpacing()))
     
     return vol1/vol0
 
@@ -293,7 +293,7 @@ def change_im_dtype(im, newPixType):
     im : SimpleITK Image
         The 3D image whose pixel type is to be converted.
     newPixType : str
-        The pixel type to convert image to.  Acceptable inputs are a subset of
+        The pixel type to convert im to.  Acceptable inputs are a subset of
         the SimpleITK pixel types 
         (https://simpleitk.org/SimpleITK-Notebooks/01_Image_Basics.html):
          
@@ -375,7 +375,7 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
         a similar distribution of zeros and ones as in binaryIm.
     """
     
-    from conversion_tools.pixarrs_ims import im_to_pixarr
+    #from conversion_tools.pixarrs_ims import im_to_pixarr
     
     if p2c:
         print('\n\n', '-'*120)
@@ -384,13 +384,17 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
     
     ratio = get_voxel_volume_ratio(binaryIm, nonBinaryIm)
     
-    binPixArr, binf2sInds = im_to_pixarr(binaryIm)
+    binPixarr, binf2sInds = im_to_pixarr(binaryIm)
     
-    nonBinPixArr, nonBinf2sInds = im_to_pixarr(nonBinaryIm)
+    nonBinPixarr, nonBinf2sInds = im_to_pixarr(nonBinaryIm)
     
-    numOfOnes_B = np.count_nonzero(binPixArr)
+    numOfOnes_B = np.count_nonzero(binPixarr)
+    
+    # The expected number of 1s to retain in nonBinPixarr (i.e. expected
+    # number of 1st in the binarised non-binary pixel array):
+    expectedNumOfOnes_BNB = int(numOfOnes_B/ratio)
             
-    vals_NB = nonBinPixArr.flatten()
+    vals_NB = nonBinPixarr.flatten()
     minVal = min(vals_NB)
     maxVal = max(vals_NB)
     
@@ -411,7 +415,8 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
     # and the number of ones in the binary image scaled by the ratio of the
     # voxel volumes:
     #absDiffs = np.abs(cumSumfreq - numOfOnes_B)
-    absDiffs = np.abs(cumSumfreq - numOfOnes_B/ratio)
+    #absDiffs = np.abs(cumSumfreq - numOfOnes_B/ratio) # 20/08/21
+    absDiffs = np.abs(cumSumfreq - expectedNumOfOnes_BNB) # 20/08/21
     
     revInd = np.where(absDiffs == np.min(absDiffs))[0][0]
     
@@ -423,14 +428,14 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
         print(f'\nbinaryIm.GetSpacing() = {binaryIm.GetSpacing()}')
         print(f'\nnonBinaryIm.GetSpacing() = {nonBinaryIm.GetSpacing()}')
         print(f'\nVoxel volume ratio = {ratio}')
-        #print(f'\nTarget number of ones = {numOfOnes_B}')
-        print(f'\nTarget number of ones = {numOfOnes_B/ratio}')
+        print(f'\nNumber of 1s in binaryIm = {numOfOnes_B}')
+        print(f'\nTarget number of ones = {expectedNumOfOnes_BNB}')
         print(f'\ncumSumfreq[0:revInd+5] = {cumSumfreq[:revInd+5]}')
         print(f'\nabsDiffs[0:revInd+5] = {absDiffs[:revInd+5]}')
         print(f'\nind = {ind}')
         print(f'bins[{ind}] = {bins[ind]}')
     
-    binPixarr = (nonBinPixArr > thresh).astype(np.int_)
+    binPixarr = (nonBinPixarr > thresh).astype(np.int_)
     
     numOfOnes_BNB = np.count_nonzero(binPixarr)
     
@@ -438,7 +443,8 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
         print(f'There are {numOfOnes_B} ones in the binary pixel array. ',
               f'\nThresholding the non-binary pixel array at {round(thresh,3)}',
               f'would result in {numOfOnes_BNB} ones (difference of',
-              f'{abs(numOfOnes_BNB - numOfOnes_B)}).')
+              #f'{abs(numOfOnes_BNB - numOfOnes_B)}).')
+              f'{abs(numOfOnes_BNB - expectedNumOfOnes_BNB)}).')
         print('-'*120)
     
     return thresh
@@ -488,15 +494,15 @@ def binarise_im(im, thresh=0.5):
     
     return imFilt.Execute(im)
 
-def gaussian_blur_im(image, variance=(1,1,1), p2c=False):
+def gaussian_blur_im(im, var=(1,1,1), p2c=False):
     """
     Gaussian blur a 3D SimpleITK image.
     
     Parameters
     ---------- 
-    image : SimpleITK Image 
+    im : SimpleITK Image 
         The 3D image to be blurred.
-    variance : tuple of floats, optional ((1,1,1) by default)
+    var : tuple of floats, optional ((1,1,1) by default)
         The variance along all dimensions.
     p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
@@ -522,12 +528,12 @@ def gaussian_blur_im(image, variance=(1,1,1), p2c=False):
     converted to float if applicable.
     """
     
-    from image_tools.attrs_info import get_im_info
+    #from image_tools.attrs_info import get_im_info
     
     if p2c:
         print('\n   Image info for im prior to Gaussian blurring:')
             
-    pixID, pixIdtypeAsStr, uniqueValsPostTx, f2sInds = get_im_info(image, p2c)
+    pixID, pixIdtypeAsStr, uniqueValsPostTx, f2sInds = get_im_info(im, p2c)
     
     # Ensure im is a 32-bit float (pixID = 8).
     if pixID != 8: 
@@ -536,19 +542,19 @@ def gaussian_blur_im(image, variance=(1,1,1), p2c=False):
                   'It will be converted to Float32.')
         
         # Convert image to Float32:
-        image = change_im_dtype(Image=image, newPixType='Float32')
+        im = change_im_dtype(im=im, newPixType='Float32')
         
         if p2c:
             print('\n   Image info for im after converting to Float32:')
             
-        pixID, pixIdtypeAsStr, uniqueVals, f2sInds = get_im_info(image, p2c)
+        pixID, pixIdtypeAsStr, uniqueVals, f2sInds = get_im_info(im, p2c)
     
     imFilt = sitk.DiscreteGaussianImageFilter()
     #imFilt.SetMaximumKernelWidth(sigma)
     #print(f'   imFilt.GetMaximumKernelWidth() = {imFilt.GetMaximumKernelWidth()}')
-    imFilt.SetVariance(variance)
+    imFilt.SetVariance(var)
         
-    blurredIm = imFilt.Execute(image)
+    blurredIm = imFilt.Execute(im)
     
     if p2c:
         print('\nApplying Gaussian blur...')
@@ -556,22 +562,22 @@ def gaussian_blur_im(image, variance=(1,1,1), p2c=False):
         print(f'   imFilt.GetMaximumKernelWidth() = {imFilt.GetMaximumKernelWidth()}')
         print(f'   imFilt.GetUseImageSpacing() = {imFilt.GetUseImageSpacing()}')
         print(f'   imFilt.GetVariance() = {imFilt.GetVariance()}')
-        print(f'\n   image.GetPixelID() = {image.GetPixelID()}')
-        print(f'   image.GetPixelIDValue() = {image.GetPixelIDValue()}')
-        print(f'   image.GetPixelIDTypeAsString() = {image.GetPixelIDTypeAsString()}')
+        print(f'\n   im.GetPixelID() = {im.GetPixelID()}')
+        print(f'   im.GetPixelIDValue() = {im.GetPixelIDValue()}')
+        print(f'   im.GetPixelIDTypeAsString() = {im.GetPixelIDTypeAsString()}')
         print(f'   blurredIm.GetPixelID() = {blurredIm.GetPixelID()}')
         print(f'   blurredIm.GetPixelIDValue() = {blurredIm.GetPixelIDValue()}')
         print(f'   blurredIm.GetPixelIDTypeAsString() = {blurredIm.GetPixelIDTypeAsString()}')
     
     return blurredIm
 
-def recursive_gaussian_blur_im(image, sigma, direction, p2c=False):
+def recursive_gaussian_blur_im(im, sigma, direction, p2c=False):
     """
     Apply a recursive Gaussian blur to a 3D SimpleITK Image.
     
     Parameters
     ---------- 
-    image : SimpleITK Image 
+    im : SimpleITK Image 
         The 3D image to be blurred.
     sigma : int
         The kernel width.
@@ -595,12 +601,12 @@ def recursive_gaussian_blur_im(image, sigma, direction, p2c=False):
     converted to float if applicable.
     """
     
-    from image_tools.attrs_info import get_im_info
+    #from image_tools.attrs_info import get_im_info
     
     if p2c:
         print('\n   Image info for im prior to Gaussian blurring:')
     
-    pixID, pixIdtypeAsStr, uniqueValsPostTx, f2sInds = get_im_info(image, p2c)
+    pixID, pixIdtypeAsStr, uniqueValsPostTx, f2sInds = get_im_info(im, p2c)
     
     # Ensure im is a 32-bit float (pixID = 8).
     if pixID != 8: 
@@ -609,18 +615,18 @@ def recursive_gaussian_blur_im(image, sigma, direction, p2c=False):
                   'It will be converted to Float32.')
         
         # Convert im to Float32:
-        image = change_im_dtype(image=image, newPixType='Float32')
+        im = change_im_dtype(im=im, newPixType='Float32')
         
         if p2c:
             print('\n   Image info for image after converting to Float32:')
             
-        pixID, pixIdtypeAsStr, uniqueVals, f2sInds = get_im_info(image, p2c)
+        pixID, pixIdtypeAsStr, uniqueVals, f2sInds = get_im_info(im, p2c)
         
     imFilt = sitk.RecursiveGaussianImageFilter()
     imFilt.SetSigma(sigma)
     imFilt.SetDirection(direction)
     
-    blurredIm = imFilt.Execute(image)
+    blurredIm = imFilt.Execute(im)
     
     if p2c:
         print('\nApplying Gaussian blur...')
@@ -628,9 +634,9 @@ def recursive_gaussian_blur_im(image, sigma, direction, p2c=False):
         print(f'   imFilt.GetNormalizeAcrossScale() = {imFilt.GetNormalizeAcrossScale()}')
         print(f'   imFilt.GetOrder() = {imFilt.GetOrder()}')
         print(f'   imFilt.GetSigma() = {imFilt.GetSigma()}')
-        print(f'\n   image.GetPixelID() = {image.GetPixelID()}')
-        print(f'   image.GetPixelIDValue() = {image.GetPixelIDValue()}')
-        print(f'   image.GetPixelIDTypeAsString() = {image.GetPixelIDTypeAsString()}')
+        print(f'\n   im.GetPixelID() = {im.GetPixelID()}')
+        print(f'   im.GetPixelIDValue() = {im.GetPixelIDValue()}')
+        print(f'   im.GetPixelIDTypeAsString() = {im.GetPixelIDTypeAsString()}')
         print(f'   blurredIm.GetPixelID() = {blurredIm.GetPixelID()}')
         print(f'   blurredIm.GetPixelIDValue() = {blurredIm.GetPixelIDValue()}')
         print(f'   blurredIm.GetPixelIDTypeAsString() = {blurredIm.GetPixelIDTypeAsString()}')

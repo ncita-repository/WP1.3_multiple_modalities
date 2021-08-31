@@ -41,12 +41,15 @@ class DataDownloaderTester:
     """
     
     def __init__(self, cfgDir, runID):
-        # Run ConfigFetcherTester to get the config parameters:
+        # Run ConfigFetcherTester:
         cfgObj = ConfigFetcherTester(cfgDir=cfgDir, runID=runID)
         
-        print('Downloading data from XNAT...\n')
-        
+        # Instantiate a DataDownloader object:
         params = DataDownloader(cfgDict=cfgObj.cfgDict)
+        
+        # Download data and create pathsDict:
+        print('Downloading data from XNAT...\n')
+        params.download_and_get_pathsDict()
         
         #print('\n\n\nFetching parameters and data using pre-existing XNAT session...\n')
         #params = Fetcher(cfgDir, params.xnatSession)
@@ -54,6 +57,7 @@ class DataDownloaderTester:
         self.cfgDict = params.cfgDict
         self.pathsDict = params.pathsDict
         self.xnatSession = params.xnatSession
+        self.params = params
         
     def test_fetch_params_and_data_210812(runID):
         """

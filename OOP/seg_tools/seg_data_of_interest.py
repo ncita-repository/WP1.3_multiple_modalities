@@ -5,8 +5,9 @@ Created on Tue Jul  6 16:50:51 2021
 @author: ctorti
 """
 
-def get_seg_data_of_interest(seg, allF2SindsBySeg, segNums, segLabs, 
-                             segLab, slcNum, p2c=False):
+def get_seg_data_of_interest(
+        seg, allF2SindsBySeg, segNums, segLabs, segLab, slcNum, p2c=False
+        ):
     # TODO tidy docstrings 16/07
     """   
     Get data of interest from a SEG.

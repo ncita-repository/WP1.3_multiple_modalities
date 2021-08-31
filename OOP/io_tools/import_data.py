@@ -5,12 +5,6 @@ Created on Tue Jul 13 17:47:21 2021
 @author: ctorti
 """
 
-"""
-21/07:
-    I'm confused by the incomplete code here to import ROI Collections 
-    and import_roicol in other tab. Seems I've changed my mind and there 
-    seems to be some redundancy.
-"""
 
 from importlib import reload
 
@@ -20,6 +14,10 @@ from importlib import reload
 #import io_tools.fetch_params_and_data
 #reload(io_tools.fetch_params_and_data)
 
+#import time
+
+import io_tools.download_data
+reload(io_tools.download_data)
 import io_tools.import_dro
 reload(io_tools.import_dro)
 import io_tools.import_roicol
@@ -37,6 +35,7 @@ reload(image_tools.imports)
 import conversion_tools.pixarrs_ims
 reload(conversion_tools.pixarrs_ims)
 
+
 #from xnat_tools.sessions import create_session
 #from io_tools.fetch_params_and_data import Params
 #from xnat_tools.dros import search_dro
@@ -45,14 +44,14 @@ reload(conversion_tools.pixarrs_ims)
 
 from pydicom import dcmread
 
-from io_tools.import_dro import DroImporter
+#from io_tools.import_dro import DroImporter
 #from io_tools.import_roicol import RoicollectionImporter
-from io_tools.inputs_checker import are_inputs_valid
+from io_tools.inputs_checker import are_inputs_valid, which_use_case
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
     )
 from seg_tools.metadata import (
-    get_divs, group_list_by_seg, get_p2sInds
+    get_DIVs, group_list_by_seg, get_p2sInds
     )
 from seg_tools.seg_data import (
     get_seg_data_of_interest, raise_error_if_no_seg_data_of_interest
@@ -60,6 +59,8 @@ from seg_tools.seg_data import (
 from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
 from dicom_tools.imports import import_dcms
 from image_tools.imports import import_im
+from image_tools.attrs_info import get_im_attrs
+from general_tools.geometry import get_im_extent
 
 class DataImporter:
     # TODO modify the docstrings
@@ -70,7 +71,8 @@ class DataImporter:
     Parameters
     ----------
     params : DataDownloader Object
-        Contains parameters and file paths in cfgDict and pathsDict.
+        Contains parameters (cfgDict), file paths (pathsDict), timestamps
+        (timings) and timing messages (timingMsgs).
     srcORtrg : str
         'src' or 'trg' for source or target dataset to be imported.
     
@@ -114,6 +116,24 @@ class DataImporter:
     """
     
     def __init__(self, params, srcORtrg):
+        
+        cfgDict = params.cfgDict
+        self.cfgDict = cfgDict
+        self.srcORtrg = srcORtrg
+        
+        if srcORtrg == 'src':
+            self.dicomDir = cfgDict['srcDicomDir']
+            self.roicolFpath = cfgDict['srcRoicolFpath']
+            self.slcNum = cfgDict['srcSlcNum']
+        else:
+            self.dicomDir = cfgDict['trgDicomDir']
+            self.roicolFpath = cfgDict['trgRoicolFpath']
+            self.slcNum = cfgDict['trgSlcNum']
+        
+        #self.timings = params.timings
+        #self.timingMsgs = params.timingMsgs
+    
+    def __init__210817(self, params, srcORtrg):
         
         cfgDict = params.cfgDict
         
@@ -279,14 +299,26 @@ class DataImporter:
         # Import the Source and Target DICOM series as a SimpleITK Images:
         self.get_images(self, params)
     
-    def get_dicom_uids(self, fdir):
+    #def add_timestamp(self, timingMsg):
+    #    # TODO update docstrings
+    #    """
+    #    Add timestamp and timing message. Replace the keyword 'dTime' in
+    #    timingMsg with the actual dTime calculated below.
+    #    """
+    #    self.timings.append(time.time())
+    #    dTime = round(self.timings[-1] - self.timings[-2], 1)
+    #    timingMsg.replace('dTime', f'{dTime}')
+    #    self.timingMsgs.append(timingMsg)
+    #    print(f'*{timingMsg}')
+    
+    def get_dicom_uids(self):
         """
         Get StudyUID, SeriesUID, FrameOfReferenceUID and SOPInstanceUIDs for
         a DICOM series.
         
         Parameters
         ----------
-        fdir : str
+        self.dicomDir : str
             Directory containing a series of DICOM files.
         
         Returns
@@ -301,7 +333,7 @@ class DataImporter:
             List of DICOM SOP UIDs for each DICOM in the series.
         """
         self.studyuid, self.seriesuid, self.foruid, self.sopuids\
-            = get_dcm_uids(fdir)
+            = get_dcm_uids(self.dicomDir)
     
     def get_dicom_uids_210805(self, params):
         """
@@ -369,16 +401,17 @@ class DataImporter:
             self.trgFORUID = FORUID
             self.trgSOPUIDs = SOPUIDs
     
-    def import_roicol(self, fpath):
+    def import_roicol(self):
         """
         Imports an ROI Collection as a Pydicom Object.
         
-        If fpath = None (e.g. SEG data may not exist for Target, hence fpath
-        will be None), the roicol attribute will be also be None.
+        If self.roicolFpath = None (e.g. SEG data may not exist for Target, 
+        hence self.roicolFpath will be None), the roicol attribute will be also
+        be None.
         
         Parameters
         ----------
-        fpath : str or None
+        self.roicolFpath : str or None
             File path to DICOM-RTSTRUCT or DICOM-SEG file. None if a ROI
             collection doesn't exist.
         
@@ -386,8 +419,8 @@ class DataImporter:
         -------
         self.roicol : Pydicom Object or None
         """
-        if fpath != None:
-            self.roicol = dcmread(fpath)
+        if self.roicolFpath != None:
+            self.roicol = dcmread(self.roicolFpath)
         else:
             self.roicol = None
         
@@ -457,7 +490,7 @@ class DataImporter:
             else:
                 self.trgRoicol = None
     
-    def get_seg_metadata(self, cfgDict, srcORtrg):
+    def get_seg_metadata(self):
         """
         Get metadata for a SEG. 
         
@@ -466,9 +499,9 @@ class DataImporter:
         
         Parameters
         ----------
-        cfgDict : dict
+        self.cfgDict : dict
             Dictionary containing various parameters.
-        srcORtrg : str
+        self.srcORtrg : str
             'src' or 'trg' for Source or Target.
         
         Returns
@@ -490,7 +523,9 @@ class DataImporter:
             List for each ROI/segment of a list of frame-to-slice indices.  
         """
         
-        if srcORtrg == 'src':
+        cfgDict = self.cfgDict
+        
+        if self.srcORtrg == 'src':
             roiName = cfgDict['srcRoiName']
             #slcNum = cfgDict['srcSlcNum']
         else:
@@ -513,17 +548,19 @@ class DataImporter:
             print(type(self.roicol), '\n')
             
             # Get list of DimensionIndexValues:
-            self.divs = get_divs(self.roicol)
+            self.divs = get_DIVs(self.roicol)
             
             # Get list of PerFrameFunctionalGroupsSequence-to-slice indices
             # and the same grouped by segment:
             self.allF2Sinds = get_p2sInds(
                 seg=self.roicol, 
-                sopuids=self.sopuids)
+                sopuids=self.sopuids
+                )
 
             self.allF2SindsByRoi = group_list_by_seg(
                 listToGroup=self.allF2Sinds, 
-                divs=self.divs)
+                divs=self.divs
+                )
             
             # Get the segment number(s) that match the segment label of
             # interest (roiName):
@@ -869,12 +906,12 @@ class DataImporter:
             
             """ Repeat the above lines but for trg? """
     
-    def import_dicoms(self, dpath, p2c=False):
+    def import_dicoms(self):
         """
         Imports DICOM series as a list of Pydicom Objects.
         
         Parameters
-        dpath : str
+        self.dicomDir : str
             Path to a directory containing a DICOM series.
         p2c : bool (optional)
             If True some results will be printed to the console. False by 
@@ -887,7 +924,10 @@ class DataImporter:
             series.
         """
         
-        self.dicoms = import_dcms(dicomDir=dpath, p2c=p2c)
+        dicomDir = self.dicomDir
+        p2c = self.cfgDict['p2c']
+        
+        self.dicoms = import_dcms(dicomDir, p2c)
     
     def import_dicoms_210805(self, params):
         """
@@ -912,13 +952,65 @@ class DataImporter:
         self.srcDcms = import_dcms(dicomDir=srcDcmDir, p2c=p2c)
         self.trgDcms = import_dcms(dicomDir=trgDcmDir, p2c=p2c)
     
-    def import_image(self, dpath):
+    def get_image_attributes(self, params):
+        """
+        Get image size, voxel spacings, image positions (IPPs), and direction 
+        cosines.
+        
+        Parameters
+        ----------
+        dicomDir : str
+            Directory containing DICOMs.
+        package : str, optional
+            Package to use; acceptable inputs are:
+             - 'pydicom' (default)
+             - 'sitk' (SimpleITK)
+            Default value is 'pydicom'.
+        p2c : bool, optional
+            If True results will be printed to the console. Default value is
+            False.
+        
+        Returns
+        -------
+        self.imSize : list of int
+            The size/dimensions of the 3D image along x, y and z, 
+            e.g. [c, r, s] 
+            where c = number of columns
+                  r = number of rows
+                  s = number of slices
+        self.imSpacings : list of float
+            The pixel spacings along x, y and z (= SliceThickness appended to 
+            PixelSpacing), e.g. [di, dj, dk]
+        self.imSlcThick : float
+            The slice thickness.
+        self.imPositions : list of list of float
+            The ImagePositionPatient of all slices in the DICOM series, 
+            e.g. [[x0_0, y0_0, z0_0], [x1_0, y1_0, z1_0], ...]
+        self.imDirections : list of float
+            The direction cosine along x (rows), y (columns) and z (slices).
+        self.imWarnings : list of str
+            List of any warnings encountered during parsing of attributes.
+              
+        Note
+        ----
+        See image_tools.attrs_info.py.
+        """
+        
+        dicomDir = self.dicomDir
+        p2c = self.cfgDict['p2c']
+        
+        self.imSize, self.imSpacings, self.imSlcThick, self.imPositions,\
+            self.imDirections, self.imWarnings = get_im_attrs(
+                dicomDir, package='pydicom', p2c=p2c
+                )
+    
+    def import_image(self):
         """
         Imports a DICOM series as a SimpleITK Image.
         
         Parameters
         ----------
-        dpath : str
+        self.dicomDir : str
             Path to a directory containing a DICOM series.
             
         Returns
@@ -927,7 +1019,7 @@ class DataImporter:
             SimpleITK Image representation of the DICOM series.
         """
         
-        self.image = import_im(dicomDir=dpath)
+        self.image = import_im(self.dicomDir)
     
     def import_images_210805(self, params):
         """
@@ -949,3 +1041,104 @@ class DataImporter:
         self.srcIm = import_im(dicomDir=srcDcmDir)
         self.trgIm = import_im(dicomDir=trgDcmDir)
     
+    def import_data(self, params):
+        # TODO update docstrings
+        """
+        Import various data.
+        
+        Parameters
+        ----------
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        Returns
+        -------
+        
+        """
+        
+        if self.srcORtrg == 'src':
+            toImport = 'source'
+        else:
+            toImport = 'target'
+            
+        timingMsg = f"* Importing the {toImport} DICOM scans and ROI "\
+            + "Collection...\n"
+        params.add_timestamp(timingMsg)
+        
+        #cfgDict = self.cfgDict
+        p2c = self.cfgDict['p2c']
+        
+        # Import an appropriate DRO:
+        #self.droData = DroImporter(params)
+        #print(f'type(self.droData.dro) = {type(self.droData.dro)}\n')
+        
+        # TODO move DRO somewhere else since DroImporter requires params for
+        # Source and Target (06/08/21)
+        
+        # Get DICOM UIDs:
+        self.get_dicom_uids()
+        
+        # Import the ROI Collection:
+        self.import_roicol()
+        if p2c:
+            print(f'type(self.roicol) = {type(self.roicol)}\n')
+        
+        """ This is already done in get_seg_metadata (23/08/21): """
+        # Get ROI Names / segment labels (required elsewhere):
+        """ 
+        Note: roiNames may refer to either ROI Names (for RTS data) or SEG 
+        labels (for SEG data). It does not refer to the name of the ROI 
+        Collection itself.
+        """
+        #self.roiNames = get_roicol_labels(self.roicol)
+        
+        """ This is already done in get_seg_metadata (23/08/21): """
+        # The list of ROI/segment numbers for the ROI(s)/segment(s) of interest:
+        #self.roiNums = get_roicol_nums(self.roicol, self.roiName)
+        
+        # TODO Move this check somewhere else since it requires the Target 
+        # roiNames:
+        """
+        # Check if combination of input parameters are valid:
+        valid, errMsg = are_inputs_valid(params, trgRoiNames)
+        
+        if not valid:
+            # Raise exception:
+            raise Exception(errMsg)
+        """
+        
+        # Import a DICOM series as a list of Pydicom Objects:
+        self.import_dicoms()
+        
+        # Import a DICOM series as a SimpleITK Image:
+        self.import_image()
+        
+        # Get the image attributes:
+        self.get_image_attributes(params)
+        
+        # Get the image extent:
+        self.imExtent = get_im_extent(self.image)
+        
+        # Get the RTS/SEG data of interest:
+        self.get_seg_metadata()
+        
+        # Determine which use case applies and which to apply:
+        useCaseThatApplies, useCaseToApply\
+            = which_use_case(config=self.cfgDict)
+        
+        # Update cfgDict:
+        params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
+        params.cfgDict['useCaseToApply'] = useCaseToApply
+        
+        if 'p2c':
+            print(f"cfgDict['runID'] = {params.cfgDict['runID']}")
+            print(f"useCaseThatApplies = {params.cfgDict['useCaseThatApplies']}")
+            print(f"useCaseToApply = {params.cfgDict['useCaseToApply']}")
+        
+        #print(f'type(self.labimByRoi) = {type(self.labimByRoi)}')
+        #if not self.labimByRoi is None:
+        #    print(f'type(self.labimByRoi[0]) = {type(self.labimByRoi[0])}')
+        
+        timingMsg = f"Took [*] s to import the {toImport} DICOM scans and "\
+                + "ROI Collection.\n"
+        params.add_timestamp(timingMsg)

@@ -13,40 +13,41 @@ import numpy as np
 from general_tools.general import are_items_equal_to_within_eps
 
 
-def matrix_sum_of_squares(Matrix):
+def matrix_sum_of_squares(matrix):
     """
     Compute the root-sum-of-squares of a matrix.
     
     Parameters
     ----------
-    Matrix : Numpy array
+    matrix : Numpy array
         A Numpy array (including matrices).
         
     Returns
     -------
     RSS : float
-        The root-sum-of-squares of Matrix.
+        The root-sum-of-squares of matrix.
     """
     
-    RSS = np.sqrt(np.sum(np.square(Matrix)))
+    RSS = np.sqrt(np.sum(np.square(matrix)))
     
     return RSS
 
-def is_matrix_orthogonal(Matrix, LogToConsole=False):
+def is_matrix_orthogonal(matrix, p2c=False):
     """
     Determine if a matrix is orthogonal.
     
     Parameters
     ----------
-    Matrix : Numpy array of square shape
+    matrix : Numpy array of square shape
         A Numpy matrix of square shape.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
         
     Returns
     -------
-    IsOrthogonal : bool
-        True if Matrix is orthogonal, False otherwise.
+    isOrthogonal : bool
+        True if matrix is orthogonal, False otherwise.
     
     Note
     ----
@@ -55,7 +56,7 @@ def is_matrix_orthogonal(Matrix, LogToConsole=False):
         i.e. if np.dot(M, M.T) - np.dot(M.T, M) = 0
     """
     
-    M = Matrix
+    M = matrix
     
     if len(M.shape) != 2:
         msg = f'The matrix has {len(M.shape)} dimensions. It must have 2.'
@@ -71,34 +72,34 @@ def is_matrix_orthogonal(Matrix, LogToConsole=False):
     
     SSE = matrix_sum_of_squares(result)
     
-    IsOrthogonal = are_items_equal_to_within_eps(SSE, 0, epsilon=1e-06)
+    isOrthogonal = are_items_equal_to_within_eps(SSE, 0, epsilon=1e-06)
     
-    if LogToConsole:
+    if p2c:
         print(f'\nM*M.T - M.T*M = \n{result}')
         print(f'\nSSE = {SSE}')
         
-        if IsOrthogonal:
+        if isOrthogonal:
             print('\nM is orthogonal')
         else:
             print('\nM is not orthogonal')
         
-    return IsOrthogonal
+    return isOrthogonal
 
-def is_matrix_orthonormal(Matrix, LogToConsole=False):
+def is_matrix_orthonormal(matrix, p2c=False):
     """
     Determine if a matrix is orthonormal.
     
     Parameters
     ----------
-    Matrix : Numpy array of square shape
+    matrix : Numpy array of square shape
         A Numpy matrix of square shape.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether intermediate results will be logged to the console.
     
     Returns
     -------
-    IsOrthonormal : bool
-        True if Matrix is orthonormal, False otherwise.
+    isOrthonormal : bool
+        True if matrix is orthonormal, False otherwise.
         
     Note
     ----
@@ -113,7 +114,7 @@ def is_matrix_orthonormal(Matrix, LogToConsole=False):
         i.e. if M.T - np.linalg.inv(M) = 0
     """
     
-    M = Matrix
+    M = matrix
     
     #print(type(M))
     #print(M)
@@ -132,47 +133,50 @@ def is_matrix_orthonormal(Matrix, LogToConsole=False):
     SSE of M.T - M^-1 = 0?) would be suitable. Determinant test is chosen for
     no particular reason. """
     Det = np.linalg.det(M)
-    IsOrthonormal = are_items_equal_to_within_eps(abs(Det), 1, epsilon=1e-06)
+    print(f'Det = {Det}')
+    isOrthonormal = are_items_equal_to_within_eps(abs(Det), 1, epsilon=1e-06)
     
     MdotM_T =  np.dot(M, M.T) - np.identity(M.shape[0])
     SSEofMdotM_T = matrix_sum_of_squares(MdotM_T)
-    #IsOrthonormal = AreItemsEqualToWithinEpsilon(SSEofMdotM_T, 0, 
-    #                                             epsilon=1e-06)
+    #isOrthonormal = are_items_equal_to_within_eps(
+    #    SSEofMdotM_T, 0, epsilon=1e-06
+    #    )
     
     TequalsInv = M.T - np.linalg.inv(M)
     SSEofTequalsInv = matrix_sum_of_squares(TequalsInv)
-    #IsOrthonormal = AreItemsEqualToWithinEpsilon(SSEofTequalsInv, 0, 
-    #                                             epsilon=1e-06)
+    #isOrthonormal = are_items_equal_to_within_eps(
+    #    SSEofTequalsInv, 0, epsilon=1e-06
+    #    )
     
-    if LogToConsole:
+    if p2c:
         print(f'\nThe determinant of M = {Det}')
         print(f'\nM*M.T - I = \n{MdotM_T}')
         print(f'\nSSE = {SSEofMdotM_T}')
         print(f'\nM.T - M^-1 = \n{SSEofTequalsInv}')
         print(f'\nSSE = {SSEofTequalsInv}')
         
-        if IsOrthonormal:
+        if isOrthonormal:
             print('\nM is orthonormal')
         else:
             print('\nM is not orthonormal')
         
-    return IsOrthonormal
+    return isOrthonormal
 
-def get_tx_matrix_type(TxMatrix, LogToConsole=False):
+def get_tx_matrix_type(txMatrix, p2c=False):
     """
     Determine the Transformation Matrix Type from a list of transformation
     parameters.
     
     Parameters
     ----------
-    TxMatrix : list of strs
+    txMatrix : list of strs
         The registration transform parameters.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether intermediate results will be logged to the console.
     
     Returns
     -------
-    MatrixType : str
+    matrixType : str
         A string containing the matrix type.  Possible outputs are:
             - 'RIGID'
             - 'RIGID_SCALE'
@@ -183,13 +187,13 @@ def get_tx_matrix_type(TxMatrix, LogToConsole=False):
     1. The matrix M is the 3x3 matrix within the 4x4 matrix TxParams read from
     TransformParameters.0.txt.  M only includes the elements that describe 
     rotations, scaling and shearing, i.e not translations (hence only the
-    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in TxMatrix).
+    elements [0, 1, 2, 4, 5, 6, 8, 9, 10] in txMatrix).
     
-    TxMatrix has additional bottom row [0 0 0 1] (see 
+    txMatrix has additional bottom row [0 0 0 1] (see 
     http://dicom.nema.org/medical/dicom/current/output/chtml/part17/chapter_P.html).
     
-    Those additional elements are at indices 3, 7, 11, 15 in TxMatrix. Hence
-    TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
+    Those additional elements are at indices 3, 7, 11, 15 in txMatrix. Hence
+    TxParams = [txMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]].
     
     3. There are three types of Registration matrices as defined in C.X.1.1.2
     (page 27) in DICOM Standard Supplement 7.3:
@@ -222,25 +226,25 @@ def get_tx_matrix_type(TxMatrix, LogToConsole=False):
     #M = np.array([TxParams[i] for i in inds]) # 06/05/21
     #M = np.array([float(TxParams[i]) for i in inds]) # 06/05/21
     #M = np.array([float(TxParams[i]) for i in range(9)]) # 07/05/21
-    M = np.array([float(TxMatrix[i]) for i in inds]) # 04/06/21
+    M = np.array([float(txMatrix[i]) for i in inds]) # 04/06/21
     
     M = np.reshape(M, (3, 3))
     
     #print(f'M = {M}\n')
     
-    IsOrthonormal = is_matrix_orthonormal(M, LogToConsole)
+    isOrthonormal = is_matrix_orthonormal(M, p2c)
     
-    if IsOrthonormal:
-        MatrixType = 'RIGID'
+    if isOrthonormal:
+        matrixType = 'RIGID'
     else:
-        IsOrthogonal = is_matrix_orthogonal(M, LogToConsole)
+        isOrthogonal = is_matrix_orthogonal(M, p2c)
         
-        if IsOrthogonal:
-            MatrixType = 'RIGID_SCALE'
+        if isOrthogonal:
+            matrixType = 'RIGID_SCALE'
         else:
-            MatrixType = 'AFFINE'
+            matrixType = 'AFFINE'
     
-    if LogToConsole:
-        print('Matrix type is', MatrixType)
+    if p2c:
+        print('Matrix type is', matrixType)
     
-    return MatrixType
+    return matrixType

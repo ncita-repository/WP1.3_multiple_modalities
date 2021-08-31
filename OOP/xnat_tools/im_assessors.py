@@ -6,17 +6,26 @@ Created on Mon Jul  5 10:30:55 2021
 """
 
 from importlib import reload
+
 import io_tools.general
 reload(io_tools.general)
+
+import general_tools.general
+reload(general_tools.general)
 
 import os
 from pathlib import Path
 from xnat_tools.sessions import create_session
 from xnat_tools.format_pathsDict import create_pathsDict_for_im_asr
 from io_tools.general import get_user_input_as_int
+from general_tools.general import (
+    combine_dates_and_times, get_ind_of_newest_and_oldest_datetime
+    )
 
-
-def download_im_asr(config, srcORtrg, xnatSession=None, pathsDict=None):
+def download_im_asr(
+        config, srcORtrg, xnatSession=None, pathsDict=None#, 
+        #whichSrcRoicol='user'
+        ):
     """
     Download an image assessor (ROI Collection) of interest for a particular 
     scan from XNAT.
@@ -28,9 +37,16 @@ def download_im_asr(config, srcORtrg, xnatSession=None, pathsDict=None):
     srcORtrg : str
             'src' or 'trg' for Source or Target.
     xnatSession : requests.models.Response, optional
-        If provided a new session request will be avoided.
-    pathsDict : dict, optional (None by default)
-        Dictionary containing paths of data downloaded. 
+        If provided a new session request will be avoided. The default value
+        is None.
+    pathsDict : dict, optional
+        Dictionary containing paths of data downloaded. The default value is
+        None.
+    whichSrcRoicol : str, optional
+        Determine how to proceed if multiple image assessors (ROI Collections)
+        are found that meet the criteria.  Allowed values are 'oldest' -> the
+        oldest file, 'newest' -> The newest file, and 'user' -> Prompt the user
+        to decide. The default value is 'user'.
     
     Returns
     -------
@@ -76,6 +92,7 @@ def download_im_asr(config, srcORtrg, xnatSession=None, pathsDict=None):
         scanID = config['trgScanID']
         roicolName_req = config['trgRoicolName']
     
+    whichSrcRoicol = config['whichSrcRoicol']
     p2c = config['p2c']
     
     if p2c:
@@ -85,7 +102,8 @@ def download_im_asr(config, srcORtrg, xnatSession=None, pathsDict=None):
         print(f'  expLab = {expLab}')
         print(f'  scanID = {scanID}')
         print(f'  roicolMod = {roicolMod}')
-        print(f'  roicolName_req = {roicolName_req}\n')
+        print(f'  roicolName_req = {roicolName_req}')
+        print(f'  whichSrcRoicol = {whichSrcRoicol}\n')
     
     """ 
     The 'collectionType' key in 'data_fields' is either 'AIM' or 'SEG'. The 
@@ -297,17 +315,31 @@ def download_im_asr(config, srcORtrg, xnatSession=None, pathsDict=None):
         for i in range(len(matchingInds)):
             msg += f"\n{i+1}. {matchingDates[i]} {matchingTimes[i]}"
         
-        msg += "\nEnter an integer corresponding to the ROI Collection to be "\
-                + "imported"
-        
-        choice = get_user_input_as_int(
-            message=msg, minVal=1, maxVal=len(matchingInds)
-            )
-        
-        roicolInd = choice - 1 # userInput is 1-indexed
-        
-        #print(f'choice = {choice}, roicolInd = {roicolInd}\n')
-        
+        if whichSrcRoicol == 'user':
+            msg += "\nEnter an integer corresponding to the ROI Collection to be "\
+                    + "imported"
+            
+            choice = get_user_input_as_int(
+                message=msg, minVal=1, maxVal=len(matchingInds)
+                )
+            
+            roicolInd = choice - 1 # userInput is 1-indexed
+            
+            #print(f'choice = {choice}, roicolInd = {roicolInd}\n')
+        else:
+            matchingDateTimes = combine_dates_and_times(
+                matchingDates, matchingTimes
+                )
+            
+            newestInd, oldestInd = get_ind_of_newest_and_oldest_datetime(
+                matchingDateTimes
+                )
+            
+            if whichSrcRoicol == 'oldest':
+                roicolInd = int(oldestInd)
+            else:
+                roicolInd = int(newestInd)
+             
         asrID = matchingIDs[roicolInd]
         label = matchingLabels[roicolInd]
         roicolName = matchingNames[roicolInd]

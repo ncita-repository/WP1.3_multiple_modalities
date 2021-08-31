@@ -103,6 +103,11 @@ def create_config_files(cfgDir, password=""):
     #cfgExportDir = os.path.join(rootExportDir, 'configs')
     
     """
+    Define the directory path of the sample DROs:
+    """
+    sampleDroDir = r'C:\Code\WP1.3_multiple_modalities\sample_DROs'
+    
+    """
     Chose whether or not to export the (new) target ROI Collection (i.e.
     RTS or SEG), DRO, plots and logs:
     """
@@ -117,6 +122,30 @@ def create_config_files(cfgDir, password=""):
     #exportLogs = False
     exportLogs = True
     
+    
+    """ 
+    When searching XNAT for the source ROI Collection that matches the required
+    metadata multiple hits may arise. Chose how to proceed from the following
+    3 options:
+        1. Select the oldest ROI Collection (whichSrcRoicol = 'oldest')
+        2. Select the newest ROI Collection (whichSrcRoicol = 'newest')
+        3. Allow the user to decide (whichSrcRoicol = 'user')
+    """
+    whichSrcRoicol = 'oldest'
+    #whichSrcRoicol = 'newest'
+    #whichSrcRoicol = 'user'
+    
+    
+    """
+    Choose whether or not to use a valid DRO to transform (propagate) the 
+    source ROI Collection to the target domain or to perform image registration
+    irrespective of a valid DRO:
+    
+    Update: Rather than defining the value here it is defined in the definition
+    of the dictionaries (see below).
+    """
+    #useDroForTx = True # use transform in DRO, by-passing image registration
+    #useDroForTx = False # apply image registration even if DRO is available
     
     """
     Chose whether or not to upload the (new) target DRO to XNAT:
@@ -174,6 +203,7 @@ def create_config_files(cfgDir, password=""):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'sampleDroDir' : sampleDroDir,
         'rootExportDir' : rootExportDir,
         #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
@@ -186,6 +216,7 @@ def create_config_files(cfgDir, password=""):
         'exportDro' : exportDro,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
+        'whichSrcRoicol' : whichSrcRoicol,
         'uploadDro' : uploadDro,
         'overwriteDro' : overwriteDro,
         'p2c' : p2c
@@ -256,6 +287,7 @@ def create_config_files(cfgDir, password=""):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'sampleDroDir' : sampleDroDir,
         'rootExportDir' : rootExportDir,
         #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
@@ -268,6 +300,7 @@ def create_config_files(cfgDir, password=""):
         'exportDro' : exportDro,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
+        'whichSrcRoicol' : whichSrcRoicol,
         'uploadDro' : uploadDro,
         'overwriteDro' : overwriteDro,
         'p2c' : p2c

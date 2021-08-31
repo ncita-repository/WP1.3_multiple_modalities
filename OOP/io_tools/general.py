@@ -48,18 +48,21 @@ def get_user_input_as_int(message="Enter an integer", minVal=None,
     """
     
     if minVal and maxVal:
-        message += f' ({minVal} <= integer <= {maxVal}): '
+        message += f' ({minVal} <= integer <= {maxVal}; q to quit): '
     elif minVal:
-        message += f' (>= {minVal}): '
+        message += f' (>= {minVal}; q to quit): '
     elif maxVal:
-        message += f' (<= {maxVal}): '
+        message += f' (<= {maxVal}; q to quit): '
     else:
-        message += ': '
+        message += '(q to quit) : '
         
     helpfulMsg = str(message)
     
     while True:
         userInput = input(helpfulMsg)
+        
+        if userInput == 'q':
+            raise Exception("Quit by the user.")
         
         try:
             choice = int(userInput)

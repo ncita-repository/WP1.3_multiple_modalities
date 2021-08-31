@@ -6,9 +6,13 @@ Created on Mon Jul  5 10:58:34 2021
 """
 
 
-def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab, 
-               trgScanID, regTxName, p2c=False):
+def search_dro(
+        xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab, 
+        trgScanID, regTxName, p2c=False
+        ):
     """
+    OBSOLETE - See fetch_dro() in io_tools.import_dro.py.
+    
     Search XNAT for a DRO (as a subject assessor) whose FrameOfReferenceUIDs   
     matches the Source (moving) and Target (fixed) FrameOfReferenceUIDs, and 
     whose SOP Class UID matches the transformation type specified by regTxName. 
@@ -45,27 +49,24 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
     Returns
     -------
     dro : Pydicom Object or None
-        A DICOM Registration Object (if there exists a DRO, as a subject 
-        assessor) that matches the requirements); None if not.
+        A DICOM Registration Object if there exists a DRO that matches the 
+        requirements, and None otherwise.
     txMatrix : list of float str or None
         List of float strings representing the non-deformable transformation 
         that transforms the moving (Source) image to the fixed (Target) image 
-        (if there exists a DRO (as a subject assessor) that matches the 
-        requirements); None if not.
+        if dro != None; None otherwise.
     gridDims : list of int or None
         List of integers representing the dimensions of the BSpline grid used 
-        to deform the moving (Source) image to the fixed (Target) image (if 
-        there exists a DRO (as a subject assessor) that matches the 
-        requirements); None if not.
+        to deform the moving (Source) image to the fixed (Target) image if 
+        dro != None; None otherwise.
     gridRes : list of float or None
         List of floats representing the resolution of the BSpline grid used to 
-        deform the moving (Source) image to the fixed (Target) image (if there 
-        exists a DRO (as a subject assessor) that matches the requirements); 
-        None if not.
+        deform the moving (Source) image to the fixed (Target) image if 
+        dro != None; None otherwise.
     vectGridData : list of float str or None
         List of floats representing the vector deformations that deform the
-        moving (Source) image to the fixed (Target) image (if there exists a
-        DRO (as a subject assessor) that matches the requirements); None if not.
+        moving (Source) image to the fixed (Target) image if dro != None; None
+        otherwise.
     """
     
     from pydicom.filebase import DicomBytesIO
@@ -83,11 +84,13 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
     
     url = xnatSession.url
     
-    srcFORUID = get_FOR_uid(url, projID, subjLab, srcExpLab, srcScanID,
-                            xnatSession)
+    srcFORuid = get_FOR_uid(
+        url, projID, subjLab, srcExpLab, srcScanID, xnatSession
+        )
     
-    trgFORUID = get_FOR_uid(url, projID, subjLab, trgExpLab, trgScanID,
-                            xnatSession)
+    trgFORuid = get_FOR_uid(
+        url, projID, subjLab, trgExpLab, trgScanID, xnatSession
+        )
     
     # Get a listing of all resource files for the subject:
     uri = f'{url}/data/projects/{projID}/subjects/{subjLab}/files'
@@ -143,7 +146,7 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
     
     for i in range(len(fnames)):
         uri = f'{url}/data/projects/{projID}/subjects/{subjLab}/'\
-              + f'files/{fnames[i]}'
+            + f'files/{fnames[i]}'
         
         request = xnatSession.get(uri)
         
@@ -163,8 +166,10 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
         
         # Only proceed if the DICOM file is a registration object:
         if mod == 'REG': # 07/05/21
-            #droType = f'{file.SOPClassUID}' # this is a number (e.g. 1.2.840.10008.5.1.4.1.1.66.3)
-            droType = f'{file[0x0008, 0x0016].repval}' # the representation of the element's value
+            #droType = f'{file.SOPClassUID}' # this is a number 
+            # (e.g. 1.2.840.10008.5.1.4.1.1.66.3)
+            droType = f'{file[0x0008, 0x0016].repval}' # the representation of 
+            # the element's value
             
             if 'Deformable' in droType:
                 if regTxName == 'bspline':
@@ -182,16 +187,18 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
                 print(f'    droType = {droType}\n')
                 print(f'    matchOnDroType = {matchOnDroType}\n')
             
-            #ForUidPairs.append((Dro.RegistrationSequence[0].FrameOfReferenceUID,
-            #                    Dro.RegistrationSequence[1].FrameOfReferenceUID))
+            #ForUidPairs.append(
+            #    (Dro.RegistrationSequence[0].FrameOfReferenceUID,
+            #     Dro.RegistrationSequence[1].FrameOfReferenceUID)
+            #    )
                        
             # Use f-strings instead of deepcopy:
             if 'Deformable' in droType:
-                FORUID0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
-                FORUID1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
+                FORuid0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
+                FORuid1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
             else:
-                FORUID0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
-                FORUID1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
+                FORuid0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
+                FORuid1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
             
             #Type = f'{file.RegistrationSequence[1].MatrixRegistrationSequence[0].MatrixSequence[0].FrameOfReferenceTransformationMatrixType}'
             #Type = Type.lower()
@@ -200,33 +207,46 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
                         
             #print(Type)
             
-            #if FORUID0 == trgFORUID and FORUID1 == srcFORUID and Type == regTxName\
-            #and mod == 'REG': # 07/05/21
-            if FORUID0 == trgFORUID and FORUID1 == srcFORUID and matchOnDroType:
+            #if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
+            #        Type == regTxName and mod == 'REG'): # 07/05/21
+            if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
+                    matchOnDroType):
                 inds.append(i)
                 
                 if 'Deformable' in droType:
-                    gridDimss.append(file.DeformableRegistrationSequence[1]\
-                                          .DeformableRegistrationGridSequence[0]\
-                                          .GridDimensions)
+                    gridDimss.append(
+                        file.DeformableRegistrationSequence[1]\
+                            .DeformableRegistrationGridSequence[0]\
+                            .GridDimensions
+                            )
                     
-                    gridRess.append(file.DeformableRegistrationSequence[1]\
-                                         .DeformableRegistrationGridSequence[0]\
-                                         .GridResolution)
+                    gridRess.append(
+                        file.DeformableRegistrationSequence[1]\
+                            .DeformableRegistrationGridSequence[0]\
+                            .GridResolution
+                            )
                     
-                    vectGridDatas.append(file.DeformableRegistrationSequence[1]\
-                                               .DeformableRegistrationGridSequence[0]\
-                                               .VectorGridData)
+                    vectGridDatas.append(
+                        file.DeformableRegistrationSequence[1]\
+                            .DeformableRegistrationGridSequence[0]\
+                            .VectorGridData
+                            )
                 else:
-                    txMatrices.append(file.RegistrationSequence[1]\
-                                           .MatrixRegistrationSequence[0]\
-                                           .MatrixSequence[0]\
-                                           .FrameOfReferenceTransformationMatrix)
-            
-                #txMatrix_types.append(file.RegistrationSequence[1]\
-                #                           .MatrixRegistrationSequence[0]\
-                #                           .MatrixSequence[0]\
-                #                           .FrameOfReferenceTransformationMatrixType)
+                    txMatrices.append(
+                        file.RegistrationSequence[1]\
+                            .MatrixRegistrationSequence[0]\
+                            .MatrixSequence[0]\
+                            .FrameOfReferenceTransformationMatrix
+                            )
+                
+                """
+                txMatrix_types.append(
+                    file.RegistrationSequence[1]\
+                        .MatrixRegistrationSequence[0]\
+                        .MatrixSequence[0]\
+                        .FrameOfReferenceTransformationMatrixType
+                        )
+                """
     
                 contentDateTime = f'{file.ContentDate}{file.ContentTime}'
                 
@@ -234,15 +254,17 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
                     print(f'  contentDateTime = {contentDateTime}')
                 
                 # Convert to datetime object:
-                contentDateTime = datetime.strptime(contentDateTime, 
-                                                    '%Y%m%d%H%M%S.%f')
+                contentDateTime = datetime.strptime(
+                    contentDateTime, '%Y%m%d%H%M%S.%f'
+                    )
                 contentDateTimes.append(contentDateTime)
                 
                 #print(f'contentDateTime = {contentDateTime}')
                 #print(f'now = {now}')
                 
-                #t0 = time.mktime(time.strptime(contentDateTime, 
-                #                               '%Y%m%d%H%M%S.%f'))
+                #t0 = time.mktime(time.strptime(
+                #    contentDateTime, '%Y%m%d%H%M%S.%f')
+                #    )
                 #t0 = datetime.strptime(contentDateTime, '%Y%m%d%H%M%S.%f')
                 
                 #if p2c:
@@ -307,7 +329,7 @@ def search_dro(xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab,
                   + f" matrix \n  {txMatrixRounded}\n"
     else:
         msg = "  There were no DROs with FrameOfReferenceUIDs matching those "\
-              + "of the Source ({srcFORUID}) \nand Target ({trgFORUID}) "\
+              + "of the Source ({srcFORuid}) \nand Target ({trgFORuid}) "\
               + "image series, and whose SOP Class matched the desired "\
               + f"transform type ({regTxName}).\n"
         

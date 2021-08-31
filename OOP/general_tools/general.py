@@ -223,15 +223,15 @@ def are_items_equal_to_within_eps(items0, items1, epsilon=1e-06):
     
     Are two items equal to within epsilon?
     
-    The items may be ints, floats, or lists of ints or floats.
+    The items may be ints, floats, or a list/tuple of ints or floats.
     
     Parameters
     ----------
-    items0 : list of floats or ints
-    items1 : list of floats or ints
+    items0 : int or float or list/tuple of ints/floats
+    items1 : int or float or list/tuple of ints/floats
     epsilon : float, optional
         Maximum allowed variation between items not considered to be unique. 
-        The default is 1e-5.
+        The default value is 1e-5.
 
     Returns
     -------
@@ -239,9 +239,14 @@ def are_items_equal_to_within_eps(items0, items1, epsilon=1e-06):
         True if the items are equal to within epsilon.
     """
     
-    # Get the maximum value of their absolute differences:
+    # Get their absolute differences:
     abs_diffs = abs(np.array(items0) - np.array(items1))
-    max_abs_diffs = max(abs_diffs)
+    
+    if isinstance(items0, list) or isinstance(items0, tuple):
+        # Get the maximum value of their absolute differences:
+        max_abs_diffs = max(abs_diffs)
+    else:
+        max_abs_diffs = float(abs_diffs)
     
     if max_abs_diffs < epsilon:
         are_equal = True
@@ -296,11 +301,21 @@ def reduce_list_of_str_floats_to_16(origList):
         The list of strings with characters limited to 16.
     """
     
-    newList = [item[:16] for item in origList]
+    #newList = [item[:16] for item in origList]
+    
+    charLimit = 5
+    
+    newList = []
+    
+    for item in origList:
+        if len(item) > charLimit:
+            newList.append(item[:charLimit])
+        else:
+            newList.append(item)
     
     return newList
 
-def check_fileExt(filePath, fileExt):
+def check_file_ext(filePath, fileExt):
     """
     Check if a filePath has a specified extension.
 
@@ -362,3 +377,72 @@ def does_instance_variable_exist(instanceObj, varName, p2c=False):
             print(f'Instance variable {varName} does not exist.\n')
     
     return doesExist
+
+def combine_dates_and_times(dates, times):
+    """
+    Combine a list of dates and times into a list of datetimes.
+    
+    Parameters
+    ----------
+    dates : list of strs
+        List of strings representing dates, e.g.:
+            ['2021-02-14', '2021-02-13']
+    times : list of strs
+        List of strings representing times, e.g.:
+            ['13:59:00', '20:10:24']
+        
+    Returns
+    -------
+    datetimes : list of strs
+        List of strings representing datetimes, e.g.:
+            ['2021-02-14 13:59:00', '2021-02-13 20:10:24']
+    """
+    
+    D = len(dates)
+    T = len(times)
+    
+    if D != T:
+        msg = f"There are {D} dates and {T} times. They must have the same "\
+            + "length."
+        raise Exception(msg)
+    
+    return [dates[i] + ' ' + times[i] for i in range(D)]
+
+def get_ind_of_newest_and_oldest_datetime(datetimes):
+    """
+    Return the index of the newest and oldest datetime from a list of datetimes.
+    
+    Parameters
+    ----------
+    datetimes : list of strs
+        List of strings representing datetimes, e.g.:
+            ['2021-02-14 13:59:00', '2021-02-13 20:10:24']
+        
+    Returns
+    -------
+    newest_ind : int
+        Index of the newest datetime.
+    oldest_ind : int
+        Index of the oldest datetime.
+    """
+    
+    newest_ind = 0 # initial value
+    oldest_ind = 0 # initial value
+    
+    newest_dt = datetimes[newest_ind] # initial value
+    oldest_dt = datetimes[oldest_ind] # initial value
+    
+    for i in range(1, len(datetimes)):
+        if datetimes[i] > newest_dt:
+            # update newest index
+            newest_ind = i
+        
+        if datetimes[i] < oldest_dt:
+            # update oldest index:
+            oldest_ind = i
+        
+        # update oldest and newest datetimes:
+        newest_dt = datetimes[newest_ind]
+        oldest_dt = datetimes[oldest_ind]
+    
+    return newest_ind, oldest_ind

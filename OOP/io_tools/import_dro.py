@@ -14,18 +14,42 @@ from xnat_tools.FOR_uid import get_FOR_uid
 
 class DroImporter:
     """
-    This class creates a droData Object by fetching a DRO from XNAT.
+    This class creates a DroImporter Object by fetching a DICOM Registration 
+    Object (DRO) from XNAT.
     
     Parameters
     ----------
-    params : Params Object
-        Object containing various parameters.
+    params : DataDownloader Object
+        Contains parameters (cfgDict), file paths (pathsDict), timestamps
+        (timings) and timing messages (timingMsgs).
     
     Returns
     -------
-    
+    self.dro : Pydicom Object or None
+        Pydicom representation of the DRO if a suitable DRO was found, and None
+        otherwise.
+    self.txMatrix : list of strs or None
+        List of float strings representing the non-deformable transformation 
+        that transforms the moving (Source) image to the fixed (Target) image 
+        (if there exists a DRO (as a subject assessor) that matches the 
+        requirements); None if not.
+    self.gridDims : list of ints or None
+        List of integers representing the dimensions of the BSpline grid used 
+        to deform the moving (Source) image to the fixed (Target) image (if 
+        there exists a DRO (as a subject assessor) that matches the 
+        requirements); None if not.
+    self.gridRes : list of floats or None
+        List of floats representing the resolution of the BSpline grid used to 
+        deform the moving (Source) image to the fixed (Target) image (if there 
+        exists a DRO (as a subject assessor) that matches the requirements); 
+        None if not.
+    self.vectGridData : list of floats or None
+        List of floats representing the vector deformations that deform the
+        moving (Source) image to the fixed (Target) image (if there exists a
+        DRO (as a subject assessor) that matches the requirements); None if not.
     """
     
+    """
     def __init__(self, params):
         useCaseToApply = params.useCaseToApply
         
@@ -45,12 +69,11 @@ class DroImporter:
             self.fetch_dro(params)
             
         print(f'type(self.dro) = {type(self.dro)}\n')
+    """
     
     def fetch_dro(self, params):
         """
-        Search XNAT for a suitable DRO.
-        
-        Modified from search_dro().
+        Search XNAT for a suitable DRO (as a subject assessor).
 
         Parameters
         ----------
@@ -59,32 +82,50 @@ class DroImporter:
 
         Returns
         -------
-        self.dro : Pydicom Object
-            Pydicom representation of the DRO.
-        self.txMatrix : list of floats or None
+        self.dro : Pydicom Object or None
+            Pydicom representation of the DRO if a suitable DRO was found, and
+            None otherwise.
+        self.txMatrix : list of strs or None
+            List of float strings representing the non-deformable  
+            transformation that transforms the moving (Source) image to the 
+            fixed (Target) image if dro != None; None otherwise.
         self.gridDims : list of ints or None
-            One int per dimension.
+            List of integers representing the dimensions of the BSpline grid  
+            used to deform the moving (Source) image to the fixed (Target)  
+            image if dro != None; None otherwise.
         self.gridRes : list of floats or None
-            One float per dimension.
+            List of floats representing the resolution of the BSpline grid used 
+            to deform the moving (Source) image to the fixed (Target) image if
+            dro != None; None otherwise.
         self.vectGridData : list of floats or None
+            List of floats representing the vector deformations that deform the
+            moving (Source) image to the fixed (Target) image if dro != None; 
+            None otherwise.
+        
+        Note
+        ----
+        Modified from xnat_tools.dros.search_dro().
         """
         
         xnatSession = params.xnatSession
         url = xnatSession.url
-        projID = params.srcXnatParams['projID']
-        subjLab = params.srcXnatParams['subjLab']
-        srcExpLab = params.srcXnatParams['expLab']
-        srcScanID = params.srcXnatParams['scanID']
-        trgExpLab = params.trgXnatParams['expLab']
-        trgScanID = params.trgXnatParams['scanID']
-        regTxName = params.resParams['regTxName']
-        p2c = params.genParams['p2c']
+        cfgDict = params.cfgDict
+        projID = cfgDict['projID']
+        subjLab = cfgDict['subjLab']
+        srcExpLab = cfgDict['srcExpLab']
+        srcScanID = cfgDict['srcScanID']
+        trgExpLab = cfgDict['trgExpLab']
+        trgScanID = cfgDict['trgScanID']
+        regTxName = cfgDict['regTxName']
+        p2c = cfgDict['p2c']
         
-        srcFORUID = get_FOR_uid(url, projID, subjLab, srcExpLab, srcScanID,
-                                xnatSession)
+        srcFORuid = get_FOR_uid(
+            url, projID, subjLab, srcExpLab, srcScanID, xnatSession
+            )
         
-        trgFORUID = get_FOR_uid(url, projID, subjLab, trgExpLab, trgScanID,
-                                xnatSession)
+        trgFORuid = get_FOR_uid(
+            url, projID, subjLab, trgExpLab, trgScanID, xnatSession
+            )
         
         # Get a listing of all resource files for the subject:
         uri = f'{url}/data/projects/{projID}/subjects/{subjLab}/files'
@@ -162,15 +203,16 @@ class DroImporter:
                 
                 # Use f-strings instead of deepcopy:
                 if 'Deformable' in droType:
-                    FORUID0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
-                    FORUID1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
+                    FORuid0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
+                    FORuid1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
                 else:
-                    FORUID0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
-                    FORUID1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
+                    FORuid0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
+                    FORuid1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
                 
-                #if FORUID0 == trgFORUID and FORUID1 == srcFORUID and Type == regTxName\
+                #if FORuid0 == trgFORuid and FORuid1 == srcFORuid and Type == regTxName\
                 #and mod == 'REG': # 07/05/21
-                if FORUID0 == trgFORUID and FORUID1 == srcFORUID and matchOnDroType:
+                if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
+                        matchOnDroType):
                     inds.append(i)
                     
                     if 'Deformable' in droType:
@@ -209,8 +251,9 @@ class DroImporter:
                         print(f'  contentDateTime = {contentDateTime}')
                     
                     # Convert to datetime object:
-                    contentDateTime = datetime.strptime(contentDateTime, 
-                                                        '%Y%m%d%H%M%S.%f')
+                    contentDateTime = datetime.strptime(
+                        contentDateTime, '%Y%m%d%H%M%S.%f'
+                        )
                     contentDateTimes.append(contentDateTime)
         
         if p2c:
@@ -237,14 +280,14 @@ class DroImporter:
                 
                 gridResRounded = [round(item, 2) for item in gridRes]
                 
-                msg = f"  There were {len(fnames)} subject assessors found, of "\
-                      + f"which {len(contentDateTimes)} was a {droType}, with "\
-                      + "\n  FrameOfReferenceUIDs matching those of the Source "\
-                      + "and Target image series, matching the transform type, "\
-                      + "\n  the most recent of which contains the grid "\
-                      + f"dimensions {gridDims}, grid resolution {gridResRounded},"\
-                      + f" and vector grid data containing {len(vectGridData)} "\
-                      + "elements.\n"
+                msg = f"  There were {len(fnames)} subject assessors found, "\
+                    + f"of which {len(contentDateTimes)} was a {droType}, "\
+                    + "with\n  FrameOfReferenceUIDs matching those of the "\
+                    + "Source and Target image series, matching the transform"\
+                    + " type, \n  the most recent of which contains the grid "\
+                    + f"dimensions {gridDims}, grid resolution {gridResRounded},"\
+                    + f" and vector grid data containing {len(vectGridData)} "\
+                    + "elements.\n"
             
             if regTxName in ['rigid', 'affine']:
                 txMatrix = txMatrices[newInd]
@@ -254,12 +297,12 @@ class DroImporter:
                 
                 txMatrixRounded = [round(item, 3) for item in txMatrix]
                 
-                msg = f"  There were {len(fnames)} subject assessors found, of "\
-                      + f"which {len(contentDateTimes)} was a {droType}, with "\
-                      + "\n  FrameOfReferenceUIDs matching those of the Source and"\
-                      + " Target image series, matching the transform type, "\
-                      + "\n  the most recent of which contains the transformation"\
-                      + f" matrix \n  {txMatrixRounded}\n"
+                msg = f"  There were {len(fnames)} subject assessors found, "\
+                    + f"of which {len(contentDateTimes)} was a {droType}, "\
+                    + "with\n  FrameOfReferenceUIDs matching those of the "\
+                    + "Source and Target image series, matching the transform"\
+                    + " type, \n  the most recent of which contains the "\
+                    + f"transformation matrix \n  {txMatrixRounded}\n"
         else:
             dro = None
             txMatrix = None
@@ -267,10 +310,10 @@ class DroImporter:
             gridRes = None
             vectGridData = None
             
-            msg = "  There were no DROs with FrameOfReferenceUIDs matching those "\
-                  + "of the Source ({srcFORUID}) \nand Target ({trgFORUID}) "\
-                  + "image series, and whose SOP Class matched the desired "\
-                  + f"transform type ({regTxName}).\n"
+            msg = "  There were no DROs with FrameOfReferenceUIDs matching "\
+                + "those of the Source ({srcFORuid}) \nand Target ({trgFORuid})"\
+                + " image series, and whose SOP Class matched the desired "\
+                + f"transform type ({regTxName}).\n"
         print(msg)
         
         self.dro = dro

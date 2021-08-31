@@ -64,7 +64,7 @@ def get_frameNums(p2sIndsBySeg, segNum):
     
     return frameNums, p2sInds
 
-def get_rsopuids_in_ris(seg):
+def get_RSOPuids_in_RIS(seg):
     """
     Get the list of ReferencedSOPInstanceUIDs in the ReferencedInstanceSequence
     of a SEG.
@@ -112,7 +112,7 @@ def get_r2sInds(seg, sopuids):
     """
     
     # Get the list of Referenced SOP Instance UIDs:
-    rsopuids = get_rsopuids_in_ris(seg)
+    rsopuids = get_RSOPuids_in_RIS(seg)
     
     r2sInds = [] 
     
@@ -122,7 +122,7 @@ def get_r2sInds(seg, sopuids):
         
     return r2sInds
 
-def get_rsopuids_in_pffgs(seg):
+def get_RSOPuids_in_PFFGS(seg):
     """
     Get the list of ReferencedSOPInstanceUIDs in the 
     Per-FrameFunctionalGroupsSequence of a SEG.
@@ -171,7 +171,7 @@ def get_p2sInds(seg, sopuids):
     """
     
     # Get the list of ReferencedSOPInstanceUIDs:
-    rsopuids = get_rsopuids_in_pffgs(seg)
+    rsopuids = get_RSOPuids_in_PFFGS(seg)
     
     p2sInds = [] 
     
@@ -208,14 +208,14 @@ def get_p2sIndsBySeg(seg, sopuids):
     
     p2sInds = get_p2sInds(seg, sopuids)
     
-    divs = get_divs(seg)
+    divs = get_DIVs(seg)
     
     p2sIndsBySeg = group_list_by_seg(listToGroup=p2sInds, 
                                            divs=divs)
     
     return p2sIndsBySeg
 
-def get_divs(seg):
+def get_DIVs(seg):
     """
     Get the DimensionIndexValues in a SEG.
     
@@ -408,7 +408,7 @@ def get_frame_nums_OLD(seg, searchStr, dicomDir):
     
     # Get the DimensionIndexValues (divs) and group the divs by segment.
     """ Note:  The divs are integers that start from 1. """
-    divs = get_divs(seg)
+    divs = get_DIVs(seg)
     
     # Get the DICOM SOP UIDs:
     studyUID, seriesUID, FORUID, sopuids = get_dcm_uids(dicomDir)
