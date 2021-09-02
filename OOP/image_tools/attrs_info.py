@@ -21,7 +21,7 @@ reload(general_tools.general)
 import numpy as np
 from image_tools.imports import import_im
 #from image_tools.operations import im_min, im_max
-from dicom_tools.imports import import_dcms
+from dicom_tools.imports import import_dcms, get_dcm_fpaths
 from general_tools.general import get_items_unique_to_within, get_unique_items
 from conversion_tools.pixarrs_ims import im_to_pixarr
 from image_tools.operations import im_min, im_max
@@ -216,7 +216,7 @@ def get_im_attrs(dicomDir, package='pydicom', p2c=False):
     if p2c:
         print(f'\nsize = {size} \nspacings = {spacings}',
               f'\nslcThick = {slcThick}', # \npositions = {positions}',
-              f'\ndirections = {directions}')
+              f'\ndirections = {directions}\n')
     
     return size, spacings, slcThick, positions, directions, warnings
 
@@ -299,6 +299,7 @@ def get_im_info(image, p2c=False):
             
             freq, bins = np.histogram(vals, bins=10, range=[minVal, maxVal])
             
+            """
             print('\n      Distribution of values:')
             #for b, f in zip(bins[1:], freq):
             #    #print(round(b, 1), ' '.join(np.repeat('*', f)))
@@ -306,6 +307,7 @@ def get_im_info(image, p2c=False):
             for i in reversed(range(len(freq))):
                 valRange = f'[{round(bins[i], 2)} - {round(bins[i+1], 2)}]'
                 print(f'      {valRange} : {freq[i]}')
+            """
             
             #vals = pixarr.flatten()
             #minVal = 0
@@ -323,3 +325,32 @@ def get_im_info(image, p2c=False):
         print(f'       {f2sInds}')
     
     return pixID, pixIDtypeAsStr, uniqueVals, f2sInds
+
+def get_im_attrs_from_list_of_dicomDir(listOfDicomDir):
+    """ 
+    listOfDicomDir is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs.
+    """
+    
+    listOfDicomFpaths = []
+    listOfSizes = []
+    listOfSpacings = []
+    listOfSlcThick = []
+    listOfIPPs = []
+    listOfDirections = []
+    
+    for i in range(len(listOfDicomDir)):
+        dicomFpaths = get_dcm_fpaths(listOfDicomDir[i])
+        
+        size, spacings, slcThick, IPPs, directions, warnings\
+            = get_im_attrs(listOfDicomDir[i])
+        
+        listOfDicomFpaths.append(dicomFpaths)
+        listOfSizes.append(size)
+        listOfSpacings.append(spacings)
+        listOfSlcThick.append(slcThick)
+        listOfIPPs.append(IPPs)
+        listOfDirections.append(directions)
+    
+    return listOfDicomFpaths, listOfSizes, listOfSpacings, listOfSlcThick,\
+        listOfIPPs, listOfDirections

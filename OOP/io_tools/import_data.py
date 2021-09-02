@@ -1122,6 +1122,11 @@ class DataImporter:
         # Get the RTS/SEG data of interest:
         self.get_seg_metadata()
         
+        """
+        Determining of the use case has been moved to image_tools.propagate.py
+        since import_data is applied separately to Source and Target, hence
+        which_use_case has to follow after both datasets have been imported.
+        
         # Determine which use case applies and which to apply:
         useCaseThatApplies, useCaseToApply\
             = which_use_case(config=self.cfgDict)
@@ -1134,6 +1139,7 @@ class DataImporter:
             print(f"cfgDict['runID'] = {params.cfgDict['runID']}")
             print(f"useCaseThatApplies = {params.cfgDict['useCaseThatApplies']}")
             print(f"useCaseToApply = {params.cfgDict['useCaseToApply']}")
+        """
         
         #print(f'type(self.labimByRoi) = {type(self.labimByRoi)}')
         #if not self.labimByRoi is None:

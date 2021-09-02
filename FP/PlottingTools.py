@@ -265,10 +265,6 @@ def PlotImagesAndContours(Image, ImageType, DicomDir, RtsFpath,
         
     return
 
-
-
-
-
 def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir, 
                           LogToConsole):
     
@@ -382,11 +378,6 @@ def PlotDicomsAndSegments(DicomDir, SegFpath, ExportPlot, ExportDir,
     #print(f'AxisAR = {AxisAR}')
         
     return
-
-
-
-
-
 
 def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcLabel, TrgLabel, 
                                Case=None, ImageType='', ExportPlot=False, 
@@ -590,10 +581,6 @@ def Plot_Src_ResSrc_Trg_Images(SrcIm, ResSrcIm, TrgIm, SrcLabel, TrgLabel,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
 
 def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm, 
                                       SrcLMIms, ResSrcLMIms, 
@@ -1024,12 +1011,6 @@ def Plot_Src_ResSrc_Trg_NewTrg_Images(SrcIm, ResSrcIm, TrgIm,
         
     return
 
-
-
-
-
-
-
 def PlotPixelArrays(ListOfPixArrs, ListOfFrameToSliceInds, ListOfPlotTitles, 
                     AddTxt=None, ExportPlot=False, ExportDir=None, dpi=80, 
                     LogToConsole=False):
@@ -1161,14 +1142,6 @@ def PlotPixelArrays(ListOfPixArrs, ListOfFrameToSliceInds, ListOfPlotTitles,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
-
-
-
-
 
 def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
                                  PlotAllSlices=False, ExportPlot=False, 
@@ -1362,10 +1335,6 @@ def PlotPixArrsFromListOfSegs_v1(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         
     return
 
-
-
-
-
 def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
                                  SearchString, PlotAllSlices=False, AddTxt=None, 
                                  ExportPlot=False, ExportDir=None, dpi=80, 
@@ -1553,11 +1522,6 @@ def PlotPixArrsFromListOfSegs_v2(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
-
 
 def PlotPixArrsFromListOfSegs_v3(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
                                  ExportPlot=False, ExportDir='cwd', 
@@ -1778,12 +1742,7 @@ def PlotPixArrsFromListOfSegs_v3(ListOfSegs, ListOfDicomDirs, ListOfPlotTitles,
         print(f'Plot exported to:\n {ExportFpath}\n')
         
     return
-
-
-
-
-
-    
+  
 def PlotContoursFromListOfRtss_v1_OLD(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                                   SearchString, PlotAllSlices=False, AddTxt=None, 
                                   ExportPlot=False, ExportDir=None, dpi=80, 
@@ -1994,13 +1953,6 @@ def PlotContoursFromListOfRtss_v1_OLD(ListOfRtss, ListOfDicomDirs, ListOfPlotTit
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
-
-
-
 
 def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                                   PlotAllSlices=False, ExportPlot=False, 
@@ -2239,15 +2191,6 @@ def PlotContoursFromListOfRtss_v1(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         
     return
 
-
-
-
-
-
-
-
-
-
 def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                                   SearchString, PlotAllSlices=False, AddTxt=None, 
                                   ExportPlot=False, ExportDir=None, dpi=80, 
@@ -2460,10 +2403,6 @@ def PlotContoursFromListOfRtss_v2(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
 
 def PlotContoursFromListOfRtss_v3(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                                   PlotAllSlices=False, AddTxt=None, 
@@ -2687,13 +2626,6 @@ def PlotContoursFromListOfRtss_v3(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
-
-
-
-
 
 def PlotContoursFromListOfRtss_v4(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
                                   ExportPlot=False, ExportDir='cwd',
@@ -2943,16 +2875,6 @@ def PlotContoursFromListOfRtss_v4(ListOfRtss, ListOfDicomDirs, ListOfPlotTitles,
         
     return
 
-
-
-
-
-
-
-
-
-
-
 def GetPixArrsFromListOfImages(ListOfImages, ListOfDicomDirs, 
                                LogToConsole=False):
     """ 
@@ -3031,12 +2953,6 @@ def GetPixArrsFromListOfImages(ListOfImages, ListOfDicomDirs,
         
     
     return ListOfPixArrs, ListOfF2Sinds, ListOfDcmFpaths
-
-
-
-
-
-
 
 def PlotPixArrsFromListOfLabIm(ListOfLabIm, ListOfDicomDirs, ListOfPlotTitles,
                                PlotAllSlices=False, AddTxt=None, 
@@ -3221,9 +3137,6 @@ def PlotPixArrsFromListOfLabIm(ListOfLabIm, ListOfDicomDirs, ListOfPlotTitles,
         print('\nPlot exported to:\n\n', ExportFpath)
         
     return
-
-
-
 
 def PlotPixArrsFromListOfLabImBySeg(ListOfLabImBySeg, ListOfDicomDirs, 
                                     ListOfPlotTitles, AddTxt=None,
@@ -3450,9 +3363,6 @@ def PlotPixArrsFromListOfLabImBySeg(ListOfLabImBySeg, ListOfDicomDirs,
         print(f'Plot exported to:\n {ExportFpath}\n')
         
     return
-
-
-
 
 def PlotResultOfMaskToContourConversion(ListOfIms, 
                                         ListOfPtsByCntByRoi, ListOfC2SindsByRoi,
@@ -3813,10 +3723,6 @@ def PlotResultOfMaskToContourConversion(ListOfIms,
         
     return
 
-
-
-
-
 def PlotSitkImage(Image, FrameNum=None, Colormap='grayscale', 
                   ExportPlot=False, ExportDir='cwd', TxtToAddToFname='',
                   LogToConsole=False):
@@ -3907,9 +3813,6 @@ def PlotSitkImage(Image, FrameNum=None, Colormap='grayscale',
         print(f'Plot exported to:\n {ExportFpath}\n')
     return
 
-
-
-
 def PlotImageAndLabmapIm(DicomIm, LabmapIm, dpi=80, LogToConsole=False):
     """ 
      
@@ -3970,9 +3873,6 @@ def PlotImageAndLabmapIm(DicomIm, LabmapIm, dpi=80, LogToConsole=False):
         
     return
 
-
-
-
 def PlotImageAndLabmapImBySeg_NOT_COMPLETE(DicomIm, LabmapImBySeg, dpi=80, LogToConsole=False):
     """ 
      
@@ -4032,10 +3932,6 @@ def PlotImageAndLabmapImBySeg_NOT_COMPLETE(DicomIm, LabmapImBySeg, dpi=80, LogTo
         n += 1 # increment sub-plot number
         
     return
-
-
-
-
 
 def PlotImageAndContours(DicomIm, PtsByCnt, C2Sinds, dpi=80, 
                          LogToConsole=False):
@@ -4109,11 +4005,6 @@ def PlotImageAndContours(DicomIm, PtsByCnt, C2Sinds, dpi=80,
         
     return
 
-
-
-
-
-
 def PlotSitkLabelmap(Labelmap, Colormap='grayscale', dpi=80, LogToConsole=False):
     """ 
      
@@ -4159,10 +4050,6 @@ def PlotSitkLabelmap(Labelmap, Colormap='grayscale', dpi=80, LogToConsole=False)
         n += 1 # increment sub-plot number
         
     return
-
-
-
-
 
 def CompareSitkFrames(Image0, Ind0, Image1, Ind1, PlotTxt0='', PlotTxt1='',
                       Colormap='grayscale', dpi=80, ExportPlot=False, 
@@ -4251,11 +4138,6 @@ def CompareSitkFrames(Image0, Ind0, Image1, Ind1, PlotTxt0='', PlotTxt1='',
         
     return
 
-
-
-
-
-
 def PlotPoints(Points, dim=3):
     from GeneralTools import Unpack
     import matplotlib.pyplot as plt
@@ -4289,9 +4171,6 @@ def PlotPoints(Points, dim=3):
         raise Exception(msg)
     
     return
-
-
-
 
 def PlotTwoSetsOfPoints(Points0, Points1, dim=3):
     from GeneralTools import Unpack
@@ -4329,7 +4208,6 @@ def PlotTwoSetsOfPoints(Points0, Points1, dim=3):
         raise Exception(msg)
     
     return
-
 
 def PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle=''):
     """ 
@@ -4398,10 +4276,6 @@ def PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle=''):
         
     return
 
-
-
-
-
 def PlotLabmapImBySeg(LabmapImBySeg, F2SindsBySeg, PlotTitle=''):
     """ LabmapImBySeg can either be a list of labelmap images (as the variable 
     name suggests), or a single labelmap image, and F2SindsBySeg can either be 
@@ -4422,11 +4296,6 @@ def PlotLabmapImBySeg(LabmapImBySeg, F2SindsBySeg, PlotTitle=''):
     PlotPixArrBySeg(PixArrBySeg, F2SindsBySeg, PlotTitle)
         
     return
-
-
-
-
-
 
 def overlay(img1, img2, title=None, interpolation=None, sizeThreshold=128):
     """
@@ -4485,9 +4354,6 @@ def overlay(img1, img2, title=None, interpolation=None, sizeThreshold=128):
     
     return
 
-
-
-
 """ The next few functions from here:
 https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
 """
@@ -4517,9 +4383,6 @@ def PlotFixMovImages(FixInd, MovInd, FixPixArr, MovPixArr,
     plt.show()
     
     return
-
-
-
 
 def PlotFixMovImages_v2(FixIm, MovIm, FixInd, MovInd, 
                      FixTitle='Fixed image', MovTitle='Moving image'):
@@ -4557,10 +4420,6 @@ def PlotFixMovImages_v2(FixIm, MovIm, FixInd, MovInd,
     
     return
 
-
-
-
-
 def PlotFixMovImagesWithMouseInput(FixInd, MovInd, FixPixArr, MovPixArr,
                                    FixTitle='Fixed image', MovTitle='Moving image'):
     """ Callback invoked by the interact IPython method for scrolling 
@@ -4586,10 +4445,6 @@ def PlotFixMovImagesWithMouseInput(FixInd, MovInd, FixPixArr, MovPixArr,
     
     
     return FixInput
-
-
-
-
 
 def PlotFixMovImagesWithMouseInput_v2(FixIm, MovIm, FixInd, MovInd, 
                      FixTitle='Fixed image', MovTitle='Moving image'):
@@ -4629,11 +4484,6 @@ def PlotFixMovImagesWithMouseInput_v2(FixIm, MovIm, FixInd, MovInd,
     
     return FixInput, MovInput
 
-
-
-
-
-
 def PlotBlendedImage(FixIm, ResIm, Ind, alpha=0.5, PlotTitle='Blended image'):
     """ Callback invoked by the IPython interact method for scrolling and 
     modifying the alpha blending of an image stack of two images that 
@@ -4652,7 +4502,6 @@ def PlotBlendedImage(FixIm, ResIm, Ind, alpha=0.5, PlotTitle='Blended image'):
     
     return
 
-
 def StartPlot():
     """ Callback invoked when the StartEvent happens, sets up our new data. """
     global metric_values, multires_iterations
@@ -4661,7 +4510,6 @@ def StartPlot():
     multires_iterations = []
     
     return
-
 
 def EndPlot():
     """ Callback invoked when the EndEvent happens, do cleanup of data and 
@@ -4676,7 +4524,6 @@ def EndPlot():
     plt.close()
     
     return
-
 
 def PlotValues(RegMethod):
     """ Callback invoked when the IterationEvent happens, update our data 
@@ -4697,11 +4544,6 @@ def PlotValues(RegMethod):
     plt.show()
     
     return
-
-
-
-
-
 
 def PlotSrcResSrcTrgImages(SrcIm, ResSrcIm, TrgIm, SrcInd, ResSrcInd, TrgInd,
                            SrcTitle='Source image', 
@@ -4749,14 +4591,11 @@ def PlotSrcResSrcTrgImages(SrcIm, ResSrcIm, TrgIm, SrcInd, ResSrcInd, TrgInd,
     
     return
 
-
-
 """
 R0, C0, S0 = Im0.GetSize()
 R1, C1, S1 = Im1.GetSize()
 R2, C2, S2 = Im2.GetSize()
 """
-
 
 def PlotTwoImages(Im0, Ind0, PlotLabel0, Im1, Ind1, PlotLabel1):
     """
@@ -4791,11 +4630,6 @@ def PlotTwoImages(Im0, Ind0, PlotLabel0, Im1, Ind1, PlotLabel1):
     plt.show()
     
     return
-
-
-
-
-
 
 def PlotThreeImages(Im0, Ind0, PlotLabel0, 
                     Im1, Ind1, PlotLabel1, 
@@ -4835,11 +4669,6 @@ def PlotThreeImages(Im0, Ind0, PlotLabel0,
     plt.show()
     
     return
-
-
-
-
-
 
 def PlotTwoImagesWithFiducials(Im0, FidsFpath0, PlotLabel0, 
                                Im1, FidsFpath1, PlotLabel1,
@@ -4892,11 +4721,6 @@ def PlotTwoImagesWithFiducials(Im0, FidsFpath0, PlotLabel0,
     plt.show()
     
     return
-
-
-
-
-
 
 def PlotThreeImagesWithFiducials(Im0, FidsFpath0, PlotLabel0, 
                                  Im1, FidsFpath1, PlotLabel1,
@@ -4999,12 +4823,6 @@ def PlotThreeImagesWithFiducials(Im0, FidsFpath0, PlotLabel0,
         print('\nPlot exported to:\n\n', ExportFpath)
     
     return
-
-
-
-
-
-
 
 def PlotResResults(FixIm, MovIm, ResIm, FixInd, MovInd=None,
                    FixTitle='Fixed image', MovTitle='Moving image', 
@@ -5119,11 +4937,6 @@ def PlotResResults(FixIm, MovIm, ResIm, FixInd, MovInd=None,
         print(f'Plot exported to:\n {ExportFpath}\n')
     
     return
-
-
-
-
-
 
 def PlotResResultsWithLabIms(FixIm, MovIm, ResIm, MovInd, MovLabIm, ResLabIm, 
                              FixTitle='Fixed image', MovTitle='Moving image', 
@@ -5270,11 +5083,6 @@ def PlotResResultsWithLabIms(FixIm, MovIm, ResIm, MovInd, MovLabIm, ResLabIm,
     
     return
 
-
-
-
-
-
 def CompareResResults(ResIm0, ResIm1, ResInd,
                       ResTitle0='Resampled image 0', 
                       ResTitle1='Resampled image 1', 
@@ -5371,8 +5179,3 @@ def CompareResResults(ResIm0, ResIm1, ResInd,
         print('\nPlot exported to:\n\n', ExportFpath)
     
     return
-
-
-
-
-

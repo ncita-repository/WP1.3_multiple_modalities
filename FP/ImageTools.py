@@ -3986,9 +3986,11 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
         #= 'landmarks'), it won't be needed. """
         #LandmarkTx = None
         ListOfSitkTxs = [FinalTx]
+        
+        LandmarkTx = None # 01/09/21
     
-    #return RegIm, LandmarkTx, FinalTx
-    return RegIm, ListOfSitkTxs
+    return RegIm, LandmarkTx, FinalTx # 01/09/21
+    #return RegIm, ListOfSitkTxs # 01/09/21
 
 
 

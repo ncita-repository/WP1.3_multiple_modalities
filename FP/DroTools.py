@@ -438,8 +438,79 @@ def ModifyStuConOthRefInsSeq(Dro, SeqNum, Dicoms, RefAllSOPs=False,
     return Dro
 
 
-def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='', 
-                 LogToConsole=False):
+def create_txMatrix_from_tx(sitkTx, LogToConsole=False):
+    """
+    Create a Frame of Reference Transformation Matrix
+    
+    Parameters
+    ----------
+    sitkTx : SimpleITK Transform
+        The transformation following image registration.
+        
+    Returns
+    -------
+    txMatrix : list of floats
+        The Frame of Reference Transformation Matrix.
+    txParams : typle of floats
+        The transform parameters of sitkTx.
+    
+    Note
+    ----
+    http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1
+    """
+    
+    # The transform parameters:
+    txParams = sitkTx.GetParameters()
+    
+    """ Add the row vector [0, 0, 0, 1] to txParams to complete the Frame of
+    Reference Transformation Matrix 
+    (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+    """
+    #txParams = [str(item) for item in txParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+    #""" 01/09/21
+    
+    if len(txParams) == 6:
+        # RIGID DICOM FOR Transformation Matrix <--> Euler3DTransform sitk tx
+        
+        txMatrix = [
+            str(txParams[0]), '0.0', '0.0', '0.0',
+            '0.0', str(txParams[1]), '0.0', '0.0',
+            '0.0', '0.0', str(txParams[2]), '0.0',
+            str(txParams[3]), str(txParams[4]), str(txParams[5]), '1.0'
+            ]
+        
+    elif len(txParams) == 7:
+        # RIGID_SCALE FOR tx matrix <--> Similarity3DTransform sitk tx
+        
+        msg = "rigid scale case not done yet."
+        raise Exception(msg)
+        
+    elif len(txParams) == 12:
+        # AFFINE FOR tx matrix <--> AffineTransform sitk tx
+        
+        txMatrix = [
+            str(txParams[0]), str(txParams[1]), str(txParams[2]), '0.0',
+            str(txParams[3]), str(txParams[4]), str(txParams[5]), '0.0',
+            str(txParams[6]), str(txParams[7]), str(txParams[8]), '0.0',
+            str(txParams[9]), str(txParams[10]), str(txParams[11]), '1.0'
+            ]
+    else:
+        msg = "Was expecting 6, 7 or 12 transform parameters (for rigid, "\
+            + "rigid scale or affine transforms, but there are "\
+            + f"{len(txParams)} parameters."
+        raise Exception(msg)
+    
+    if LogToConsole:
+        print(f'txParams = {txParams}\n')
+        print(f'txMatrix = {txMatrix}\n')
+    
+    return txMatrix, txParams
+
+
+def CreateSpaDroFromSitkTx(
+        SampleDroDir, SrcDicomDir, TrgDicomDir, SitkTx,
+        Description='', LogToConsole=False
+        ):
     """
     08/07/21:
         See create_spa_dro in dro_tools.tx_to_spa_dro.py
@@ -455,9 +526,8 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     TrgDicomDir : string
         Directory containing Target DICOMs.
     
-    TxParams : list of floats
-        List of floats representing the non-deformable transformation 
-        parameters from the SimpleElastix image filter or SimpleITK transform.
+    SitkTx : SimpleITK Transform
+        The SimpleITK transform containing the transform parameters.
     
     Description : string (optional; '' by default)
         Description to be added to ContentDescription, and used in the file
@@ -497,9 +567,10 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     from DicomTools import ImportDicoms
     from GeneralTools import GetTxMatrixType
     
-    cwd = os.getcwd()
+    #cwd = os.getcwd()
 
-    DroDir = os.path.join(cwd, 'sample_DROs')
+    #DroDir = os.path.join(cwd, 'sample_DROs')
+    DroDir = str(SampleDroDir)
     
     DroFname = 'sample_spatial_dro.dcm'
     DroFpath = os.path.join(DroDir, DroFname)
@@ -541,17 +612,10 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     Dtime = round(times[-1] - times[-2], 3)
     if LogToConsole:
         print(f'\n*Took {Dtime} s to import the 3D images.')
-        
     
-    """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
-    Reference Transformation Matrix 
-    (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
-    """
-    #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
-    TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
-                str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
-                str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
-                str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
+    # Get the Frame of Reference Transformation Matrix from the SimpleITK
+    # transform:
+    TxMatrix, TxParams = create_txMatrix_from_tx(SitkTx, LogToConsole)
     
     
     """ Read in the DRO template. """
@@ -678,8 +742,10 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     Dro.RegistrationSequence[1]\
        .MatrixRegistrationSequence[0]\
        .MatrixSequence[0]\
-       .FrameOfReferenceTransformationMatrixType = GetTxMatrixType(TxParams, 
-                                                                   LogToConsole)
+       .FrameOfReferenceTransformationMatrixType = GetTxMatrixType(
+           #TxParams, LogToConsole # 01/09/21
+           TxMatrix, LogToConsole # 01/09/21
+           )
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 3)
@@ -769,79 +835,6 @@ def CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description='',
     if LogToConsole:
         print(f'\n   *Took a total of {Dtime} s to create the DRO.')
         
-        
-    return Dro
-
-
-def CreateSpaDroFromSitkTx(SrcDicomDir, TrgDicomDir, SitkTx, Description='', 
-                           LogToConsole=False):
-    """
-    08/07/21:
-        See create_spa_dro_from_tx in dro_tools.tx_to_spa_dro.py
-     
-    Create a DICOM Spatial Registration Object (DRO) from a SimpleITK 
-    transform.  
-    
-    Inputs:
-    ******
-    
-    SrcDicomDir : string
-        Directory containing Source DICOMs.
-    
-    TrgDicomDir : string
-        Directory containing Target DICOMs.
-    
-    SitkTx : SimpleITK Transform
-        The SimpleITK transform containing the transform parameters.
-    
-    Description : string (optional; '' by default)
-        Description to be added to ContentDescription, and used in the file
-        name of the exported DRO.
-    
-    LogToConsole : boolean (optional; False by default)
-        Denotes whether intermediate results will be logged to the console.
-    
-    
-    Outputs:
-    *******
-    
-    Dro : Pydicom object
-        The DICOM Registration Object.
-    
-    
-    Notes:
-    *****
-    
-    Sample DROs from:
-    https://www.insight-journal.org/browse/publication/923
-    
-    Spatial Registration Object module:
-    https://dicom.innolitics.com/ciods/spatial-registration
-    http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html
-    
-    Example Spatial DRO:
-    https://docs.google.com/document/d/1tMUWGe4kw6yLC2j7-y9WC-gY6LoiRL8XbG-_LeRU2_U
-    """
-    
-    # The transform parameters:
-    TxParams = SitkTx.GetParameters()
-    
-    """ Add the row vector [0, 0, 0, 1] to TxParams to complete the Frame of
-    Reference Transformation Matrix 
-    (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
-    """
-    #TxParams = [str(item) for item in TxParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
-    TxMatrix = [str(TxParams[0]), str(TxParams[1]), str(TxParams[2]), '0.0',
-                str(TxParams[3]), str(TxParams[4]), str(TxParams[5]), '0.0',
-                str(TxParams[6]), str(TxParams[7]), str(TxParams[8]), '0.0',
-                str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
-    
-    if LogToConsole:
-        print(f'TxParams = {TxParams}\n')
-        print(f'TxMatrix = {TxMatrix}\n')
-    
-    Dro = CreateSpaDro(SrcDicomDir, TrgDicomDir, TxParams, Description, 
-                       LogToConsole)
         
     return Dro
 
@@ -1290,7 +1283,7 @@ def CreateDefDro_OLD(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, Grid
 
 
 
-def CreateDefDro(SrcDicomDir, TrgDicomDir, 
+def CreateDefDro(SampleDroDir, SrcDicomDir, TrgDicomDir, 
                  GridOrig, GridDir, GridDims, GridRes, VectGridData,
                  TxMatrix=None, Description='', LogToConsole=False):
     """
@@ -1376,9 +1369,10 @@ def CreateDefDro(SrcDicomDir, TrgDicomDir,
     #importlib.reload(GeneralTools)
     from GeneralTools import GetTxMatrixType, ReduceListOfStringFloatsTo16
     
-    cwd = os.getcwd()
+    #cwd = os.getcwd()
 
-    DroDir = os.path.join(cwd, 'sample_DROs')
+    #DroDir = os.path.join(cwd, 'sample_DROs')
+    DroDir = str(SampleDroDir)
     
     DroFname = 'sample_deformable_dro.dcm'
     DroFpath = os.path.join(DroDir, DroFname)
@@ -1891,7 +1885,7 @@ def CreateDefDroFromBsplineTx_OLD(SrcDicomDir, TrgDicomDir, BsplineTx,
     return Dro
 
 
-def CreateDefDroFromBsplineTx(SrcDicomDir, TrgDicomDir, BsplineTx, 
+def CreateDefDroFromBsplineTx(SampleDroDir, SrcDicomDir, TrgDicomDir, BsplineTx, 
                               PreRegTx=None, Description='', 
                               LogToConsole=False):
     """
@@ -2025,7 +2019,7 @@ def CreateDefDroFromBsplineTx(SrcDicomDir, TrgDicomDir, BsplineTx,
                     str(TxParams[9]), str(TxParams[10]), str(TxParams[11]), '1.0']
     
     
-    Dro = CreateDefDro(SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, 
+    Dro = CreateDefDro(SampleDroDir, SrcDicomDir, TrgDicomDir, GridOrig, GridDir, GridDims, 
                        GridRes, VectGridData, TxMatrix, Description, 
                        LogToConsole)
     
@@ -2170,8 +2164,8 @@ def CreateSitkTxFromSpaDro(Dro, LogToConsole=False):
                                    .FrameOfReferenceTransformationMatrix]
     
     if LogToConsole:
-        print(f'MatrixType from DRO = {MatrixType}')
-        print(f'Matrix from DRO = {Matrix}')
+        print(f'MatrixType from DRO = {MatrixType}\n')
+        print(f'Matrix from DRO = {Matrix}\n')
     
     if MatrixType == 'RIGID':
         SitkTx = sitk.Euler3DTransform()
@@ -2180,9 +2174,13 @@ def CreateSitkTxFromSpaDro(Dro, LogToConsole=False):
         #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
         #SitkTx.SetParameters(TxParams) # 07/05/21
         
+        Matrix = [Matrix[i] for i in [0, 5, 10, 12, 13, 14]] # 01/09/21
     
     elif MatrixType == 'RIGID_SCALE':
         SitkTx = sitk.Similarity3DTransform()
+        
+        msg = "rigid scale case not done yet."
+        raise Exception(msg)
         
         #SitkTx.SetParameters(TxMatrix[0:12]) # 07/05/21
         #TxParams = [TxMatrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
@@ -2191,9 +2189,18 @@ def CreateSitkTxFromSpaDro(Dro, LogToConsole=False):
     elif MatrixType == 'AFFINE':
         SitkTx = sitk.AffineTransform(3)
         
+        #print(f'\n\n\nMatrix was {Matrix}\n')
+        
         #SitkTx.SetParameters(TxMatrix[0:12]) # 07/05/21
-        Matrix = [Matrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
+        #Matrix = [Matrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]] # 07/05/21
+        Matrix = [Matrix[i] for i in [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 3, 7, 11]] # 01/09/21
+        
+        #print(f'\n\n\nMatrix is {Matrix}')
+        
         SitkTx.SetParameters(Matrix) # 07/05/21
+        
+        #print(f'\n\n\nSitkTx.GetParameters = {SitkTx.GetParameters}\n')
+        #print(f'\n\n\nSitkTx.GetFixedParameters = {SitkTx.GetFixedParameters}\n\n\n')
         
     else:
         msg = f"MatrixType = {MatrixType} is not a recognised value. Only "\

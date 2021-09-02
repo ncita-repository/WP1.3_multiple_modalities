@@ -918,7 +918,8 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                    SrcFidsFpath='moving_fiducials.txt',
                    TrgFidsFpath='fixed_fiducials.txt',
                    TxInterp='NearestNeighbor', ApplyPostTxBin=True, 
-                   ApplyPostTxBlur=True, PostTxVar=(1,1,1), DictOfInputs=None):
+                   ApplyPostTxBlur=True, PostTxVar=(1,1,1), DictOfInputs=None,
+                   SampleDroDir='default'):
     
     """
     Copy a contour/ROI/RTSTRUCT/segmentation/segment/SEG from data downloaded
@@ -1361,10 +1362,10 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
                   TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin, 
                   ApplyPostTxBlur=ApplyPostTxBlur, PostTxVariance=PostTxVar, 
                   #TxMatrix, GridDims, GridRes, VectGridData, 
-                  Dro=Dro, TxtToAddToTrgRoiName=TxtToAddToTrgRoiColName, 
+                  Dro=Dro, TxtToAddToSegLabel=TxtToAddToTrgRoiColName, 
                   LogToConsole=LogToConsole,
                   DictOfInputs=DictOfInputs, #ListOfInputs=ListOfInputs, 
-                  ListOfTimings=ListOfTimings)
+                  ListOfTimings=ListOfTimings, SampleDroDir=SampleDroDir)
         
         SrcPtsByCntByRoi = None
         SrcC2SindsByRoi = None
@@ -1376,6 +1377,9 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         ResSrcLabImByRoi = None
         ResSrcPixArrByRoi = None
         ResSrcF2SindsByRoi = None
+        ResSrcPtsByCntByRoi = None
+        ResSrcCntDataByCntByRoi = None
+        ResSrcC2SindsByRoi = None
         
     else:
         msg = f'The modality of the Source ROI Collection ({SrcRoiColMod}) '\
@@ -2390,7 +2394,8 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     if TestNum != None:
         if isinstance(TestNum, int):
             TestNum = str(TestNum)
-        if not (isinstance(TestNum, int) and isinstance(TestNum, str)):
+        #if not (isinstance(TestNum, int) and isinstance(TestNum, str)): # 01/09/21
+        if not isinstance(TestNum, str): # 01/09/21
             msg = 'The input argument "TestNum" must be a character string.'
             print(msg)
             raise Exception(msg)
@@ -2462,6 +2467,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     Defaults = Preferences(directory=os.getcwd(), 
                            filename='CopyRoiDefaults.py')
     
+    SampleDroDir = Defaults.get('SampleDroDir') # 01/09/21
     if ResInterp == 'default':
         ResInterp = Defaults.get('ResInterp')
     if PreResVar == 'default':
@@ -2663,7 +2669,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
                      SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
                      TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin,
                      ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar,
-                     DictOfInputs=DictOfInputs)
+                     DictOfInputs=DictOfInputs, SampleDroDir=SampleDroDir)
     
     
     #""" Update DictOfInputs: """

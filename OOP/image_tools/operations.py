@@ -380,7 +380,7 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
     if p2c:
         print('\n\n', '-'*120)
         print('Running of find_thresh():')
-        print('\n\n', '-'*120)
+        #print('\n\n', '-'*120)
     
     ratio = get_voxel_volume_ratio(binaryIm, nonBinaryIm)
     
@@ -400,6 +400,7 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
     
     freq, bins = np.histogram(vals_NB, bins=1000, range=[minVal, maxVal])
     
+    """
     if p2c:
         print('\n      Distribution of values:')
         #for b, f in zip(bins[1:], freq):
@@ -407,6 +408,7 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
         for i in reversed(range(len(freq))):
                 valRange = f'[{round(bins[i], 3)} - {round(bins[i+1], 3)}]'
                 print(f'      {valRange} : {freq[i]}')
+    """
     
     # The cumulative sum of the frequencies in reverse order:
     cumSumfreq = np.cumsum(np.flip(freq))
@@ -430,8 +432,8 @@ def find_thresh(binaryIm, nonBinaryIm, p2c=False):
         print(f'\nVoxel volume ratio = {ratio}')
         print(f'\nNumber of 1s in binaryIm = {numOfOnes_B}')
         print(f'\nTarget number of ones = {expectedNumOfOnes_BNB}')
-        print(f'\ncumSumfreq[0:revInd+5] = {cumSumfreq[:revInd+5]}')
-        print(f'\nabsDiffs[0:revInd+5] = {absDiffs[:revInd+5]}')
+        #print(f'\ncumSumfreq[0:revInd+5] = {cumSumfreq[:revInd+5]}')
+        #print(f'\nabsDiffs[0:revInd+5] = {absDiffs[:revInd+5]}')
         print(f'\nind = {ind}')
         print(f'bins[{ind}] = {bins[ind]}')
     

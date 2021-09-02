@@ -14,29 +14,19 @@ def get_FOR_uid(url, proj_id, subj_label, exp_label, scan_id,
     
     url : str
         Address of XNAT (e.g. 'http://10.1.1.20').
-    
     proj_id : str
         The project ID of interest.
-    
     subj_label : str
         The subject label of interest. 
-    
     exp_label : str
         The DICOM study / XNAT experiment label of interest. 
-    
     scan_id : str
         The DICOM series label / XNAT scan ID of interest.
-    
     session : requests session, optional
         If provided a new session request will be avoided.
-    
-    PathsDict : dict, optional
-        Dictionary containing paths of data downloaded.
-    
     username : str, optional
         The username for XNAT log-in.  If not provided (i.e. username = None)
         the user will be prompted to enter a user name.
-    
     password : str, optional
         The password for XNAT log-in.  If not provided (i.e. password = None)
         the user will be prompted to enter a password.
@@ -80,8 +70,8 @@ def get_FOR_uid(url, proj_id, subj_label, exp_label, scan_id,
             
     dcm = dcmread(raw)
     
-    FOR_uid = dcm.FrameOfReferenceUID
+    FORuid = dcm.FrameOfReferenceUID
     
-    return FOR_uid
+    return FORuid
 
 

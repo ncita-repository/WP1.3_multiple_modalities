@@ -127,10 +127,12 @@ def download_im_asr(
         
     experiment = request.json()
     
-    """ There are likely more than one item in the list 
+    """ 
+    There are likely more than one item in the list 
     experiment['items'][0]['children'] (e.g. one for scans and one for 
     image assessors). Get the index that corresponds to assessors, asr_ind, and
-    the index that corresponds to scans, scan_ind: """
+    the index that corresponds to scans, scan_ind:
+    """
     asrInd = None # initial value
     
     for i in range(len(experiment['items'][0]['children'])):
@@ -139,8 +141,8 @@ def download_im_asr(
     
     if asrInd == None:
         msg = f"There are no assessors for:\n  projID = '{projID}'"\
-              + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
-              + f"\n  scanID = '{scanID}'."
+            + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
+            + f"\n  scanID = '{scanID}'."
         raise Exception(msg)
     
     scanInd = None # initial value
@@ -151,8 +153,8 @@ def download_im_asr(
     
     if scanInd == None:
         msg = f"There are no scans for:\n  projID = '{projID}'"\
-              + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
-              + f"\n  scanID = '{scanID}'."
+            + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
+            + f"\n  scanID = '{scanID}'."
         raise Exception(msg)
     
     if p2c:
@@ -187,8 +189,8 @@ def download_im_asr(
     
     if seriesUID_req == None:
         msg = f"No image assessors were found for:\n  projID = '{projID}'"\
-              + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
-              + f"\n  scanID = '{scanID}'."
+            + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
+            + f"\n  scanID = '{scanID}'."
         raise Exception(msg)
     
     if p2c:
@@ -239,10 +241,12 @@ def download_im_asr(
             print(f"  fileInd = {fileInd}")
             print(f"  refInd = {refInd}\n")
         
-        """ The following check is probably not required in most cases, but 
+        """
+        The following check is probably not required in most cases, but 
         covers cases where a ROI collection has been deleted and although the
         item with field 'out/file' is removed from the JSON, the item with
-        field 'references/seriesUID' can persist. """
+        field 'references/seriesUID' can persist.
+        """
         # Check that items exist with both 'out/file' and 
         # 'references/seriesUID' fields:
         #if 'out/file' in fields and 'references/seriesUID' in fields:
@@ -306,18 +310,18 @@ def download_im_asr(
                       "both field 'out/file' and 'references/seriesUID'.\n")
     
     if p2c:
-        print(f'Matching indices = {matchingInds}\n')
+        print(f'Matching indices = {matchingInds}')
     
     if len(matchingInds) > 1:
         msg = "More than one matching ROI Collection was found. "\
-              + "Following are their timestamps:"
+            + "Following are their timestamps:"
         
         for i in range(len(matchingInds)):
             msg += f"\n{i+1}. {matchingDates[i]} {matchingTimes[i]}"
         
         if whichSrcRoicol == 'user':
             msg += "\nEnter an integer corresponding to the ROI Collection to be "\
-                    + "imported"
+                + "imported"
             
             choice = get_user_input_as_int(
                 message=msg, minVal=1, maxVal=len(matchingInds)
@@ -365,6 +369,7 @@ def download_im_asr(
     
     if p2c:
         print(f"Index of the ROI Collection of interest = {roicolInd}")
+        print(f"Name of the ROI Collection of interest = {roicolName}")
         print(f"ID of the ROI Collection of interest = {asrID}")
         print(f"Label of the ROI Collection of interest = {label}")
         print(f"Date and time of the ROI Collection of interest = {asrDate}",
@@ -372,10 +377,10 @@ def download_im_asr(
     
     if roicolInd == None:
         msg = f"No image assessors were found for:\n  projID = '{projID}'"\
-              + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
-              + f"\n  scanID = '{scanID}'\ncontaining matches on:"\
-              + f"\n  roicolMod = '{roicolMod}'\n  roicolName_req ="\
-              + "f'{roicolName_req}'."
+            + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
+            + f"\n  scanID = '{scanID}'\ncontaining matches on:"\
+            + f"\n  roicolMod = '{roicolMod}'\n  roicolName_req ="\
+            + f"{roicolName_req}."
         raise Exception(msg)
     
     """ Get the assessor of interest: """
@@ -391,9 +396,11 @@ def download_im_asr(
     if request.raise_for_status() != None:
         print(request.raise_for_status())
     
-    exportDir = os.path.join(rootExportDir, 'projects', projID, 'subjects',
-                             subjLab, 'experiments', expLab, 'assessors',
-                             asrID, 'resources', roicolMod, 'files')
+    exportDir = os.path.join(
+        rootExportDir, 'projects', projID, 'subjects', subjLab,
+        'experiments', expLab, 'assessors', asrID, 'resources', roicolMod,
+        'files'
+        )
 
     if not os.path.isdir(exportDir):
         Path(exportDir).mkdir(parents=True)

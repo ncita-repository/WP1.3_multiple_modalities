@@ -42,13 +42,15 @@ def end_plot():
     
     global metric_values, multires_iterations
     
+    """ 31/08/21
     del metric_values
     del multires_iterations
     # Close figure, we don't want to get a duplicate of the plot latter on.
     plt.close()
+    """
 
 def plot_values(regMethod):
-    """ Callback invoked when the IterationEvent happens, update our data 
+    """ Callback invoked when the IterationEvent happens, update the data 
     and display new figure. """
     
     global metric_values, multires_iterations
@@ -59,11 +61,13 @@ def plot_values(regMethod):
     #plt.clf() # doesn't have intended result
     # Plot the similarity metric values
     plt.plot(metric_values, 'r')
-    plt.plot(multires_iterations, [metric_values[index] for index in multires_iterations], 'b*')
-    plt.xlabel('Iteration Number',fontsize=12)
-    plt.ylabel('Metric Value',fontsize=12)
+    plt.plot(multires_iterations, 
+             [metric_values[index] for index in multires_iterations], 
+             'b*')
+    plt.xlabel('Iteration Number', fontsize=12)
+    plt.ylabel('Metric Value', fontsize=12)
     plt.show()
-    
+
 def update_multires_iterations():
     """ Callback invoked when the sitkMultiResolutionIterationEvent happens, 
     update the index into the metric_values list. """
@@ -103,10 +107,22 @@ def plot_blended_im(Ind, alpha, fixIm, resIm):
     plt.axis('off')
     plt.show()
 
-def non_def_reg_im(
+def plot_values_and_export(metric_values, multires_iterations, regPlotFpath):
+    
+    plt.plot(metric_values, 'r')
+    plt.plot(multires_iterations, 
+             [metric_values[ind] for ind in multires_iterations], 'b*')
+    plt.xlabel('Iteration number', fontsize=12)
+    plt.ylabel('Metric value', fontsize=12)
+    
+    plt.savefig(regPlotFpath, bbox_inches='tight')
+        
+    print(f'Plot exported to:\n {regPlotFpath}\n')
+
+def rigid_reg_im(
         fixIm, movIm, regTxName='affine', initMethod='landmarks', 
         fixFidsFpath='', movFidsFpath='', samplingPercentage=50, 
-        numIters=500, learningRate=1.0, p2c=False
+        numIters=500, learningRate=1.0, p2c=False, regPlotFpath='',
         ):
     """  
     Register two 3D SimpleITK images using a non-deformable transformation 
@@ -118,31 +134,43 @@ def non_def_reg_im(
         The 3D image that movIm will be registered to
     movIm : SimpleITK Image
         The 3D image that will be registered to fixIm.
-    regTxName : str, optional ('affine' by default)
+    regTxName : str, optional
         Transformation to use for registration.  Acceptable values include:
         - 'rigid'
         - 'affine'
-    initMethod : str, optional ('landmarks' by default)
+        The default value is 'affine'.
+    initMethod : str, optional
         The method used for initialisation.  Acceptable inputs include:
             - 'geometry' (or 'geometricalcenter')
             - 'moments' (or 'centerofgravity')
             - 'landmarks'
         If initMethod = 'landmarks' but file paths to txt files containing
         fiducials are not provided the next default value will be 'moments'.
-    fixFidsFpath : str, optional ('' by default)
+        The default value is 'landmarks'.
+    fixFidsFpath : str, optional
         The file path of the text file containing fiducials for fixIm. 
-        This parameter is only relevant if initMethod = 'landmarks'.
-    movFidsFpath : str, optional ('' by default)
+        This parameter is only relevant if initMethod = 'landmarks'. 
+        The default value is ''.
+    movFidsFpath : str, optional
         The file path of the text file containing fiducials for movIm. 
         This argument is only relevant if initMethod = 'landmarks'.
-    samplingPercentage : int or float, optional (50 by default)
+        The default value is ''.
+    samplingPercentage : int or float, optional
         The percentage of the images that are sampled for evaluating the metric.
-    numIters : int, optional (500 by default)
-        The maximum number of iterations used when optimising.
-    learningRate : float, optional (1.0 by default)
-        The learning rate used for the gradient descent optimiser.
-    p2c : bool, optional (False by default)
+        The default value is 50.
+    numIters : int, optional
+        The maximum number of iterations used when optimising. The default 
+        value is 500.
+    learningRate : float, optional
+        The learning rate used for the gradient descent optimiser. The default 
+        value is 1.0.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False
+    regPlotFpath : str, optional
+        The file path to be assigned to the Metric v Iteration number plot
+        following optimisation if regPlotFpath is not ''. 
+        The default value is ''.
         
     Returns
     -------
@@ -155,6 +183,17 @@ def non_def_reg_im(
     
     Note
     ----
+    It appears that a high sampling percentage (e.g. 50%) is required to get 
+    good (and repeatable) results. Low values (e.g. 5%) result in poorer 
+    results and are highly variable from run to run (due to the use of clock
+    to generate samples).
+    
+    An indication that the sampling percentage is too low is looking at the
+    Metric value v Iteration Number during optimisation. A highly erratic plot
+    may suggest that the value is too low. Typically the part of the plot 
+    from the first resolution (of the multi-resolution strategy) looks very 
+    "noisy" (the part of the plot between the first and second asterixes). 
+    
     https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
     
     https://simpleitk.readthedocs.io/en/master/link_ImageRegistrationMethodBSpline3_docs.html
@@ -174,6 +213,8 @@ def non_def_reg_im(
     
     if regTxName == 'rigid':
         sitkTx = sitk.Euler3DTransform()
+    elif regTxName == 'rigid_scale':
+        sitkTx = sitk.SimilarityTransform3D()
     elif regTxName == 'affine':
         sitkTx = sitk.AffineTransform(fixIm.GetDimension())
     else:
@@ -292,6 +333,10 @@ def non_def_reg_im(
     
     """ Post registration analysis. """
     if p2c:
+        if plotToConsole:
+            plot_values_and_export(
+                metric_values, multires_iterations, regPlotFpath
+                )
         print("-------")
         print('initialTx:')
         print(initialTx)
@@ -324,11 +369,12 @@ def non_def_reg_im(
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
     
-    return regIm, initialTx, finalTx
+    return regIm, initialTx, finalTx, metric_values, multires_iterations
 
 def bspline_reg_im(
         fixIm, movIm, fixFidsFpath='', movFidsFpath='', numControlPts=8,
-        samplingPercentage=5, numIters=100, learningRate=5.0, p2c=False
+        samplingPercentage=5, numIters=100, learningRate=5.0, p2c=False,
+        regPlotFpath=''
         ):
     """ 
     Register two 3D SimpleITK images using a B-spline transformation in
@@ -340,22 +386,33 @@ def bspline_reg_im(
         The 3D image that movIm will be registered to.
     movIm : SimpleITK Image
         The 3D image that will be registered to fixIm.
-    fixFidsFpath : str, optional ('' by default)
+    fixFidsFpath : str, optional
         The file path of the txt file containing fiducials for fixIm. If '' the
         BSpline will be initialised using BSplineTransformInitializer.
-    movFidsFpath : str, optional ('' by default)
+        The default value is ''.
+    movFidsFpath : str, optional
         The file path of the txt file containing fiducials for movIm. If '' the
         BSpline will be initialised using BSplineTransformInitializer.
-    numControlPts : int, optional (8 by default)
-        The number of control points that defines the BSpline grid.
-    samplingPercentage : int or float, optional (5 by default)
+        The default value is ''.
+    numControlPts : int, optional
+        The number of control points that defines the BSpline grid. The default
+        value is 8.
+    samplingPercentage : int or float, optional
         The percentage of the images that are sampled for evaluating the metric.
-    numIters : int, optional (100 by default)
-        The maximum number of iterations used during optimisation.
-    learningRate : float, optional (5.0 by default)
-        The learning rate used for the gradient descent optimiser.
-    p2c : bool, optional (False by default)
+        The default value is 5.
+    numIters : int, optional
+        The maximum number of iterations used during optimisation. The default
+        value is 100.
+    learningRate : float, optional
+        The learning rate used for the gradient descent optimiser. The default
+        value is 5.0.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
+    regPlotFpath : str, optional
+        The file path to be assigned to the Metric v Iteration number plot
+        following optimisation if regPlotFpath is not ''. 
+        The default value is ''.
         
     Returns
     -------
@@ -371,6 +428,9 @@ def bspline_reg_im(
     
     Note
     ----
+    Unlike rigid registrations it seems that a low sampling percentage (e.g.
+    5%) is sufficient to get good results.
+    
     Zivy advised not to use gradient descent line search for bspline:
     https://github.com/SimpleITK/SimpleITK/issues/1415
     """
@@ -513,6 +573,10 @@ def bspline_reg_im(
     
     """ Post registration analysis. """
     if p2c:
+        if plotToConsole:
+            plot_values_and_export(
+                metric_values, multires_iterations, regPlotFpath
+                )
         print("-------")
         print('initialTx:')
         print(initialTx)
@@ -529,14 +593,14 @@ def bspline_reg_im(
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
 
-    return regIm, initialTx, finalTx
+    return regIm, initialTx, finalTx, metric_values, multires_iterations
 
 def register_im(
         fixIm, movIm, regTxName='affine', initMethod='landmarks',
-        fixFidsFpath='', movFidsFpath='', samplingPercentage=5, p2c=False
+        fixFidsFpath='', movFidsFpath='', p2c=False, regPlotFpath=''
         ):
     """
-    Wrapper function for functions non_def_reg_im() and bspline_reg_im() 
+    Wrapper function for functions rigid_reg_im() and bspline_reg_im() 
     to register two 3D SimpleITK images using SimpleITK.
     
     Parameters
@@ -545,33 +609,38 @@ def register_im(
         The 3D image that movIm will be registered to.
     movIm : SimpleITK Image
         The 3D image that will be registered to fixIm.
-    regTxName : str, optional ('affine' by default)
+    regTxName : str, optional
         Denotes type of transformation to use for registration.  Acceptable 
         values include:
         - 'rigid'
         - 'affine'
         - 'bspline'
-    initMethod : str, optional ('landmarks' by default)
+        The default value is 'affine'.
+    initMethod : str, optional
         The method used for initialisation.  Acceptable inputs include:
             - 'geometry' (or 'geometricalcenter')
             - 'moments' (or 'centerofgravity')
             - 'landmarks'
-        If initMethod = 'landmarks' but file paths to txt files containing
-        fiducials are not provided the next default value will be 'moments'.
-    fixFidsFpath : str, optional ('' by default)
+        The default value is 'landmarks'. If initMethod = 'landmarks' but file 
+        paths to txt files containing fiducials are not provided the default 
+        value will be 'moments'.
+    fixFidsFpath : str, optional unless initMethod=='landmarks'
         The file path (or file name if the file is present in the current 
         working directory) of the text file containing fiducials for fixIm. 
         The string need not contain the .txt extension. This argument is only
-        relevant if initMethod = 'landmarks'.
-    movFidsFpath : str, optional ('' by default)
+        relevant if initMethod = 'landmarks'. The default value is ''.
+    movFidsFpath : str, optional unless initMethod=='landmarks'
         The file path (or file name if the file is present in the current 
         working directory) of the text file containing fiducials for movIm. 
         The string need not contain the .txt extension. This argument is only
-        relevant if initMethod = 'landmarks'.
-    samplingPercentage : int or float, optional (5 by default)
-        The percentage of the images that are sampled for evaluating the metric.
-    p2c : bool, optional (False by default)
+        relevant if initMethod = 'landmarks'. The default value is ''.
+    p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
+        The default value is False.
+    regPlotFpath : str, optional
+        The file path to be assigned to the Metric v Iteration number plot
+        following optimisation if regPlotFpath is not ''. 
+        The default value is ''.
         
     Returns
     -------
@@ -621,24 +690,26 @@ def register_im(
         if p2c:
             print('Running bspline_reg()...\n')
             
-        regIm, initialTx, finalTx = bspline_reg_im(
-            fixIm=fixIm, movIm=movIm,
-            fixFidsFpath=fixFidsFpath, 
-            movFidsFpath=movFidsFpath,
-            numControlPts=8, samplingPercentage=samplingPercentage,
-            numIters=100, learningRate=5.0, p2c=p2c
-            )
+        regIm, initialTx, finalTx, metric_values, multires_iterations\
+            = bspline_reg_im(
+                fixIm=fixIm, movIm=movIm,
+                fixFidsFpath=fixFidsFpath, 
+                movFidsFpath=movFidsFpath,
+                numControlPts=8, samplingPercentage=5,
+                numIters=100, learningRate=5.0, p2c=p2c, regPlotFpath=regPlotFpath
+                )
     else:
         if p2c:
-            print('Running non_def_reg_ims()...\n')
+            print('Running rigid_reg_im()...\n')
         
-        regIm, initialTx, finalTx = non_def_reg_im(
-            fixIm=fixIm, movIm=movIm, 
-            regTxName=regTxName, initMethod=initMethod,
-            fixFidsFpath=fixFidsFpath, 
-            movFidsFpath=movFidsFpath,
-            samplingPercentage=samplingPercentage,
-            numIters=500, learningRate=1.0, p2c=p2c
-            )
+        regIm, initialTx, finalTx, metric_values, multires_iterations\
+            = rigid_reg_im(
+                fixIm=fixIm, movIm=movIm, 
+                regTxName=regTxName, initMethod=initMethod,
+                fixFidsFpath=fixFidsFpath, 
+                movFidsFpath=movFidsFpath,
+                samplingPercentage=50,
+                numIters=500, learningRate=1.0, p2c=p2c, regPlotFpath=regPlotFpath
+                )
     
-    return regIm, initialTx, finalTx
+    return regIm, initialTx, finalTx, metric_values, multires_iterations

@@ -36,7 +36,8 @@ from image_tools.propagate import Propagator
 from dro_tools.create_dro import DroCreator
 from seg_tools.create_seg import create_seg
 
-from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
+#from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
+from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_and_images
 
 class PropagatorTester:
     # TODO update docstrings
@@ -91,7 +92,12 @@ class PropagatorTester:
         self.params = params
         self.srcDataset = srcDataset
         self.trgDataset = trgDataset
+        """ 
+        useCaseToApply isn't an attribute until the Propagator class is
+        implemented
+        
         useCaseToApply = params.cfgDict['useCaseToApply']
+        """
         
         
         #if '5' in params.cfgDict['useCaseToApply']:
@@ -100,12 +106,16 @@ class PropagatorTester:
         #    found on XNAT.  Search XNAT for an appropriate DRO:
         #    """
         # The following was under the if statement:
-        # Instantiate a droData Object:
-        droData = DroImporter()
-        droData.fetch_dro(params)
-        self.droData = droData
-        dro = droData.dro
-        #print(f'type(droData.dro) = {type(droData.dro)}\n')
+        
+        if params.cfgDict['useDroForTx']:
+            # Instantiate a droData Object:
+            droData = DroImporter()
+            droData.fetch_dro(params)
+            self.droData = droData
+            dro = droData.dro
+            #print(f'type(droData.dro) = {type(droData.dro)}\n')
+        else:
+            dro = None
         
         #print(f'dir(srcDataset) = {dir(srcDataset)}\n')
         
@@ -116,6 +126,9 @@ class PropagatorTester:
         newDataset.propagate(srcDataset, trgDataset, params, dro)
         
         self.newDataset = newDataset
+        # Update params:
+        params = self.params
+        useCaseToApply = params.cfgDict['useCaseToApply']
         
         """ Creating a new ROI Collection and DRO (if applicable) is not
         required but adding it to more fully test (23/08/2021). """
@@ -133,8 +146,15 @@ class PropagatorTester:
             
             # Create the new DRO:
             newDroData.create_dro(srcDataset, trgDataset, newDataset, params)
-        
+            
+            # Export the new DRO:
+            newDroData.export_dro(params)
+            
             self.newDroData = newDroData
+        
+        
+        
+        """ Plot results """
         
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
@@ -149,17 +169,62 @@ class PropagatorTester:
         resInterp = cfgDict['resInterp']
         
         if roicolMod == 'RTSTRUCT':
-            exportDir = cfgDict['rtsPlotsExportDir']
+            roiExportDir = cfgDict['rtsPlotsExportDir']
         else:
-            exportDir = cfgDict['segPlotsExportDir']
+            roiExportDir = cfgDict['segPlotsExportDir']
+        
+        
+        """ Plot copied/propagated ROI overlaid on DICOM images """
+        
+        # Prepare plot title for new dataset:
+        method = 'Src '
+        if useCaseToApply in ['1', '2a']:
+            method += 'copied to Trg'
+        elif useCaseToApply == '2b':
+            method += 'propagated to Trg'
+        elif useCaseToApply in ['3a', '4a']:
+            method += f'copied to Trg (res, {resInterp})'
+        elif useCaseToApply in ['3a', '4a']:
+            method += f'propagated to Trg (res, {resInterp})'
+        elif useCaseToApply == '5a':
+            if useDroForTx:
+                method += f'copied to Trg ({regTxName} DRO, {resInterp}'
+            else:
+                method += f'copied to Trg ({regTxName} reg, {initMethod}, '\
+                    + f'{resInterp})'
+        elif useCaseToApply == '5b':
+            if useDroForTx:
+                method += f'propagated to Trg ({regTxName} DRO, {resInterp}'
+            else:
+                method += f'propagated to Trg ({regTxName} reg, {initMethod},'\
+                    + f' {resInterp})'
         
         listOfSegs = [srcDataset.roicol, newRoicol]
-        listOfDcmDirs = [srcDataset.dicomDir, newDataset.dicomDir]
-        listOfPlotTitles = ['Source', 'New Target']
+        """
+        Note: newDataset does not have a dicomDir since DICOMs are not
+        generated for the resampled/registered source dataset, but for the
+        purposes of pulling metadata (sizes, spacings, IPPs, directions, etc)
+        relevant to the resampled/registered dataset, getting it from the
+        target dataset is equivalent.
+        """
+        listOfDicomDirs = [srcDataset.dicomDir, trgDataset.dicomDir]
         
+        listOfImages = [srcDataset.image, newDataset.image]
+        listOfPlotTitles = ['Src', method]
+        
+        """
         plot_pixarrs_from_list_of_segs_v3(
-        listOfSegs, listOfDcmDirs, listOfPlotTitles, exportPlot=exportPlot,
+        listOfSegs, listOfDicomDirs, listOfPlotTitles, exportPlot=exportPlot,
             exportDir=exportDir, runID=runID, useCaseToApply=useCaseToApply,
+            forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
+            initMethod=initMethod, resInterp=resInterp, p2c=p2c
+        )
+        """
+        
+        plot_pixarrs_from_list_of_segs_and_images(
+            listOfSegs, listOfImages, listOfDicomDirs, listOfPlotTitles, 
+            exportPlot=exportPlot, exportDir=roiExportDir,
+            runID=runID, useCaseToApply=useCaseToApply,
             forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
             initMethod=initMethod, resInterp=resInterp, p2c=p2c
         )

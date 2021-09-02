@@ -1651,7 +1651,17 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg,
         NewTrgSeg.Rows = TrgDicoms[0].Rows
         NewTrgSeg.Columns = TrgDicoms[0].Columns
         
-        IOP = TrgDicoms[0].ImageOrientationPatient
+        #IOP = TrgDicoms[0].ImageOrientationPatient # 01/09/21
+        IOP = [str(item) for item in TrgDicoms[0].ImageOrientationPatient] # 01/09/21
+        
+        """
+        print(f'\n\n\nIOP = {IOP}')
+        print(f'type(IOP) = {type(IOP)}')
+        print(f'type(IOP[0]) = {type(IOP[0])}')
+        print(f'IOP[0] = {IOP[0]}')
+        print(f'len(IOP[0]) = {len(IOP[0])}')
+        print('\n\n\n')
+        """
         
         # Ensure that the character length is limited to 16:
         IOP = ReduceListOfStringFloatsTo16(IOP)
@@ -1826,7 +1836,8 @@ def CreateSeg(SrcSegFpath, TrgSegFpath, TrgSegLabel, TrgPixArrBySeg,
                      .FrameContentSequence[0]\
                      .DimensionIndexValues = [s + 1, ind + 1]
             
-            IPP = TrgDicoms[d].ImagePositionPatient
+            #IPP = TrgDicoms[d].ImagePositionPatient # 01/09/21
+            IPP = [str(item) for item in TrgDicoms[d].ImagePositionPatient] # 01/09/21
             
             # Ensure that the characters are limited to 16:
             IPP = ReduceListOfStringFloatsTo16(IPP)
@@ -2911,7 +2922,8 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             #TxMatrix=None, GridDims=None, GridRes=None, VectGridData=None,
             Dro=None, TxtToAddToSegLabel='', #OverwriteDro=False, 
             LogToConsole=False, 
-            DictOfInputs={}, ListOfInputs=[], ListOfTimings=[]):
+            DictOfInputs={}, ListOfInputs=[], ListOfTimings=[], 
+            SampleDroDir='default'):
     """
     Note 09/02/2021:
         This function will, depending on the inputs, copy either:
@@ -3503,6 +3515,10 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         """ Direct or relationship-preserving copying with registration
         transformation. """
         
+        from importlib import reload
+        import DroTools
+        reload(DroTools)
+        
         if SelxOrSitk == 'Selx':
             from SelxTools import RegisterImagesSelx, GetParamFromSelxImFilt
         else:
@@ -3525,7 +3541,8 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         #if (Transform in ['rigid', 'affine'] and TxMatrix == None) \
         #or (Transform == 'bspline' and VectGridData == None):
         #if Dro == None:
-        if Dro == None or (Dro != None and UseDroForTx):
+        #if Dro == None or (Dro != None and UseDroForTx): # 01/09/21
+        if Dro == None or (Dro != None and not UseDroForTx): # 01/09/21
             """ The transform parameters required to register SrcIm to TrgIm 
             were not found from any matching subject assessors in XNAT, or
             a suitable DRO was found but UseDroForTx = False. 
@@ -3648,7 +3665,9 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                                                 LogToConsole=LogToConsole)
                 
                 ListOfSitkTxs.append(SitkTx)
-            
+                
+            SelxImFiltOrSitkTx = deepcopy(SitkTx) # 01/09/21 added to allow 
+            # CreateSpaDroFromSitkTx() (line 3942) to run
             
             """ Since image registration was skipped, create RegIm by applying
             ListOfSitkTxs iteratively: """
@@ -3924,8 +3943,9 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             """ Create a Spatial Registration DRO. """
             #Dro = CreateSpaDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
             #                   LogToConsole)
-            Dro = CreateSpaDroFromSitkTx(SrcDcmDir, TrgDcmDir, 
-                                         SelxImFiltOrSitkTx, 
+            Dro = CreateSpaDroFromSitkTx(SampleDroDir,
+                                         SrcDcmDir, TrgDcmDir, 
+                                         SelxImFiltOrSitkTx,
                                          ContentDesc, LogToConsole)
         else:
             #""" Get the bspline grid related registration transform parameters 
@@ -3968,9 +3988,10 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                 The first Transform in ListOfSitkTxs is the landmark-based
                 Transform, the second/last one is the final BSpline Transform.
             """
-            Dro = CreateDefDroFromBsplineTx(SrcDcmDir, TrgDcmDir, 
+            Dro = CreateDefDroFromBsplineTx(SampleDroDir,
+                                            SrcDcmDir, TrgDcmDir, 
                                             BsplineTx=ListOfSitkTxs[-1], 
-                                            PreRegTx=ListOfSitkTxs[0], 
+                                            PreRegTx=ListOfSitkTxs[0],
                                             Description=ContentDesc, 
                                             LogToConsole=LogToConsole)
         
@@ -3990,7 +4011,8 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     #return TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
     ##return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
     return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcSeg,\
-           SrcPixArrBySeg, SrcLabImBySeg, SrcF2SindsBySeg,\
+           SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+           TrgPixArrBySeg, TrgF2SindsBySeg,\
            RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
            ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
            TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings

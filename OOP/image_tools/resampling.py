@@ -11,12 +11,15 @@ Created on Wed Jul  7 20:24:22 2021
 from importlib import reload
 import image_tools.operations
 reload(image_tools.operations)
+import image_tools.attrs_info
+reload(image_tools.attrs_info)
 
 import SimpleITK as sitk
 
 from image_tools.attrs_info import get_im_info
-from image_tools.operations import change_im_dtype, find_thresh, binarise_im
-from image_tools.operations import gaussian_blur_im#, recursive_gaussian_blur_im
+from image_tools.operations import (
+    change_im_dtype, find_thresh, binarise_im, gaussian_blur_im#, recursive_gaussian_blur_im
+    )
 from conversion_tools.pixarrs_ims import im_to_pixarr
 from general_tools.fiducials import get_landmark_tx
 from plotting_tools.plotting import plot_two_ims
@@ -546,11 +549,10 @@ def resample_labim(
     if p2c:
         print('\n\n', '-'*120)
         print('Running of resample_labim():')
-        print('\n\n', '-'*120)
         print('The chosen resampler (transform) sitkTx:')
-        print(f'  sitkTx Name is {sitkTx.GetName()}')
-        print(f'  sitkTx Parameters is {sitkTx.GetParameters()}')
-        print(f'  sitkTx Fixed Parameters is {sitkTx.GetFixedParameters()}')
+        print(f'  Name is {sitkTx.GetName()}')
+        print(f'  Parameters is {sitkTx.GetParameters()}')
+        print(f'  Fixed Parameters is {sitkTx.GetFixedParameters()}')
         print(f'The chosen interpolation is {interp}.\n')
         
     if not interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:

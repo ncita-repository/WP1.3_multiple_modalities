@@ -2188,13 +2188,18 @@ def IsMatrixOrthonormal(Matrix, LogToConsole=False):
     #IsOrthonormal = AreItemsEqualToWithinEpsilon(SSEofMdotM_T, 0, 
     #                                             epsilon=1e-06)
     
-    TequalsInv = M.T - np.linalg.inv(M)
-    SSEofTequalsInv = SumOfSquaresOfMatrix(TequalsInv)
+    try:
+        TequalsInv = M.T - np.linalg.inv(M)
+        SSEofTequalsInv = SumOfSquaresOfMatrix(TequalsInv)
+    except:
+        SSEofTequalsInv = None
+   
     #IsOrthonormal = AreItemsEqualToWithinEpsilon(SSEofTequalsInv, 0, 
     #                                             epsilon=1e-06)
     
     
     if LogToConsole:
+        print(f'\nM = {M}')
         print(f'\nThe determinant of M = {Det}')
         print(f'\nM*M.T - I = \n{MdotM_T}')
         print(f'\nSSE = {SSEofMdotM_T}')
@@ -2478,7 +2483,7 @@ def GetTxMatrixType(TxMatrix, LogToConsole=False):
         - a registration involving only translations and rotations
         - the matrix contains 6 degrees of freedom: 3 translations and 3 
         rotations
-        - the matrix must be orthnormal
+        - the matrix must be orthonormal
         
         RIGID_SCALE:
         - a registration involving only translations, rotations and scaling
@@ -2500,6 +2505,7 @@ def GetTxMatrixType(TxMatrix, LogToConsole=False):
     from GeneralTools import IsMatrixOrthonormal, IsMatrixOrthogonal
     
     #print(f'TxParams = {TxParams}\n')
+    print(f'TxMatrix = {TxMatrix}\n')
     
     #inds = [0, 1, 2, 4, 5, 6, 8, 9, 10] # 06/05/21
     inds = [0, 1, 2, 3, 4, 5, 6, 7, 8] # 04/06/21
@@ -3207,6 +3213,25 @@ def ReduceListOfStringFloatsTo16(OrigList):
         The list of strings with characters limited to 16.
     """
     
-    NewList = [item[:16] for item in OrigList]
+    #NewList = [item[:16] for item in OrigList]
     
-    return NewList
+    """
+    print(f'\n\n\nOrigList = {OrigList}')
+    print(f'type(OrigList) = {type(OrigList)}')
+    print(f'type(OrigList[0]) = {type(OrigList[0])}')
+    print(f'OrigList[0] = {OrigList[0]}')
+    print(f'len(OrigList[0]) = {len(OrigList[0])}')
+    print('\n\n\n')
+    """
+    
+    charLimit = 16
+    
+    newList = []
+    
+    for item in OrigList:
+        if len(item) > charLimit:
+            newList.append(item[:charLimit])
+        else:
+            newList.append(item)
+    
+    return newList

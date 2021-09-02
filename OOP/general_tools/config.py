@@ -98,6 +98,8 @@ def create_config_files(cfgDir, password=""):
     rtsPlotsExportDir = os.path.join(rootExportDir, 'plots_RTS')
     segPlotsExportDir = os.path.join(rootExportDir, 'plots_SEG')
     
+    regPlotsExportDir = os.path.join(rootExportDir, 'plots_reg')
+    
     logsExportDir = os.path.join(rootExportDir, 'logs')
     
     #cfgExportDir = os.path.join(rootExportDir, 'configs')
@@ -211,6 +213,7 @@ def create_config_files(cfgDir, password=""):
         'droExportDir' : droExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
+        'regPlotsExportDir' : regPlotsExportDir,
         'logsExportDir' : logsExportDir,
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
@@ -295,6 +298,7 @@ def create_config_files(cfgDir, password=""):
         'droExportDir' : droExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
+        'regPlotsExportDir' : regPlotsExportDir,
         'logsExportDir' : logsExportDir,
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
@@ -377,13 +381,14 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to propagate RTS across two DICOM series with different IOPs:
     runID = 'NCITA_test_RR11'
-    cfg[runID] = dict(cfg['NCITA_test_RR10'])
+    cfg[runID] = dict(cfg['NCITA_test_RR2'])
     cfg[runID]['runID'] = runID
-    cfg[runID]['srcScanID'] = '13'
+    cfg[runID]['trgExpLab'] = 'Session3'
+    cfg[runID]['srcScanID'] = '6'
     
     # Datasets to propagate RTS across two DICOM series with different IOPs:
     runID = 'NCITA_test_RR12'
-    cfg[runID] = dict(cfg['NCITA_test_RR10'])
+    cfg[runID] = dict(cfg['NCITA_test_RR11'])
     cfg[runID]['runID'] = runID
     cfg[runID]['srcExpLab'] = 'Session5'
     cfg[runID]['srcScanID'] = '12'
@@ -398,31 +403,26 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to propagate RTS across two DICOM series with different IOPs:
     runID = 'NCITA_test_RR14'
-    cfg[runID] = dict(cfg['NCITA_test_RR13'])
+    cfg[runID] = dict(cfg['NCITA_test_RR2'])
     cfg[runID]['runID'] = runID
-    cfg[runID]['srcScanID'] = '13'
-    cfg[runID]['srcRoicolName'] = 'Nasal cavity'
+    cfg[runID]['trgExpLab'] = 'Session1'
+    cfg[runID]['trgScanID'] = '5'
     
     # Datasets to propagate RTS across two DICOM series with different IOPs:
     runID = 'NCITA_test_RR15'
-    cfg[runID] = dict(cfg['NCITA_test_RR13'])
+    cfg[runID] = dict(cfg['NCITA_test_RR12'])
     cfg[runID]['runID'] = runID
-    cfg[runID]['srcExpLab'] = 'Session5'
-    cfg[runID]['srcScanID'] = '12'
-    cfg[runID]['srcRoicolName'] = 'Left eye'
+    cfg[runID]['trgExpLab'] = 'Session1'
+    cfg[runID]['trgScanID'] = '5'
     
     # Dataset to propagate RTS to an existing RTS:
     """ 
-    Note:
-        This was not one of the original test configurations so unknown whether
-    this will work.
+    Note: This was added to the original list of test configurations.
     """
     runID = 'NCITA_test_RR16'
-    cfg[runID] = dict(cfg['NCITA_test_RR14'])
+    cfg[runID] = dict(cfg['NCITA_test_RR4'])
     cfg[runID]['runID'] = runID
-    cfg[runID]['trgExpLab'] = 'Session4'
-    cfg[runID]['trgScanID'] = '11'
-    cfg[runID]['trgRoicolName'] = 'Ventricles'
+    cfg[runID]['forceReg'] = True
     
     # Datasets to copy RTS within the same DICOM series:
     runID = 'NCITA_test_RD1'
@@ -441,8 +441,7 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to copy RTS across two DICOM series with different IOPs:
     """
-    Note:
-        Source slice 5 maps to Target slices 55-64.
+    Note: Source slice 5 maps to Target slices 55-64.
     """
     runID = 'NCITA_test_RD3'
     cfg[runID] = dict(cfg['NCITA_test_RD2'])
@@ -453,8 +452,7 @@ def create_config_files(cfgDir, password=""):
     # Datasets to copy RTS from one DICOM series to another with equal slice
     # thickness:
     """
-    Note:
-        Source slice 5 maps to Target slice 7.
+    Note: Source slice 5 maps to Target slice 7.
     """
     runID = 'NCITA_test_RD4'
     cfg[runID] = dict(cfg['NCITA_test_RD2'])
@@ -466,8 +464,7 @@ def create_config_files(cfgDir, password=""):
     # Datasets to copy RTS from one DICOM series to another with smaller
     # slice thickness:
     """
-    Note:
-        Source slice 5 maps to Target slices 67-77.
+    Note: Source slice 5 maps to Target slices 67-77.
     """
     runID = 'NCITA_test_RD5'
     cfg[runID] = dict(cfg['NCITA_test_RD4'])
@@ -581,6 +578,15 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'SEG'
     
+    # Datasets to propagate SEG across two DICOM series with different IOPs:
+    """
+    Note: This was added to the original list of test configurations.
+    """
+    runID = 'NCITA_test_SR16'
+    cfg[runID] = dict(cfg['NCITA_test_RR16'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['roicolMod'] = 'SEG'
+    
     # Datasets to copy SEG within the same DICOM series:
     runID = 'NCITA_test_SD1'
     cfg[runID] = dict(cfg['NCITA_test_RD1'])
@@ -595,8 +601,7 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to copy SEG across two DICOM series with different IOPs:
     """
-    Note:
-        Source slice 5 maps to Target slices 55-64.
+    Note: Source slice 5 maps to Target slices 55-64.
     """
     runID = 'NCITA_test_SD3'
     cfg[runID] = dict(cfg['NCITA_test_RD3'])
@@ -606,8 +611,7 @@ def create_config_files(cfgDir, password=""):
     # Datasets to copy SEG from one DICOM series to another with equal slice
     # thickness:
     """
-    Note:
-        Source slice 5 maps to Target slice 7.
+    Note: Source slice 5 maps to Target slice 7.
     """
     runID = 'NCITA_test_SD4'
     cfg[runID] = dict(cfg['NCITA_test_RD4'])
@@ -617,8 +621,7 @@ def create_config_files(cfgDir, password=""):
     # Datasets to copy SEG from one DICOM series to another with smaller
     # slice thickness:
     """
-    Note:
-        Source slice 5 maps to Target slices 67-77.
+    Note: Source slice 5 maps to Target slices 67-77.
     """
     runID = 'NCITA_test_SD5'
     cfg[runID] = dict(cfg['NCITA_test_RD5'])

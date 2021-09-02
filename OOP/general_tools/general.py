@@ -6,6 +6,7 @@ Created on Tue Jul  6 13:38:32 2021
 """
 
 import os
+import time
 from copy import deepcopy
 import numpy as np
 
@@ -31,6 +32,16 @@ def flatten_list(listOfLists):
     if isinstance(listOfLists[0], list):
         return flatten_list(listOfLists[0]) + flatten_list(listOfLists[1:])
     return listOfLists[:1] + flatten_list(listOfLists[1:])
+    
+    #a = np.array(listOfLists, dtype=object)
+    
+    #flatList = np.concatenate(a).flatten().tolist() # zero-dimensional arrays 
+    # cannot be concatenated
+    
+    #flatList = np.column_stack(a).ravel() # all the input array dimensions for 
+    # the concatenation axis must match exactly
+    
+    #return flatList
 
 def unpack(items):
     """
@@ -123,7 +134,11 @@ def get_unique_items(items, ignoreZero=False, maintainOrder=False):
         ##items = list(np.concatenate(items).flat)
         #items = np.concatenate(items)
         
+        #print(f'\nPre-flattened list (type {type(items)}) = {items}\n')
+        
         items = np.array(flatten_list(items))
+        
+        #print(f'\nPost-flattened list (type {type(items)}) = {items}\n')
     
     if items.size == 0:
         return None
@@ -141,6 +156,7 @@ def get_unique_items(items, ignoreZero=False, maintainOrder=False):
                 uniqueItems.append(item)
     else:
         #uniqueItems = list(set(items.tolist()))
+        #print(f'type(items) = {type(items)}')
         uniqueItems = np.unique(items)
     
     # If items was a list convert back to a list:
@@ -303,7 +319,7 @@ def reduce_list_of_str_floats_to_16(origList):
     
     #newList = [item[:16] for item in origList]
     
-    charLimit = 5
+    charLimit = 16
     
     newList = []
     
@@ -446,3 +462,37 @@ def get_ind_of_newest_and_oldest_datetime(datetimes):
         oldest_dt = datetimes[oldest_ind]
     
     return newest_ind, oldest_ind
+
+def generate_reg_fname(
+        srcExpLab, srcScanID, trgExpLab, trgScanID, regTxName
+        ):
+    """
+    Generate a file name for registration-related files.
+    
+    Parameters
+    ----------
+    srcExpLab : str
+        The Source experiment label.
+    srcScanID : int
+        The Source scan ID.
+    trgExpLab : str
+        The Target experiment label.
+    trgScanID : int
+        The Target scan ID.
+    regTxName : str
+        The name of the registration transform (e.g. 'affine', 'bspline').
+        
+    Returns
+    -------
+    fname : str
+        A file name with the format:
+        f"YYYYMMDD_HHMMSS_ExpLab_{srcExpLab}_ScanID{srcScanID}_{regTxName}_"\
+        + f"reg_to_{trgExpLab}_ScanID_{trgScanID}".
+    """
+    
+    cdt = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+    fname = f'{cdt}_ExpLab_{srcExpLab}_ScanID_{srcScanID}_{regTxName}'\
+        + f'_reg_to_ExpLab_{trgExpLab}_ScanID_{trgScanID}'
+    
+    return fname

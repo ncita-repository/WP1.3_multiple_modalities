@@ -6,7 +6,7 @@ Created on Mon Jul  5 10:58:34 2021
 """
 
 
-def search_dro(
+def search_dro_OBSOLETE(
         xnatSession, projID, subjLab, srcExpLab, srcScanID, trgExpLab, 
         trgScanID, regTxName, p2c=False
         ):
@@ -73,7 +73,8 @@ def search_dro(
     from pydicom import dcmread
     #import time
     from datetime import datetime
-    from xnat_tools.FOR_uid import get_FOR_uid
+    #from xnat_tools.FOR_uid import get_FOR_uid
+    from xnat_tools.dicom_metadata import get_dicom_metadata
     
     if p2c:
         print('\n\n', '-'*120)
@@ -84,14 +85,42 @@ def search_dro(
     
     url = xnatSession.url
     
-    srcFORuid = get_FOR_uid(
+    """
+    srcFORuid_req = get_FOR_uid(
         url, projID, subjLab, srcExpLab, srcScanID, xnatSession
         )
     
-    trgFORuid = get_FOR_uid(
+    trgFORuid_req = get_FOR_uid(
         url, projID, subjLab, trgExpLab, trgScanID, xnatSession
         )
+    """
     
+    srcStudyUID_req, srcSeriesUID_req, srcFORuid_req, srcIPPs_req, srcIOP_req\
+        = get_dicom_metadata(
+            url, projID, subjLab, srcExpLab, srcScanID, xnatSession
+            )
+    
+    trgStudyUID_req, trgSeriesUID_req, trgFORuid_req, trgIPPs_req, trgIOP_req\
+        = get_dicom_metadata(
+            url, projID, subjLab, trgExpLab, trgScanID, xnatSession
+            )
+    
+    if regTxName == 'bspline':
+        droType_req = 'Deformable Spatial Registration Storage'
+    else:
+        droType_req = 'Spatial Registration Storage'
+    
+    if p2c:
+        print('Items to match:')
+        print(f'   droType_req = {droType_req}')
+        print(f'   srcFORuid_req = {srcFORuid_req}')
+        print(f'   trgFORuid_req = {trgFORuid_req}\n')
+        print('Items expected to match:')
+        print(f'   srcStudyUID_req = {srcStudyUID_req}')
+        print(f'   trgStudyUID_req = {trgStudyUID_req}\n')
+        #print(f'   srcIOP_req = {srcIOP_req}')
+        #print(f'   trgIOP_req = {trgIOP_req}\n')
+        
     # Get a listing of all resource files for the subject:
     uri = f'{url}/data/projects/{projID}/subjects/{subjLab}/files'
     
@@ -171,6 +200,7 @@ def search_dro(
             droType = f'{file[0x0008, 0x0016].repval}' # the representation of 
             # the element's value
             
+            """
             if 'Deformable' in droType:
                 if regTxName == 'bspline':
                     matchOnDroType = True
@@ -181,11 +211,17 @@ def search_dro(
                     matchOnDroType = True
                 else:
                     matchOnDroType = False
+            """
+            
+            if droType == droType_req:
+                matchOnDroType = True
+            else:
+                matchOnDroType = False
             
             if p2c:
                 print(f'  File {i+1} of {len(fnames)}')
-                print(f'    droType = {droType}\n')
-                print(f'    matchOnDroType = {matchOnDroType}\n')
+                print(f'    droType = {droType}')
+                print(f'    matchOnDroType = {matchOnDroType}')
             
             #ForUidPairs.append(
             #    (Dro.RegistrationSequence[0].FrameOfReferenceUID,
@@ -194,12 +230,26 @@ def search_dro(
                        
             # Use f-strings instead of deepcopy:
             if 'Deformable' in droType:
-                FORuid0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
-                FORuid1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
+                trgFORuid = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
+                srcFORuid = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
             else:
-                FORuid0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
-                FORuid1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
+                trgFORuid = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
+                srcFORuid = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
             
+            if srcFORuid == srcFORuid_req:
+                matchOnSrcFOR = True
+            else:
+                matchOnSrcFOR = False
+            
+            if trgFORuid == trgFORuid_req:
+                matchOnTrgFOR = True
+            else:
+                matchOnTrgFOR = False
+            
+            if p2c:
+                print(f'    matchOnSrcFOR = {matchOnSrcFOR}')
+                print(f'    matchOnTrgFOR = {matchOnTrgFOR}')
+                    
             #Type = f'{file.RegistrationSequence[1].MatrixRegistrationSequence[0].MatrixSequence[0].FrameOfReferenceTransformationMatrixType}'
             #Type = Type.lower()
             
@@ -209,8 +259,7 @@ def search_dro(
             
             #if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
             #        Type == regTxName and mod == 'REG'): # 07/05/21
-            if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
-                    matchOnDroType):
+            if (matchOnDroType and matchOnSrcFOR and matchOnTrgFOR):
                 inds.append(i)
                 
                 if 'Deformable' in droType:
@@ -254,9 +303,14 @@ def search_dro(
                     print(f'  contentDateTime = {contentDateTime}')
                 
                 # Convert to datetime object:
-                contentDateTime = datetime.strptime(
-                    contentDateTime, '%Y%m%d%H%M%S.%f'
-                    )
+                try:
+                    contentDateTime = datetime.strptime(
+                        contentDateTime, '%Y%m%d%H%M%S.%f'
+                        )
+                except ValueError:
+                    contentDateTime = datetime.strptime(
+                        contentDateTime, '%Y%m%d%H%M%S'
+                        )
                 contentDateTimes.append(contentDateTime)
                 
                 #print(f'contentDateTime = {contentDateTime}')
@@ -305,13 +359,12 @@ def search_dro(
             gridResRounded = [round(item, 2) for item in gridRes]
             
             msg = f"  There were {len(fnames)} subject assessors found, of "\
-                  + f"which {len(contentDateTimes)} was a {droType}, with "\
-                  + "\n  FrameOfReferenceUIDs matching those of the Source "\
-                  + "and Target image series, matching the transform type, "\
-                  + "\n  the most recent of which contains the grid "\
-                  + f"dimensions {gridDims}, grid resolution {gridResRounded},"\
-                  + f" and vector grid data containing {len(vectGridData)} "\
-                  + "elements.\n"
+                + f"which {len(contentDateTimes)} was a {droType}, with "\
+                + "\n  FrameOfReferenceUIDs matching those of the Source and "\
+                + "Target image series, matching the transform type, \n  the "\
+                + "most recent of which contains the grid dimensions "\
+                + f"{gridDims}, grid resolution {gridResRounded}, and vector "\
+                + f"grid data containing {len(vectGridData)} elements.\n"
         #else:
         if regTxName in ['rigid', 'affine']:
             txMatrix = txMatrices[newInd]
@@ -322,16 +375,16 @@ def search_dro(
             txMatrixRounded = [round(item, 3) for item in txMatrix]
             
             msg = f"  There were {len(fnames)} subject assessors found, of "\
-                  + f"which {len(contentDateTimes)} was a {droType}, with "\
-                  + "\n  FrameOfReferenceUIDs matching those of the Source and"\
-                  + " Target image series, matching the transform type, "\
-                  + "\n  the most recent of which contains the transformation"\
-                  + f" matrix \n  {txMatrixRounded}\n"
+                + f"which {len(contentDateTimes)} was a {droType}, with \n  "\
+                + "FrameOfReferenceUIDs matching those of the Source and "\
+                + "Target image series, matching the transform type, \n  the "\
+                + "most recent of which contains the transformation matrix \n"\
+                + f"  {txMatrixRounded}\n"
     else:
         msg = "  There were no DROs with FrameOfReferenceUIDs matching those "\
-              + "of the Source ({srcFORuid}) \nand Target ({trgFORuid}) "\
-              + "image series, and whose SOP Class matched the desired "\
-              + f"transform type ({regTxName}).\n"
+            + "of the Source ({srcFORuid}) \nand Target ({trgFORuid}) image "\
+            + "series, and whose SOP Class matched the desired transform "\
+            + f"type ({regTxName}).\n"
         
         dro = None
         txMatrix = None

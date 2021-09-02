@@ -1221,7 +1221,11 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
     
     """ The 'collectionType' key in 'data_fields' is either 'AIM' or 'SEG'. """
     if Mod == 'RTSTRUCT':
-        CollType = 'AIM'
+        #collType = 'AIM' # 01/09/21
+        collType_req = 'AIM' # 01/09/21
+    else: # 01/09/21
+        collType_req = 'SEG' # 01/09/21
+    
     
     if XnatSession == None:
         XnatSession = CreateXnatSession(XnatUrl, Username, Password)
@@ -1387,7 +1391,8 @@ def DownloadImAsr(XnatUrl, ProjId, SubjLabel, ExpLabel, ScanId, Mod, Name,
                 #    print(f"   * Matched collectionType = {collectionType}")
                 #    print(f"   * Matched name = {name}\n")
             
-            if seriesUid == SeriesUid and collType == CollType and name == Name:
+            #if seriesUid == SeriesUid and collType == collType and name == Name: # 01/09/21
+            if seriesUid == SeriesUid and collType == collType_req and name == Name: # 01/09/21
                 if LogToConsole:
                     print(f"   * Matched seriesUID = {seriesUid}")
                     print(f"   * Matched collType = {collType}")
@@ -2180,8 +2185,12 @@ def SearchXnatForDro(XnatUrl, ProjId, SubjLabel,
                     print(f'  ContentDateTime = {ContentDateTime}')
                 
                 # Convert to datetime object:
-                ContentDateTime = datetime.strptime(ContentDateTime, 
-                                                    '%Y%m%d%H%M%S.%f')
+                try:
+                    ContentDateTime = datetime.strptime(ContentDateTime, 
+                                                        '%Y%m%d%H%M%S.%f')
+                except ValueError:
+                    ContentDateTime = datetime.strptime(ContentDateTime, 
+                                                        '%Y%m%d%H%M%S')
                 ContentDateTimes.append(ContentDateTime)
                 
                 #print(f'ContentDateTime = {ContentDateTime}')

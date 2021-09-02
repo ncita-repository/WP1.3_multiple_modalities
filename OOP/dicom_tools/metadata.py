@@ -21,13 +21,13 @@ def get_dcm_uids(dicomDir):
     Returns
     -------
     studyUID : str
-        Study Instance UID of the DICOM series.
+        Study Instance UID of the DICOM series / XNAT scan.
     seriesUID : str
-        Series Instance UID of the DICOM series.
+        Series Instance UID of the DICOM series / XNAT scan.
     FORUID : str
-        Frame of reference UID of the DICOM series.
+        Frame of reference UID of the DICOM series / XNAT scan.
     SOPUIDs : list of strs
-        List of the SOP UIDs of the DICOMs.
+        List of the SOP UIDs of the DICOM series / XNAT scan.
     """
     
     seriesReader = sitk.ImageSeriesReader()

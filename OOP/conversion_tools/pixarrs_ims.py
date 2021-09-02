@@ -135,7 +135,7 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     #from GeneralTools import UniqueItems, AreListsEqualToWithinEpsilon
     
     if p2c:
-        print('\n\n', '-'*120)
+        print('\n\nStart', '-'*110)
         print('Running of pixarrByRoi_to_imByRoi():')
         print('\n\n', '-'*120)
         #print(f'   len(pixarrByRoi) = {len(pixarrByRoi)}')
@@ -175,7 +175,7 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     #          f'images, {NumOut}.')
     
     if p2c:
-        print('-'*120)
+        print('End', '-'*120)
         
     return labimByRoi
 
@@ -187,16 +187,17 @@ def im_to_pixarr(image, f2sInds=None):
     ----------
     image : SimpleITK Image
         A image (e.g. labelmap).
-    f2sInds : list of int, optional (None by default)  
+    f2sInds : list of ints, optional
         Use PerFrameFunctionalGroupsSequence-to-slice indices 
         (PFFGStoSliceInds) if they are known. If this input is not specified a 
-        list of the frame numbers that are non-zero will be determined.
+        list of the frame numbers that are non-zero will be determined. The
+        default value is None.
         
     Returns
     -------
     pixarr : Numpy array
         The non-zero frames in Image as a Numpy array.
-    f2sInds : List of integers
+    f2sInds : list of ints
         List of the indices of non-zero frames in Image.  This should be
         equivalent to the PerFrameFunctionalGroupsSequence-to-slice 
         indices (PFFGStoSliceInds).
@@ -215,7 +216,7 @@ def im_to_pixarr(image, f2sInds=None):
             #print(f'i = {i}, labarrSum = {labarrSum}')
             
             if labarrSum:
-                """ This is a non-zero frame: """
+                # This is a non-zero frame:
                 f2sInds.append(i)
     
     # Initialise pixarr:
@@ -259,7 +260,7 @@ def im_to_binary_ones_im(image):
     
     return maskIm
 
-def imBySeg_to_pixarrBySeg(imBySeg):
+def imBySeg_to_pixarrBySeg(imBySeg, p2c=False):
     """
     Convert a list of 3D SimpleITK Images to a list of 3D SEG pixel arrays.  
     
@@ -267,6 +268,9 @@ def imBySeg_to_pixarrBySeg(imBySeg):
     ----------
     imBySeg : list of SimpleITK Images
         A list (e.g. for each segment) of images (e.g. labelmap).
+    p2c : bool, optional
+        If True results will be printed to the console. The default value is
+        False.
         
     Returns
     -------
@@ -278,14 +282,26 @@ def imBySeg_to_pixarrBySeg(imBySeg):
         non-zero frames in each image in imBySeg.
     """
     
+    if p2c:
+        print('\n\n' + '-'*120)
+        print('---> imBySeg_to_pixarrBySeg():\n')
+        #print('-'*120)
+    
     pixarrBySeg = []
-    f2sInds = []
+    f2sIndsBySeg = []
     
     for i in range(len(imBySeg)):
         pixarr, f2sInds = im_to_pixarr(imBySeg[i])
+        
+        if p2c:
+            print(f'{i}: f2sInds = {f2sInds}\n')
             
         pixarrBySeg.append(pixarr)
         
-        f2sInds.append(f2sInds)
+        f2sIndsBySeg.append(f2sInds)
     
-    return pixarrBySeg, f2sInds
+    if p2c:
+        print('<--- imBySeg_to_pixarrBySeg()')
+        print('-'*120 + '\n')
+    
+    return pixarrBySeg, f2sIndsBySeg

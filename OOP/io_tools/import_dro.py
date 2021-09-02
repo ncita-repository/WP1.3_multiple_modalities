@@ -5,11 +5,15 @@ Created on Fri Jul 16 12:33:15 2021
 @author: ctorti
 """
 
+from importlib import reload
+import xnat_tools.dicom_metadata
+reload(xnat_tools.dicom_metadata)
 
 from pydicom.filebase import DicomBytesIO
 from pydicom import dcmread
 from datetime import datetime
-from xnat_tools.FOR_uid import get_FOR_uid
+#from xnat_tools.FOR_uid import get_FOR_uid
+from xnat_tools.dicom_metadata import get_dicom_metadata
     
 
 class DroImporter:
@@ -119,6 +123,12 @@ class DroImporter:
         regTxName = cfgDict['regTxName']
         p2c = cfgDict['p2c']
         
+        if p2c:
+            print('\n\n', '-'*120)
+            print('Running of fetch_dro():')
+            print('\n\n', '-'*120)
+        
+        """
         srcFORuid = get_FOR_uid(
             url, projID, subjLab, srcExpLab, srcScanID, xnatSession
             )
@@ -126,6 +136,33 @@ class DroImporter:
         trgFORuid = get_FOR_uid(
             url, projID, subjLab, trgExpLab, trgScanID, xnatSession
             )
+        """
+        
+        srcStudyUID_req, srcSeriesUID_req, srcFORuid_req, srcIPPs_req,\
+            srcIOP_req = get_dicom_metadata(
+                url, projID, subjLab, srcExpLab, srcScanID, xnatSession
+                )
+        
+        trgStudyUID_req, trgSeriesUID_req, trgFORuid_req, trgIPPs_req,\
+            trgIOP_req = get_dicom_metadata(
+                url, projID, subjLab, trgExpLab, trgScanID, xnatSession
+                )
+        
+        if regTxName == 'bspline':
+            droType_req = 'Deformable Spatial Registration Storage'
+        else:
+            droType_req = 'Spatial Registration Storage'
+        
+        if p2c:
+            print('Items to match:')
+            print(f'   droType_req = {droType_req}')
+            print(f'   srcFORuid_req = {srcFORuid_req}')
+            print(f'   trgFORuid_req = {trgFORuid_req}\n')
+            print('Items expected to match:')
+            print(f'   srcStudyUID_req = {srcStudyUID_req}')
+            print(f'   trgStudyUID_req = {trgStudyUID_req}\n')
+            #print(f'   srcIOP_req = {srcIOP_req}')
+            #print(f'   trgIOP_req = {trgIOP_req}\n')
         
         # Get a listing of all resource files for the subject:
         uri = f'{url}/data/projects/{projID}/subjects/{subjLab}/files'
@@ -145,11 +182,11 @@ class DroImporter:
                 fnames.append(fname) # 07/05/21
         
         if p2c:
-            print(f'  There were {len(fnames)} DICOM subject assessors found.')
+            print(f'There were {len(fnames)} DICOM subject assessors found:\n')
         
         # Initialise lists:
         txMatrices = []
-        #txMatrixTypes = []
+        txMatrixTypes = []
         gridDimss = [] # note extra s since a list of gridDims
         gridRess = [] # note extra s since a list of gridRes
         vectGridDatas = []
@@ -180,11 +217,54 @@ class DroImporter:
             
             # Only proceed if the DICOM file is a registration object:
             if mod == 'REG': # 07/05/21
+                """ Get meta data """
+                
+                contentDateTime = f'{file.ContentDate}{file.ContentTime}'
+                seriesDesc = f'{file.SeriesDescription}'
+                contentDesc = f'{file.ContentDescription}'
+                
                 #droType = f'{file.SOPClassUID}' # this is a number 
                 # (e.g. 1.2.840.10008.5.1.4.1.1.66.3)
                 droType = f'{file[0x0008, 0x0016].repval}' # this is the 
                 # representation of the element's value
                 
+                # Use f-strings instead of deepcopy:
+                if 'Deformable' in droType:
+                    trgFORuid = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
+                    srcFORuid = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
+                else:
+                    trgFORuid = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
+                    srcFORuid = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
+                
+                trgStudyUID = f'{file.StudyInstanceUID}'
+                
+                if 'Deformable' in droType:
+                    gridDims = file.DeformableRegistrationSequence[1]\
+                                   .DeformableRegistrationGridSequence[0]\
+                                   .GridDimensions
+                    
+                    gridRes = file.DeformableRegistrationSequence[1]\
+                                  .DeformableRegistrationGridSequence[0]\
+                                  .GridResolution
+                    
+                    vectGridData = file.DeformableRegistrationSequence[1]\
+                                       .DeformableRegistrationGridSequence[0]\
+                                       .VectorGridData
+                else:
+                    txMatrix = file.RegistrationSequence[1]\
+                                   .MatrixRegistrationSequence[0]\
+                                   .MatrixSequence[0]\
+                                   .FrameOfReferenceTransformationMatrix
+                    
+                    txMatrixType = file.RegistrationSequence[1]\
+                                       .MatrixRegistrationSequence[0]\
+                                       .MatrixSequence[0]\
+                                       .FrameOfReferenceTransformationMatrixType
+                
+                
+                """ Does meta data match requirements? """
+                
+                """
                 if 'Deformable' in droType:
                     if regTxName == 'bspline':
                         matchOnDroType = True
@@ -195,70 +275,108 @@ class DroImporter:
                         matchOnDroType = True
                     else:
                         matchOnDroType = False
+                """
+                
+                if droType == droType_req:
+                    matchOnDroType = True
+                else:
+                    matchOnDroType = False
+                
+                if srcFORuid == srcFORuid_req:
+                    matchOnSrcFOR = True
+                else:
+                    matchOnSrcFOR = False
+                
+                if trgFORuid == trgFORuid_req:
+                    matchOnTrgFOR = True
+                else:
+                    matchOnTrgFOR = False
+                
+                if trgStudyUID == trgStudyUID_req:
+                    matchOnTrgStudyUID = True
+                else:
+                    matchOnTrgStudyUID = False
                 
                 if p2c:
                     print(f'  File {i+1} of {len(fnames)}')
-                    print(f'    droType = {droType}\n')
-                    print(f'    matchOnDroType = {matchOnDroType}\n')
+                    print(f'    fname = {fnames[i]}')
+                    print(f'    contentDateTime = {contentDateTime}')
+                    print(f'    seriesDesc = {seriesDesc}')
+                    print(f'    contentDesc = {contentDesc}')
+                    print(f'    droType = {droType}')
+                    if 'Deformable' in droType:
+                        print(f'    gridDims = {gridDims}')
+                        print(f'    gridRes = {gridRes}')
+                        print(f'    len(vectGridData) = {len(vectGridData)}')
+                    else:
+                        print(f'    txMatrixType = {txMatrixType}')
+                        """
+                        print(f'    txMatrix = [{float(txMatrix[0])},',
+                              f'{float(txMatrix[1])}, {float(txMatrix[2])},',
+                              f'{float(txMatrix[3])},')
+                        print(f'                {float(txMatrix[4])},',
+                              f'{float(txMatrix[5])}, {float(txMatrix[6])},',
+                              f'{float(txMatrix[7])},')
+                        print(f'                {float(txMatrix[8])},',
+                              f'{float(txMatrix[9])}, {float(txMatrix[10])},',
+                              f'{float(txMatrix[11])},')
+                        print(f'                {float(txMatrix[12])},',
+                              f'{float(txMatrix[13])}, {float(txMatrix[14])},',
+                              f'{float(txMatrix[15])}]')
+                        """
+                        txt = '    txMatrix = ['
+                        for j in range(4):
+                            txt += f'{txMatrix[4*j]}, {txMatrix[4*j + 1]}, '\
+                                + f'{txMatrix[4*j + 2]}, {txMatrix[4*j + 3]}'
+                            if j < 3:
+                                txt += ',\n                '
+                            else:
+                                txt += ']'
+                        print(txt)
+                    print(f'    matchOnDroType = {matchOnDroType}')
+                    print(f'    matchOnSrcFOR = {matchOnSrcFOR}')
+                    print(f'    matchOnTrgFOR = {matchOnTrgFOR}')
+                    print(f'    matchOnTrgStudyUID = {matchOnTrgStudyUID}\n')
                 
-                # Use f-strings instead of deepcopy:
-                if 'Deformable' in droType:
-                    FORuid0 = f'{file.DeformableRegistrationSequence[0].SourceFrameOfReferenceUID}'
-                    FORuid1 = f'{file.DeformableRegistrationSequence[1].SourceFrameOfReferenceUID}'
-                else:
-                    FORuid0 = f'{file.RegistrationSequence[0].FrameOfReferenceUID}'
-                    FORuid1 = f'{file.RegistrationSequence[1].FrameOfReferenceUID}'
                 
-                #if FORuid0 == trgFORuid and FORuid1 == srcFORuid and Type == regTxName\
-                #and mod == 'REG': # 07/05/21
-                if (FORuid0 == trgFORuid and FORuid1 == srcFORuid and 
-                        matchOnDroType):
+                """ Store meta data that match requirements in lists """
+                
+                if (matchOnDroType and matchOnSrcFOR and matchOnTrgFOR):
                     inds.append(i)
                     
                     if 'Deformable' in droType:
-                        gridDimss.append(
-                            file.DeformableRegistrationSequence[1]\
-                                .DeformableRegistrationGridSequence[0]\
-                                .GridDimensions)
+                        gridDimss.append(gridDims)
                         
-                        gridRess.append(
-                            file.DeformableRegistrationSequence[1]\
-                                .DeformableRegistrationGridSequence[0]\
-                                .GridResolution)
+                        gridRess.append(gridRes)
                         
-                        vectGridDatas.append(
-                            file.DeformableRegistrationSequence[1]\
-                                .DeformableRegistrationGridSequence[0]\
-                                .VectorGridData)
+                        vectGridDatas.append(vectGridData)
                     else:
-                        txMatrices.append(
-                            file.RegistrationSequence[1]\
-                                .MatrixRegistrationSequence[0]\
-                                .MatrixSequence[0]\
-                                .FrameOfReferenceTransformationMatrix)
-                
-                    """
-                    txMatrixTypes.append(
-                        file.RegistrationSequence[1]\
-                            .MatrixRegistrationSequence[0]\
-                            .MatrixSequence[0]\
-                            .FrameOfReferenceTransformationMatrixType)
-                    """
-        
-                    contentDateTime = f'{file.ContentDate}{file.ContentTime}'
+                        txMatrices.append(txMatrix)
+                        
+                        txMatrixTypes.append(txMatrixType)
                     
-                    if p2c:
-                        print(f'  contentDateTime = {contentDateTime}')
-                    
-                    # Convert to datetime object:
-                    contentDateTime = datetime.strptime(
-                        contentDateTime, '%Y%m%d%H%M%S.%f'
-                        )
+                    # Convert contentDateTime to datetime object:
+                    try:
+                        contentDateTime = datetime.strptime(
+                            contentDateTime, '%Y%m%d%H%M%S.%f'
+                            )
+                    except ValueError:
+                        contentDateTime = datetime.strptime(
+                            contentDateTime, '%Y%m%d%H%M%S'
+                            )
                     contentDateTimes.append(contentDateTime)
         
         if p2c:
             print(f'  The indices of the files that match = {inds}')
-            print(f'  contentDateTimes = {contentDateTimes}')
+            #print(f'  contentDateTimes = {contentDateTimes}')
+            txt = '  contentDateTimes = ['
+            for j in range(len(contentDateTimes)):
+                txt += f'{contentDateTimes[j]}'
+                if j < len(contentDateTimes) - 1:
+                    txt += ',\n                      '
+                else:
+                    txt += ']'
+            print(txt)
         
         if contentDateTimes:#time_diffs:
             # The index of the most recent contentDateTime:
@@ -268,7 +386,7 @@ class DroImporter:
             droInd = inds[newInd]
             
             if p2c:
-                print(f'  The index of the most recent file that matches = {droInd}')
+                print(f'\n  The index of the most recent file that matches = {droInd}')
             
             dro = files[droInd]
             
@@ -280,14 +398,14 @@ class DroImporter:
                 
                 gridResRounded = [round(item, 2) for item in gridRes]
                 
-                msg = f"  There were {len(fnames)} subject assessors found, "\
-                    + f"of which {len(contentDateTimes)} was a {droType}, "\
+                msg = f"\n  There were {len(fnames)} subject assessors found,"\
+                    + f" of which {len(contentDateTimes)} were a {droType}, "\
                     + "with\n  FrameOfReferenceUIDs matching those of the "\
                     + "Source and Target image series, matching the transform"\
-                    + " type, \n  the most recent of which contains the grid "\
-                    + f"dimensions {gridDims}, grid resolution {gridResRounded},"\
-                    + f" and vector grid data containing {len(vectGridData)} "\
-                    + "elements.\n"
+                    + "'{regTxName}', \n  the most recent of which contains "\
+                    + f"the grid dimensions {gridDims}, grid resolution "\
+                    + f"{gridResRounded}, and vector grid data containing "\
+                    + f"{len(vectGridData)} elements.\n"
             
             if regTxName in ['rigid', 'affine']:
                 txMatrix = txMatrices[newInd]
@@ -297,12 +415,12 @@ class DroImporter:
                 
                 txMatrixRounded = [round(item, 3) for item in txMatrix]
                 
-                msg = f"  There were {len(fnames)} subject assessors found, "\
-                    + f"of which {len(contentDateTimes)} was a {droType}, "\
+                msg = f"\n  There were {len(fnames)} subject assessors found,"\
+                    + f" of which {len(contentDateTimes)} were a {droType}, "\
                     + "with\n  FrameOfReferenceUIDs matching those of the "\
                     + "Source and Target image series, matching the transform"\
-                    + " type, \n  the most recent of which contains the "\
-                    + f"transformation matrix \n  {txMatrixRounded}\n"
+                    + f"'{regTxName}', \n  the most recent of which contains "\
+                    + f"the transformation matrix: \n  {txMatrixRounded}\n"
         else:
             dro = None
             txMatrix = None
@@ -321,3 +439,6 @@ class DroImporter:
         self.gridDims = gridDims
         self.gridRes = gridRes
         self.vectGridData = vectGridData
+        
+        if p2c:
+            print('-'*120)
