@@ -44,6 +44,7 @@ from general_tools.pixarr_ops import (
     mean_frame_in_pixarrBySeg, or_frame_of_pixarrBySeg
     )
 from plotting_tools.plotting import plot_pixarrBySeg
+from io_tools.exports import export_list_to_txt
 
 class Propagator:
     # TODO modify the docstrings
@@ -133,27 +134,35 @@ class Propagator:
         self.labimByRoi = None
         self.image = None
         
-        # Initialise sitkTx that will be used for resampling source label
-        # images to be the identity transform:
+        # Initialise the SimpleITK Transform that will be used for resampling 
+        # source label images to be the identity transform:
+        """
+        Note:
+        
+        If image registration is performed, resTx will be updated to be the 
+        final registration transform. If a suitable DRO is found, resTx will be
+        updated to be the transform created from the DRO and used to transform/
+        resample the source label image.
+        """
         #self.sitkTx = sitk.Transform()
-        self.sitkTx = sitk.Transform(3, sitk.sitkIdentity)
+        self.resTx = sitk.Transform(3, sitk.sitkIdentity)
+        self.resTxParams = self.resTx.GetParameters()
         
         # Initialise instance attributes that will be updated following
-        # registration:
-        self.initialTx = None
-        self.finalTx = None
+        # registration or parsing of a DRO:
+        self.initRegTx = None # initial registration transform
+        self.initRegTxParams = None
+        #self.finalTx = None # from registration or DRO
         #self.sitkTx = None
         #self.regIm = None
         
         # Initialise instance attributes that will be updated following
         # parsing of a DRO:
         #self.sitkTx = None
-        self.txParams = None
+        #self.txParams = None # from registration or DRO
         #self.regIm = None
-        """
-        Note:
-            self.finalTx and self.regIm will be updated after parsing a DRO.
-        """
+        self.preRegTx = None # will be updated for deformable DROs only
+        self.preRegTxParams = None
         
         # Determine which use case applies (and will be applied):
         self.which_use_case(srcDataset, trgDataset, params)
@@ -946,12 +955,12 @@ class Propagator:
             DataImporter Object for the source DICOM series.
         trgDataset : DataImporter Object
             DataImporter Object for the target DICOM series.
+        resTx : SimpleITK Transform
+            The transform to use when resampling the source image to the target
+            domain.
         params : DataDownloader Object
             Contains parameters (cfgDict), file paths (pathsDict), timestamps
             (timings) and timing messages (timingMsgs).
-        #sitkTx : SimpleITK Transform, optional
-        #    The transform to use when resampling the source image to the target
-        #    domain. Default value is sitk.Transform() (identity transform).
             
         Returns
         -------
@@ -975,9 +984,9 @@ class Propagator:
                     f2sIndsByRoi=srcDataset.f2sIndsByRoi,
                     im=srcDataset.image,
                     refIm=trgDataset.image,
-                    #sitkTx=sitkTx,
+                    sitkTx=self.resTx, # 03/09/21
                     #sitkTx=self.sitkTx, # 01/09/21
-                    sitkTx=self.finalTx, # 01/09/21
+                    #sitkTx=self.finalTx, # 01/09/21
                     interp=params.cfgDict['resInterp'], 
                     applyPreResBlur=params.cfgDict['applyPreResBlur'],
                     preResVar=params.cfgDict['preResVar'],
@@ -1054,6 +1063,7 @@ class Propagator:
         regPlotFname = generate_reg_fname(
                 srcExpLab, srcScanID, trgExpLab, trgScanID, regTxName
                 )
+        
         regPlotFpath = os.path.join(regPlotsExportDir, regPlotFname)
         
         # Create directory if it doesn't already exist:
@@ -1068,7 +1078,7 @@ class Propagator:
         print(f'fixFidsFpath = {fixFidsFpath}')
         print(f'movFidsFpath = {movFidsFpath}\n')
         
-        self.image, self.initialTx, self.finalTx, self.metricValues,\
+        self.image, self.initRegTx, self.resTx, self.metricValues,\
             self.multiresIters = register_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
@@ -1079,7 +1089,8 @@ class Propagator:
         
         # Get the registration transform parameters:
         #self.txParams = [str(item) for item in self.finalTx.GetParameters()]  # 01/09/21
-        self.txParams = self.finalTx.GetParameters() # 01/09/21
+        self.resTxParams = self.resTx.GetParameters() # 03/09/21
+        self.initRegTxParams = self.initRegTx.GetParameters() # 03/09/21
         
         timingMsg = "Took [*] s to register the source to target DICOM scans.\n"
         params.add_timestamp(timingMsg)
@@ -1127,30 +1138,27 @@ class Propagator:
         p2c = params.cfgDict['p2c']
         
         if params.cfgDict['regTxName'] in ['rigid', 'affine']:
-            finalTx = create_tx_from_spa_dro(dro, p2c)
-            self.finalTx = finalTx
+            resTx = create_tx_from_spa_dro(dro, p2c)
+            self.resTx = resTx # update resTx
             
-            txParams = list(finalTx.GetParameters())
-            self.txParams = txParams
+            resTxParams = list(resTx.GetParameters())
+            self.resTxParams = resTxParams # update resTxParams
             
             #listOfSitkTxs.append(sitkTx)
             
             # Resample srcIm:
             resIm = resample_im(
-                    im=srcIm, refIm=trgIm, sitkTx=finalTx, 
-                    interp='Linear', p2c=False
-                    )
+                im=srcIm, refIm=trgIm, sitkTx=resTx, interp='Linear', 
+                p2c=False
+                )
         else:
             # Create the deformable SimpleITK Transform:
-            finalTx = create_tx_from_def_dro(dro, refIm=trgIm, p2c=p2c)
-            self.finalTx = finalTx
+            resTx = create_tx_from_def_dro(dro, refIm=trgIm, p2c=p2c)
             
             # Create the pre-deformable SimpleITK Transform:
             preRegTx = create_pre_tx_from_def_dro(dro, p2c)
             self.preRegTx = preRegTx
-            
-            txParams = list(preRegTx.GetParameters())
-            self.txParams = txParams
+            self.preRegTxParams = list(preRegTx.GetParameters())
             
             IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
             
@@ -1160,34 +1168,34 @@ class Propagator:
                 so no need to resample/transform the label image using
                 preRegTx - only need to use sitkTx. 
                 """
-                #finalTx = create_tx_from_def_dro(Dro, refIm=trgIm, p2c=p2c)
-                
                 # Resample srcIm using sitkTx:
                 resIm = resample_im(
-                    im=srcIm, refIm=trgIm, sitkTx=finalTx, 
+                    im=srcIm, refIm=trgIm, sitkTx=resTx, 
                     interp='Linear', p2c=False
                     )
+                
+                # Update resTx and resTxParams:
+                self.resTx = resTx
+                self.resTxParams = list(resTx.GetParameters())
             else:
                 """ 
                 The pre-registration matrix is not the identity matrix so
                 need to resample/transform the label image using the composite
                 transform of preRegTx and sitkTx. 
                 """
-                #listOfSitkTxs.append(preRegTx)
-                
-                #finalTx = create_tx_from_def_dro(Dro, refIm=trgIm, p2c=p2c)
-                
                 # Compose transforms: (09/07/21)
                 compTx = sitk.CompositeTransform(preRegTx)
-                compTx.AddTransform(finalTx)
-                # Update self.sitkTx:
-                self.finalTx = compTx
-                
+                compTx.AddTransform(resTx)
+            
                 # Resample srcIm usig compTx:
                 resIm = resample_im(
                     im=srcIm, refIm=trgIm, sitkTx=compTx, 
                     interp='Linear', p2c=False
                     )
+                
+                # Update resTx and resTxParams:
+                self.resTx = compTx
+                self.resTxParams = list(compTx.GetParameters())
         
         self.image = resIm
     
@@ -1361,7 +1369,7 @@ class Propagator:
         #applyPostResBlur = cfgDict['applyPostResBlur']
         #postResVar = cfgDict['postResVar']
         useDroForTx = cfgDict['useDroForTx']
-        regTxName = cfgDict['regTxName']
+        #regTxName = cfgDict['regTxName']
         p2c = cfgDict['p2c']
         
         #srcLabimByRoi = srcDataset.labimByRoi
@@ -1421,8 +1429,8 @@ class Propagator:
         
         if useCase in ['3a', '3b', '4a', '4b']:
             """
-            NRP copy (3a, 4a) or RP propagation (3b, 4b) with resampling (not 
-            registration transformation).
+            NRP copy (3a, 4a) or RP propagation (3b, 4b) by resampling using
+            the identity transform.
             """
             if p2c:
                 print('Running useCase in [3a, 3b, 4a and 4b]\n')
@@ -1480,4 +1488,88 @@ class Propagator:
             self.pixarrByRoi = self.resPixarrByRoi
             self.f2sIndsByRoi = self.resF2SindsByRoi
         """
+        
+    def export_data(self, srcDataset, trgDataset, params):
+        
+        #exportLabim = params.cfgDict['exportLabim']
+        #exportTx = params.cfgDict['exportTx']
+        
+        labimExportDir = params.cfgDict['labimExportDir']
+        txExportDir = params.cfgDict['txExportDir']
+        
+        if not os.path.isdir(txExportDir):
+            Path(txExportDir).mkdir(parents=True)
+        
+        srcLabimByRoi = srcDataset.labimByRoi
+        trgLabimByRoi = trgDataset.labimByRoi
+        newLabimByRoi = self.labimByRoi
+        
+        resTx = self.resTx
+        initRegTx = self.initRegTx
+        preRegTx = self.preRegTx
+        
+        #resTxParams = self.resTxParams
+        #initRegTxParams = self.initRegTxParams
+        #preRegTxParams = self.preRegTxParams
+        
+        useCaseToApply = params.cfgDict['useCaseToApply']
+        useDroForTx = params.cfgDict['useDroForTx']
+        regTxName = params.cfgDict['regTxName']
+        
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        """ Export label images """
+        for labimByRoi, ds in zip(
+                [srcLabimByRoi, trgLabimByRoi, newLabimByRoi],
+                ['src', 'trg', 'new']
+                ):
+            if labimByRoi:
+                for r in range(len(labimByRoi)):
+                    fname = f'{currentDateTime}_{ds}Labim_{r}'
+                    
+                    fpath = os.path.join(labimExportDir, fname)
+                    
+                    
+                
+        
+        """ Export transforms """
+        
+        # Beginning of file name will be current datetime:
+        resFname = f'{currentDateTime}_'
+        initRegFname = f'{currentDateTime}_'
+        preRegFname = f'{currentDateTime}_'
+        
+        if useCaseToApply in ['3a', '3b', '4a', '4b']:
+            resFname += 'resample_tx'
+            
+        elif useCaseToApply in ['5a', '5a']:
+            if useDroForTx:
+                resFname += f'res_tx_{regTxName}_from_DRO'
+                
+                if regTxName == 'bspline':
+                    preRegFname += 'pre_reg_tx_from_DRO'
+                
+            else:
+                resFname += f'reg_tx_{regTxName}'
+                initRegFname += 'reg_init_tx'
+        
+        for tx, fname in zip(
+                [resTx, initRegTx, preRegTx], 
+                [resFname, initRegFname, preRegFname]
+                ):
+            if tx:
+                # Write transform in TFM and HDF formats:
+                fpath = os.path.join(txExportDir, fname + '.tfm')
+                sitk.WriteTransform(tx, fpath)
+                
+                fpath = os.path.join(txExportDir, fname + '.hdf')
+                sitk.WriteTransform(tx, fpath)
+                
+                # Write transform parameters in TXT format:
+                export_list_to_txt(
+                    items=tx.GetParameters(), 
+                    filename=fname+'_params.txt', 
+                    exportDir=txExportDir
+                    )
         

@@ -88,7 +88,7 @@ def create_config_files(cfgDir, password=""):
     
     """
     Define the export directories for the (new) target ROI Collections, 
-    DRO, plots, logs and configuration files:
+    DRO, plots, transforms, binary label maps, logs and configuration files:
     """
     rtsExportDir = os.path.join(rootExportDir, 'new_RTS')
     segExportDir = os.path.join(rootExportDir, 'new_SEG')
@@ -98,7 +98,12 @@ def create_config_files(cfgDir, password=""):
     rtsPlotsExportDir = os.path.join(rootExportDir, 'plots_RTS')
     segPlotsExportDir = os.path.join(rootExportDir, 'plots_SEG')
     
-    regPlotsExportDir = os.path.join(rootExportDir, 'plots_reg')
+    # Location where resampled/transformed/registered plots will be saved:
+    resPlotsExportDir = os.path.join(rootExportDir, 'plots_res')
+    
+    txExportDir = os.path.join(rootExportDir, 'transforms')
+    
+    labimExportDir = os.path.join(rootExportDir, 'label_images')
     
     logsExportDir = os.path.join(rootExportDir, 'logs')
     
@@ -111,14 +116,15 @@ def create_config_files(cfgDir, password=""):
     
     """
     Chose whether or not to export the (new) target ROI Collection (i.e.
-    RTS or SEG), DRO, plots and logs:
+    RTS or SEG), DRO, transforms, label images, plots and logs:
     """
     #exportTrgRoicol = False
     exportTrgRoicol = True
     
     #exportDro = False
     exportDro = True
-    
+    exportTx = True
+    exportLabim = True
     #exportPlots = False
     exportPlots = True
     #exportLogs = False
@@ -211,12 +217,16 @@ def create_config_files(cfgDir, password=""):
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
+        'txExportDir' : txExportDir,
+        'labimExportDir' : labimExportDir,
+        'logsExportDir' : logsExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
-        'regPlotsExportDir' : regPlotsExportDir,
-        'logsExportDir' : logsExportDir,
+        'resPlotsExportDir' : resPlotsExportDir,
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
+        'exportTx' : exportTx,
+        'exportLabim' : exportLabim,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
         'whichSrcRoicol' : whichSrcRoicol,
@@ -296,12 +306,16 @@ def create_config_files(cfgDir, password=""):
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
+        'txExportDir' : txExportDir,
+        'labimExportDir' : labimExportDir,
+        'logsExportDir' : logsExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
-        'regPlotsExportDir' : regPlotsExportDir,
-        'logsExportDir' : logsExportDir,
+        'resPlotsExportDir' : resPlotsExportDir,
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
+        'exportTx' : exportTx,
+        'exportLabim' : exportLabim,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
         'whichSrcRoicol' : whichSrcRoicol,
@@ -384,7 +398,7 @@ def create_config_files(cfgDir, password=""):
     cfg[runID] = dict(cfg['NCITA_test_RR2'])
     cfg[runID]['runID'] = runID
     cfg[runID]['trgExpLab'] = 'Session3'
-    cfg[runID]['srcScanID'] = '6'
+    cfg[runID]['trgScanID'] = '6'
     
     # Datasets to propagate RTS across two DICOM series with different IOPs:
     runID = 'NCITA_test_RR12'

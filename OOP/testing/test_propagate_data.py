@@ -37,7 +37,9 @@ from dro_tools.create_dro import DroCreator
 from seg_tools.create_seg import create_seg
 
 #from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
-from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_and_images
+from plotting_tools.plotting import (
+    plot_pixarrs_from_list_of_segs_and_images, compare_res_results
+    )
 
 class PropagatorTester:
     # TODO update docstrings
@@ -167,12 +169,38 @@ class PropagatorTester:
         regTxName = cfgDict['regTxName']
         initMethod = cfgDict['initMethod']
         resInterp = cfgDict['resInterp']
+        trgIm = trgDataset.image
+        resIm = self.image # resampled source or source-registered-to-target 
+        
+        regExportDir = cfgDict['regPlotsExportDir']
         
         if roicolMod == 'RTSTRUCT':
             roiExportDir = cfgDict['rtsPlotsExportDir']
         else:
             roiExportDir = cfgDict['segPlotsExportDir']
         
+        
+        if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+            """ Plot a single slice from trgIm and resIm and compare """
+            
+            # Prepare plot title for new dataset:
+            resTitle = 'Src '
+            if useCaseToApply in ['3a', '3b', '4a', '4b']:
+                resTitle += f'res to Trg ({resInterp})'
+            elif useCaseToApply in ['5a', '5a']:
+                if useDroForTx:
+                    resTitle += f'tx to Trg ({regTxName} DRO, {resInterp})'
+                else:
+                    resTitle += f'reg to Trg ({regTxName}, {initMethod}, '\
+                        + f'{resInterp})'
+                    
+            midInd = trgIm.GetSize()[2] // 2
+    
+            compare_res_results(
+                resIm0=trgIm, resIm1=resIm, resInd=midInd,
+                resTitle0='Target image', resTitle1=resTitle,
+                exportPlot=exportPlot, exportDir=regExportDir,
+            )
         
         """ Plot copied/propagated ROI overlaid on DICOM images """
         
@@ -188,13 +216,13 @@ class PropagatorTester:
             method += f'propagated to Trg (res, {resInterp})'
         elif useCaseToApply == '5a':
             if useDroForTx:
-                method += f'copied to Trg ({regTxName} DRO, {resInterp}'
+                method += f'copied to Trg ({regTxName} DRO, {resInterp})'
             else:
                 method += f'copied to Trg ({regTxName} reg, {initMethod}, '\
                     + f'{resInterp})'
         elif useCaseToApply == '5b':
             if useDroForTx:
-                method += f'propagated to Trg ({regTxName} DRO, {resInterp}'
+                method += f'propagated to Trg ({regTxName} DRO, {resInterp})'
             else:
                 method += f'propagated to Trg ({regTxName} reg, {initMethod},'\
                     + f' {resInterp})'

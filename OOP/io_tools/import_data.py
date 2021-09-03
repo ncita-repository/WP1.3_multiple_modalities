@@ -18,6 +18,8 @@ from importlib import reload
 
 import io_tools.download_data
 reload(io_tools.download_data)
+import io_tools.imports
+reload(io_tools.imports)
 import io_tools.import_dro
 reload(io_tools.import_dro)
 import io_tools.import_roicol
@@ -30,8 +32,6 @@ import seg_tools.seg_data
 reload(seg_tools.seg_data)
 import dicom_tools.imports
 reload(dicom_tools.imports)
-import image_tools.imports
-reload(image_tools.imports)
 import conversion_tools.pixarrs_ims
 reload(conversion_tools.pixarrs_ims)
 
@@ -46,6 +46,7 @@ from pydicom import dcmread
 
 #from io_tools.import_dro import DroImporter
 #from io_tools.import_roicol import RoicollectionImporter
+from io_tools.imports import import_dicoms_as_im
 from io_tools.inputs_checker import are_inputs_valid, which_use_case
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
@@ -58,7 +59,6 @@ from seg_tools.seg_data import (
     )
 from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
 from dicom_tools.imports import import_dcms
-from image_tools.imports import import_im
 from image_tools.attrs_info import get_im_attrs
 from general_tools.geometry import get_im_extent
 
@@ -187,7 +187,7 @@ class DataImporter:
         self.import_dicoms(dicomDir, p2c)
         
         # Import a DICOM series as a SimpleITK Image:
-        self.import_image(dicomDir)
+        self.import_dicom_image(dicomDir)
         
         # Get the RTS/SEG data of interest:
         self.get_seg_metadata(cfgDict, srcORtrg)
@@ -1004,7 +1004,7 @@ class DataImporter:
                 dicomDir, package='pydicom', p2c=p2c
                 )
     
-    def import_image(self):
+    def import_dicom_image(self):
         """
         Imports a DICOM series as a SimpleITK Image.
         
@@ -1019,7 +1019,7 @@ class DataImporter:
             SimpleITK Image representation of the DICOM series.
         """
         
-        self.image = import_im(self.dicomDir)
+        self.image = import_dicoms_as_im(self.dicomDir)
     
     def import_images_210805(self, params):
         """
@@ -1038,8 +1038,8 @@ class DataImporter:
         srcDcmDir = params.srcXnatParams['dicomDir']
         trgDcmDir = params.trgXnatParams['dicomDir']
         
-        self.srcIm = import_im(dicomDir=srcDcmDir)
-        self.trgIm = import_im(dicomDir=trgDcmDir)
+        self.srcIm = import_dicoms_as_im(dicomDir=srcDcmDir)
+        self.trgIm = import_dicoms_as_im(dicomDir=trgDcmDir)
     
     def import_data(self, params):
         # TODO update docstrings
@@ -1111,7 +1111,7 @@ class DataImporter:
         self.import_dicoms()
         
         # Import a DICOM series as a SimpleITK Image:
-        self.import_image()
+        self.import_dicom_image()
         
         # Get the image attributes:
         self.get_image_attributes(params)

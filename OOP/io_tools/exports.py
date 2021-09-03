@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 import csv
 import json
-
+import SimpleITK as sitk
 
 def export_dict_to_csv(dictionary, filename, exportDir='cwd'):
     """
@@ -275,5 +275,62 @@ def export_list_to_txt(items, filename, exportDir='cwd'):
     with open(filepath, 'w') as file:
         for line in items:
             file.write(line)
+    
+    return
+
+def export_im(im, filename, fileFormat='NrrdImageIO', exportDir='cwd'):
+    """ 
+    Export a SimpleITK Image in a desired format. 
+    
+    Parameters
+    ----------
+    im : SimpleITK Image 
+        The image to be exported.
+    filename : str
+        The filename (without extension) to assign to the exported file.
+    fileFormat : str, optional
+        The desired format can be any format specified here:
+            https://simpleitk.readthedocs.io/en/master/IO.html#transformations
+        e.g. 'HDF5ImageIO', 'NiftiImageIO', 'NrrdImageIO'. The default value is
+        'NrrdImageIO'.
+    exportDir : str, optional
+        If provided the directory to which the file will be exported to. If the
+        directory doesn't exist it will be created. The default value is 'cwd',
+        i.e. the current working directory.
+    
+    Note
+    ----
+    The file extension will be defined based on fileFormat. Note that this part
+    of this function is incomplete.
+    """
+    
+    #if not '.nii' in filename:
+    #    filename += '.nii'
+    
+    # TODO Complete file extension section below
+    # Determine the appropriate file extension (THIS IS INCOMPLETE as it does
+    # not cover all possible file formats allowed!):
+    if fileFormat == 'HDF5ImageIO':
+        fileExt = '.hdf'
+    elif fileFormat == 'NiftiImageIO':
+        fileExt = '.nii'
+    elif fileFormat == 'NrrdImageIO':
+        fileExt = '.nrrd'
+    
+    filename += fileExt
+    
+    if exportDir == 'cwd':
+        filepath = filename
+    else:
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        filepath = os.path.join(exportDir, filename)
+    
+    writer = sitk.ImageFileWriter()
+    writer.SetImageIO(fileFormat)
+    writer.SetFileName(filepath)
+    writer.Execute(im)
     
     return

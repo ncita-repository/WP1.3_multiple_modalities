@@ -5,9 +5,11 @@ Created on Tue Jul  6 13:42:34 2021
 @author: ctorti
 """
 
+""" 03/09/21: These functions were moved to io_tools.imports.py """
+
 import SimpleITK as sitk
 
-def import_im(dicomDir, dtype='float32'):
+def import_im_OBSOLETE(dicomDir, dtype='float32'):
     """
     Import a DICOM series as a SimpleITK image.
     
@@ -75,7 +77,7 @@ def import_im(dicomDir, dtype='float32'):
     
     return im
 
-def import_nifti(filepath):
+def import_nifti_OBSOLETE(filepath):
     """
     Import a NIFTI as a SimpleITK image.
     

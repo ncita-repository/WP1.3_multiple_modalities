@@ -312,12 +312,17 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
                         
                     sliceTxt = f'Slice {sInd}'
                     zPosTxt = f'z = {round(IPP[2], 2)} mm'
+                    """ Title not displaying as expected using bold font with
+                    Latex-style command:
                     plotTitle = plotTitle.replace(' ', '\:')
                     plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle) \
                         + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
                     #plotTitle = r"$\bf{plotTitle}$\," \
                     #            + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
-                    
+                    """
+                    plotTitle = f'{plotTitle}\n\n {sliceTxt}\n{frameTxt}'\
+                        + f'\n{zPosTxt}'
+                        
                     ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
                     ax.set_title(plotTitle)
                     
@@ -479,9 +484,8 @@ def plot_pixarrs_from_list_of_segs_and_images(
     return
 
 def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
-        listOfLabimByRoi, listOfDicomDir, listOfPlotTitles,
-        addTxt=None, exportPlot=False, exportDir=None, 
-        txtToAddToFname='', p2c=False
+        listOfLabimByRoi, listOfDicomDir, listOfPlotTitles, listOfDicomIm=[],
+        exportPlot=False, exportDir=None, txtToAddToFname='', p2c=False
         ):
     """ 
     listOfLabimByRoi is a list (for each dataset, which could be of length 1) 
@@ -493,6 +497,11 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
     listOfPlotTitles is a list (which could be of length 1) of text for each
     plot title.
     
+    listOfDicomIm is a list (for each dataset, which could be of length 1) 
+    of 3D SimpleITK Image representations of the DICOMs. This is optional, but
+    if provided, the pixel data will be obtained from the 3D images rather than
+    by importing DICOMs from the list of DICOM directories.
+    
     Plot has different DATASETS ALONG COLUMNS and different SLICES ALONG ROWS. 
     """
     
@@ -501,6 +510,18 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
         = get_seg_data_from_list_of_labimByRoi(
             listOfLabimByRoi, listOfDicomDir, p2c
             )
+            
+    """
+    This is incomplete:
+    if listOfDicomIm:
+        
+    else:
+        listOfPixarrByRoi, listOfF2SindsByRoi, listOfDicomFpaths,\
+            listOfIPPs, listOfDirections, listOfSpacings\
+            = get_seg_data_from_list_of_labimByRoi(
+                listOfLabimByRoi, listOfDicomDir, p2c
+                )
+    """
     
     """
     print(f'\nlen(listOfPixarrByRoi) = {len(listOfPixarrByRoi)}')
@@ -602,7 +623,14 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
                 ax = plt.subplot(Nrows, Ncols, n)
                 
                 dicomPixarr = dcmread(dicomFpaths[Sind]).pixel_array
-            
+                """
+                This is incomplete:
+                if listOfDicomIm:
+                    dicomPixarr = 
+                else:
+                    dicomPixarr = dcmread(dicomFpaths[Sind]).pixel_array
+                """
+                
                 #im = ax.imshow(dicomPixarr, cmap=plt.cm.Greys_r)
                 ax.imshow(dicomPixarr, cmap=plt.cm.Greys_r, alpha=dcmAlpha)
                 
@@ -786,5 +814,65 @@ def compare_res_results(
         
         print('\nPlot exported to:\n\n', exportFpath)
     
+    return
+
+def plot_labim_over_dicom_im(dicomIm, labim, dpi=80, p2c=False):
+    """ 
+     
+    """
+    
+    
+    
+    dicomPixarr, dicomF2Sinds = im_to_pixarr(dicomIm)
+    dicomF, dicomR, dicomC = dicomPixarr.shape
+    
+    labPixarr, labF2Sinds = im_to_pixarr(labim)
+    labF, labR, labC = labPixarr.shape
+    
+    if p2c:
+        print(f'\ndicomPixarr.shape = {dicomPixarr.shape}')
+        print(f'dicomF2Sinds = {dicomF2Sinds}')
+        
+        print(f'\nlabPixarr.shape = {labPixarr.shape}')
+        print(f'labF2Sinds = {labF2Sinds}')
+    
+    #if colormap == 'color':
+    #    cmap = plt.cm.nipy_spectral
+    #else:
+    #    cmap = plt.cm.Greys_r
+    
+    # Colormap for labelmaps:
+    cMap = plt.cm.nipy_spectral
+    #cMap = plt.cm.hsv
+    #cMap = plt.cm.gist_rainbow
+    
+    # Set the transparency of labelmaps to be overlaid over DICOMs:
+    #alpha = 0.2
+    alpha = 0.5
+    
+    # Set the number of subplot rows and columns:
+    Ncols = 1
+    Nrows = labF
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+        
+    n = 1 # initialised sub-plot number
+    
+    for f in range(labF):
+        ax = plt.subplot(Nrows, Ncols, n)
+        
+        # The DICOM slice number:
+        s = labF2Sinds[f]
+        
+        #ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r)
+        ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r, alpha=alpha)
+        
+        ax.imshow(labPixarr[f], cmap=cMap, alpha=alpha)
+                
+        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+        ax.set_title(f'Frame = {f}, Slice {s}')
+                
+        n += 1 # increment sub-plot number
+        
     return
 
