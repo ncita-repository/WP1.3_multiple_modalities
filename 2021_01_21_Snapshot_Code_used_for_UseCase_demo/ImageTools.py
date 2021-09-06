@@ -35,6 +35,36 @@ DICOM IMAGE FUNCTIONS
 """
 
 
+def copy_im(im):
+    """
+    Copy a SimpleITK Image.  
+    
+    Parameters
+    ----------
+    im : SimpleITK Image
+        The image to be copied.
+        
+    Returns
+    -------
+    imCopy : SimpleITK Image
+        The copied image.
+          
+    Notes
+    -----
+    https://simpleitk.org/SimpleITK-Notebooks/01_Image_Basics.html
+    """
+    
+    import SimpleITK as sitk
+    
+    imCopy = sitk.Image(im.GetSize(), im.GetPixelID())
+    
+    #imCopy.SetOrigin(im.GetOrigin())
+    #imCopy.SetDirection(im.GetDirection())
+    #imCopy.SetSpacing(im.GetSpacing())
+    
+    imCopy = sitk.Paste(im, imCopy)
+    
+    return imCopy
 
 def ImportImage(DicomDir):
     """
@@ -315,7 +345,12 @@ def GetImageAttributes(DicomDir, Package='pydicom', LogToConsole=False):
               f'\nDirections = {Directions}')
     
     
+    #""" 04/09/21 To make this compatible with functions that call a newer version
+    #of this function which also returns a ListOfWarnings, add an empty list
+    #at the end:
     return Size, Spacings, SliceThick, Positions, Directions
+    #"""
+    #return Size, Spacings, SliceThick, Positions, Directions, []
 
 
 

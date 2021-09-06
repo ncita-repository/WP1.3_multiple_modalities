@@ -8,10 +8,13 @@ Created on Tue Jul  6 16:10:00 2021
 
 import os
 from pathlib import Path
+import time
+#from datetime import datetime
 import pandas as pd
 import csv
 import json
 import SimpleITK as sitk
+
 
 def export_dict_to_csv(dictionary, filename, exportDir='cwd'):
     """
@@ -249,7 +252,7 @@ def export_list_to_txt(items, filename, exportDir='cwd'):
     
     Parameters
     ----------
-    items : list of strs
+    items : list of strs or ints or floats
         The list to be exported.
     filename : str
         The file name to assign to the exported file. If filename doesn't 
@@ -274,7 +277,48 @@ def export_list_to_txt(items, filename, exportDir='cwd'):
     
     with open(filepath, 'w') as file:
         for line in items:
+            if not isinstance(line, str):
+                line = f'{line},\n'
             file.write(line)
+    
+    return
+
+def export_list_to_csv_NOT_WORKING(items, filename, exportDir='cwd'):
+    """
+    NOTE:  Not sure this works.
+    
+    Export a list to a .csv file.
+    
+    Parameters
+    ----------
+    items : list of strs or ints or floats
+        The list to be exported.
+    filename : str
+        The file name to assign to the exported file. If filename doesn't 
+        include the '.csv' extension it will be added automatically.
+    exportDir : str, optional ('cwd' by default)
+        If provided the directory to which the file will be exported to. If not
+        provided the file will be exported to the current working directory.
+        If the directory doesn't exist it will be created.
+    """
+    
+    if not '.csv' in filename:
+        filename += '.csv'
+    
+    if exportDir == 'cwd':
+        filepath = filename
+    else:
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        filepath = os.path.join(exportDir, filename)
+    
+    with open(filepath, 'wb') as output:
+        writer = csv.writer(output)
+        
+        for item in items:
+            writer.writerow(item)
     
     return
 
@@ -334,3 +378,54 @@ def export_im(im, filename, fileFormat='NrrdImageIO', exportDir='cwd'):
     writer.Execute(im)
     
     return
+
+def export_newRoicol(newRoicol, srcRoicolFpath, exportDir, fname=''):
+    """
+    Export ROI Collection (RTS/SEG) to disk.  
+    
+    Parameters
+    ----------
+    newRoicol : Pydicom object
+        Target ROI Collection (RTS/SEG) to be exported.
+    srcRoicolFpath : str
+        Full path of the Source RTS/SEG file (used to generate the filename of
+        the new RTS/SEG file).
+    exportDir : str
+        Directory where the new RTS/SEG is to be exported.
+    fname : str
+        File name to assign.     
+    
+    Returns
+    -------
+    newRoicolFpath : str
+        Full path of the exported new Target RTS/SEG file.
+    """
+    
+    # Get the filename of the original RTS/SEG file:
+    #SrcRoiFname = os.path.split(SrcRoiFpath)[1]
+    
+    if not os.path.isdir(exportDir):
+        #os.mkdir(ExportDir)
+        Path(exportDir).mkdir(parents=True)
+    
+    currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    
+    #FnamePrefix = DateTime + '_' + NamePrefix + '_from_'
+    #FnamePrefix = DateTime + '_' + TxtToAddToFname.replace(' ', '_')
+    
+    # Create a new filename (this will appear under Label in XNAT):
+    #TrgRoiFname = FnamePrefix + SrcRoiFname
+    #TrgRoiFname = FnamePrefix
+    if fname == '':
+        newRoicolFname = currentDateTime + '.dcm'
+    else:
+        #TrgRoiFname = Fname.replace(' ', '_') + '.dcm'
+        newRoicolFname = f'{fname}_{currentDateTime}.dcm'
+    
+    newRoicolFpath = os.path.join(exportDir, newRoicolFname)
+    
+    newRoicol.save_as(newRoicolFpath)
+        
+    print(f'New Target {newRoicol.Modality} exported to:\n {newRoicolFpath}\n')
+    
+    return newRoicolFpath

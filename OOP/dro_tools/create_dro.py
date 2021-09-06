@@ -262,7 +262,8 @@ class DroCreator:
         p2c = params.cfgDict['p2c']
         
         # The registration transform:
-        regTx = newDataset.finalTx
+        #regTx = newDataset.finalTx # 04/09/21
+        regTx = newDataset.resTx # 04/09/21
         
         # The transform parameters:
         txParams = regTx.GetParameters()
@@ -390,8 +391,10 @@ class DroCreator:
             self.gridRes = gridRes
             self.vectGridData = vectGridData
         
-        self.txParams = txParams
-        self.txMatrix = txMatrix
+        #self.txParams = txParams  # 04/09/21
+        #self.txMatrix = txMatrix  # 04/09/21
+        self.resTxParams = txParams  # 04/09/21
+        self.resTxMatrix = txMatrix  # 04/09/21
         
         if p2c:
             print(f'txParams = {txParams}\n')
@@ -426,8 +429,10 @@ class DroCreator:
         
         # The tuple of the registration transform parameters, and the list of
         # parameters that define the transform matrix:
-        txParams = self.txParams
-        txMatrix = self.txMatrix
+        #txParams = self.txParams # 04/09/21
+        #txMatrix = self.txMatrix # 04/09/21
+        resTxParams = self.resTxParams # 04/09/21
+        resTxMatrix = self.resTxMatrix # 04/09/21
         
         refAllSOPs = self.refAllSOPs
         #contentDesc = self.contentDesc
@@ -560,7 +565,7 @@ class DroCreator:
         dro.RegistrationSequence[1]\
            .MatrixRegistrationSequence[0]\
            .MatrixSequence[0]\
-           .FrameOfReferenceTransformationMatrix = txMatrix # was txParams (06/05/21)
+           .FrameOfReferenceTransformationMatrix = resTxMatrix # was txParams (06/05/21)
            
         # Modify the FrameOfReferenceTransformationMatrixType.  
         """
@@ -574,7 +579,7 @@ class DroCreator:
            .MatrixRegistrationSequence[0]\
            .MatrixSequence[0]\
            .FrameOfReferenceTransformationMatrixType = get_tx_matrix_type(
-               txParams, p2c
+               resTxParams, p2c
                )
         
         #times.append(time.time())
@@ -692,8 +697,10 @@ class DroCreator:
         # The tuple of the registration transform parameters, the list of
         # parameters that define the transform matrix, and the bspline grid
         # parameters:
-        txParams = self.txParams
-        txMatrix = self.txMatrix
+        #txParams = self.txParams # 04/09/21
+        #txMatrix = self.txMatrix # 04/09/21
+        resTxParams = self.resTxParams # 04/09/21
+        resTxMatrix = self.resTxMatrix # 04/09/21
         gridOrig = self.gridOrig
         gridDir = self.gridDir
         gridDims = self.gridDims
@@ -995,7 +1002,7 @@ class DroCreator:
         """ > Modify PreDeformationMatrixRegistrationSequence. """
         dro.DeformableRegistrationSequence[1]\
            .PreDeformationMatrixRegistrationSequence[0]\
-           .FrameOfReferenceTransformationMatrix = txMatrix
+           .FrameOfReferenceTransformationMatrix = resTxMatrix
         
         """ > Modify the FrameOfReferenceTransformationMatrixType.  Acceptable 
         values:
@@ -1023,7 +1030,7 @@ class DroCreator:
         dro.DeformableRegistrationSequence[1]\
            .PreDeformationMatrixRegistrationSequence[0]\
            .FrameOfReferenceTransformationMatrixType = get_tx_matrix_type(
-               txMatrix, p2c
+               resTxMatrix, p2c
                )
                
         """ > Consider adding details for the FrameOfReferenceTransformationComment

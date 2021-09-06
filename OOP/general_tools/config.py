@@ -439,6 +439,7 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['forceReg'] = True
     
     # Datasets to copy RTS within the same DICOM series:
+    """ Use case 1 """
     runID = 'NCITA_test_RD1'
     cfg[runID] = dict(cfg['NCITA_test_RR1'])
     cfg[runID]['runID'] = runID
@@ -448,13 +449,14 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['trgSlcNum'] = 6
     
     # Datasets to copy RTS within the same DICOM series:
+    """ Use case 2a """
     runID = 'NCITA_test_RD2'
     cfg[runID] = dict(cfg['NCITA_test_RD1'])
     cfg[runID]['runID'] = runID
     cfg[runID]['trgScanID'] = '4'
     
     # Datasets to copy RTS across two DICOM series with different IOPs:
-    """
+    """ Use case 3a
     Note: Source slice 5 maps to Target slices 55-64.
     """
     runID = 'NCITA_test_RD3'
@@ -465,7 +467,7 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to copy RTS from one DICOM series to another with equal slice
     # thickness:
-    """
+    """ Use case 5a
     Note: Source slice 5 maps to Target slice 7.
     """
     runID = 'NCITA_test_RD4'
@@ -477,7 +479,7 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to copy RTS from one DICOM series to another with smaller
     # slice thickness:
-    """
+    """ Use case 5a
     Note: Source slice 5 maps to Target slices 67-77.
     """
     runID = 'NCITA_test_RD5'
@@ -488,6 +490,7 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to copy RTS across two DICOM series with equal slice
     # thickness, demonstrating the displacement within the same series:
+    """ Use case 5a """
     runID = 'NCITA_test_RD6'
     cfg[runID] = dict(cfg['NCITA_test_RR2'])
     cfg[runID]['runID'] = runID

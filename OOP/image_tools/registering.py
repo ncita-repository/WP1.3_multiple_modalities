@@ -24,7 +24,7 @@ import image_tools.registration_callbacks as rc
 
 def command_iteration(method):
     print(f"{method.GetOptimizerIteration():3} = {method.GetMetricValue():10.5f}")
-    print("\t#: ", len(method.GetOptimizerPosition()))
+    #print("\t#: ", len(method.GetOptimizerPosition()))
 
 def command_multi_iteration(method):
     print("--------- Resolution Changing ---------")
@@ -209,12 +209,12 @@ def rigid_reg_im(
     plotToConsole = False # simple text only
     plotToConsole = True # plots
     
-    samplingPercentage = samplingPercentage/100
+    samplingPercentage = float(samplingPercentage/100)
     
     if regTxName == 'rigid':
         sitkTx = sitk.Euler3DTransform()
     elif regTxName == 'rigid_scale':
-        sitkTx = sitk.SimilarityTransform3D()
+        sitkTx = sitk.Similarity3DTransform()
     elif regTxName == 'affine':
         sitkTx = sitk.AffineTransform(fixIm.GetDimension())
     else:
@@ -240,10 +240,11 @@ def rigid_reg_im(
                 fixIm=fixIm, movIm=movIm, flipK=False, p2c=True
                 )
         else:
-            print('File paths to fiducials were not provided/found. Initialising',
-                  'using CenteredTransformInitializerFilter.MOMENTS..\n')
+            print('File paths to fiducials were not provided/found.',
+                  'Initialising using geometry..\n')
         
-            CTIF = sitk.CenteredTransformInitializerFilter.MOMENTS
+            #CTIF = sitk.CenteredTransformInitializerFilter.MOMENTS
+            CTIF = sitk.CenteredTransformInitializerFilter.GEOMETRY
             
             initialTx = sitk.CenteredTransformInitializer(
                 fixIm, movIm, sitkTx, CTIF)
@@ -257,6 +258,8 @@ def rigid_reg_im(
             fixIm, movIm, sitkTx, CTIF
             )
     
+    
+        
     """ Registration. """
     regMethod = sitk.ImageRegistrationMethod()
     
@@ -268,30 +271,48 @@ def rigid_reg_im(
     regMethod.SetMetricSamplingStrategy(regMethod.RANDOM)
     #regMethod.SetMetricSamplingStrategy(regMethod.REGULAR)
     regMethod.SetMetricSamplingPercentage(samplingPercentage)
+    #regMethod.SetMetricSamplingPercentage(
+    #    samplingPercentage, sitk.sitkWallClock
+    #    )
     
     """ Setup for the multi-resolution framework. """
     shrinkFactors = [4,2,1]
     smoothingSigmas = [2,1,1]
     #smoothingSigmas = [2,1,0]
     
+    # 06/09/21
+    #shrinkFactors = [8,4,2,1]
+    #smoothingSigmas = [4,2,1,1]
+    
+    #""" 06/09/21
     regMethod.SetShrinkFactorsPerLevel(shrinkFactors=shrinkFactors)
     regMethod.SetSmoothingSigmasPerLevel(smoothingSigmas=smoothingSigmas)
     regMethod.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+    #"""
     
     """ Interpolator settings. """
     regMethod.SetInterpolator(sitk.sitkLinear)
     
     """ Optimizer settings. """
+    
     """
     regMethod.SetOptimizerAsGradientDescent(
         learningRate=learningRate, numberOfIterations=500, 
         convergenceMinimumValue=1e-6, convergenceWindowSize=10
         )
     """
+    
+    #""" 06/09/21
     regMethod.SetOptimizerAsGradientDescent(
         learningRate=learningRate, numberOfIterations=numIters, 
         estimateLearningRate=regMethod.Once
         )
+    #"""
+    # 06/09/21:
+    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, .001, 200)
+    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, 1e-6, 200)
+    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, 1e-8, 200)
+    
     """
     regMethod.SetOptimizerAsGradientDescentLineSearch(
         learningRate=learningRate, numberOfIterations=100,
@@ -299,6 +320,7 @@ def rigid_reg_im(
         convergenceWindowSize=5
         )
     """
+    
     regMethod.SetOptimizerScalesFromPhysicalShift()
     
     if p2c:
@@ -320,16 +342,23 @@ def rigid_reg_im(
     numOfValidPts = regMethod.GetMetricNumberOfValidPoints()
     
     # Get the number of points in fixIm:
-    numOfPtsInfixIm = np.prod(fixIm.GetSize())
+    numOfPtsInFixIm = np.prod(fixIm.GetSize())
     
     # The % of valid points:
-    percentageValidPts = 100*numOfValidPts/numOfPtsInfixIm
+    percentageValidPts = 100*numOfValidPts/numOfPtsInFixIm
     
     print(f'numOfValidPts = {numOfValidPts} = {percentageValidPts}%\n')
     
     #finalTx = regMethod.Execute(sitk.Cast(fixIm, sitk.sitkFloat32), 
     #                            sitk.Cast(movIm, sitk.sitkFloat32))
     finalTx = regMethod.Execute(fixIm, movIm)
+    
+    print('\nParameters used during registration:')
+    print(f'regTxName = {regTxName}')
+    print(f'initMethod = {initMethod}')
+    print(f'samplingPercentage = {samplingPercentage}')
+    print(f'learningRate = {learningRate}')
+    print(f'numIters = {numIters}\n')
     
     """ Post registration analysis. """
     if p2c:
@@ -361,9 +390,11 @@ def rigid_reg_im(
                  alpha=(0.0,1.0,0.05), fixIm=(fixIm), resIm=fixed(regIm));
     
     times.append(time.time())
-    dTime = round(times[-1] - times[-2], 1)
+    #dTime = round(times[-1] - times[-2], 1)
+    dTime = times[-1] - times[-2]
     if True:#p2c:
-        print(f'*Took {dTime} s to perform image registration.\n')
+        print(f'*Took {dTime:.1f} s ({dTime/60:.1f} min) to perform image',
+              'registration.\n')
     
     frequency = 2500  # Hz
     duration = 1500  # ms
@@ -437,7 +468,7 @@ def bspline_reg_im(
     
     # Print simple metric values to console or plot of metric value v iteration?
     plotToConsole = False # simple text only
-    plotToConsole = True # plots
+    #plotToConsole = True # plots
     
     # Use scale factors for mesh grid?
     # Note 08/07/21: Not sure it works properly using scale factors.
@@ -662,9 +693,10 @@ def register_im(
     """
     
     # Deal with invalid value for regTxName:
-    if not regTxName in ['rigid', 'affine', 'bspline']:
+    if not regTxName in ['rigid', 'rigid_scale', 'affine', 'bspline']:
         msg = f"The chosen transform, {regTxName}, is not one of the "\
-              + "accepted inputs: 'rigid', 'affine', or 'bspline'."
+              + "accepted inputs: 'rigid', 'rigid_scale', 'affine', or "\
+              + "'bspline'."
         raise Exception(msg)
     
     # Deal with invalid value for initMethod:
@@ -702,14 +734,35 @@ def register_im(
         if p2c:
             print('Running rigid_reg_im()...\n')
         
+        learningRate = 1
+        learningRate = 5
+        #learningRate = 10
+        #learningRate = 0.5
+        if learningRate != 1:
+            print('\n* On 06/09 changed learning rate from 1 to',
+                  f'{learningRate}\n\n')
+        
+        samplingPercentage = 50
+        #samplingPercentage = 100
+        if samplingPercentage != 50:
+            print('\n* On 06/09 changed samplingPercentage from 50% to',
+                  f'{samplingPercentage}%\n\n')
+        
+        initMethod = 'moments'
+        initMethod = 'geometry'
+        if initMethod != 'moments':
+            print('\n* On 06/09 changed initMethod from "moments" to',
+                  '"geometry"\n\n')
+        
         regIm, initialTx, finalTx, metric_values, multires_iterations\
             = rigid_reg_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
-                samplingPercentage=50,
-                numIters=500, learningRate=1.0, p2c=p2c, regPlotFpath=regPlotFpath
+                samplingPercentage=samplingPercentage,
+                numIters=500, learningRate=learningRate, 
+                p2c=p2c, regPlotFpath=regPlotFpath
                 )
     
     return regIm, initialTx, finalTx, metric_values, multires_iterations

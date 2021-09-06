@@ -111,7 +111,7 @@ class Propagator:
         #self.divs = trgDataset.divs
         #self.f2sIndsByRoi = trgDataset.f2sIndsByRoi
         self.foruid = trgDataset.foruid
-        #self.image = trgDataset.image
+        self.image = trgDataset.image # this will be changed for useCases 3-5
         #self.pixarrByRoi = trgDataset.pixarrByRoi
         #self.roiName = trgDataset.roiName
         #self.roiNames = trgDataset.roiNames
@@ -132,7 +132,7 @@ class Propagator:
         self.pixarrByRoi = None
         self.f2sIndsByRoi = None
         self.labimByRoi = None
-        self.image = None
+        #self.image = None
         
         # Initialise the SimpleITK Transform that will be used for resampling 
         # source label images to be the identity transform:
@@ -175,6 +175,11 @@ class Propagator:
         # Initialise list of timestamps and timing messages to be stored:
         self.timings = [time.time()]
         self.timingMsgs = []
+        
+        #print(f'srcIm direction:\n{srcDataset.image.GetDirection()}\n')
+        #print(f'trgIm direction:\n{trgDataset.image.GetDirection()}\n')
+        
+        #breakpoint()
         
         #self.propagate(params, srcDataset, trgDataset)
     
@@ -409,10 +414,13 @@ class Propagator:
         params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
         params.cfgDict['useCaseToApply'] = useCaseToApply
     
-    def replace_ind_in_f2sIndsByRoi(self, srcDataset, trgDataset):
+    def replace_indices(self, srcDataset, trgDataset):
         # TODO modfy the docstrings
         """
-        Replace an index in a list of frame-to-slice indices.
+        06/09/21: This was called replace_ind_in_f2sIndsByRoi prior to 06/09.
+        
+        Replace an index in a list of frame-to-slice indices for making
+        (non-relationship-preserving) copies of ROIs.
         
         Parameters
         ----------
@@ -440,27 +448,33 @@ class Propagator:
         replacementInd = trgDataset.slcNum
         
         # Start with copy of srcF2SindsByRoi for newF2SindsByRoi:
-        replacedF2SindsByRoi = deepcopy(srcF2SindsByRoi)
+        #replacedF2SindsByRoi = deepcopy(srcF2SindsByRoi)
+        newF2SindsByRoi = list(srcF2SindsByRoi)
         
         #print(f'type(replacedF2SindsByRoi) = {type(replacedF2SindsByRoi)}\n')
         
         for r in range(len(srcF2SindsByRoi)):
             for c in range(len(srcF2SindsByRoi[r])):
                 if srcF2SindsByRoi[r][c] == indToReplace:
-                    replacedF2SindsByRoi[r][c] = replacementInd
+                    #replacedF2SindsByRoi[r][c] = replacementInd
+                    newF2SindsByRoi[r][c] = replacementInd
         
-        self.replacedF2SindsByRoi = replacedF2SindsByRoi
+        #self.replacedF2SindsByRoi = replacedF2SindsByRoi
         #self.f2sIndsByRoi = replacedF2SindsByRoi
+        self.f2sIndsByRoi = newF2SindsByRoi
     
-    def shift_frames_in_pixarrByRoi(self, srcDataset, trgDataset, params):
+    def shift_frames(self, srcDataset, trgDataset, params):
         # TODO update docstrings
         """
+        06/09/21: This was called shift_frames_in_pixarrByRoi prior to 06/09.
+        
         19/08/21:
             The problem with wrapping this in a method in this way is that
-            the arguments required for use case 3a/4a/5a is diffent than that
+            the arguments required for use case 3a/4a/5a is different than that
             required for use case 1/2a.
             
-        Shift the pixels in each frame of srcPixarrByRoi. 
+        Shift the pixels in frames for (non-relationship-preserving) copies of
+        ROIs. 
         
         Parameters
         ----------
@@ -498,19 +512,33 @@ class Propagator:
         the out-of-plane (z) components.
         
         Example uses: 
-            - To compensate for differences in z-positions of a single-framed 
-            Source pixel array to be "direct" copied to a Target slice at a 
-            different stack position; 
-            - Compensating for differences in the origin of Source and Target 
-            images for relationship-preserving copies of images with equal 
-            voxel spacings.
+        - To compensate for differences in z-positions of a single-framed
+        Source pixel array to be "direct" copied to a Target slice at a 
+        different stack position; 
+        - Compensating for differences in the origin of Source and Target 
+        images for relationship-preserving copies of images with equal voxel
+        spacings.
+        
+        At the moment there's no obvious way of knowing whether the pixel 
+        arrays are from resampled label images or not. So will rely on the 
+        value of params.cfgDict['useCaseToApply']. If useCaseToApply is '1' or
+        '2a', shifting will be performed in all directions, else along the
+        z-direction only.
         """
         
+        useCaseToApply = params.cfgDict['useCaseToApply']
         p2c = params.cfgDict['p2c']
         
-        # Are we working with resampled source pixel arrays or not?
-        """ Could check value of self.useCase but this might be better. """ 
-        if hasattr(self, 'resPixarrByRoi'):
+        if p2c:
+            print('\n\n', '-'*120)
+            print(' Running of shift_frames():')
+            print('-'*120, '\n')
+            
+        #print(f'dir(self):\n{dir(self)}\n')
+        
+        # Have the source pixel arrays been resampled or not?
+        #if hasattr(self, 'resPixarrByRoi'):
+        if useCaseToApply in ['3a', '4a']:
             if p2c:
                 print('Source pixel arrays have been resampled, so applying',
                       'pixel shifts along z direction only.\n')
@@ -523,12 +551,15 @@ class Propagator:
             # Since the source pixel array has been resampled it shares the 
             # same image grid as the target image, so use the target image for
             # srcIm: 
-            srcIm = trgDataset.image
+            #srcIm = trgDataset.image
             
             # Use the resampled source slice number for srcSlcNum, and the
             # resampled pixel arrays for srcPixarrByRoi:
-            srcSlcNum = self.resSlcNum
-            srcPixarrByRoi = self.resPixarrByRoi
+            #srcSlcNum = self.resSlcNum # does this still exist? (06/09/21)
+            #srcPixarrByRoi = self.resPixarrByRoi # does this still exist? (06/09/21)
+            slcNum = self.slcNum # (06/09/21)
+            pixarrByRoi = self.pixarrByRoi # (06/09/21)
+            f2sIndsByRoi = self.f2sIndsByRoi # (06/09/21)
         else:
             if p2c:
                 print('Source pixel arrays have not been resampled, so',
@@ -539,45 +570,78 @@ class Propagator:
             shiftInY = True
             shiftInZ = True
                                     
-            srcIm = srcDataset.image
-            srcSlcNum = srcDataset.slcNum
-            srcPixarrByRoi = srcDataset.pixarrByRoi
+            #srcIm = srcDataset.image
+            #srcSlcNum = srcDataset.slcNum
+            #srcPixarrByRoi = srcDataset.pixarrByRoi
+            
+            slcNum = srcDataset.slcNum # initial value
+            f2sIndsByRoi = srcDataset.f2sIndsByRoi # initial value
+            pixarrByRoi = srcDataset.pixarrByRoi # initial value
+        
+        """ Note:
+        self.image was initialised in the Propagator class as trgIm, but 
+        depending on the use case might have been replaced with the result of
+        resampling srcIm to the target domain.
+        """
+        im = self.image
         
         trgIm = trgDataset.image
         trgSlcNum = trgDataset.slcNum
         
+        #print(f'slcNum = {slcNum}')
+        #print(f'trgSlcNum = {trgSlcNum}')
+        
+        """
         if not hasattr(self, 'resPixarrByRoi'):
             # Replace all indices in source with srcDataset.slcNum with
             # trgDataset.slcNum:
             #newF2SindsByRoi = deepcopy(srcDataset.f2sIndsByRoi)
-            #self.replace_ind_in_f2sIndsByRoi(srcDataset, trgDataset)
-            self.replace_ind_in_f2sIndsByRoi(srcDataset, trgDataset)
+            #self.replace_indices(srcDataset, trgDataset)
+            self.replace_indices(srcDataset, trgDataset)
             replacedF2SindsByRoi = self.replacedF2SindsByRoi
             #f2sIndsByRoi = self.f2sIndsByRoi
         else:
             # Pass self.resF2SindsByRoi instead:
             replacedF2SindsByRoi = self.resF2SindsByRoi
+        """
+        
+        """
+        06/09/21: This is unnecessary since the index shift along z will 
+        already be done below using voxShift!
+        
+        if useCaseToApply in ['1', '2a']:
+            # Replace all indices in source with srcDataset.slcNum with
+            # trgDataset.slcNum to get newF2SindsByRoi (self.f2sIndsByRoi):
+            self.replace_indices(srcDataset, trgDataset)
+        """
         
         # Although the f2sInds will be shifted, the pixel data will not, so
         # simply make a copy of the source's pixarrByRoi:
         #shiftedPixarrByRoi = deepcopy(srcDataset.pixarrByRoi)
         
-        if p2c:
-            print('\n\n', '-'*120)
-            print(' Running of shift_frames_in_pixarrByRoi():')
-            print('-'*120, '\n')
-            
+        """
         # Get voxel shift between srcSlcNum in srcIm and trgSlcNum in trgIm
         # in the trgIm domain:
         voxShift = get_voxel_shift_bt_slices(
-            image0=srcIm, sliceNum0=srcSlcNum, image1=trgIm, 
-            sliceNum1=trgSlcNum, refImage=trgIm
+            image0=srcIm, sliceNum0=srcSlcNum,
+            image1=trgIm, sliceNum1=trgSlcNum,
+            refImage=trgIm
+            )
+        """
+        
+        # Get voxel shift (in the trgIm domain) between slice slcNum in im and
+        # slice trgSlcNum in trgIm:
+        voxShift = get_voxel_shift_bt_slices(
+            image0=im, sliceNum0=slcNum,
+            image1=trgIm, sliceNum1=trgSlcNum,
+            refImage=trgIm
             )
         
         if p2c:
             print(f'   voxShift between slices = {voxShift}')
-            print(f'   f2sIndsByRoi prior to shifting = {replacedF2SindsByRoi}')
+            #print(f'   f2sIndsByRoi prior to shifting = {replacedF2SindsByRoi}')
             #print(f'   f2sIndsByRoi prior to shifting = {f2sIndsByRoi}')
+            print(f'   f2sIndsByRoi prior to shifting = {self.f2sIndsByRoi}')
         
         if not shiftInX:
             voxShift[0] = 0
@@ -593,26 +657,40 @@ class Propagator:
         shiftedPixarrByRoi = [] # initial value
         
         # Loop through each pixel array:
-        for s in range(len(srcPixarrByRoi)):
+        #for s in range(len(srcPixarrByRoi)):
+        for s in range(len(pixarrByRoi)):
             # Proceed only if there is at least one frame in this pixel array:
-            if srcPixarrByRoi[s].shape[0]:
+            #if srcPixarrByRoi[s].shape[0]:
+            if pixarrByRoi[s].shape[0]:
                 # Replace srcPixarrByRoi[s] with the result of shifting the 
                 # in-plane elements and add the pixel shift along z to
                 # replacedF2SindsByRoi:
+                """
                 shiftedPixarrByRoi.append(
                     shift_frame(
                         frame=srcPixarrByRoi[s], voxShift=voxShift
                         )
                     )
+                """
+                shiftedPixarrByRoi.append(
+                    shift_frame(
+                        frame=pixarrByRoi[s], voxShift=voxShift
+                        )
+                    )
                 
-                F = len(replacedF2SindsByRoi[s])
-                #F = len(f2sIndsByRoi[s])
+                #F = len(replacedF2SindsByRoi[s])
+                F = len(f2sIndsByRoi[s])
                 
                 # Shift the frame-to-slice indices by voxShift[2] to account
                 # for the z-shift:
+                """
                 shiftedF2SindsByRoi.append(
                     [replacedF2SindsByRoi[s][i] + voxShift[2] for i in range(F)]
                     #[f2sIndsByRoi[s][i] + voxShift[2] for i in range(F)]
+                    )
+                """
+                shiftedF2SindsByRoi.append(
+                    [f2sIndsByRoi[s][i] + voxShift[2] for i in range(F)]
                     )
                 
                 if p2c:
@@ -626,10 +704,20 @@ class Propagator:
                   f'{shiftedF2SindsByRoi}')
             print('-'*120)
         
+        """
         self.shiftedPixarrByRoi = shiftedPixarrByRoi
         self.shiftedF2SindsByRoi = shiftedF2SindsByRoi
         #self.pixarrByRoi = shiftedPixarrByRoi
         #self.f2sIndsByRoi = shiftedF2SindsByRoi
+        """
+        self.pixarrByRoi = shiftedPixarrByRoi
+        self.f2sIndsByRoi = shiftedF2SindsByRoi
+        
+        if p2c:
+            print('-'*120)
+            
+        print('end of shift_frames\n')
+        print('')
     
     def add_modified_data_to_existing_trgDataset(self, trgDataset, params):
         """
@@ -667,8 +755,10 @@ class Propagator:
             print(' Running of add_modified_data_to_existing_trgDataset():')
             print('-'*120, '\n')
         
-        shiftedF2SindsByRoi = self.shiftedF2SindsByRoi
-        shiftedPixarrByRoi = self.shiftedPixarrByRoi
+        #shiftedF2SindsByRoi = self.shiftedF2SindsByRoi
+        #shiftedPixarrByRoi = self.shiftedPixarrByRoi
+        shiftedF2SindsByRoi = self.f2sIndsByRoi
+        shiftedPixarrByRoi = self.pixarrByRoi
         
         if trgDataset.roicol == None:
             self.f2sIndsByRoi = shiftedF2SindsByRoi
@@ -757,11 +847,11 @@ class Propagator:
         
         # Replace all indices in source with srcDataset.slcNum with
         # trgDataset.slcNum:
-        """ This was moved to inside shift_frames_in_pixarrByRoi: """
-        #self.replace_ind_in_f2sIndsByRoi(srcDataset, trgDataset)
+        """ This was moved to inside shift_frames: """
+        #self.replace_indices(srcDataset, trgDataset)
         
         # Shift the frames to account for change from srcSlcNum to trgSlcNum:
-        self.shift_frames_in_pixarrByRoi(srcDataset, trgDataset, params)
+        self.shift_frames(srcDataset, trgDataset, params)
         
         # Any pixel array(s) and corresponding F2Sinds for any ROI(s)/segment(s)
         # that may be present in trgDataset:
@@ -771,12 +861,16 @@ class Propagator:
                 + "copy of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
     
-    def get_trgF2SindsByRoi_from_srcF2SindsByRoi(
+    def shift_indices(
             self, params, srcDataset, trgDataset
             ):
         """
-        Shift the indices in srcF2SindsByRoi to account for any differences in 
-        the origins of the source and target image domains.
+        Note: This was called get_trgF2SindsByRoi_from_srcF2SindsByRoi
+        prior to 06/09/21.
+        
+        Shift the indices to account for any differences in the origins of the
+        source and target image domains for (relationship-preserving) 
+        propagations of ROIs.
     
         Parameters
         ----------
@@ -819,22 +913,28 @@ class Propagator:
         
         dz_pix = round(dz_mm/dk)
         
-        trgF2SindsByRoi = []
+        #trgF2SindsByRoi = []
+        newF2SindsByRoi = []
         
         for r in range(len(srcF2SindsByRoi)):
-            trgF2Sinds = []
+            #trgF2Sinds = []
+            newF2Sinds = []
             
             for c in range(len(srcF2SindsByRoi[r])):
-                #trgF2Sinds.append(srcF2SindsByRoi[r][c] + dz_pix)
-                trgF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
+                ##trgF2Sinds.append(srcF2SindsByRoi[r][c] + dz_pix)
+                #trgF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
+                newF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
                 
-            trgF2SindsByRoi.append(trgF2Sinds)
+            #trgF2SindsByRoi.append(trgF2Sinds)
+            newF2SindsByRoi.append(newF2Sinds)
         
-        self.f2sIndsByRoi = trgF2SindsByRoi
+        #self.f2sIndsByRoi = trgF2SindsByRoi
+        self.f2sIndsByRoi = newF2SindsByRoi
         
         if p2c:
                 print(f'   srcF2SindsByRoi = {srcF2SindsByRoi}')
-                print(f'   trgF2SindsByRoi = {trgF2SindsByRoi}')
+                #print(f'   trgF2SindsByRoi = {trgF2SindsByRoi}')
+                print(f'   newF2SindsByRoi = {newF2SindsByRoi}')
                 print('-'*120)
 
     def make_relationship_preserving_copy(self, params, srcDataset, trgDataset):
@@ -877,10 +977,8 @@ class Propagator:
                 + "copy of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
         
-        # Shift the indices is srcF2SindsByRoi to get trgF2SindsByRoi:
-        self.get_trgF2SindsByRoi_from_srcF2SindsByRoi(
-            params, srcDataset, trgDataset
-            )
+        # Shift the indices in srcF2SindsByRoi to get newF2SindsByRoi:
+        self.shift_indices(params, srcDataset, trgDataset)
         
         # Since the spatial relationships are not to be modified, 
         # trgPixarrByRoi = srcPixarrBySeg:
@@ -995,7 +1093,7 @@ class Propagator:
                     p2c=params.cfgDict['p2c']
                     )
         
-        """ 
+        """
         Although the desired interpolation (resInterp) was provided, the actual
         interpolation that was used might have been different. 
         
@@ -1037,7 +1135,7 @@ class Propagator:
             The source image registered to the target image.
         self.initialTx : SimpleITK Transform
             The transform used during initialisation of the registration.
-        self.finalTx : list of floats
+        self.resTx : list of floats
             The transform that registers source image to target image.
         params.timings : list of Time timestamps
             Additional timestamp appended.
@@ -1054,22 +1152,25 @@ class Propagator:
         p2c = params.cfgDict['p2c']
         
         # Required for generating a file path for exported registeration plot:
-        regPlotsExportDir = params.cfgDict['regPlotsExportDir']
+        resPlotsExportDir = params.cfgDict['resPlotsExportDir']
         srcExpLab = params.cfgDict['srcExpLab']
         srcScanID = params.cfgDict['srcScanID']
         trgExpLab = params.cfgDict['trgExpLab']
         trgScanID = params.cfgDict['trgScanID']
         
-        regPlotFname = generate_reg_fname(
+        #initMethod = 'geometry'
+        #print('\n* On 06/09 changed initMethod from "moments" to "geometry"\n\n')
+        
+        resPlotFname = generate_reg_fname(
                 srcExpLab, srcScanID, trgExpLab, trgScanID, regTxName
                 )
         
-        regPlotFpath = os.path.join(regPlotsExportDir, regPlotFname)
+        resPlotFpath = os.path.join(resPlotsExportDir, resPlotFname)
         
         # Create directory if it doesn't already exist:
-        if not os.path.isdir(regPlotsExportDir):
+        if not os.path.isdir(resPlotsExportDir):
             #os.mkdir(exportDir)
-            Path(regPlotsExportDir).mkdir(parents=True)
+            Path(resPlotsExportDir).mkdir(parents=True)
         
         timingMsg = "* Registering the source to target DICOM scans using "\
             + f"{regTxName} registration with {initMethod} initialisation...\n"
@@ -1084,7 +1185,7 @@ class Propagator:
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
-                p2c=p2c, regPlotFpath=regPlotFpath
+                p2c=p2c, regPlotFpath=resPlotFpath
                 )
         
         # Get the registration transform parameters:
@@ -1114,7 +1215,7 @@ class Propagator:
          
         Returns
         -------
-        self.finalTx : SimpleITK Transform
+        self.resTx : SimpleITK Transform
             The transform parsed from the DRO.
         self.txParams : list of floats
             The transform parameters (i.e. flat matrix) corresponding to
@@ -1390,7 +1491,7 @@ class Propagator:
             NRP copy without resampling or registration transformation.
             """
             if p2c:
-                print('Running useCase in [1, 2a]\n')
+                print('Running useCase in ["1", "2a"]\n')
             # Make a non-relationship-preserving copy:
             self.make_non_relationship_preserving_copy(
                 srcDataset, trgDataset, params
@@ -1402,7 +1503,7 @@ class Propagator:
             transformation.
             """
             if p2c:
-                print('Running useCase = 2b\n')
+                print('Running useCase = "2b"\n')
             # Make a relationship-preserving copy:
             self.make_relationship_preserving_copy(
                 params, srcDataset, trgDataset
@@ -1433,8 +1534,20 @@ class Propagator:
             the identity transform.
             """
             if p2c:
-                print('Running useCase in [3a, 3b, 4a and 4b]\n')
+                print('Running useCase in ["3a", "3b", "4a" and "4b"]\n')
             self.resample_src_labims(srcDataset, trgDataset, params)
+            
+            """ 
+            Although resampling of the source image to the target domain is 
+            not required for copying/propagating the source ROI Collection to  
+            the target domain, it is useful to have the resampled source image 
+            (e.g. for overlays of the resampled ROI Collection on the resampled
+            DICOM image).
+            """ 
+            self.image = resample_im(
+                srcDataset.image, refIm=trgDataset.image,
+                sitkTx=self.resTx, p2c=params.cfgDict['p2c']
+                )
         
         if useCase in ['5a', '5b']:
             """
@@ -1442,7 +1555,7 @@ class Propagator:
             transformation.
             """
             if p2c:
-                print('Running useCase in [5a, 5b]\n')
+                print('Running useCase in ["5a", "5b"]\n')
             
             #if dro == None or (dro != None and useDroForTx): # 01/09/21
             if dro == None or (dro != None and not useDroForTx): # 01/09/21
@@ -1477,7 +1590,7 @@ class Propagator:
             self.reduce_frames(params)
             
             # Shift the frames to account for change from srcSlcNum to trgSlcNum:
-            self.shift_frames_in_pixarrByRoi(srcDataset, trgDataset, params)
+            self.shift_frames(srcDataset, trgDataset, params)
             
             # Any pixel array(s) and corresponding F2Sinds for any ROI(s)/segment(s)
             # that may be present in trgDataset:

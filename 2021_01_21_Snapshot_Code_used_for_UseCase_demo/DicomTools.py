@@ -620,3 +620,69 @@ def InspectDicomSubjectDir(SubjectDir): # THIS IS NOT COMPLETE!
     
 
     return
+
+def GetRoiNums(Roi, SearchString):
+    """
+    03/09/21:
+        Copied from FP/DicomTools.py
+        
+    Get the ROI/segment number(s) that matches SearchString.
+    
+    Inputs:
+    ******
+    
+    Roi : Pydicom object
+        RTS or SEG object.
+        
+    SearchString : string
+        All or part of the ROIName/SegmentLabel of the ROI/segment of interest.
+        If SearchString is an empty string return the first ROI/segment number. 
+                       
+                            
+    Outputs:
+    *******
+    
+    RoiNums : list of integers
+        A list of indices corresponding to the ROI(s) that matche SearchString.
+    """
+    
+    RoiLabels = GetRoiLabels(Roi)
+    
+    #print('\nRoiLabels =', RoiLabels)
+    
+    #print('\nRoiLabel to find =', SearchString)
+    
+    if not RoiLabels:
+        msg = 'There are no ROIs in the RTS/SEG.'
+            
+        raise Exception(msg)
+    
+    
+    if SearchString == "":
+        RoiNum = 0
+        
+    else:
+        #RoiNum = RoiLabels.index(SearchString)
+        #RoiNum = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel][0] # 13/01/2021
+        RoiNums = [i for i, RoiLabel in enumerate(RoiLabels) if SearchString in RoiLabel] # 13/01/2021
+        
+        #print(f'\nRoiNum = {RoiNum}')
+        
+        #if RoiNum:
+        #    RoiNum = RoiNum[0] # 13/01/2021
+        #    
+        #else:
+        #    msg = "There is no ROI/segment in the RTS/SEG containing "\
+        #          + f"names/labels {RoiLabels} \nthat matches 'SearchString' "\
+        #          + f"= '{SearchString}'."
+        #    
+        #    raise Exception(msg)
+            
+        if not RoiNums:
+            msg = "There is no ROI/segment in the RTS/SEG containing "\
+                  + f"names/labels {RoiLabels} \nthat matches 'SearchString' "\
+                  + f"= '{SearchString}'."
+            
+            raise Exception(msg)
+            
+    return RoiNums

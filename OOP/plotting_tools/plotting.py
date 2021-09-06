@@ -724,7 +724,7 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
 def compare_res_results(
         resIm0, resIm1, resInd,
         resTitle0='Resampled image 0', resTitle1='Resampled image 1', 
-        exportPlot=False, exportDir='cwd', txtToAddToFname='',
+        exportPlot=False, exportDir='cwd', fname='',
         cBarForDiffIm=False
         ):
     """
@@ -806,13 +806,14 @@ def compare_res_results(
         
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
             
-        exportFname = currentDateTime + '_' + txtToAddToFname + '.jpg'
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        exportFname =  f'{fname}_{currentDateTime}.jpg'
         
         exportFpath = os.path.join(exportDir, exportFname)
         
         plt.savefig(exportFpath, bbox_inches='tight')
         
-        print('\nPlot exported to:\n\n', exportFpath)
+        print(f'\nPlot exported to:\n\n{exportFpath}\n')
     
     return
 
@@ -876,3 +877,69 @@ def plot_labim_over_dicom_im(dicomIm, labim, dpi=80, p2c=False):
         
     return
 
+def plot_metricValues_v_iters(
+        metricValues, multiresIters, exportPlot=False, 
+        exportDir='cwd', fname=''
+        ):
+    
+    plt.plot(metricValues, 'r')
+    plt.plot(multiresIters, 
+             [metricValues[ind] for ind in multiresIters], 'b*')
+    plt.xlabel('Iteration number', fontsize=12)
+    plt.ylabel('Metric value', fontsize=12)
+    
+    if exportPlot:
+        if exportDir == 'cwd':
+            exportDir = os.getcwd()
+        
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        exportFname =  f'{fname}_{currentDateTime}.jpg'
+        
+        exportFpath = os.path.join(exportDir, exportFname)
+        
+        plt.savefig(exportFpath, bbox_inches='tight')
+        
+        print(f'\nPlot exported to:\n\n{exportFpath}\n')
+        
+    return
+
+def plot_fix_mov_ims_v2(
+        fixIm, movIm, fixInd, movInd, 
+        fixTitle='Fixed image', movTitle='Moving image'
+        ):
+    """ Callback invoked by the interact IPython method for scrolling 
+    through the image stacks of the two images (moving and fixed). """
+    
+    fixPixArr = sitk.GetArrayViewFromImage(fixIm)[fixInd,:,:]
+    movPixArr = sitk.GetArrayViewFromImage(movIm)[movInd,:,:]
+    
+    fixZ = fixIm.TransformIndexToPhysicalPoint([0,0,fixInd])[2]
+    movZ = movIm.TransformIndexToPhysicalPoint([0,0,movInd])[2]
+    
+    fixTitle = f'{fixTitle}\nz = {round(fixZ, 2)} mm'
+    movTitle = f'{movTitle}\nz = {round(movZ, 2)} mm'
+    
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1, 2, figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(fixPixArr, cmap=plt.cm.Greys_r);
+    plt.title(fixTitle)
+    plt.axis('off')
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1, 2, 2)
+    plt.imshow(movPixArr, cmap=plt.cm.Greys_r);
+    plt.title(movTitle)
+    plt.axis('off')
+    
+    plt.show()
+    
+    return

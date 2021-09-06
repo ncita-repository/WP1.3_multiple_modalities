@@ -1024,6 +1024,9 @@ def InitialiseSeg(SegTemplate, SearchString, PFFGStoSliceInds, DicomDir,
     from DicomTools import ImportDicom
     from ImageTools import GetImageAttributes
     
+    #print('\nLogToConsole set to True on line 1028 in SegTools.InitialiseSeg()\n')
+    #LogToConsole = True
+    
     Dicom = ImportDicom(DicomDir)
     
     NumOfDicoms = len(GetDicomFpaths(DicomDir))
@@ -1288,14 +1291,19 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
     from pydicom.pixel_data_handlers.numpy_handler import pack_bits
     import numpy as np
     
+    #LogToConsole = True
+    
+    if LogToConsole:
+        print('\nInputs to ModifySeg():')
+        print(f'PFFGStoSliceInds = {PFFGStoSliceInds}')
+        print(f'PixArr.shape = {PixArr.shape}\n')
+    
     F, R, C = PixArr.shape
     
     #if F == 0:
     #    PixArr = np.reshape(PixArr, (1, R, C))
     #    
     #    F, R, C = PixArr.shape
-    
-    print(f'\n\n\n*****PixArr.shape = {PixArr.shape}')
     
     P = len(PFFGStoSliceInds)
     
@@ -1461,3 +1469,1155 @@ def ModifySeg(Seg, PixArr, PFFGStoSliceInds, DicomDir, LogToConsole=False):
     
                                           
     return Seg
+
+def CreateSeg(SrcSeg, TrgPixArrBySeg, TrgF2SindsBySeg, TrgDicomDir, 
+              SrcSegLabel, TrgSeg=None, TrgSegLabel=None, 
+              AddTxtToSegLabel='', LogToConsole=False):
+    """
+    04/09/21:
+        Modified from SegTools in FP directory.
+    
+    Create an SEG object for the target dataset.
+         
+    
+    Inputs:
+    ******
+    
+    SrcSeg : Pydicom Object
+        The Source SEG file. If TrgSeg = None, the Source SEG
+        will be used as a template for the new Target SEG (NewTrgSeg).
+    
+    TrgSeg : Pydicom Object or None
+        If TrgSeg != None, the Target SEG will be modified to create 
+        NewTrgSeg.  If TrgSeg = None, the Source SEG will be used as a 
+        template.
+        
+    TrgSegLabel : string or None
+        All or part of the SegmentLabel of the destination segment.
+
+    TrgPixArrBySeg : list of Numpy arrays
+        List (for each segment) of the pixel array containing the frames that
+        belong to each segment for Target.  The pixel array is a sub-array of 
+        the (entire) SEG's pixel array. 
+        
+    TrgF2SindsBySeg : List of a list of integers
+        List (for each segment) of the slice numbers that correspond to each
+        frame in each pixel array in TrgPixArrBySeg.
+                    
+    TrgDicomDir : string
+        Directory containing the Target DICOMs.
+    
+    SrcSegLabel : string
+        All or part of the Source SegmentLabel of the segment containing the 
+        segmentations(s) that were copied.
+    
+    AddTxtToSegLabel : string (optional; '' by default)
+        String to be added to SeriesDescription for the new SEG. 
+        
+    LogToConsole : boolean (optional; False by default)
+        Denotes whether intermediate results will be logged to the console.
+        
+        
+    Output:
+    ******
+        
+    NewTrgSeg : Pydicom object
+        New SEG object.
+        
+    
+    Notes:
+    *****
+    
+    Performance of adding/removing sequences using append()/pop():
+        
+    - Took 168.4 ms to add 10000 sequences to ReferencedInstanceSequence 
+    (16.8 us/sequence)
+    - Took 81.7 ms to remove 10000 sequences to ReferencedInstanceSequence 
+    (8.2 us/sequence)
+    
+    - Took 92.4 ms to add 10000 sequences to PerFrameFunctionalGroupsSequence 
+    (9.2 us/sequence)
+    -Took 45.8 ms to remove 10000 sequences to PerFrameFunctionalGroupsSequence 
+    (4.6 us/sequence)
+    
+    19/02:
+        After avoiding the use of deepcopy to increase sequences in RtsSeg()
+        I've had to re-instate them since the tag values were being duplicated 
+        despite calls to modify them.  For some reason the removal of deepcopy
+        from CreateSeg() hasn't resulted in the unexpected behaviours found 
+        with CreateRts().  Nevertheless deepcopy was re-instated in CreateSeg()
+        as a precaution.  Oddly the re-introduction of deepcopy doesn't seem to
+        have lengthened the time to run CreateSeg() or to perform error 
+        checking.
+    """
+    
+    from pydicom import dcmread
+    from pydicom.uid import generate_uid
+    #import time
+    import datetime
+    from copy import deepcopy
+    import numpy as np
+    from GeneralTools import (
+        FlattenList, UniqueItems_new, ReduceListOfStringFloatsTo16
+        )
+    from DicomTools import ImportDicoms, GetRoiNums, GetRoiLabels
+    from ImageTools import GetImageAttributes
+    from pydicom.pixel_data_handlers.numpy_handler import pack_bits
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Running of CreateSeg():')
+        print('\n\n', '-'*120)
+        print(f'   TrgF2SindsBySeg = {TrgF2SindsBySeg}')
+        print(f'   len(TrgPixArrBySeg) = {len(TrgPixArrBySeg)}')
+    
+    #SrcSeg = dcmread(SrcSegFpath)
+    
+    #""" Use TrgSeg or SrcSeg as a template for NewTrgSeg. """
+    #if TrgSegFpath:
+    #    NewTrgSeg = dcmread(TrgSegFpath)
+    #else:
+    #    NewTrgSeg = deepcopy(SrcSeg)
+    
+    if TrgSeg == None:
+        NewTrgSeg = deepcopy(SrcSeg)
+    
+    #print(f'\nTrgDicomDir = {TrgDicomDir}')
+    
+    TrgDicoms = ImportDicoms(TrgDicomDir)
+    
+    """ 04/09/21 Older version of GetImageAttributes doesn't return 
+    ListOfWarnings
+    Size, Spacings, ST, IPPs, Dirs,\
+    ListOfWarnings = GetImageAttributes(DicomDir=TrgDicomDir, Package='sitk')
+    """
+    Size, Spacings, ST, IPPs, Dirs = GetImageAttributes(
+        DicomDir=TrgDicomDir, Package='sitk'
+        )
+    
+    NumOfFramesBySeg = []
+    for s in range(len(TrgPixArrBySeg)):
+        NumOfFramesBySeg.append(TrgPixArrBySeg[s].shape[0])
+    
+    #print(f'\n\n\nNumOfFramesBySeg = {NumOfFramesBySeg}')
+    
+    NumOfFrames = sum(NumOfFramesBySeg)
+    
+    #NumOfSegs = len(TrgF2SindsBySeg)
+    
+    """ The list of segment labels in SrcSeg: """
+    AllSrcSegLabels = GetRoiLabels(SrcSeg)
+    
+    if SrcSegLabel:
+        """ The list of segment numbers for the segments of interest: """
+        SrcSegNums = GetRoiNums(SrcSeg, SrcSegLabel)
+    else:
+        SrcSegNums = list(range(len(AllSrcSegLabels)))
+    
+    UniqueTrgF2Sinds = UniqueItems_new(Items=TrgF2SindsBySeg, IgnoreZero=False, 
+                                   MaintainOrder=True)
+    
+    FlattenedTrgF2Sinds = FlattenList(TrgF2SindsBySeg)
+    
+    if LogToConsole:
+        print(f'   SrcSegNums = {SrcSegNums}')
+        print(f'   NumOfFramesBySeg = {NumOfFramesBySeg}')
+        print(f'   NumOfFrames = {NumOfFrames}')
+    
+    
+    """ Generate a new SOPInstanceUID. """
+    NewSOPuid = generate_uid()
+    NewTrgSeg.SOPInstanceUID = deepcopy(NewSOPuid)
+    NewTrgSeg.file_meta.MediaStorageSOPInstanceUID = deepcopy(NewSOPuid)
+    
+    """ Generate a new SeriesInstanceUID. """
+    NewTrgSeg.SeriesInstanceUID = generate_uid()
+    
+    #NewDate = time.strftime("%Y%m%d", time.gmtime())
+    #NewTime = time.strftime("%H%M%S", time.gmtime())
+    
+    TimeNow = datetime.datetime.now()
+    NewDate = TimeNow.strftime('%Y%m%d')
+    NewTime = TimeNow.strftime('%H%M%S.%f')
+    
+    """ If TrgSeg != None, some tags will not need to be replaced.
+    If TrgSeg = None, use the corresponding values in the first Target 
+    DICOM. """
+    
+    if TrgSeg == None:
+        NewTrgSeg.StudyDate = TrgDicoms[0].StudyDate
+        try:
+            NewTrgSeg.SeriesDate = TrgDicoms[0].SeriesDate
+        except AttributeError:
+            pass
+        #NewTrgSeg.ContentDate = TrgDicoms[0].ContentDate
+        NewTrgSeg.ContentDate = NewDate
+        NewTrgSeg.StudyTime = TrgDicoms[0].StudyTime
+        try:
+            NewTrgSeg.SeriesTime = TrgDicoms[0].SeriesTime
+        except AttributeError:
+            pass
+        #NewTrgSeg.ContentTime = TrgDicoms[0].ContentTime
+        NewTrgSeg.ContentTime = NewTime
+        NewTrgSeg.Manufacturer = TrgDicoms[0].Manufacturer
+        try:
+            NewTrgSeg.SeriesDescription += AddTxtToSegLabel
+        except AttributeError:
+            NewTrgSeg.SeriesDescription = AddTxtToSegLabel
+        NewTrgSeg.PatientName = TrgDicoms[0].PatientName
+        NewTrgSeg.PatientID = TrgDicoms[0].PatientID
+        NewTrgSeg.PatientBirthDate = TrgDicoms[0].PatientBirthDate
+        NewTrgSeg.PatientSex = TrgDicoms[0].PatientSex
+        try:
+            NewTrgSeg.PatientAge = TrgDicoms[0].PatientAge
+        except AttributeError:
+            pass
+        NewTrgSeg.StudyInstanceUID = TrgDicoms[0].StudyInstanceUID
+        NewTrgSeg.StudyID = TrgDicoms[0].StudyID
+        NewTrgSeg.SeriesNumber = TrgDicoms[0].SeriesNumber
+        NewTrgSeg.InstanceNumber = TrgDicoms[0].InstanceNumber
+        NewTrgSeg.FrameOfReferenceUID = TrgDicoms[0].FrameOfReferenceUID
+        NewTrgSeg.PositionReferenceIndicator = TrgDicoms[0].PositionReferenceIndicator
+        NewTrgSeg.Rows = TrgDicoms[0].Rows
+        NewTrgSeg.Columns = TrgDicoms[0].Columns
+        
+        #IOP = TrgDicoms[0].ImageOrientationPatient # 01/09/21
+        IOP = [str(item) for item in TrgDicoms[0].ImageOrientationPatient] # 01/09/21
+        
+        """
+        print(f'\n\n\nIOP = {IOP}')
+        print(f'type(IOP) = {type(IOP)}')
+        print(f'type(IOP[0]) = {type(IOP[0])}')
+        print(f'IOP[0] = {IOP[0]}')
+        print(f'len(IOP[0]) = {len(IOP[0])}')
+        print('\n\n\n')
+        """
+        
+        # Ensure that the character length is limited to 16:
+        IOP = ReduceListOfStringFloatsTo16(IOP)
+        
+        NewTrgSeg.SharedFunctionalGroupsSequence[0]\
+                 .PlaneOrientationSequence[0]\
+                 .ImageOrientationPatient = IOP
+           
+        """ 
+        Notes:
+            
+        1. SliceThickness in PixelMeasuresSequence appears to be the z-Spacing 
+        rather than SliceThickness from the DICOM metadata. 
+        
+        2. The character limit of VR DS is 16 characters.
+        """
+        Zspacing = f"{Spacings[2]}"
+        
+        #if len(Zspacing) > 16:
+        #    Zspacing = Zspacing[:16]
+        
+        Zspacing = ReduceListOfStringFloatsTo16([Zspacing])[0]
+        
+        NewTrgSeg.SharedFunctionalGroupsSequence[0]\
+                 .PixelMeasuresSequence[0]\
+                 .SliceThickness = deepcopy(Zspacing)
+        
+        NewTrgSeg.SharedFunctionalGroupsSequence[0]\
+                 .PixelMeasuresSequence[0]\
+                 .SpacingBetweenSlices = deepcopy(Zspacing)
+    
+        NewTrgSeg.SharedFunctionalGroupsSequence[0]\
+                 .PixelMeasuresSequence[0]\
+                 .PixelSpacing = TrgDicoms[0].PixelSpacing
+    
+    
+    #""" Modify SeriesDescription. <-- this was done above """
+    #
+    #if len(SegNums) == 1:
+    #    """ There is only one segment. The new Target SeriesDescription will be
+    #    the Source SeriesDescription with the Source SegmentLabel that was 
+    #    copied + AddTxtToSegLabel. """
+    #    NewSD = SrcSeg.SeriesDescription + '_' \
+    #            + SrcSeg.SegmentSequence[SegNums[0]].SegmentLabel \
+    #            + AddTxtToSegLabel
+    #            
+    #    NewTrgSeg.SeriesDescription = NewSD
+    #else:
+        
+    
+    
+    """ Modify NumberOfFrames. """
+    
+    NewTrgSeg.NumberOfFrames = f"{len(FlattenedTrgF2Sinds)}"
+    
+    
+    """ Modify ReferencedSeriesSequence. """
+    
+    NewTrgSeg.ReferencedSeriesSequence[0]\
+             .SeriesInstanceUID = TrgDicoms[0].SeriesInstanceUID
+    
+    """ Modify ReferencedInstanceSequence in ReferencedSeriesSequence. """
+        
+    for i in range(len(UniqueTrgF2Sinds)):
+        """ The slice index s determines the SOPInstanceUID to reference. """
+        s = UniqueTrgF2Sinds[i]
+        
+        """ The number of sequences in ReferencedSeriesSequence: """
+        N = len(NewTrgSeg.ReferencedSeriesSequence[0]\
+                         .ReferencedInstanceSequence)
+        
+        if i > N - 1:
+            """ Increase the sequence by one. """
+            #NewTrgSeg.ReferencedSeriesSequence[0]\
+            #         .ReferencedInstanceSequence.append(NewTrgSeg.ReferencedSeriesSequence[0]\
+            #                                                     .ReferencedInstanceSequence[-1])
+                     
+            LastItem = deepcopy(NewTrgSeg.ReferencedSeriesSequence[0]\
+                                         .ReferencedInstanceSequence[-1])
+            
+            NewTrgSeg.ReferencedSeriesSequence[0]\
+                     .ReferencedInstanceSequence.append(LastItem)
+        
+        """ Update the sequence. """
+        NewTrgSeg.ReferencedSeriesSequence[0]\
+                 .ReferencedInstanceSequence[i]\
+                 .ReferencedSOPClassUID = TrgDicoms[s].SOPClassUID
+        
+        NewTrgSeg.ReferencedSeriesSequence[0]\
+                 .ReferencedInstanceSequence[i]\
+                 .ReferencedSOPInstanceUID = TrgDicoms[s].SOPInstanceUID
+    
+    """ Check if there are more sequences in ReferencedInstanceSequence than 
+    required. """
+    N = len(NewTrgSeg.ReferencedSeriesSequence[0]\
+                     .ReferencedInstanceSequence)
+    
+    if N > len(UniqueTrgF2Sinds):
+        for i in range(N - len(UniqueTrgF2Sinds)):
+            """ Remove the last sequence. """
+            NewTrgSeg.ReferencedSeriesSequence[0]\
+                     .ReferencedInstanceSequence.pop()
+    
+    
+    
+    """ Modify SegmentSequence. """
+    
+    """ Loop through all SrcSegNums. """
+    for s in range(len(SrcSegNums)):
+        SegNum = SrcSegNums[s]
+        
+        """ Replace the s^th SegmentSequence in NewTrgSeg with the SegNum^th 
+        SegmentSequence in SrcSeg."""
+        NewTrgSeg.SegmentSequence[s] = deepcopy(SrcSeg.SegmentSequence[SegNum])
+        
+        NewTrgSeg.SegmentSequence[s].SegmentNumber = int(s+1)
+        
+        NewTrgSeg.SegmentSequence[s]\
+                 .SegmentLabel = SrcSeg.SegmentSequence[SegNum].SegmentLabel
+        
+    """ Check if there are more sequences in SegmentSequence than required. """
+    N = len(NewTrgSeg.SegmentSequence)
+    
+    if N > len(SrcSegNums):
+        for i in range(N - len(SrcSegNums)):
+            """ Remove the last sequence: """
+            NewTrgSeg.SegmentSequence.pop()
+    
+    
+    """ Modify PerFrameFunctionalGroupsSequence. """
+    
+    """ Get the ReferencedSOPInstanceUIDs in the ReferencedInstanceSequence."""
+    RefSOPsInRIS = GetRSOPuidsInRIS(NewTrgSeg)
+    
+    i = 0 # total frame counter (for all segments)
+    
+    for s in range(len(TrgF2SindsBySeg)):
+        for f in range(len(TrgF2SindsBySeg[s])):  
+            N = len(NewTrgSeg.PerFrameFunctionalGroupsSequence)
+            
+            if i > N - 1:
+                """ Increase the sequence by one. """
+                #NewTrgSeg.PerFrameFunctionalGroupsSequence\
+                #         .append(NewTrgSeg.PerFrameFunctionalGroupsSequence[-1])
+                         
+                LastItem = deepcopy(NewTrgSeg.PerFrameFunctionalGroupsSequence[-1])
+                
+                NewTrgSeg.PerFrameFunctionalGroupsSequence\
+                         .append(LastItem)
+            
+            """ The DICOM slice number: """
+            d = TrgF2SindsBySeg[s][f]
+            
+            NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
+                     .DerivationImageSequence[0]\
+                     .SourceImageSequence[0]\
+                     .ReferencedSOPClassUID = TrgDicoms[d].SOPClassUID
+            
+            NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
+                     .DerivationImageSequence[0]\
+                     .SourceImageSequence[0]\
+                     .ReferencedSOPInstanceUID = TrgDicoms[d].SOPInstanceUID
+            
+            SOPuid = TrgDicoms[d].SOPInstanceUID
+            
+            ind = RefSOPsInRIS.index(SOPuid)
+            
+            """ Note: While s (segment number) and ind (the index of SOPuid
+            within the ReferencedSOPInstanceUIDs in ReferencedInstanceSequence)
+            are are both 0-indexed, DimensionIndexValues are 1-indexed. """
+            NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
+                     .FrameContentSequence[0]\
+                     .DimensionIndexValues = [s + 1, ind + 1]
+            
+            #IPP = TrgDicoms[d].ImagePositionPatient # 01/09/21
+            IPP = [str(item) for item in TrgDicoms[d].ImagePositionPatient] # 01/09/21
+            
+            # Ensure that the characters are limited to 16:
+            IPP = ReduceListOfStringFloatsTo16(IPP)
+            
+            NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
+                     .PlanePositionSequence[0]\
+                     .ImagePositionPatient = IPP
+               
+            NewTrgSeg.PerFrameFunctionalGroupsSequence[i]\
+                     .SegmentIdentificationSequence[0]\
+                     .ReferencedSegmentNumber = s + 1
+            
+            i += 1 # increment the total frame count
+    
+    """ Check if there are more sequences in PerFrameFunctionalGroupsSequence 
+    than required. """
+    N = len(NewTrgSeg.PerFrameFunctionalGroupsSequence)
+    
+    if N > len(FlattenedTrgF2Sinds):
+        for i in range(N - len(FlattenedTrgF2Sinds)):
+            """ Remove the last sequence: """
+            NewTrgSeg.PerFrameFunctionalGroupsSequence.pop()        
+    
+    
+    """ Modify PixelData. """
+    
+    """ Start by copying the first (or only) frame: """
+    PixArr = deepcopy(TrgPixArrBySeg[0])
+    
+    if len(TrgPixArrBySeg) > 1:
+        """ If there are more than one frame, vertically stack all pixel arrays 
+        into a single pixel array. """
+        for s in range(1, len(TrgPixArrBySeg)):
+            PixArr = np.vstack((PixArr, TrgPixArrBySeg[s]))
+    
+    """ Note: The following doesn't work for binary arrays:
+    NewTrgSeg.PixelData = PixArr.tobytes()
+    """
+    
+    """ Ravel (to 1D array) PixArr and pack bits (see
+    https://github.com/pydicom/pydicom/issues/1230). """
+    packed = pack_bits(PixArr.ravel())
+    
+    """ Convert PixArr to bytes. """
+    NewTrgSeg.PixelData = packed + b'\x00' if len(packed) % 2 else packed
+    
+    
+    if LogToConsole:
+        print('-'*120)
+        
+    return NewTrgSeg
+
+
+
+def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
+    """
+    04/09/21:
+        Copied from SegTools in FP directory.
+    
+    Check a SEG for errors in dependencies based on provided directory of
+    the DICOMs that relate to the SEG.  
+    
+    Inputs:
+    ******
+    
+    Seg : Pydicom object
+        SEG object to be error checked.
+        
+    DicomDir : string
+        Directory containing the DICOMs that relate to Seg.
+        
+    LogToConsole : boolean (default False)
+        Denotes whether some results will be logged to the console.
+                           
+    
+    Outputs:
+    *******
+    
+    LogList : list of strings
+        A list of strings that describe any errors that are found.  If no 
+        errors are found an empty list ([]) will be returned.
+        
+    Nerrors : integer
+        The number of errors found.
+    """
+    
+    #import importlib
+    #import GeneralTools
+    #importlib.reload(GeneralTools)
+    
+    from copy import deepcopy
+    from DicomTools import GetDicomSOPuids
+    from DicomTools import ImportDicom
+    from ImageTools import GetImageAttributes
+    from GeneralTools import AreItemsEqualToWithinEpsilon
+    from GeneralTools import AreListsEqualToWithinEpsilon
+    
+    if LogToConsole:
+        print('\n\n', '-'*120)
+        print('Running of ErrorCheckSeg():')
+        print('\n\n', '-'*120)
+        
+    # The maximum allowed error between two lists/items:
+    epsilon = 1e-05
+    
+    SOPuids = GetDicomSOPuids(DicomDir)
+    
+    Dicom = ImportDicom(DicomDir)
+    
+    #Size, Spacings, ST,\
+    #IPPs, Dirs = GetImageAttributes(DicomDir=DicomDir, Package='sitk')
+    Size, Spacings, ST, IPPs, Dirs,\
+    ListOfWarnings = GetImageAttributes(DicomDir=DicomDir, Package='pydicom')
+    
+    PixArr = Seg.pixel_array
+    
+    """ The number of frames, rows and columns in the SEG's pixel array: """
+    if len(PixArr.shape) > 2:
+        NumOfFrames, NumOfRows, NumOfCols = PixArr.shape
+    else:
+        NumOfRows, NumOfCols = PixArr.shape
+        NumOfFrames = 1
+    
+    #NumOfDicoms = len(SOPuids)
+    
+    if LogToConsole:
+        print(f'NumOfFrames = {NumOfFrames}')
+    
+    LogList = []
+    Nerrors = 0
+    
+    
+    """Determine whether MediaStorageSOPInstanceUID matches SOPInstanceUID."""
+    MSSOPuid = Seg.file_meta.MediaStorageSOPInstanceUID
+    SOPuid = Seg.SOPInstanceUID
+    
+    if MSSOPuid == SOPuid:
+        msg = f'INFO:  MediaStorageSOPInstanceUID {MSSOPuid} matches '\
+              + f'SOPInstanceUID {SOPuid}.\n'
+    else:
+        msg = f'ERROR:  MediaStorageSOPInstanceUID {MSSOPuid} does not '\
+              + f'match SOPInstanceUID {SOPuid}.\n'
+        Nerrors = Nerrors + 1 
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Determine whether any of the ReferencedSOPInstanceUIDs do not
+    match the SOPInstanceUIDs."""        
+    
+    RIS = Seg.ReferencedSeriesSequence[0]\
+             .ReferencedInstanceSequence
+    
+    RefSOPuidsInRIS = [RIS[i].ReferencedSOPInstanceUID for i in range(len(RIS))]
+
+    IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInRIS]
+    
+    #NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching Ref SOP UIDs:
+    Inds = [i for i, x in enumerate(IsMatch) if x==False]
+    
+    if Inds:
+        for i in range(len(Inds)):
+            uid = RefSOPuidsInRIS[Inds[i]]
+            
+            msg = f'ERROR:  ReferencedSOPInstanceUID {uid} in '\
+                  + f'ReferencedInstanceSequence[{Inds[i]}] does not match '\
+                  + 'any SOPInstanceUID.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+            if LogToConsole:
+                print(msg)
+    else:
+        msg = 'INFO:  The ReferencedSOPInstanceUIDs in '\
+                  + 'ReferencedInstanceSequence matches the '\
+                  + 'SOPInstanceUIDs.\n'
+        LogList.append(msg)
+        if LogToConsole:
+            print(msg)
+    
+                           
+    if Seg.ReferencedSeriesSequence[0].SeriesInstanceUID == Dicom.SeriesInstanceUID:
+        msg = 'INFO:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
+              + f'{Seg.ReferencedSeriesSequence[0].SeriesInstanceUID}, '\
+              + 'matches DICOM SeriesInstanceUID, '\
+              + f'{Dicom.SeriesInstanceUID}.\n'
+    else:
+        msg = 'ERROR:  SEG SeriesInstanceUID in ReferencedSeriesSequence, '\
+              + f'{Seg.ReferencedSeriesSequence[0].SeriesInstanceUID}, does '\
+              + 'not match DICOM SeriesInstanceUID '\
+              + f'{Dicom.SeriesInstanceUID}.\n'
+        Nerrors = Nerrors + 1 
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+       
+    if Seg.PatientName == Dicom.PatientName:
+        msg = f'INFO:  SEG PatientName, {Seg.PatientName}, matches DICOM '\
+              + f'PatientName, {Dicom.PatientName}.\n'
+    else:
+        msg = f'ERROR:  SEG PatientName, {Seg.PatientName}, does not match '\
+              + f'DICOM PatientName, {Dicom.PatientName}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    if Seg.PatientID == Dicom.PatientID:
+        msg = f'INFO:  SEG PatientID, {Seg.PatientID}, matches the '\
+              + f'DICOM PatientID, {Dicom.PatientID}.\n'
+    else:
+        msg = f'ERROR:  SEG PatientID, {Seg.PatientID}, does not match the '\
+              + f'DICOM PatientID, {Dicom.PatientID}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    if Seg.StudyInstanceUID == Dicom.StudyInstanceUID:
+        msg = f'INFO:  SEG StudyInstanceUID, {Seg.StudyInstanceUID}, '\
+              + 'matches the DICOM StudyInstanceUID, '\
+              + f'{Dicom.StudyInstanceUID}.\n'
+    else:
+        msg = f'ERROR:  SEG StudyInstanceUID, {Seg.StudyInstanceUID}, does '\
+              + 'not match the DICOM StudyInstanceUID, '\
+              + f'{Dicom.StudyInstanceUID}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+            
+    #if Seg.StudyID == Dicom.StudyID:
+    #    msg = f'INFO:  The SEG StudyID {Seg.StudyID} matches the'\
+    #          + f' DICOM StudyID {Dicom.StudyID}.'
+    #else:
+    #    msg = f'ERROR:  The SEG StudyID {Seg.StudyID} does not match the'\
+    #          + f' DICOM StudyID {Dicom.StudyID}.'
+    #
+    #    Nerrors = Nerrors + 1
+    #    
+    #LogList.append(msg)
+    #    
+    #if LogToConsole:
+    #    print(msg)
+            
+    if Seg.FrameOfReferenceUID == Dicom.FrameOfReferenceUID:
+        msg = f'INFO:  SEG FrameOfReferenceUID, {Seg.FrameOfReferenceUID}, '\
+              + 'matches DICOM FrameOfReferenceUID, '\
+              + f'{Dicom.FrameOfReferenceUID}.\n'
+    else:
+        msg = f'ERROR:  SEG FrameOfReferenceUID, {Seg.FrameOfReferenceUID}, '\
+              + 'does not match DICOM FrameOfReferenceUID, '\
+              + f'{Dicom.FrameOfReferenceUID}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    if int(Seg.NumberOfFrames) == NumOfFrames:
+        msg = f'INFO:  NumberOfFrames, {Seg.NumberOfFrames}, matches the '\
+              + f'number of frames in PixelData, {NumOfFrames}.\n'
+    else:
+        msg = f'ERROR:  NumberOfFrames, {Seg.NumberOfFrames}, does not '\
+              + f'match the number of frames in PixelData, {NumOfFrames}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    if Seg.Rows == Dicom.Rows:
+        msg = f'INFO:  SEG Rows, {Seg.Rows}, matches DICOM Rows, '\
+              + f'{Dicom.Rows}.\n'
+    else:
+        msg = f'ERROR:  SEG Rows, {Seg.Rows}, does not match DICOM Rows, '\
+              + f'{Dicom.Rows}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    if Seg.Columns == Dicom.Columns:
+        msg = f'INFO:  SEG Columns, {Seg.Columns}, matches DICOM '\
+              + f'Columns, {Dicom.Columns}.\n'
+    else:
+        msg = f'ERROR:  SEG Columns, {Seg.Columns}, does not match DICOM '\
+              + f'Columns, {Dicom.Columns}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """ This is already checked below
+    if Seg.Rows == NumOfRows:
+        msg = f'INFO:  SEG Rows, {Seg.Rows}, matches the number of rows in '\
+              + f'PixelData, {NumOfRows}.\n'
+    else:
+        msg = f'ERROR:  SEG Rows, {Seg.Rows}, does not match the number of '\
+              + f'rows in PixelData, {NumOfRows}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+            
+        
+    if Seg.Columns == NumOfCols:
+        msg = f'INFO:  SEG Columns, {Seg.Columns}, matches the number of '\
+              + f'columns in PixelData, {NumOfCols}.\n'
+    else:
+        msg = f'ERROR:  SEG Columns, {Seg.Columns}, does not match the '\
+              + f'number of columns in PixelData, {NumOfCols}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    """
+    
+    
+    """Keep track of the number of sequences in SegmentSequence."""
+    NumSS = len(Seg.SegmentSequence)
+    
+    """Verify that the SegmentNumber in each SegmentSequence increments from 
+    1."""
+    SS = deepcopy(Seg.SegmentSequence)
+    
+    for i in range(NumSS):
+        N = int(SS[i].SegmentNumber)
+        
+        #print(f'\n\nN = {N}, type(N) = {type(N)}')
+        
+        if N == i + 1:
+            msg = f'INFO:  SegmentNumber in SegmentSequence[{i}] is {N}.\n'
+            LogList.append(msg)
+        else:
+            msg = f'ERROR:  SegmentNumber in SegmentSequence[{i}] is {N}.'\
+                  + f' It should be {i + 1}.\n'
+            Nerrors = Nerrors + 1
+            LogList.append(msg)
+
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Check various tags in SharedFunctionalGroupsSequence."""
+    SegIOP = Seg.SharedFunctionalGroupsSequence[0]\
+                .PlaneOrientationSequence[0]\
+                .ImageOrientationPatient
+    
+    SegIOP = [float(item) for item in SegIOP]
+    
+    DcmIOP = [float(item) for item in Dicom.ImageOrientationPatient]
+    
+    if SegIOP == DcmIOP:
+        msg = 'INFO:  SEG ImageOrientationPatient in '\
+              + f'SharedFunctionalGroupsSequence, {SegIOP} matches '\
+              + f'DICOM ImageOrientationPatient, {DcmIOP}.\n'
+    else:
+        if AreListsEqualToWithinEpsilon(SegIOP, DcmIOP, epsilon):
+            msg = 'INFO:  SEG ImageOrientationPatient in '\
+                  + f'SharedFunctionalGroupsSequence, {SegIOP}, is within '\
+                  + f'{epsilon} of DICOM ImageOrientationPatient, {DcmIOP}.\n'
+        else:
+            msg = 'ERROR:  SEG ImageOrientationPatient in '\
+                  + f'SharedFunctionalGroupsSequence, {SegIOP}, is not within'\
+                  + f' {epsilon} of DICOM ImageOrientationPatient, {DcmIOP}.\n'
+            Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+       
+    
+    SegST = Seg.SharedFunctionalGroupsSequence[0]\
+               .PixelMeasuresSequence[0]\
+               .SliceThickness
+    
+    """ The SliceThickness appears to be the z-Spacing rather than the
+    SliceThickness from the DICOM metadata. """
+    
+    if float(SegST) == Spacings[2]:
+        msg = 'INFO:  SEG SliceThickness in SharedFunctionalGroupsSequence,'\
+              + f' {SegST}, matches the slice thickness calculated '\
+              + 'from DICOM ImagePositionPatient and '\
+              + f'ImageOrientationPatient, {Spacings[2]}.\n'
+    else:
+        if AreItemsEqualToWithinEpsilon(float(SegST), Spacings[2], epsilon):
+            msg = 'INFO:  SEG SliceThickness in '\
+                  + f'SharedFunctionalGroupsSequence, {SegST}, is within '\
+                  + f'{epsilon} of the slice thickness calculated from DICOM'\
+                  + ' ImagePositionPatient and ImageOrientationPatient, '\
+                  + f'{Spacings[2]}.\n'
+        else:
+            print(f'\n{float(SegST) - Spacings[2]}')
+            
+            msg = 'ERROR:  SEG SliceThickness in '\
+                  + f'SharedFunctionalGroupsSequence, {SegST}, is not within '\
+                  + f'{epsilon} of the slice thickness calculated from DICOM '\
+                  + 'ImagePositionPatient and ImageOrientationPatient, '\
+                  + f'{Spacings[2]}.\n'
+            Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    SegSBS = Seg.SharedFunctionalGroupsSequence[0]\
+                .PixelMeasuresSequence[0]\
+                .SpacingBetweenSlices
+    
+    if float(SegSBS) == Spacings[2]:
+        msg = 'INFO:  SEG SpacingBetweenSlices in '\
+              + f'SharedFunctionalGroupsSequence, {SegSBS}, matches the slice'\
+              + ' thickness calculated from DICOM ImagePositionPatient and '\
+              + f'ImageOrientationPatient, {Spacings[2]}.\n'
+    else:
+        if AreItemsEqualToWithinEpsilon(float(SegSBS), Spacings[2], epsilon):
+            msg = 'INFO:  SEG SpacingBetweenSlices in '\
+                  + f'SharedFunctionalGroupsSequence, {SegSBS}, is within '\
+                  + f'{epsilon} of the slice thickness calculated from DICOM '\
+                  + 'ImagePositionPatient and ImageOrientationPatient, '\
+                  + f'{Spacings[2]}.\n'
+        else:
+            #print(f'\n{float(SegSBS) - Spacings[2]}')
+            msg = 'ERROR:  SEG SpacingBetweenSlices in '\
+                  + f'SharedFunctionalGroupsSequence, {SegSBS}, is not within'\
+                  + f' {epsilon} of the slice thickness calculated from DICOM'\
+                  + ' ImagePositionPatient and ImageOrientationPatient, '\
+                  + f'{Spacings[2]}.\n'
+            Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+
+    
+    SegPS = Seg.SharedFunctionalGroupsSequence[0]\
+               .PixelMeasuresSequence[0]\
+               .PixelSpacing
+    
+    SegPS = [float(item) for item in SegPS]
+    
+    DcmPS = [float(item) for item in Dicom.PixelSpacing]
+    
+    if SegPS == DcmPS:
+        msg = 'INFO:  SEG PixelSpacing in SharedFunctionalGroupsSequence, '\
+              + f'{SegPS}, matches the DICOM PixelSpacing, {DcmPS}.\n'
+    else:
+        if AreListsEqualToWithinEpsilon(SegPS, DcmPS, epsilon):
+            msg = 'INFO:  SEG PixelSpacing in SharedFunctionalGroupsSequence,'\
+                  + f' {SegPS} is within {epsilon} of the DICOM PixelSpacing,'\
+                  + f' {DcmPS}.\n'
+        else:
+            msg = 'ERROR:  SEG PixelSpacing in SharedFunctionalGroupsSequence'\
+                  + f', {SegPS}, is not within {epsilon} of the DICOM '\
+                  + f'PixelSpacing, {DcmPS}.\n'
+            Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Verify that the number of sequences in PerFrameFunctionalGroupsSequence
+    is equal to NumberOfFrames."""
+    PFFGS = Seg.PerFrameFunctionalGroupsSequence
+    
+    if len(PFFGS) == int(Seg.NumberOfFrames):
+        msg = 'INFO:  The number of sequences in '\
+              + f'PerFrameFunctionGroupsSequence, {len(PFFGS)}, '\
+              + f'matches NumberOfFrames {Seg.NumberOfFrames}.\n'
+    else:
+        msg = 'ERROR:  The number of sequences in '\
+              + f'PerFrameFunctionGroupsSequence, {len(PFFGS)}, does not '\
+              + f'match NumberOfFrames {Seg.NumberOfFrames}.\n'
+        Nerrors = Nerrors + 1
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Determine whether any of the ReferencedSOPInstanceUIDs in
+    PerFrameFunctionGroupsSequence do not match the SOPInstanceUIDs."""        
+    RefSOPuidsInPFFGS = [PFFGS[i].DerivationImageSequence[0]\
+                                 .SourceImageSequence[0]\
+                                 .ReferencedSOPInstanceUID for i in range(len(PFFGS))]
+    
+    IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInPFFGS]
+    
+    #NumOfMatches = IsMatch.count(True)
+    
+    # Find the indices of any non-matching ReferencedSOPInstanceUID:
+    Inds = [i for i, x in enumerate(IsMatch) if x==False]
+    
+    if Inds:        
+        for i in range(len(Inds)):
+            uid = RefSOPuidsInPFFGS[Inds[i]]
+            
+            msg = f'ERROR:  ReferencedSOPInstanceUID {uid} in '\
+                  + f'PerFrameFunctionalGroupsSequence[{Inds[i]}] does not '\
+                  + 'match any DICOM SOPInstanceUID.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+    else:
+        msg = 'INFO:  The ReferencedSOPInstanceUIDs in '\
+              + 'PerFrameFunctionalGroupsSequence match the DICOM '\
+              + 'SOPInstanceUIDs.\n'
+        LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Determine whether the DimensionIndexValues are sensible integers,
+    and if the indexed ReferencedSOPInstanceUID agrees with the 
+    ReferencedSOPInstanceUID within the SourceImageSequence."""
+    DIVs = [PFFGS[i].FrameContentSequence[0]\
+                    .DimensionIndexValues for i in range(len(PFFGS))]
+    
+    FirstElements = [int(DIVs[i][0]) for i in range(len(DIVs))]
+    
+    """ Find the indices of any elements that exceed the number of sequences in
+    SegmentSequence, NumSS: """
+    Inds = [i for i, x in enumerate(FirstElements) if x > NumSS]
+    
+    if Inds:        
+        for i in range(len(Inds)):
+            DIV = DIVs[Inds[i]]
+            
+            msg = f'ERROR:  The first element in DimensionalIndexValue[{Inds[i]}],'\
+                  + f' {DIV}, exceeds the number of sequences in '\
+                  + f'SegmentSequene, {NumSS}.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+    else:
+        msg = 'INFO:  The first element in each DimensionalIndexValue are '\
+              + 'consistent with the number of sequences in SegmentSequence, '\
+              + f'{NumSS}.\n'
+        LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+                
+    """ Determine if any of the second elements in the DIVs exceed the number
+    of sequences in ReferencedInstanceSequence: """
+    SecondElements = [int(DIVs[i][1]) for i in range(len(DIVs))]
+    
+    """ Find the indices of any elements that exceed len(RIS): """
+    Inds = [i for i, x in enumerate(SecondElements) if x > len(RIS)]
+
+    if Inds:       
+        for i in range(len(Inds)):
+            DIV = DIVs[Inds[i]]
+            
+            msg = f'ERROR:  The second element in DimensionalIndexValue[{Inds[i]}],'\
+                  + f' {DIV}, exceeds the number of sequences in '\
+                  + f'ReferencedInstanceSequence, {len(RIS)}.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+    else:
+        msg = 'INFO:  The second elements in DimensionalIndexValue '\
+                  + 'matches the number of sequences in '\
+                  + 'ReferencedInstanceSequence.\n'
+        LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    #print(f'\n\n\nlen(RefSOPuidsInPFFGS) = {RefSOPuidsInPFFGS}')
+    #print(f'len(SecondElements) = {len(SecondElements)}')
+    #print(f'DIVs = {DIVs}')
+    
+    
+    """Determine if the ReferencedSOPInstanceUID in the 
+    ReferencedInstanceSequence indexed by the second elements in the DIVs 
+    match the ReferencedSOPInstanceUID in the SourceImageSequence."""
+    n = 0
+    for i in range(len(SecondElements)):
+        RefSOPinPFFGS = RefSOPuidsInPFFGS[i]
+        
+        """ -1 since i is zero-indexed: """
+        ind = SecondElements[i] - 1
+        
+        #print(f'ind = {ind}')
+        
+        RefSOPinRIS = RefSOPuidsInRIS[ind]
+        
+        if RefSOPinPFFGS == RefSOPinRIS:
+            msg = 'INFO:  ReferencedSOPInstanceUID referenced in '\
+                  + f'SourceImageSequence[{i}] matches '\
+                  + 'ReferencedSOPInstanceUID referenced in '\
+                  + f'ReferencedInstanceSequence[{DIVs[i]}], as indexed by '\
+                  + f'DimensionalIndexValue[{i}], {DIVs[i]}.\n'
+        else:
+            msg = 'ERROR:  ReferencedSOPInstanceUID referenced in '\
+                  + f'SourceImageSequence[{i}] does not match '\
+                  + 'ReferencedSOPInstanceUID referenced in '\
+                  + f'ReferencedInstanceSequence[{DIVs[i]}], as indexed by '\
+                  + f'DimensionalIndexValue[{i}], {DIVs[i]}.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+            n += 1
+                  
+    if n == 0:
+        msg = 'INFO:  The ReferencedSOPInstanceUIDs referenced in '\
+                  + 'SourceImageSequence match the '\
+                  + 'ReferencedSOPInstanceUIDs referenced in '\
+                  + 'ReferencedInstanceSequence, as indexed by '\
+                  + 'DimensionalIndexValue.\n'
+        LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Determine if ImagePositionPatient in PerFrameFunctionalGroupsSequence 
+    matches ImagePositionPatient of the DICOM as indexed by the DIVs."""
+    IPPsInPFFGS = [PFFGS[i].PlanePositionSequence[0]\
+                           .ImagePositionPatient for i in range(len(PFFGS))]
+    
+    IPPsInPFFGS = [[float(item) for item in IPP] for IPP in IPPsInPFFGS]
+    
+    c = 0
+    for i in range(len(IPPsInPFFGS)):
+        if RefSOPuidsInPFFGS[i] in SOPuids:
+            ind = SOPuids.index(RefSOPuidsInPFFGS[i])
+            
+            IPP = IPPs[ind]
+            
+            #if IPPsInPFFGS[i] != IPP:
+            if AreListsEqualToWithinEpsilon(IPPsInPFFGS[i], IPP, epsilon):
+                msg = f'INFO: ImagePositionPatient, {IPPsInPFFGS[i]}, '\
+                      + f'referenced in PlanePositionSequence[{i}] is within '\
+                      + f'{epsilon} of the DICOM ImagePositionPatient, {IPP},'\
+                      + f' indexed by the second element, {SecondElements[i]}'\
+                      + f', in DimensionalIndexValue[{i}], {DIVs[i]}.\n'
+            else:
+                msg = f'ERROR: ImagePositionPatient, {IPPsInPFFGS[i]}, '\
+                      + f'referenced in PlanePositionSequence[{i+1}] is not '\
+                      + f'within {epsilon} of the DICOM ImagePositionPatient,'\
+                      + f' {IPP}, indexed by the second element, '\
+                      + f'{SecondElements[i]}, in DimensionalIndexValue[{i}],'\
+                      + f' {DIVs[i]}.\n'
+                LogList.append(msg)
+                Nerrors = Nerrors + 1
+                c += 1
+        
+        if c == 0:
+            msg = 'INFO: All ImagePositionPatient referenced in '\
+                      + f'PlanePositionSequence are within {epsilon} of the '\
+                      + 'DICOM ImagePositionPatient indexed by the second '\
+                      + 'element in DimensionalIndexValue.\n'
+            LogList.append(msg)
+            
+        #else:
+        #    msg = f'.\n'
+        #    
+        #    Nerrors = Nerrors + 1
+                  
+    LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Check that the ReferencedSegmentNumber match the first elements in the
+    DimensionIndexValues.
+    """
+    RSNs = [PFFGS[i].SegmentIdentificationSequence[0]\
+                    .ReferencedSegmentNumber for i in range(len(PFFGS))]
+    
+    Diffs = [FirstElements[i] - RSNs[i] for i in range(len(RSNs))]
+    
+    Inds = [i for i, x in enumerate(Diffs) if x > 0]
+    
+    if Inds:       
+        for i in range(len(Inds)):
+            msg = 'ERROR:  ReferencedSegmentNumber in '\
+                  + 'SegmentIdentificationSequence of '\
+                  + f'PerFrameFunctionalGroupsSequence[{Inds[i]}], '\
+                  + f'{RSNs[Inds[i]]}, does not match the first element in '\
+                  + f'DimensionIndexValues[{Inds[i]}], {DIVs[Inds[i]]}.\n'
+            LogList.append(msg)
+            Nerrors = Nerrors + 1
+    else:
+        msg = 'INFO:  Each ReferencedSegmentNumber in '\
+              + 'SegmentIdentificationSequence of '\
+              + 'PerFrameFunctionalGroupsSequence matches the first element '\
+              + 'in DimensionIndexValues.\n'
+        LogList.append(msg)
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    """Determine if the dimensions of the pixel array in PixelData do not
+    match the expected dimensions (the number of frames (PixArrF) has 
+    already been compared to NumberOfFrames)."""
+    if NumOfRows == Seg.Rows:
+        msg = f'INFO:  The number of rows in PixelData, {NumOfRows}, '\
+              + f'matches the number of SEG Rows, {Seg.Rows}.\n'
+        LogList.append(msg)
+    else:
+        msg = f'ERROR:  The number of rows in PixelData, {NumOfRows}, does '\
+              + f'not match the number of SEG Rows, {Seg.Rows}.\n'
+        LogList.append(msg)
+        Nerrors = Nerrors + 1
+    
+    
+    if LogToConsole:
+        print(msg)
+            
+    if NumOfCols == Seg.Columns:
+        msg = f'INFO:  The number of columns in PixelData, {NumOfCols}, '\
+              + f'matches the number of SEG Columns, {Seg.Columns}.\n'
+        LogList.append(msg)
+    else:
+        msg = f'ERROR:  The number of columns in PixelData, {NumOfCols}, does'\
+              + f' not match the number of SEG Columns, {Seg.Columns}.\n'
+        LogList.append(msg)
+        Nerrors = Nerrors + 1
+    
+    if LogToConsole:
+        print(msg)
+    
+    
+    #print(f'There were {Nerrors} errors found in the SEG.\n')
+    
+    if LogToConsole:
+        print('-'*120)
+            
+    return LogList, Nerrors

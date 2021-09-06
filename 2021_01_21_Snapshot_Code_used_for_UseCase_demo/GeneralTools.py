@@ -107,7 +107,83 @@ def UniqueItems(Items, IgnoreZero=False):
         
     
         
+def UniqueItems_new(Items, IgnoreZero=False, MaintainOrder=False):
+    """
+    04/09/21:
+        Copied from FP/GeneralTools.py
+        
+    Get list of unique items in a list or Numpy data array.
     
+    Inputs:
+    ******
+    
+    Items : list of integers/floats or a Numpy data array
+    
+    IgnoreZero : boolean (optional; False by default)
+        If IgnoreZero=True only unique non-zero items will be returned.
+        
+    MaintainOrder : boolean (optional; False by default)
+        If MaintainOrder=True the unique items will be returned in their
+        original order.
+        
+    
+    Outputs:
+    *******
+    
+    UniqueItems : list or Numpy data array or None
+        List or Numpy array of unique items, or None if Items is empty.
+    """
+    
+    import numpy as np
+    from copy import deepcopy
+    
+    
+    if not isinstance(Items, list) and not isinstance(Items, np.ndarray):
+        msg = f'The input "Items" is data type {type(Items)}.  Acceptable '\
+              + 'data types are "list" and "numpy.ndarray".'
+        
+        raise Exception(msg)
+    
+    
+    OrigItems = deepcopy(Items)
+    
+    if isinstance(Items, list):
+        #Items = np.array(Items)
+    
+        ##Items = list(np.concatenate(Items).flat)
+        #Items = np.concatenate(Items)
+        
+        Items = np.array(FlattenList(Items))
+            
+
+    if Items.size == 0:
+        return None
+    
+    
+    if IgnoreZero:
+        inds = np.nonzero(Items)
+        
+        Items = [Items[ind] for ind in inds[0]]
+    
+    if MaintainOrder:
+        UniqueItems = []
+        
+        for item in Items:
+            if not item in UniqueItems:
+                UniqueItems.append(item)
+        
+    else:
+        #UniqueItems = list(set(Items.tolist()))
+        UniqueItems = np.unique(Items)
+    
+    # If Items was a list convert back to a list:
+    if isinstance(OrigItems, list):
+        UniqueItems = list(UniqueItems) # 18/12/2020
+        #UniqueItems = sorted(list(UniqueItems)) # 18/12/2020
+        
+
+    
+    return UniqueItems
     
     
     
@@ -1009,3 +1085,59 @@ def SliceNoFromFpath(Fpath, SearchString, Separator='_'):
         print(msg)
         
         return None
+    
+def FlattenList(ListOfLists):
+    """
+    04/09/21:
+        Copied from FP/GeneralTools.py
+    """
+    if len(ListOfLists) == 0:
+        return ListOfLists
+    if isinstance(ListOfLists[0], list):
+        return FlattenList(ListOfLists[0]) + FlattenList(ListOfLists[1:])
+    return ListOfLists[:1] + FlattenList(ListOfLists[1:])
+
+def ReduceListOfStringFloatsTo16(OrigList):
+    """ 
+    04/09/21:
+        Copied from FP/GeneralTools.py
+    
+    Decimal strings (VR DS in DICOM standard) must be limited to 16 
+    characters. Reduce a list of string floats to the required limit.
+    
+    Inputs:
+    ******
+        
+    OrigList : list of strings
+        The original list of string floats.
+    
+    
+    Outputs:
+    *******
+        
+    NewList : list of strings
+        The list of strings with characters limited to 16.
+    """
+    
+    #NewList = [item[:16] for item in OrigList]
+    
+    """
+    print(f'\n\n\nOrigList = {OrigList}')
+    print(f'type(OrigList) = {type(OrigList)}')
+    print(f'type(OrigList[0]) = {type(OrigList[0])}')
+    print(f'OrigList[0] = {OrigList[0]}')
+    print(f'len(OrigList[0]) = {len(OrigList[0])}')
+    print('\n\n\n')
+    """
+    
+    charLimit = 16
+    
+    newList = []
+    
+    for item in OrigList:
+        if len(item) > charLimit:
+            newList.append(item[:charLimit])
+        else:
+            newList.append(item)
+    
+    return newList

@@ -111,6 +111,10 @@ def WhichUseCase(SrcDcmDir, TrgDcmDir, ToSliceNum, LogToConsole=False):
         String that denotes the Use Case that applies.
     """
     
+    from importlib import reload
+    import ImageTools
+    reload(ImageTools)
+    
     from DicomTools import GetDicomUids
     from ImageTools import GetImageAttributes
     from GeneralTools import AreListsEqualToWithinEpsilon
@@ -1301,9 +1305,10 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
     from GeneralTools import UniqueItems
     from ImageTools import ImportImage
     from SegTools import InitialiseSeg
-    from SegTools import ModifySeg
-    from ImageTools import GetImageInfo
+    #from SegTools import ModifySeg
+    from ImageTools import GetImageInfo, copy_im
     from GeneralTools import ProportionOfPixArrInExtent
+    from ConversionTools import Image2PixArr
     
     
     # Verify that a segment exists whose label matches FromSearchString:
@@ -1463,7 +1468,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         TrgPFFGStoSliceInds = deepcopy([FromSliceNum]) # 04/12 verify?
         
         # 03/09/21:
-        from ConversionTools import Image2PixArr
+        #from ConversionTools import Image2PixArr
         # Convert PixArrToCopy to a labelmap image:
         LabmapImToCopy = PixArr2Image(
             PixArr=TrgPixArr,
@@ -1474,7 +1479,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         
     if UseCase in ['3a', '3b', '4', '5']:
         from ConversionTools import PixArr2Image
-        from ConversionTools import Image2PixArr
+        #from ConversionTools import Image2PixArr
         from ImageTools import ResampleImage
         from ImageTools import GaussianBlurImage
         #from ImageTools import RecursiveGaussianBlurImage
@@ -1882,7 +1887,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         """ Ensure that ResLabmapImToCopy is a 32-bit unsigned integer. """
         if not PixID == 5:
             print(f'\nPixelID = {PixID} ({PixIDTypeAsStr})). Converting to',
-                  f'unsigned 32-bit integer (sitkUInt32)..')
+                  'unsigned 32-bit integer (sitkUInt32)..')
             
             # Convert ResLabmapImToCopy from float to 32-bit unsigned 
             # integer:
@@ -1946,7 +1951,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
             
             print(f'\nResPixArrToCopy now has {F} frames')
         else:
-            print(f'\nResPixArrToCopy has F frames')
+            print('\nResPixArrToCopy has F frames')
             
         
         # Shift the in-plane elements in ResPixArrToCopy:
@@ -2070,11 +2075,11 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         print(f'\nThe segmentation on slice {FromSliceNum} has been',
               f'registered to {F} frames: {TrgPFFGStoSliceInds}.')
         
-        TxParams = RegImFilt.GetParametersMap()
+        TxParams = RegImFilt.GetParameterMap()
         
-        TrgLabIm = deepcopy(TxLabmapImToCopy)
+        TrgLabIm = copy_im(TxLabmapImToCopy)
     else:
-        RegIm = None
+        RegSrcIm = None
         RegImFilt = None
         TxParams = None
     
@@ -2134,10 +2139,13 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
                                LogToConsole=LogToConsole)
     else:
         """ Use SrcSeg to initialise the Target SEG. """
+        """ 04/09/21: Commenting this out since it seems that ModifySeg is
+        not complete (Ref SOPuids in PFFGS are not correct resulting in errors)
         TrgSeg = InitialiseSeg(SegTemplate=SrcSeg, SearchString=FromSearchString,
                                PFFGStoSliceInds=TrgPFFGStoSliceInds, 
                                DicomDir=TrgDcmDir, NamePrefix=AddText,
                                LogToConsole=LogToConsole)
+        """
         
     print(f'\n\n\n***FromSegNum = {FromSegNum}')
     
@@ -2147,11 +2155,21 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
         [print(f'   np.amax(TrgPixArr[{i}]) = {np.amax(TrgPixArr[i])}') for i in range(TrgPixArr.shape[0])]
         print(f'   TrgPFFGStoSliceInds = {TrgPFFGStoSliceInds}')
         
+    """ 04/09/21: Commenting this out since it seems that ModifySeg is
+        not complete (Ref SOPuids in PFFGS are not correct resulting in errors)
     # Modify the tags in TrgSeg:
     TrgSeg = ModifySeg(Seg=TrgSeg, PixArr=TrgPixArr,
                        PFFGStoSliceInds=TrgPFFGStoSliceInds, 
                        DicomDir=TrgDcmDir, LogToConsole=LogToConsole)
-    
+    """
+    from SegTools import CreateSeg
+    TrgSeg = CreateSeg(
+        SrcSeg=SrcSeg, TrgPixArrBySeg=[TrgPixArr], 
+        TrgF2SindsBySeg=[TrgPFFGStoSliceInds], 
+        TrgDicomDir=TrgDcmDir, SrcSegLabel=FromSearchString,
+        TrgSeg=TrgSeg, TrgSegLabel=None, 
+        AddTxtToSegLabel='', LogToConsole=LogToConsole
+        )
     
     """ Had 1040 lines of code. Now 207. """
     
@@ -2160,7 +2178,7 @@ def CopySeg(SrcSeg, FromSearchString, SrcDcmDir, FromSliceNum, TrgDcmDir,
            LabmapImToCopy, PixArrToCopy,\
            SegPFFGStoSliceIndsBySeg, SegPFFGStoSliceIndsInSeg,\
            TrgLabIm, TrgPixArr, TrgPFFGStoSliceInds,\
-           RegIm, RegImFilt, TxParams, TrgSeg
+           RegSrcIm, RegImFilt, TxParams, TrgSeg
 
 
 
@@ -2357,6 +2375,10 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     
     SOPuids = GetDicomSOPuids(DicomDir)
     
+    print(f'DicomDir = {DicomDir}\n')
+    print('SOPuids (line 2361) = ')
+    [print(f'{uid}') for uid in SOPuids]
+    
     Dicom = ImportDicom(DicomDir)
     
     #Size, Spacings, ST,\
@@ -2422,6 +2444,9 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     """Determine whether any of the ReferencedSOPInstanceUIDs do not
     match the SOPInstanceUIDs."""        
     RefSOPuidsInRIS = [RIS[i].ReferencedSOPInstanceUID for i in range(len(RIS))]
+    
+    print('\nRefSOPuidsInRIS (line 2430) = ')
+    [print(f'{uid}') for uid in RefSOPuidsInRIS]
     
     # Determine whether the Ref SOP UIDs match the SOP UIDs:
     IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInRIS]
@@ -2820,6 +2845,9 @@ def ErrorCheckSeg(Seg, DicomDir, LogToConsole=False):
     RefSOPuidsInPFFGS = [PFFGS[i].DerivationImageSequence[0]\
                                  .SourceImageSequence[0]\
                                  .ReferencedSOPInstanceUID for i in range(len(PFFGS))]
+    
+    print('\nRefSOPuidsInPFFGS (line 2831) = ')
+    [print(f'{uid}') for uid in RefSOPuidsInPFFGS]
     
     # Determine whether the Ref SOP UIDs match the SOP UIDs:
     IsMatch = [RefSOPuid in SOPuids for RefSOPuid in RefSOPuidsInPFFGS]

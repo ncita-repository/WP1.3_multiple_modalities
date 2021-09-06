@@ -30,16 +30,24 @@ reload(seg_tools.create_seg)
 import plotting_tools.plotting
 reload(plotting_tools.plotting)
 
+import io_tools.exports
+reload(io_tools.exports)
+
+import os
+import time
+from pathlib import Path
+import SimpleITK as sitk
 from testing.test_import_data import DataImporterTester
 from io_tools.import_dro import DroImporter
 from image_tools.propagate import Propagator
 from dro_tools.create_dro import DroCreator
 from seg_tools.create_seg import create_seg
-
 #from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
 from plotting_tools.plotting import (
-    plot_pixarrs_from_list_of_segs_and_images, compare_res_results
+    plot_pixarrs_from_list_of_segs_and_images, compare_res_results,
+    plot_metricValues_v_iters
     )
+from io_tools.exports import (export_im, export_list_to_txt, export_newRoicol)
 
 class PropagatorTester:
     # TODO update docstrings
@@ -142,6 +150,10 @@ class PropagatorTester:
         with the yet-to-be-refactored create_rts. """
         # TODO refactor create_rts and wrap it and create_seg into a new func (create_new_roicol)
         
+        """ Export the new ROI Collection """
+        self.export_newRoiCol()
+        
+        """ Create and export a new DRO (if applicable) """
         if '5' in useCaseToApply:
             # Instantiate a DroCreator Object:
             newDroData = DroCreator(newDataset, params)
@@ -154,9 +166,153 @@ class PropagatorTester:
             
             self.newDroData = newDroData
         
-        
+    
+        """ Export label images, tranforms and transform parameters """
+        self.export_labims()
+        self.export_tx_and_params()
         
         """ Plot results """
+        self.plot_metric_v_iters()
+        self.plot_res_results()
+        self.plot_roi_over_dicom_ims()
+    
+    def export_newRoiCol(self):
+        
+        print('* Exporting the new Target ROI Collection..\n')
+        
+        srcDataset = self.srcDataset
+        #trgDataset = self.trgDataset
+        newDataset = self.newDataset
+        params = self.params
+        
+        roicolMod = params.cfgDict['roicolMod']
+        runID = params.cfgDict['runID']
+        
+        if roicolMod == 'RTSTRUCT': 
+            exportDir = params.cfgDict['rtsExportDir']
+        else:
+            exportDir = params.cfgDict['segExportDir']
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        fname = f'{runID}_newRoicol_{currentDateTime}'
+        
+        newRoicolFpath = export_newRoicol(
+            newRoicol=newDataset.roicol, 
+            srcRoicolFpath=srcDataset.roicolFpath, 
+            exportDir=exportDir, fname=fname
+            )
+        
+        self.newDataset.roicolFpath = newRoicolFpath
+    
+    def plot_metric_v_iters(self):
+        """ 
+        Plot the metric values v iterations from the registeration.
+        """
+        
+        print('* Plotting metric v iterations from registeration..\n')
+        
+        metricValues = self.newDataset.metricValues
+        multiresIters = self.newDataset.multiresIters
+        params = self.params
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        exportPlot = cfgDict['exportPlots']
+        #p2c = cfgDict['p2c']
+        useCaseToApply = cfgDict['useCaseToApply']
+        #forceReg = cfgDict['forceReg']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        resInterp = cfgDict['resInterp']
+        
+        resExportDir = cfgDict['resPlotsExportDir']
+        
+        #print(useCaseToApply)
+        
+        # Prepare plot title:
+        if useCaseToApply in ['5a', '5b'] and not useDroForTx:
+            resTitle = f'Metric v iters for Src reg to Trg ({regTxName}, '\
+                + f'{initMethod}, {resInterp})'
+            
+            # Prepare filename for exported plot:
+            fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
+            fname = fname.replace('(', '').replace(')', '')
+            
+            plot_metricValues_v_iters(
+                metricValues=metricValues, multiresIters=multiresIters, 
+                exportPlot=exportPlot, exportDir=resExportDir,
+                fname=fname
+            )
+    
+    def plot_res_results(self):
+        """ 
+        Plot a single slice from trgIm and resIm and compare to assess result
+        of resampling/registering.
+        """
+        
+        print('* Plotting resampled/registered results..\n')
+        
+        #srcDataset = self.srcDataset
+        trgDataset = self.trgDataset
+        newDataset = self.newDataset
+        params = self.params
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        #roicolMod = cfgDict['roicolMod']
+        exportPlot = cfgDict['exportPlots']
+        #p2c = cfgDict['p2c']
+        useCaseToApply = cfgDict['useCaseToApply']
+        #forceReg = cfgDict['forceReg']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        resInterp = cfgDict['resInterp']
+        trgIm = trgDataset.image
+        resIm = newDataset.image # resampled source or source-registered-to-target 
+        
+        resExportDir = cfgDict['resPlotsExportDir']
+        
+        #print(useCaseToApply)
+        
+        # Prepare plot title for new dataset:
+        if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+            resTitle = 'Src '
+            if useCaseToApply in ['3a', '3b', '4a', '4b']:
+                resTitle += f'res to Trg ({resInterp})'
+            elif useCaseToApply in ['5a', '5b']:
+                if useDroForTx:
+                    resTitle += f'tx to Trg ({regTxName} DRO, {resInterp})'
+                else:
+                    resTitle += f'reg to Trg ({regTxName}, {initMethod}, '\
+                        + f'{resInterp})'
+            
+            midInd = trgIm.GetSize()[2] // 2
+            
+            # Prepare filename for exported plot:
+            fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
+            fname = fname.replace('(', '').replace(')', '')
+            
+            compare_res_results(
+                resIm0=trgIm, resIm1=resIm, resInd=midInd,
+                resTitle0='Target image', resTitle1=resTitle,
+                exportPlot=exportPlot, exportDir=resExportDir,
+                fname=fname
+            )
+    
+    def plot_roi_over_dicom_ims(self):
+        """ 
+        Plot copied/propagated ROI overlaid on DICOM images 
+        """
+        
+        print('* Plotting ROI over DICOM images..\n')
+        
+        srcDataset = self.srcDataset
+        trgDataset = self.trgDataset
+        newDataset = self.newDataset
+        params = self.params
         
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
@@ -169,40 +325,15 @@ class PropagatorTester:
         regTxName = cfgDict['regTxName']
         initMethod = cfgDict['initMethod']
         resInterp = cfgDict['resInterp']
-        trgIm = trgDataset.image
-        resIm = self.image # resampled source or source-registered-to-target 
+        #trgIm = trgDataset.image
+        #resIm = newDataset.image # resampled source or source-registered-to-target 
         
-        regExportDir = cfgDict['regPlotsExportDir']
+        #resExportDir = cfgDict['resPlotsExportDir']
         
         if roicolMod == 'RTSTRUCT':
             roiExportDir = cfgDict['rtsPlotsExportDir']
         else:
             roiExportDir = cfgDict['segPlotsExportDir']
-        
-        
-        if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
-            """ Plot a single slice from trgIm and resIm and compare """
-            
-            # Prepare plot title for new dataset:
-            resTitle = 'Src '
-            if useCaseToApply in ['3a', '3b', '4a', '4b']:
-                resTitle += f'res to Trg ({resInterp})'
-            elif useCaseToApply in ['5a', '5a']:
-                if useDroForTx:
-                    resTitle += f'tx to Trg ({regTxName} DRO, {resInterp})'
-                else:
-                    resTitle += f'reg to Trg ({regTxName}, {initMethod}, '\
-                        + f'{resInterp})'
-                    
-            midInd = trgIm.GetSize()[2] // 2
-    
-            compare_res_results(
-                resIm0=trgIm, resIm1=resIm, resInd=midInd,
-                resTitle0='Target image', resTitle1=resTitle,
-                exportPlot=exportPlot, exportDir=regExportDir,
-            )
-        
-        """ Plot copied/propagated ROI overlaid on DICOM images """
         
         # Prepare plot title for new dataset:
         method = 'Src '
@@ -212,7 +343,7 @@ class PropagatorTester:
             method += 'propagated to Trg'
         elif useCaseToApply in ['3a', '4a']:
             method += f'copied to Trg (res, {resInterp})'
-        elif useCaseToApply in ['3a', '4a']:
+        elif useCaseToApply in ['3b', '4b']:
             method += f'propagated to Trg (res, {resInterp})'
         elif useCaseToApply == '5a':
             if useDroForTx:
@@ -227,7 +358,9 @@ class PropagatorTester:
                 method += f'propagated to Trg ({regTxName} reg, {initMethod},'\
                     + f' {resInterp})'
         
-        listOfSegs = [srcDataset.roicol, newRoicol]
+        #print(method)
+        
+        listOfSegs = [srcDataset.roicol, newDataset.roicol]
         """
         Note: newDataset does not have a dicomDir since DICOMs are not
         generated for the resampled/registered source dataset, but for the
@@ -249,14 +382,99 @@ class PropagatorTester:
         )
         """
         
+        # Prepare filename for exported plot:
+        fname = f'{runID}_' + method.replace(' ', '_').replace(',', '')
+        fname = fname.replace('(', '').replace(')', '')
+            
         plot_pixarrs_from_list_of_segs_and_images(
             listOfSegs, listOfImages, listOfDicomDirs, listOfPlotTitles, 
             exportPlot=exportPlot, exportDir=roiExportDir,
             runID=runID, useCaseToApply=useCaseToApply,
             forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
-            initMethod=initMethod, resInterp=resInterp, p2c=p2c
+            initMethod=initMethod, resInterp=resInterp, 
+            #txtToAddToFname=fname, p2c=p2c
+            txtToAddToFname='', p2c=p2c
         )
 
+    def export_labims(self):
+        
+        print('* Exporting label images..\n')
+        
+        srcDataset = self.srcDataset
+        trgDataset = self.trgDataset
+        newDataset = self.newDataset
+        params = self.params
+        
+        labimExportDir = params.cfgDict['labimExportDir']
+        runID = params.cfgDict['runID']
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        # List of datasets:
+        dsets = [srcDataset, trgDataset, newDataset]
+        
+        dsetNames = ['src', 'trg', 'new']
+        
+        # List of labimByRoi to export:
+        listOfLabimByRoi = [dset.labimByRoi for dset in dsets]
+        
+        # List of file names (will be modified in loop below):
+        fnames = [
+            f'{runID}_{name}Labim_{currentDateTime}' for name in dsetNames
+            ]
+        
+        for d in range(len(listOfLabimByRoi)):
+            labimByRoi = listOfLabimByRoi[d]
+            fname = fnames[d]
+            
+            if labimByRoi: # if not None
+                # Loop through each labim (for each ROI):
+                for r in range(len(labimByRoi)):
+                    export_im(
+                        labimByRoi[r], filename=f'{fname}{r}',
+                        fileFormat='HDF5ImageIO', exportDir=labimExportDir
+                    )
+    
+    def export_tx_and_params(self):
+        
+        print('* Exporting transforms and transform parameters..\n')
+        
+        params = self.params
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        
+        txExportDir = params.cfgDict['txExportDir']
+        
+        # Create the export directory if it doesn't already exist:
+        if not os.path.isdir(txExportDir):
+            #os.mkdir(exportDir)
+            Path(txExportDir).mkdir(parents=True)
+        
+        resTx = self.newDataset.resTx
+        initRegTx = self.newDataset.initRegTx
+        preRegTx = self.newDataset.preRegTx
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        # List of transforms to export and their names:
+        txs = [resTx, initRegTx, preRegTx]
+        txNames = ['resTx', 'initRegTx', 'preRegTx']
+        
+        for tx, txName in zip(txs, txNames):
+            if tx: # is not None
+                fname = f'{runID}_{txName}_{currentDateTime}'
+                
+                # Export tx as a TFM:
+                fpath = os.path.join(txExportDir, fname + '.tfm')
+                sitk.WriteTransform(tx, fpath)
+                
+                # Export the tx parameters as a TXT:
+                export_list_to_txt(
+                    items=tx.GetParameters(),
+                    filename=fname,
+                    exportDir=txExportDir
+                    )
+        
 def test_propagator_210812(runID, params=None, srcDataset=None, trgDataset=None):
     """
     Run unit or integrated test of propagate.

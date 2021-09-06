@@ -36,6 +36,7 @@ Created on Wed Nov 11 11:52:36 2020
 
 #from SegTools import GetPFFGStoSliceInds
 
+from ConversionTools import Image2PixArr
 
 
 """
@@ -2343,5 +2344,65 @@ def PlotPixArrsFromListOfImages(ListOfImages, ListOfDicomDirs, ListOfPlotTitles,
         plt.savefig(ExportFpath, bbox_inches='tight')
         
         print('\nPlot exported to:\n\n', ExportFpath)
+        
+    return
+
+def plot_labim_over_dicom_im(dicomIm, labim, dpi=80, p2c=False):
+    """ 
+     04/09/21 Modified from OOP.plotting_tools.py
+    """
+    
+    import matplotlib.pyplot as plt
+    
+    dicomPixarr, dicomF2Sinds = Image2PixArr(dicomIm)
+    dicomF, dicomR, dicomC = dicomPixarr.shape
+    
+    labPixarr, labF2Sinds = Image2PixArr(labim)
+    labF, labR, labC = labPixarr.shape
+    
+    if p2c:
+        print(f'\ndicomPixarr.shape = {dicomPixarr.shape}')
+        print(f'dicomF2Sinds = {dicomF2Sinds}')
+        
+        print(f'\nlabPixarr.shape = {labPixarr.shape}')
+        print(f'labF2Sinds = {labF2Sinds}')
+    
+    #if colormap == 'color':
+    #    cmap = plt.cm.nipy_spectral
+    #else:
+    #    cmap = plt.cm.Greys_r
+    
+    # Colormap for labelmaps:
+    cMap = plt.cm.nipy_spectral
+    #cMap = plt.cm.hsv
+    #cMap = plt.cm.gist_rainbow
+    
+    # Set the transparency of labelmaps to be overlaid over DICOMs:
+    #alpha = 0.2
+    alpha = 0.5
+    
+    # Set the number of subplot rows and columns:
+    Ncols = 1
+    Nrows = labF
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=(5*Ncols, 8*Nrows), dpi=dpi)
+        
+    n = 1 # initialised sub-plot number
+    
+    for f in range(labF):
+        ax = plt.subplot(Nrows, Ncols, n)
+        
+        # The DICOM slice number:
+        s = labF2Sinds[f]
+        
+        #ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r)
+        ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r, alpha=alpha)
+        
+        ax.imshow(labPixarr[f], cmap=cMap, alpha=alpha)
+                
+        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+        ax.set_title(f'Frame = {f}, Slice {s}')
+                
+        n += 1 # increment sub-plot number
         
     return

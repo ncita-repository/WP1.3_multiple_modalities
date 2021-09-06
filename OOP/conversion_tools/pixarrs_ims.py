@@ -137,7 +137,7 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     if p2c:
         print('\n\nStart', '-'*110)
         print('Running of pixarrByRoi_to_imByRoi():')
-        print('\n\n', '-'*120)
+        print('-'*120)
         #print(f'   len(pixarrByRoi) = {len(pixarrByRoi)}')
         
     labimByRoi = []
