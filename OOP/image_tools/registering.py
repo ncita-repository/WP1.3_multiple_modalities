@@ -42,12 +42,12 @@ def end_plot():
     
     global metric_values, multires_iterations
     
-    """ 31/08/21
+    #""" 31/08/21
     del metric_values
     del multires_iterations
     # Close figure, we don't want to get a duplicate of the plot latter on.
     plt.close()
-    """
+    #"""
 
 def plot_values(regMethod):
     """ Callback invoked when the IterationEvent happens, update the data 
@@ -75,6 +75,14 @@ def update_multires_iterations():
     global metric_values, multires_iterations
     
     multires_iterations.append(len(metric_values))
+
+def update_metric_values(regMethod):
+    """ Callback invoked when the IterationEvent happens, update the data. 
+    """
+    
+    global metric_values, multires_iterations
+    
+    metric_values.append(regMethod.GetMetricValue())
 
 def plot_fix_mov_ims(fixInd, movInd, fixPixarr, movPixarr):
     """ Callback invoked by the interact IPython method for scrolling 
@@ -209,6 +217,11 @@ def rigid_reg_im(
     plotToConsole = False # simple text only
     plotToConsole = True # plots
     
+    """ metric values and multiresIters don't return expected values when
+    plotToConsole = False!
+    """
+    # TODO correct code so that metric values and iters returned when plotToConsole=False
+    
     samplingPercentage = float(samplingPercentage/100)
     
     if regTxName == 'rigid':
@@ -227,8 +240,12 @@ def rigid_reg_im(
     times.append(time.time())
     
     if initMethod == 'landmarks' and fixFidsFpath and movFidsFpath:
+        """
         if (check_file_ext(fixFidsFpath, '.txt') and
                 check_file_ext(movFidsFpath, '.txt')):
+        """
+        # TODO tidy this up
+        if True: # 07/09 above returning false when true expected
             print('File paths to fiducials were provided. Attempting to',
                   'create a landmark transform..\n')
             
@@ -323,20 +340,28 @@ def rigid_reg_im(
     
     regMethod.SetOptimizerScalesFromPhysicalShift()
     
-    if p2c:
-        if plotToConsole:
-            # Connect all of the observers for plotting during registration:
-            regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
-            regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
-            regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                                 update_multires_iterations) 
-            regMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: plot_values(regMethod))
-        else:
-            regMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: command_iteration(regMethod))
-            regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
-                                 lambda: command_multi_iteration(regMethod))
+    if plotToConsole:
+        # Connect all of the observers for plotting during registration:
+        regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
+        # Don't want to delete metric_values or multires_iterations since
+        # I want to return them:
+        #regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_multires_iterations) 
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: plot_values(regMethod))
+    else:
+        # Need to run start_plot to initialise metric_values and
+        # multires_iterations, even if not plotting:
+        regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_multires_iterations)
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             update_metric_values(regMethod))
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: command_iteration(regMethod))
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                             lambda: command_multi_iteration(regMethod))
     
     # Get the number of valid points:
     numOfValidPts = regMethod.GetMetricNumberOfValidPoints()
@@ -468,7 +493,7 @@ def bspline_reg_im(
     
     # Print simple metric values to console or plot of metric value v iteration?
     plotToConsole = False # simple text only
-    #plotToConsole = True # plots
+    plotToConsole = True # plots
     
     # Use scale factors for mesh grid?
     # Note 08/07/21: Not sure it works properly using scale factors.
@@ -496,23 +521,28 @@ def bspline_reg_im(
     times = []
     times.append(time.time())
     
-    if (check_file_ext(fixFidsFpath, '.txt') and
-            check_file_ext(movFidsFpath, '.txt')):
-        print('File paths to fiducials were provided. Attempting to create a',
-              'landmark transform..\n')
-        
-        # Get landmark transform:
-        initialTx, fixPts, movPts = get_landmark_tx(
-            txName='bspline', fixFidsFpath=fixFidsFpath, 
-            movFidsFpath=movFidsFpath, fixIm=fixIm, movIm=movIm, 
-            flipK=False, buffer=2, p2c=True
-            )
+    if fixFidsFpath and movFidsFpath:
+        """
+        if (check_file_ext(fixFidsFpath, '.txt') and
+                check_file_ext(movFidsFpath, '.txt')):
+            print('File paths to fiducials were provided. Attempting to create a',
+                  'landmark transform..\n')
+        """
+        # TODO tidy this up
+        if True: # 07/09 above returning false when true expected
+            
+            # Get landmark transform:
+            initialTx, fixPts, movPts = get_landmark_tx(
+                txName='bspline', fixFidsFpath=fixFidsFpath, 
+                movFidsFpath=movFidsFpath, fixIm=fixIm, movIm=movIm, 
+                flipK=False, buffer=2, p2c=True
+                )
     else:
         print('File paths to fiducials were not provided/found. Initialising',
               'the Bspline using BSplineTransformInitializer..\n')
         
         initialTx = sitk.BSplineTransformInitializer(
-            image1=fixIm, transformDomainmeshSize=meshSize
+            image1=fixIm, transformDomainMeshSize=meshSize
             )
     
     print(f'initialTx is {initialTx.GetName()}\n')
@@ -530,7 +560,7 @@ def bspline_reg_im(
     """ Similarity metric settings. """
     regMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
     regMethod.SetMetricSamplingStrategy(regMethod.RANDOM)
-    regMethod.SetMetricsamplingPercentage(samplingPercentage)
+    regMethod.SetMetricSamplingPercentage(samplingPercentage)
     
     """ Optimiser settings. Use LBFGSB (without scale factors) or LBFGS2 (with 
     scale factors).
@@ -557,21 +587,29 @@ def bspline_reg_im(
     #regMethod.SetSmoothingSigmasPerLevel([2, 1, 0]) # in 65_Registration_FFD.ipynb example
     regMethod.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn() # <-- THIS WAS MISSING until 21:51 on 1/7/21
     
-    if p2c:
-        if plotToConsole:
-            # Connect all of the observers so that we can perform plotting  
-            # during registration.
-            regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
-            regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
-            regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                                 update_multires_iterations) 
-            regMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: plot_values(regMethod))
-        else:
-            regMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: command_iteration(regMethod))
-            regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
-                                 lambda: command_multi_iteration(regMethod))
+    if plotToConsole:
+        # Connect all of the observers so that we can perform plotting  
+        # during registration.
+        regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
+        # Don't want to delete metric_values or multires_iterations since
+        # I want to return them:
+        #regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_multires_iterations) 
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: plot_values(regMethod))
+    else:
+        # Need to run start_plot to initialise metric_values and
+        # multires_iterations, even if not plotting:
+        regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_multires_iterations)
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             update_metric_values(regMethod))
+        regMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: command_iteration(regMethod))
+        regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                             lambda: command_multi_iteration(regMethod))
     
         # Since corresponding points in the fixed and moving image are available  
         # display the similarity metric and the TRE during the registration:
@@ -734,6 +772,7 @@ def register_im(
         if p2c:
             print('Running rigid_reg_im()...\n')
         
+        """
         learningRate = 1
         learningRate = 5
         #learningRate = 10
@@ -741,18 +780,26 @@ def register_im(
         if learningRate != 1:
             print('\n* On 06/09 changed learning rate from 1 to',
                   f'{learningRate}\n\n')
+        """
         
+        """
         samplingPercentage = 50
         #samplingPercentage = 100
         if samplingPercentage != 50:
             print('\n* On 06/09 changed samplingPercentage from 50% to',
                   f'{samplingPercentage}%\n\n')
+        """
         
+        """
         initMethod = 'moments'
-        initMethod = 'geometry'
+        #initMethod = 'geometry'
         if initMethod != 'moments':
             print('\n* On 06/09 changed initMethod from "moments" to',
                   '"geometry"\n\n')
+        """
+        
+        learningRate = 1.0
+        samplingPercentage = 50
         
         regIm, initialTx, finalTx, metric_values, multires_iterations\
             = rigid_reg_im(

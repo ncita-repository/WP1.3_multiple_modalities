@@ -136,24 +136,31 @@ def is_matrix_orthonormal(matrix, p2c=False):
     print(f'Det = {Det}')
     isOrthonormal = are_items_equal_to_within_eps(abs(Det), 1, epsilon=1e-06)
     
+    # Only for info:
     MdotM_T =  np.dot(M, M.T) - np.identity(M.shape[0])
     SSEofMdotM_T = matrix_sum_of_squares(MdotM_T)
     #isOrthonormal = are_items_equal_to_within_eps(
     #    SSEofMdotM_T, 0, epsilon=1e-06
     #    )
     
+    """ 07/09/21: Get LinAlgError: Singular matrix when running below code for
+    preRefTxMatrix from bspline registration. Commenting this out since it's
+    not used anyhow.
+    
+    # Only for info:
     TequalsInv = M.T - np.linalg.inv(M)
     SSEofTequalsInv = matrix_sum_of_squares(TequalsInv)
     #isOrthonormal = are_items_equal_to_within_eps(
     #    SSEofTequalsInv, 0, epsilon=1e-06
     #    )
+    """
     
     if p2c:
         print(f'\nThe determinant of M = {Det}')
         print(f'\nM*M.T - I = \n{MdotM_T}')
         print(f'\nSSE = {SSEofMdotM_T}')
-        print(f'\nM.T - M^-1 = \n{SSEofTequalsInv}')
-        print(f'\nSSE = {SSEofTequalsInv}')
+        #print(f'\nM.T - M^-1 = \n{SSEofTequalsInv}')
+        #print(f'\nSSE = {SSEofTequalsInv}')
         
         if isOrthonormal:
             print('\nM is orthonormal')
@@ -248,3 +255,69 @@ def get_tx_matrix_type(txMatrix, p2c=False):
         print('Matrix type is', matrixType)
     
     return matrixType
+
+def get_txMatrix_from_tx(tx, p2c):
+    # TODO update docstrings
+    """
+    Get a transform matrix (as a list) from a transform.  
+    
+    Parameters
+    ----------
+    tx : SimpleITK Transform
+    p2c : bool
+        If True results will be printed to the console.
+    
+    Returns
+    -------
+    txMatrix : list of floats
+        List form of the transformation matrix.
+    """
+    
+    # The transform parameters:
+    txParams = tx.GetParameters()
+    
+    
+    # Add the row vector [0, 0, 0, 1] to txParams to complete the Frame of
+    # Reference Transformation Matrix:
+    # (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+    
+    #txParams = [str(item) for item in txParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+    
+    if len(txParams) == 6:
+        # RIGID DICOM FOR Transformation Matrix <--> Euler3DTransform sitk tx
+        
+        txMatrix = [
+            str(txParams[0]), '0.0', '0.0', '0.0',
+            '0.0', str(txParams[1]), '0.0', '0.0',
+            '0.0', '0.0', str(txParams[2]), '0.0',
+            str(txParams[3]), str(txParams[4]), str(txParams[5]), '1.0'
+            ]
+        
+    elif len(txParams) == 7:
+        # RIGID_SCALE FOR tx matrix <--> Similarity3DTransform sitk tx
+        
+        msg = "rigid scale case not done yet."
+        raise Exception(msg)
+        
+    elif len(txParams) == 12:
+        # AFFINE FOR tx matrix <--> AffineTransform sitk tx
+        
+        txMatrix = [
+            str(txParams[0]), str(txParams[1]), str(txParams[2]), '0.0',
+            str(txParams[3]), str(txParams[4]), str(txParams[5]), '0.0',
+            str(txParams[6]), str(txParams[7]), str(txParams[8]), '0.0',
+            str(txParams[9]), str(txParams[10]), str(txParams[11]), '1.0'
+            ]
+    else:
+        # tx must be a non-rigid transform.
+        
+        """
+        msg = "Was expecting 6, 7 or 12 transform parameters (for rigid,"\
+            + " rigid scale or affine transforms, but there are "\
+            + f"{len(txParams)} parameters."
+        raise Exception(msg)
+        """
+        
+        txMatrix = [str(item) for item in txParams]
+    
+    return txMatrix

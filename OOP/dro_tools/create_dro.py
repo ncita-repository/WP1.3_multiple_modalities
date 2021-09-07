@@ -17,7 +17,7 @@ reload(dro_tools.matrices)
 
 import os
 from pathlib import Path
-import time
+#import time
 from datetime import datetime
 from pydicom import dcmread
 from pydicom.uid import generate_uid
@@ -28,13 +28,15 @@ from dro_tools.general import (
     modify_ref_ser_seq, modify_stu_con_oth_ref_ins_seq, modify_ref_im_seq
     )
 #from dro_tools.matrices import is_matrix_orthonormal, is_matrix_orthogonal
-from dro_tools.matrices import get_tx_matrix_type
+from dro_tools.matrices import (get_txMatrix_from_tx, get_tx_matrix_type)
 from general_tools.general import (
     reduce_list_of_str_floats_to_16, generate_reg_fname
     )
 
 #from dro_tools.create_spa_dro import create_spa_dro_from_tx
 #from dro_tools.create_def_dro import create_def_dro_from_tx
+
+
 
 
 class DroCreator:
@@ -140,26 +142,32 @@ class DroCreator:
         self.sampleDro : Pydicom Object
             The DICOM Registration Object that will be used as a template for
             the new DRO.
-        self.txParams : tuple of floats
-            The registration transformation parameters.
-        self.txMatrix : list of floats
-            List form of the transformation matrix.
+        #self.resTxParams : tuple of floats, conditional
+        #    The registration transformation parameters if the transform is a
+        #    rigid transform; None otherwise.
+        self.resTxMatrix : list of floats, conditional
+            List form of the transformation matrix if the transform is a
+            rigid transform; None otherwise.
+        self.preRegTxMatrix : list of floats, conditional
+            List form of the transformation matrix if the transform is a
+            bspline transform; None otherwise.
         self.gridOrig : list of strs, conditional
-            The origin of the bspline grid along x, y and z. Only if the 
-            registration transform is a bspline.
+            The origin of the bspline grid along x, y and z if the transform is
+            a bspline transform; None otherwise.
         self.gridDir : list of strs, conditional
-            The direction of the bspline grid. Only if the registration 
-            transform is a bspline.
+            The direction of the bspline grid if the transform is a bspline
+            transform; None otherwise.
         self.gridDims : list of floats, conditional
-            The dimensions of the bspline grid. Only if the registration 
-            transform is a bspline.
+            The dimensions of the bspline grid if the transform is a bspline
+            transform; None otherwise.
         self.gridRes : list of floats, conditional
-            The spacings of the bspline grid. Only if the registration 
-            transform is a bspline.
+            The spacings of the bspline grid if the transform is a bspline
+            transform; None otherwise.
         self.vectGridData : list of floats, conditional
-            The deformations of the bspline, e.g.: 
-            [def0_x, def0_y, def0_z, def1_x, def1_y, def1_z, ...].
-            Only if the registration transform is a bspline.
+            The deformations of the bspline if the transform is a bspline
+            transform, e.g.: 
+            [def0_x, def0_y, def0_z, def1_x, def1_y, def1_z, ...];
+            None otherwise.
         """
         
         """
@@ -177,9 +185,22 @@ class DroCreator:
         # ContentDescription:
         #self.contentDesc = ''
         
+        # Initialise the transform data that will be updated for rigid 
+        # transforms:
+        self.resTxMatrix = None
+        # and bspline transforms:
+        self.preRegTxMatrix = None
+        self.gridOrig = None
+        self.gridDir = None
+        self.gridDims = None
+        self.gridRes = None
+        self.vectGridData = None
+        
+        
         # Get the transformation matrix and grid data (if the registration
         # transformation is a bspline):
-        self.get_txMatrix_from_tx(newDataset, params)
+        #self.get_txMatrix_from_tx(newDataset, params)
+        self.get_data_from_tx(newDataset, params)
         
         # Import the sample DRO:
         self.import_sample_dro(params)
@@ -219,7 +240,36 @@ class DroCreator:
         
         self.sampleDro = sampleDro
     
-    def get_txMatrix_from_tx(self, newDataset, params):
+    def get_data_from_rigid_tx(self, newDataset, params):
+        # TODO update docstrings
+        """
+        Get the transform parameters and transform matrix.  
+        
+        Parameters
+        ----------
+        newDataset : Propagator Object
+            Object containing various data for the source-to-target propagated (or 
+            copied) dataset.
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        
+        Returns
+        -------
+        self.resTxMatrix : list of floats
+            List form of the transformation matrix.
+        """
+        
+        #regTxName = params.cfgDict['regTxName']
+        p2c = params.cfgDict['p2c']
+        
+        # The registration transform:
+        #regTx = newDataset.finalTx # 04/09/21
+        regTx = newDataset.resTx # 04/09/21
+        
+        self.resTxMatrix = get_txMatrix_from_tx(regTx, p2c)
+    
+    def get_data_from_bspline_tx(self, newDataset, params):
         # TODO update docstrings
         """
         Get the registration transform matrix as a list, and grid parameters if
@@ -236,37 +286,31 @@ class DroCreator:
         
         Returns
         -------
-        self.txParams : tuple of floats
-            The registration transformation parameters.
-        self.txMatrix : list of floats
-            List form of the transformation matrix.
-        self.gridOrig : list of strs, conditional
-            The origin of the bspline grid along x, y and z. Only if the 
-            registration transform is a bspline.
-        self.gridDir : list of strs, conditional
-            The direction of the bspline grid. Only if the registration 
-            transform is a bspline.
-        self.gridDims : list of floats, conditional
-            The dimensions of the bspline grid. Only if the registration 
-            transform is a bspline.
-        self.gridRes : list of floats, conditional
-            The spacings of the bspline grid. Only if the registration 
-            transform is a bspline.
-        self.vectGridData : list of floats, conditional
+        self.preRegTxMatrix : list of floats
+            List form of the pre-registration transformation matrix.
+        self.gridOrig : list of strs
+            The origin of the bspline grid along x, y and z.
+        self.gridDir : list of strs
+            The direction of the bspline grid.
+        self.gridDims : list of floats
+            The dimensions of the bspline grid.
+        self.gridRes : list of floats
+            The spacings of the bspline grid.
+        self.vectGridData : list of floats
             The deformations of the bspline, e.g.: 
             [def0_x, def0_y, def0_z, def1_x, def1_y, def1_z, ...].
-            Only if the registration transform is a bspline.
         """
         
-        regTxName = params.cfgDict['regTxName']
+        #regTxName = params.cfgDict['regTxName']
         p2c = params.cfgDict['p2c']
         
-        # The registration transform:
+        # The registration and pre-registration transforms:
         #regTx = newDataset.finalTx # 04/09/21
         regTx = newDataset.resTx # 04/09/21
+        preRegTx = newDataset.preRegTx
         
         # The transform parameters:
-        txParams = regTx.GetParameters()
+        #txParams = regTx.GetParameters()
         
         """ 
         Could also get the tuple of the registration transform parameters
@@ -275,131 +319,142 @@ class DroCreator:
         """
         # TODO tidy above
         
-        # Add the row vector [0, 0, 0, 1] to txParams to complete the Frame of
-        # Reference Transformation Matrix:
-        # (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+        """ 
+        The final transform after executing the registration is of class
+        SimpleITK.SimpleITK.Transform but needs to be of class
+        SimpleITK.SimpleITK.BSplineTransform. Check and change if needed:
+        """
+        if type(regTx) == sitk.SimpleITK.Transform:
+            regTx = sitk.BSplineTransform(regTx)
         
-        #txParams = [str(item) for item in txParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
+        # Get the coefficient images (deformations along x, y and z):
+        coeffImX, coeffImY, coeffImZ = regTx.GetCoefficientImages()
         
-        if len(txParams) == 6:
-            # RIGID DICOM FOR Transformation Matrix <--> Euler3DTransform sitk tx
+        # Zip the vectors to a list of x, y, z tuples:
+        listOfTuples = list(zip(
+            list(sitk.GetArrayViewFromImage(coeffImX).flatten()),
+            list(sitk.GetArrayViewFromImage(coeffImY).flatten()),
+            list(sitk.GetArrayViewFromImage(coeffImZ).flatten())
+            ))
+        
+        flatListOfVects = [item for tup in listOfTuples for item in tup]
+        
+        vectGridData = np.array(flatListOfVects).tobytes()
+        
+        gridOrig = [str(item) for item in coeffImX.GetOrigin()]
+        gridDir = [str(item) for item in coeffImX.GetDirection()]
+        gridDims = list(coeffImX.GetSize())
+        gridRes = list(coeffImX.GetSpacing())
+        
+        if len(gridDir) > 6:
+            # Ignore the direction cosines along the z-direction:
+            gridDir = gridDir[0:6]
+        
+        # Get the transformation matrix (txMatrix) from the pre-registration
+        # transform parameters: """
+        if preRegTx == None:
+            #preRegTxParams = None
             
-            txMatrix = [
-                str(txParams[0]), '0.0', '0.0', '0.0',
-                '0.0', str(txParams[1]), '0.0', '0.0',
-                '0.0', '0.0', str(txParams[2]), '0.0',
-                str(txParams[3]), str(txParams[4]), str(txParams[5]), '1.0'
-                ]
+            txMatrix = ['1.0', '0.0', '0.0', '0.0',
+                        '0.0', '1.0', '0.0', '0.0',
+                        '0.0', '0.0', '1.0', '0.0',
+                        '0.0', '0.0', '0.0', '1.0']
+        else:
+            """
+            txParams = preRegTx.GetParameters()
             
-        elif len(txParams) == 7:
-            # RIGID_SCALE FOR tx matrix <--> Similarity3DTransform sitk tx
-            
-            msg = "rigid scale case not done yet."
-            raise Exception(msg)
-            
-        elif len(txParams) == 12:
-            # AFFINE FOR tx matrix <--> AffineTransform sitk tx
-            
+            # Add the row vector [0, 0, 0, 1] to txParams to complete the Frame of
+            # Reference Transformation Matrix 
+            # (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
+            #txParams = [str(item) for item in txParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
             txMatrix = [
                 str(txParams[0]), str(txParams[1]), str(txParams[2]), '0.0',
                 str(txParams[3]), str(txParams[4]), str(txParams[5]), '0.0',
                 str(txParams[6]), str(txParams[7]), str(txParams[8]), '0.0',
                 str(txParams[9]), str(txParams[10]), str(txParams[11]), '1.0'
                 ]
-        else:
-            msg = "Was expecting 6, 7 or 12 transform parameters (for rigid,"\
-                + " rigid scale or affine transforms, but there are "\
-                + f"{len(txParams)} parameters."
-            raise Exception(msg)
-    
-        if regTxName == 'bspline':
-            preRegTx = newDataset.preRegTx
-            
-            """ 
-            The final transform after executing the registration is of class
-            SimpleITK.SimpleITK.Transform but needs to be of class
-            SimpleITK.SimpleITK.BSplineTransform. Check and change if needed:
             """
-            if type(regTx) == sitk.SimpleITK.Transform:
-                regTx = sitk.BSplineTransform(regTx)
             
-            # Get the coefficient images (deformations along x, y and z):
-            coeffImX, coeffImY, coeffImZ = regTx.GetCoefficientImages()
-            
-            # Zip the vectors to a list of x, y, z tuples:
-            listOfTuples = list(zip(
-                list(sitk.GetArrayViewFromImage(coeffImX).flatten()),
-                list(sitk.GetArrayViewFromImage(coeffImY).flatten()),
-                list(sitk.GetArrayViewFromImage(coeffImZ).flatten())
-                ))
-            
-            flatListOfVects = [item for tup in listOfTuples for item in tup]
-            
-            vectGridData = np.array(flatListOfVects).tobytes()
-            
-            gridOrig = [str(item) for item in coeffImX.GetOrigin()]
-            gridDir = [str(item) for item in coeffImX.GetDirection()]
-            gridDims = list(coeffImX.GetSize())
-            gridRes = list(coeffImX.GetSpacing())
-            
-            if len(gridDir) > 6:
-                # Ignore the direction cosines along the z-direction:
-                gridDir = gridDir[0:6]
-            
-            if p2c:
-                print(f'type(gridOrig) = {type(gridOrig)}')
-                print(f'gridOrig = {gridOrig}\n')
-                
-                print(f'type(gridDir) = {type(gridDir)}')
-                print(f'gridDir = {gridDir}\n')
-                
-                print(f'type(gridDims) = {type(gridDims)}')
-                print(f'gridDims = {gridDims}\n')
-                
-                print(f'type(gridRes) = {type(gridRes)}')
-                print(f'gridRes = {gridRes}\n')
-                
-                print(f'type(vectGridData) = {type(vectGridData)}')
-                #print(f'vectGridData = {vectGridData}\n')
-            
-            # Get the transformation matrix (txMatrix) from the pre-registration
-            # transform parameters: """
-            if preRegTx == None:
-                #preRegTxParams = None
-                
-                txMatrix = ['1.0', '0.0', '0.0', '0.0',
-                            '0.0', '1.0', '0.0', '0.0',
-                            '0.0', '0.0', '1.0', '0.0',
-                            '0.0', '0.0', '0.0', '1.0']
-            else:
-                txParams = preRegTx.GetParameters()
-                
-                # Add the row vector [0, 0, 0, 1] to txParams to complete the Frame of
-                # Reference Transformation Matrix 
-                # (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.20.2.html#sect_C.20.2.1.1). 
-                #txParams = [str(item) for item in txParams] + ['0.0', '0.0', '0.0', '1.0'] # 06/05/21
-                txMatrix = [
-                    str(txParams[0]), str(txParams[1]), str(txParams[2]), '0.0',
-                    str(txParams[3]), str(txParams[4]), str(txParams[5]), '0.0',
-                    str(txParams[6]), str(txParams[7]), str(txParams[8]), '0.0',
-                    str(txParams[9]), str(txParams[10]), str(txParams[11]), '1.0'
-                    ]
-            
-            self.gridOrig = gridOrig
-            self.gridDir = gridDir
-            self.gridDims = gridDims
-            self.gridRes = gridRes
-            self.vectGridData = vectGridData
-        
-        #self.txParams = txParams  # 04/09/21
-        #self.txMatrix = txMatrix  # 04/09/21
-        self.resTxParams = txParams  # 04/09/21
-        self.resTxMatrix = txMatrix  # 04/09/21
+            txMatrix = get_txMatrix_from_tx(preRegTx, p2c)
         
         if p2c:
-            print(f'txParams = {txParams}\n')
-            print(f'txMatrix = {txMatrix}\n')
+            print(f'type(gridOrig) = {type(gridOrig)}')
+            print(f'gridOrig = {gridOrig}\n')
+            
+            print(f'type(gridDir) = {type(gridDir)}')
+            print(f'gridDir = {gridDir}\n')
+            
+            print(f'type(gridDims) = {type(gridDims)}')
+            print(f'gridDims = {gridDims}\n')
+            
+            print(f'type(gridRes) = {type(gridRes)}')
+            print(f'gridRes = {gridRes}\n')
+            
+            print(f'type(vectGridData) = {type(vectGridData)}\n')
+            #print(f'vectGridData = {vectGridData}\n')
+            
+            #print(f'txParams = {txParams}\n')
+            print(f'preRegTxMatrix = {txMatrix}\n')
         
+        self.gridOrig = gridOrig
+        self.gridDir = gridDir
+        self.gridDims = gridDims
+        self.gridRes = gridRes
+        self.vectGridData = vectGridData
+        self.preRegTxMatrix = txMatrix  # 07/09/21
+    
+    def get_data_from_tx(self, newDataset, params):
+        # TODO update docstrings
+        """
+        Get the data from the transform that will be required for creating a
+        DRO.  
+        
+        Parameters
+        ----------
+        newDataset : Propagator Object
+            Object containing various data for the source-to-target propagated (or 
+            copied) dataset.
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        
+        Returns
+        -------
+        #self.resTxParams : tuple of floats, conditional
+        #    The registration transformation parameters if the transform is a
+        #    rigid transform; None otherwise.
+        self.resTxMatrix : list of floats, conditional
+            List form of the transformation matrix if the transform is a
+            rigid transform; None otherwise.
+        self.preRegTxMatrix : list of floats, conditional
+            List form of the transformation matrix if the transform is a
+            bspline transform; None otherwise.
+        self.gridOrig : list of strs, conditional
+            The origin of the bspline grid along x, y and z if the transform is
+            a bspline transform; None otherwise.
+        self.gridDir : list of strs, conditional
+            The direction of the bspline grid if the transform is a bspline
+            transform; None otherwise.
+        self.gridDims : list of floats, conditional
+            The dimensions of the bspline grid if the transform is a bspline
+            transform; None otherwise.
+        self.gridRes : list of floats, conditional
+            The spacings of the bspline grid if the transform is a bspline
+            transform; None otherwise.
+        self.vectGridData : list of floats, conditional
+            The deformations of the bspline if the transform is a bspline
+            transform, e.g.: 
+            [def0_x, def0_y, def0_z, def1_x, def1_y, def1_z, ...];
+            None otherwise.
+        """
+        
+        regTxName = params.cfgDict['regTxName']
+        
+        if regTxName == 'bspline':
+            self.get_data_from_bspline_tx(newDataset, params)
+        else:
+            self.get_data_from_rigid_tx(newDataset, params)
+    
     def create_spa_dro(self, srcDataset, trgDataset, newDataset, params):
         # TODO update docstrings
         """
@@ -431,7 +486,8 @@ class DroCreator:
         # parameters that define the transform matrix:
         #txParams = self.txParams # 04/09/21
         #txMatrix = self.txMatrix # 04/09/21
-        resTxParams = self.resTxParams # 04/09/21
+        #resTxParams = self.resTxParams # 04/09/21
+        resTxParams = newDataset.resTxParams # 07/09/21
         resTxMatrix = self.resTxMatrix # 04/09/21
         
         refAllSOPs = self.refAllSOPs
@@ -446,7 +502,7 @@ class DroCreator:
         srcScanID = params.cfgDict['srcScanID']
         trgExpLab = params.cfgDict['trgExpLab']
         trgScanID = params.cfgDict['trgScanID']
-        regTxName = params.cfgDict['regTxName']
+        #regTxName = params.cfgDict['regTxName']
         
         if p2c:
             if refAllSOPs:
@@ -699,8 +755,10 @@ class DroCreator:
         # parameters:
         #txParams = self.txParams # 04/09/21
         #txMatrix = self.txMatrix # 04/09/21
-        resTxParams = self.resTxParams # 04/09/21
-        resTxMatrix = self.resTxMatrix # 04/09/21
+        #resTxParams = self.resTxParams # 04/09/21
+        #resTxParams = newDataset.resTxParams # 07/09/21
+        #resTxMatrix = self.resTxMatrix # 04/09/21
+        preRegTxMatrix = self.preRegTxMatrix # 07/09/21
         gridOrig = self.gridOrig
         gridDir = self.gridDir
         gridDims = self.gridDims
@@ -742,7 +800,7 @@ class DroCreator:
         #currentTime = time.strftime("%H%M%S", time.gmtime())
         ##currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
-        timeNow = datetime.datetime.now()
+        timeNow = datetime.now()
         currentDate = timeNow.strftime('%Y%m%d')
         currentTime = timeNow.strftime('%H%M%S.%f')
         
@@ -1002,7 +1060,7 @@ class DroCreator:
         """ > Modify PreDeformationMatrixRegistrationSequence. """
         dro.DeformableRegistrationSequence[1]\
            .PreDeformationMatrixRegistrationSequence[0]\
-           .FrameOfReferenceTransformationMatrix = resTxMatrix
+           .FrameOfReferenceTransformationMatrix = preRegTxMatrix
         
         """ > Modify the FrameOfReferenceTransformationMatrixType.  Acceptable 
         values:
@@ -1030,7 +1088,7 @@ class DroCreator:
         dro.DeformableRegistrationSequence[1]\
            .PreDeformationMatrixRegistrationSequence[0]\
            .FrameOfReferenceTransformationMatrixType = get_tx_matrix_type(
-               resTxMatrix, p2c
+               preRegTxMatrix, p2c
                )
                
         """ > Consider adding details for the FrameOfReferenceTransformationComment

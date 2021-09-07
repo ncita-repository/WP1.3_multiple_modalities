@@ -110,9 +110,10 @@ def create_config_files(cfgDir, password=""):
     #cfgExportDir = os.path.join(rootExportDir, 'configs')
     
     """
-    Define the directory path of the sample DROs:
+    Define the directory path of the sample DROs and fiducials:
     """
     sampleDroDir = r'C:\Code\WP1.3_multiple_modalities\sample_DROs'
+    fidsDir = r'C:\Code\WP1.3_multiple_modalities\OOP\fiducials'
     
     """
     Chose whether or not to export the (new) target ROI Collection (i.e.
@@ -199,13 +200,14 @@ def create_config_files(cfgDir, password=""):
         'trgRoicolName' : None,
         'trgRoiName' : None,
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : os.path.join(cwd, r'STS_004_CT_fiducials.txt'),
-        'trgFidsFpath' : os.path.join(cwd, r'STS_004_MR_fiducials.txt'), 
+        'srcFidsFpath' : os.path.join(fidsDir, r'STS_004_CT_fiducials.txt'),
+        'trgFidsFpath' : os.path.join(fidsDir, r'STS_004_MR_fiducials.txt'), 
         'forceReg' : False,
         'regTxName' : 'affine',
         'initMethod' : 'landmarks',
         'maxIters' : 512,
-        'useDroForTx' : True,
+        #'useDroForTx' : True,
+        'useDroForTx' : False,
         'applyPreResBlur' : False,
         'preResVar' : (1,1,1),
         'resInterp' : 'BlurThenLinear',
@@ -292,7 +294,8 @@ def create_config_files(cfgDir, password=""):
         'trgFidsFpath' : None, 
         'forceReg' : False,
         'regTxName' : 'affine',
-        'initMethod' : 'moments',
+        #'initMethod' : 'moments', # 07/09/21
+        'initMethod' : 'geometry', # 07/09/21
         'maxIters' : 512,
         'useDroForTx' : False,
         'applyPreResBlur' : False,

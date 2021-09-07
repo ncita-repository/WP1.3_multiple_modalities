@@ -420,7 +420,8 @@ def export_newRoicol(newRoicol, srcRoicolFpath, exportDir, fname=''):
         newRoicolFname = currentDateTime + '.dcm'
     else:
         #TrgRoiFname = Fname.replace(' ', '_') + '.dcm'
-        newRoicolFname = f'{fname}_{currentDateTime}.dcm'
+        #newRoicolFname = f'{fname}_{currentDateTime}.dcm'
+        newRoicolFname = f'{fname}.dcm'
     
     newRoicolFpath = os.path.join(exportDir, newRoicolFname)
     

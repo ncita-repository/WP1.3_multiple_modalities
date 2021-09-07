@@ -155,6 +155,10 @@ class PropagatorTester:
         
         """ Create and export a new DRO (if applicable) """
         if '5' in useCaseToApply:
+            print('\n*** Commenting out create & export DRO from',
+                  'test_propagate_data.py\n')
+            
+            #""" 07/09/21
             # Instantiate a DroCreator Object:
             newDroData = DroCreator(newDataset, params)
             
@@ -165,6 +169,7 @@ class PropagatorTester:
             newDroData.export_dro(params)
             
             self.newDroData = newDroData
+            #"""
         
     
         """ Export label images, tranforms and transform parameters """
@@ -185,17 +190,22 @@ class PropagatorTester:
         newDataset = self.newDataset
         params = self.params
         
-        roicolMod = params.cfgDict['roicolMod']
-        runID = params.cfgDict['runID']
+        cfgDict = params.cfgDict
+        roicolMod = cfgDict['roicolMod']
+        runID = cfgDict['runID']
+        useDroForTx = cfgDict['useDroForTx']
         
         if roicolMod == 'RTSTRUCT': 
-            exportDir = params.cfgDict['rtsExportDir']
+            exportDir = cfgDict['rtsExportDir']
         else:
-            exportDir = params.cfgDict['segExportDir']
+            exportDir = cfgDict['segExportDir']
         
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
-        fname = f'{runID}_newRoicol_{currentDateTime}'
+        if useDroForTx:
+            fname = f'{runID}_DRO_newRoicol_{currentDateTime}'
+        else:
+            fname = f'{runID}_newRoicol_{currentDateTime}'
         
         newRoicolFpath = export_newRoicol(
             newRoicol=newDataset.roicol, 
@@ -208,43 +218,49 @@ class PropagatorTester:
     def plot_metric_v_iters(self):
         """ 
         Plot the metric values v iterations from the registeration.
+        
+        Note that metric values will only exist if registration was performed,
+        so this plot will only be produced if useDroForTx = False.
         """
         
-        print('* Plotting metric v iterations from registeration..\n')
-        
-        metricValues = self.newDataset.metricValues
-        multiresIters = self.newDataset.multiresIters
         params = self.params
-        
         cfgDict = params.cfgDict
-        runID = cfgDict['runID']
-        exportPlot = cfgDict['exportPlots']
-        #p2c = cfgDict['p2c']
-        useCaseToApply = cfgDict['useCaseToApply']
-        #forceReg = cfgDict['forceReg']
         useDroForTx = cfgDict['useDroForTx']
-        regTxName = cfgDict['regTxName']
-        initMethod = cfgDict['initMethod']
-        resInterp = cfgDict['resInterp']
         
-        resExportDir = cfgDict['resPlotsExportDir']
-        
-        #print(useCaseToApply)
-        
-        # Prepare plot title:
-        if useCaseToApply in ['5a', '5b'] and not useDroForTx:
-            resTitle = f'Metric v iters for Src reg to Trg ({regTxName}, '\
-                + f'{initMethod}, {resInterp})'
+        if not useDroForTx:
+            runID = cfgDict['runID']
+            exportPlot = cfgDict['exportPlots']
+            #p2c = cfgDict['p2c']
+            useCaseToApply = cfgDict['useCaseToApply']
+            #forceReg = cfgDict['forceReg']
             
-            # Prepare filename for exported plot:
-            fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
-            fname = fname.replace('(', '').replace(')', '')
+            regTxName = cfgDict['regTxName']
+            initMethod = cfgDict['initMethod']
+            resInterp = cfgDict['resInterp']
             
-            plot_metricValues_v_iters(
-                metricValues=metricValues, multiresIters=multiresIters, 
-                exportPlot=exportPlot, exportDir=resExportDir,
-                fname=fname
-            )
+            resExportDir = cfgDict['resPlotsExportDir']
+            
+            #print(useCaseToApply)
+            
+            metricValues = self.newDataset.metricValues
+            multiresIters = self.newDataset.multiresIters
+            
+            print('* Plotting metric v iterations from registeration..\n')
+            
+            # Prepare plot title:
+            if useCaseToApply in ['5a', '5b'] and not useDroForTx:
+                resTitle = f'Metric v iters for Src reg to Trg ({regTxName}, '\
+                    + f'{initMethod}, {resInterp})'
+                
+                # Prepare filename for exported plot:
+                fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
+                fname = fname.replace('(', '').replace(')', '')
+                
+                plot_metricValues_v_iters(
+                    metricValues=metricValues, multiresIters=multiresIters, 
+                    exportPlot=exportPlot, exportDir=resExportDir,
+                    fname=fname
+                    )
     
     def plot_res_results(self):
         """ 
@@ -383,8 +399,16 @@ class PropagatorTester:
         """
         
         # Prepare filename for exported plot:
-        fname = f'{runID}_' + method.replace(' ', '_').replace(',', '')
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        if useDroForTx:
+            fname = f'{runID}_DRO'
+        else:
+            fname = f'{runID}_'
+        fname += method.replace(' ', '_').replace(',', '')
         fname = fname.replace('(', '').replace(')', '')
+        fname += f'_{currentDateTime}'
             
         plot_pixarrs_from_list_of_segs_and_images(
             listOfSegs, listOfImages, listOfDicomDirs, listOfPlotTitles, 
@@ -392,8 +416,8 @@ class PropagatorTester:
             runID=runID, useCaseToApply=useCaseToApply,
             forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
             initMethod=initMethod, resInterp=resInterp, 
-            #txtToAddToFname=fname, p2c=p2c
-            txtToAddToFname='', p2c=p2c
+            fname=fname, p2c=p2c
+            #fname='', p2c=p2c
         )
 
     def export_labims(self):
@@ -405,8 +429,10 @@ class PropagatorTester:
         newDataset = self.newDataset
         params = self.params
         
-        labimExportDir = params.cfgDict['labimExportDir']
-        runID = params.cfgDict['runID']
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        useDroForTx = cfgDict['useDroForTx']
+        labimExportDir = cfgDict['labimExportDir']
         
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
@@ -419,9 +445,14 @@ class PropagatorTester:
         listOfLabimByRoi = [dset.labimByRoi for dset in dsets]
         
         # List of file names (will be modified in loop below):
-        fnames = [
-            f'{runID}_{name}Labim_{currentDateTime}' for name in dsetNames
-            ]
+        if useDroForTx:
+            fnames = [
+                f'{runID}_DRO_{name}Labim_{currentDateTime}' for name in dsetNames
+                ]
+        else:
+            fnames = [
+                f'{runID}_{name}Labim_{currentDateTime}' for name in dsetNames
+                ]
         
         for d in range(len(listOfLabimByRoi)):
             labimByRoi = listOfLabimByRoi[d]
@@ -440,10 +471,11 @@ class PropagatorTester:
         print('* Exporting transforms and transform parameters..\n')
         
         params = self.params
+        
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
-        
-        txExportDir = params.cfgDict['txExportDir']
+        useDroForTx = cfgDict['useDroForTx']
+        txExportDir = cfgDict['txExportDir']
         
         # Create the export directory if it doesn't already exist:
         if not os.path.isdir(txExportDir):
@@ -462,7 +494,10 @@ class PropagatorTester:
         
         for tx, txName in zip(txs, txNames):
             if tx: # is not None
-                fname = f'{runID}_{txName}_{currentDateTime}'
+                if useDroForTx:
+                    fname = f'{runID}_DRO_{txName}_{currentDateTime}'
+                else:
+                    fname = f'{runID}_{txName}_{currentDateTime}'
                 
                 # Export tx as a TFM:
                 fpath = os.path.join(txExportDir, fname + '.tfm')

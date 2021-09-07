@@ -116,7 +116,7 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
         listOfSegs, listOfDicomPixarrs, listOfDicomDirs, listOfPlotTitles,
         exportPlot=False, exportDir='cwd', runID='', useCaseToApply='',
         forceReg=False, useDroForTx=False, regTxName='', initMethod='', 
-        resInterp='', txtToAddToFname='', p2c=False
+        resInterp='', fname='', p2c=False
         ):
     """
     02/06/2021
@@ -339,21 +339,26 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
         
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
             
-        #exportFname = currentDateTime + '_' + txtToAddToFname + '.jpg'
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
         
-        exportFname = ''
-        if runID:
-            exportFname += runID + '_'
-        if ('5' in useCaseToApply or forceReg):
-            if useDroForTx:
-                exportFname += 'useDroForTx_'
-            else:
-                exportFname += regTxName + '_'
-                exportFname += initMethod + '_'
-        exportFname += resInterp + '_'
-        if txtToAddToFname:
-            exportFname += txtToAddToFname + '_'
-        exportFname += currentDateTime + '.jpg'
+        if fname == '':
+            exportFname = ''
+            if runID:
+                exportFname += runID + '_'
+            if ('5' in useCaseToApply or forceReg):
+                if useDroForTx:
+                    exportFname += 'useDroForTx_'
+                else:
+                    exportFname += regTxName + '_'
+                    exportFname += initMethod + '_'
+            exportFname += resInterp + '_'
+            
+            #if fname:
+            #    exportFname += fname + '_'
+            
+            exportFname += currentDateTime + '.jpg'
+        else:
+            exportFname = fname + '.jpg'
         
         exportFpath = os.path.join(exportDir, exportFname)
         
@@ -367,7 +372,7 @@ def plot_pixarrs_from_list_of_segs_and_dicomDirs(
         listOfSegs, listOfDicomDirs, listOfPlotTitles,
         exportPlot=False, exportDir='cwd', runID='', useCaseToApply='',
         forceReg=False, useDroForTx=False, regTxName='', initMethod='', 
-        resInterp='', txtToAddToFname='', p2c=False
+        resInterp='', fname='', p2c=False
         ):
     """ 
     02/06/2021
@@ -416,7 +421,7 @@ def plot_pixarrs_from_list_of_segs_and_dicomDirs(
         listOfSegs, listOfDicomPixarrs, listOfDicomDirs, listOfPlotTitles,
         exportPlot, exportDir, runID, useCaseToApply,
         forceReg, useDroForTx, regTxName, initMethod, 
-        resInterp, txtToAddToFname, p2c
+        resInterp, fname, p2c
         )
         
     return
@@ -425,7 +430,7 @@ def plot_pixarrs_from_list_of_segs_and_images(
         listOfSegs, listOfImages, listOfDicomDirs, listOfPlotTitles,
         exportPlot=False, exportDir='cwd', runID='', useCaseToApply='',
         forceReg=False, useDroForTx=False, regTxName='', initMethod='', 
-        resInterp='', txtToAddToFname='', p2c=False
+        resInterp='', fname='', p2c=False
         ):
     """ 
     02/06/2021
@@ -478,14 +483,14 @@ def plot_pixarrs_from_list_of_segs_and_images(
         listOfSegs, listOfDicomPixarrs, listOfDicomDirs, listOfPlotTitles,
         exportPlot, exportDir, runID, useCaseToApply,
         forceReg, useDroForTx, regTxName, initMethod, 
-        resInterp, txtToAddToFname, p2c
+        resInterp, fname, p2c
         )
         
     return
 
 def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
         listOfLabimByRoi, listOfDicomDir, listOfPlotTitles, listOfDicomIm=[],
-        exportPlot=False, exportDir=None, txtToAddToFname='', p2c=False
+        exportPlot=False, exportDir=None, fname='', p2c=False
         ):
     """ 
     listOfLabimByRoi is a list (for each dataset, which could be of length 1) 
@@ -709,9 +714,12 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims(
             #os.mkdir(exportDir)
             Path(exportDir).mkdir(parents=True)
         
-        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-            
-        exportFname = currentDateTime + '_' + txtToAddToFname + '.jpg'
+        if fname == '':
+            currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+            exportFname = currentDateTime + '_' + fname + '.jpg'
+        else:
+            exportFname = fname + '.jpg'
         
         exportFpath = os.path.join(exportDir, exportFname)
         

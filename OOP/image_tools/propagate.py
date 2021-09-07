@@ -1188,6 +1188,20 @@ class Propagator:
                 p2c=p2c, regPlotFpath=resPlotFpath
                 )
         
+        print(f'\nmetricValues = {self.metricValues}')
+        print(f'\nmultiresIters = {self.multiresIters}\n')
+        
+        #raise Exception('quitting')
+        
+        from plotting_tools.plotting import compare_res_results
+        
+        midInd = fixIm.GetSize()[2] // 2
+        
+        compare_res_results(
+            resIm0=fixIm, resIm1=self.image, resInd=midInd,
+            resTitle0='Target image', resTitle1='Registered'
+        )
+        
         # Get the registration transform parameters:
         #self.txParams = [str(item) for item in self.finalTx.GetParameters()]  # 01/09/21
         self.resTxParams = self.resTx.GetParameters() # 03/09/21
