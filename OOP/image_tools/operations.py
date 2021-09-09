@@ -10,7 +10,7 @@ Created on Tue Jul  6 14:20:01 2021
 import numpy as np
 import SimpleITK as sitk
 from conversion_tools.pixarrs_ims import im_to_pixarr
-from image_tools.attrs_info import get_im_info
+#from image_tools.attrs_info import get_im_info
 
 def initialise_im(refIm, dtype='sameAsRefIm'):
     """
@@ -530,7 +530,7 @@ def gaussian_blur_im(im, var=(1,1,1), p2c=False):
     converted to float if applicable.
     """
     
-    #from image_tools.attrs_info import get_im_info
+    from image_tools.attrs_info import get_im_info
     
     if p2c:
         print('\n   Image info for im prior to Gaussian blurring:')
@@ -603,7 +603,7 @@ def recursive_gaussian_blur_im(im, sigma, direction, p2c=False):
     converted to float if applicable.
     """
     
-    #from image_tools.attrs_info import get_im_info
+    from image_tools.attrs_info import get_im_info
     
     if p2c:
         print('\n   Image info for im prior to Gaussian blurring:')

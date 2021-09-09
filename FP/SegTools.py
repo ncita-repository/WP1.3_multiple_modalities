@@ -3165,7 +3165,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
     from GeneralTools import UniqueItems#, PrintIndsByRoi#, PrintTitle
     #from GeneralTools import ZshiftPtsByCntByRoi#, GetPixelShiftBetweenSlices
     #from GeneralTools import ShiftFrame
-    from DroTools import CreateSpaDro, CreateDefDro
+    #from DroTools import CreateSpaDro, CreateDefDro
     from RoiCopyTools import CheckValidityOfInputs
     
     """ Start timing. """
@@ -3519,7 +3519,10 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         import DroTools
         reload(DroTools)
         
+        import SimpleITK as sitk
         if SelxOrSitk == 'Selx':
+            import SelxTools
+            reload(SelxTools)
             from SelxTools import RegisterImagesSelx, GetParamFromSelxImFilt
         else:
             from ImageTools import RegisterImagesSitk
@@ -3560,7 +3563,17 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             
             """ Register SrcIm to TrgIm. """
             if SelxOrSitk == 'Selx':
+                """
                 RegIm, SelxImFiltOrSitkTx, TxParamMapDict\
+                = RegisterImagesSelx(FixIm=TrgIm, MovIm=SrcIm, 
+                                     Transform=Transform,
+                                     MaxNumOfIters=MaxIters,
+                                     InitMethod=InitMethod,
+                                     FixFidsFpath=TrgFidsFpath, 
+                                     MovFidsFpath=SrcFidsFpath,
+                                     FlipK=False, LogToConsole=LogToConsole)
+                """
+                RegIm, SelxImFilt, ParamMapDict, TxParamMapDict\
                 = RegisterImagesSelx(FixIm=TrgIm, MovIm=SrcIm, 
                                      Transform=Transform,
                                      MaxNumOfIters=MaxIters,
@@ -3574,19 +3587,57 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                 
                 """ Get the registration transform parameters for the final
                 transform parameter map: (10/05/21) """
+                """
                 TxParams = GetParamFromSelxImFilt(SelxImFiltOrSitkTx, -1,
                                                   Param='TransformParameters')
+                """
+                TxParams = GetParamFromSelxImFilt(SelxImFilt, -1,
+                                                  Param='TransformParameters')
+                
+                print(f'\n ParamMapDict = {ParamMapDict}\n')
+                print(f'\n TxParamMapDict = {TxParamMapDict}\n')
+                print(f'\n TxParams = {TxParams}\n')
+                
+                # Create SimpleITK transform from TxParams:
+                """ Will only work on affine for now (09/09/21) """
+                FinalTx = sitk.AffineTransform(3)
+                FinalTx.SetParameters([float(item) for item in TxParams])
+                
+                #ListOfSitkTxs = [SelxImFiltOrSitkTx]
+                
+                InitialTx = None
+                AlignedIm = None
+                RegMethod = None
+                MetricValues = None
+                MultiresIters = None
+                
+                ListOfSitkTxs = [FinalTx]
                 
             if SelxOrSitk == 'Sitk':
+                """
                 RegIm, LandmarkTx, SelxImFiltOrSitkTx\
                 = RegisterImagesSitk(FixIm=TrgIm, MovIm=SrcIm, 
                                      Transform=Transform, InitMethod=InitMethod,
                                      FixFidsFpath=TrgFidsFpath, 
                                      MovFidsFpath=SrcFidsFpath,
                                      LogToConsole=LogToConsole)
+                """
+                InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+                    MultiresIters = RegisterImagesSitk(
+                        FixIm=TrgIm, MovIm=SrcIm, 
+                        Transform=Transform, InitMethod=InitMethod,
+                        FixFidsFpath=TrgFidsFpath, 
+                        MovFidsFpath=SrcFidsFpath,
+                        LogToConsole=LogToConsole
+                        )
+                
+                ListOfSitkTxs = [FinalTx]
                 
                 """ Get the registration transform parameters: """
-                TxParams = [str(item) for item in SelxImFiltOrSitkTx.GetParameters()]
+                #TxParams = [str(item) for item in SelxImFiltOrSitkTx.GetParameters()]
+                TxParams = [str(item) for item in FinalTx.GetParameters()]
+                
+                SelxImFilt = None
             
             times.append(time.time())
             Dtime = round(times[-1] - times[-2], 1)
@@ -3618,7 +3669,7 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             create a list ListOfSitkTxs containing SelxImFiltOrSitkTx so
             that TransformLabImByRoi() can be looped for each item in the list.
             """
-            ListOfSitkTxs = [SelxImFiltOrSitkTx]
+            #ListOfSitkTxs = [SelxImFiltOrSitkTx]
             
         else:
             """ The transform parameters required to register SrcIm to TrgIm 
@@ -3731,7 +3782,11 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
                 DictOfInputs[f'PostTxThreshUsedForSeg{i}'] = Thresh
     else:
         RegIm = None
-        SelxImFiltOrSitkTx = None
+        #SelxImFiltOrSitkTx = None
+        SelxImFilt = None
+        RegMethod = None
+        InitialTx = None
+        AlignedIm = None
         TxParams = None
         ListOfSitkTxs = None
               
@@ -3943,9 +3998,15 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
             """ Create a Spatial Registration DRO. """
             #Dro = CreateSpaDro(SrcDcmDir, TrgDcmDir, TxParams, ContentDesc, 
             #                   LogToConsole)
+            """
             Dro = CreateSpaDroFromSitkTx(SampleDroDir,
                                          SrcDcmDir, TrgDcmDir, 
                                          SelxImFiltOrSitkTx,
+                                         ContentDesc, LogToConsole)
+            """
+            Dro = CreateSpaDroFromSitkTx(SampleDroDir,
+                                         SrcDcmDir, TrgDcmDir, 
+                                         FinalTx,
                                          ContentDesc, LogToConsole)
         else:
             #""" Get the bspline grid related registration transform parameters 
@@ -4010,12 +4071,21 @@ def CopySeg(SrcSegFpath, SrcSliceNum, SrcSegLabel, SrcDcmDir, TrgDcmDir,
         
     #return TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
     ##return TrgSeg, TrgPixArrBySeg, TrgF2SindsBySeg, ListOfTimings
+    """
     return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcSeg,\
            SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
            TrgPixArrBySeg, TrgF2SindsBySeg,\
            RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
            ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
            TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
+    """
+    return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcSeg,\
+        SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+        TrgPixArrBySeg, TrgF2SindsBySeg,\
+        InitialTx, AlignedIm, FinalTx, RegIm, RegMethod,\
+        MetricValues, MultiresIters, SelxImFilt,\
+        ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+        TrgSeg, Dro, DictOfInputs, ListOfInputs, ListOfTimings
 
 
 

@@ -15,7 +15,8 @@ from skimage.measure import find_contours
 
 from general_tools.console_printing import print_pts_by_cnt
 from general_tools.console_printing import print_pixarr_by_seg
-from image_tools.imports import import_im
+#from image_tools.imports import import_im
+from io_tools.imports import import_im
 from conversion_tools.inds_pts import inds_to_pts, pts_to_cntdata, pts_to_inds
 
 

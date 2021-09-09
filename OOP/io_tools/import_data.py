@@ -61,6 +61,7 @@ from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
 from dicom_tools.imports import import_dcms
 from image_tools.attrs_info import get_im_attrs
 from general_tools.geometry import get_im_extent
+from io_tools.exports import export_im
 
 class DataImporter:
     # TODO modify the docstrings
@@ -1041,6 +1042,45 @@ class DataImporter:
         self.srcIm = import_dicoms_as_im(dicomDir=srcDcmDir)
         self.trgIm = import_dicoms_as_im(dicomDir=trgDcmDir)
     
+    def export_dicom_image(self, params):
+        """
+        Exports a SimpleITK Image.
+        
+        This is useful for exporting of a 3D DICOM image without importing of
+        the full dataset, and prior to any further processing.
+        
+        Parameters
+        ----------
+        self.image : SimpleITK Image
+            SimpleITK Image representation of the DICOM series.
+        params : Params Object
+            Object containing various parameters.
+            
+        Returns
+        -------
+        None
+        
+        Note
+        ----
+        The image can be exported in HDF, NIFTI or NRRD formats.
+        """
+        
+        srcORtrg = self.srcORtrg
+        image = self.image
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        imExportDir = cfgDict['imExportDir']
+        
+        print(f'* Exporting {srcORtrg} image..\n')
+        
+        fname = f'{runID}_{srcORtrg}Im'
+        
+        export_im(
+            image, filename=fname,
+            fileFormat='HDF5ImageIO', exportDir=imExportDir
+        )
+        
     def import_data(self, params):
         # TODO update docstrings
         """

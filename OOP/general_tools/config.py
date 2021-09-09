@@ -102,7 +102,7 @@ def create_config_files(cfgDir, password=""):
     resPlotsExportDir = os.path.join(rootExportDir, 'plots_res')
     
     txExportDir = os.path.join(rootExportDir, 'transforms')
-    
+    imExportDir = os.path.join(rootExportDir, 'images')
     labimExportDir = os.path.join(rootExportDir, 'label_images')
     
     logsExportDir = os.path.join(rootExportDir, 'logs')
@@ -121,7 +121,7 @@ def create_config_files(cfgDir, password=""):
     """
     #exportTrgRoicol = False
     exportTrgRoicol = True
-    
+    exportIm = False # 3D DICOM images
     #exportDro = False
     exportDro = True
     exportTx = True
@@ -220,6 +220,7 @@ def create_config_files(cfgDir, password=""):
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
         'txExportDir' : txExportDir,
+        'imExportDir' : imExportDir,
         'labimExportDir' : labimExportDir,
         'logsExportDir' : logsExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
@@ -228,6 +229,7 @@ def create_config_files(cfgDir, password=""):
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
         'exportTx' : exportTx,
+        'exportIm' : exportIm,
         'exportLabim' : exportLabim,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
@@ -310,6 +312,7 @@ def create_config_files(cfgDir, password=""):
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
         'txExportDir' : txExportDir,
+        'imExportDir' : imExportDir,
         'labimExportDir' : labimExportDir,
         'logsExportDir' : logsExportDir,
         'rtsPlotsExportDir' : rtsPlotsExportDir,
@@ -318,6 +321,7 @@ def create_config_files(cfgDir, password=""):
         'exportTrgRoicol' : exportTrgRoicol,
         'exportDro' : exportDro,
         'exportTx' : exportTx,
+        'exportIm' : exportIm,
         'exportLabim' : exportLabim,
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,

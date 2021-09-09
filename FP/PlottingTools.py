@@ -5179,3 +5179,40 @@ def CompareResResults(ResIm0, ResIm1, ResInd,
         print('\nPlot exported to:\n\n', ExportFpath)
     
     return
+
+def plot_metricValues_v_iters(
+        metricValues, multiresIters, exportPlot=False, 
+        exportDir='cwd', fname=''
+        ):
+    
+    import matplotlib.pyplot as plt
+    import os
+    import time
+    from pathlib import Path
+    
+    plt.plot(metricValues, 'r')
+    plt.plot(multiresIters, 
+             [metricValues[ind] for ind in multiresIters], 'b*')
+    plt.xlabel('Iteration number', fontsize=12)
+    plt.ylabel('Metric value', fontsize=12)
+    
+    if exportPlot:
+        if exportDir == 'cwd':
+            exportDir = os.getcwd()
+        
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        exportFname =  f'{fname}_{currentDateTime}.jpg'
+        
+        exportFpath = os.path.join(exportDir, exportFname)
+        
+        plt.savefig(exportFpath, bbox_inches='tight')
+        
+        print(f'\nPlot exported to:\n\n{exportFpath}\n')
+        
+    return

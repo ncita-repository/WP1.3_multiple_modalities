@@ -20,7 +20,8 @@ reload(general_tools.geometry)
 
 from dicom_tools.metadata import get_dcm_uids, get_roicol_labels
 from image_tools.attrs_info import get_im_attrs
-from image_tools.imports import import_im
+#from image_tools.imports import import_im
+from io_tools.imports import import_im
 from general_tools.general import are_items_equal_to_within_eps
 from general_tools.geometry import get_im_extent
 

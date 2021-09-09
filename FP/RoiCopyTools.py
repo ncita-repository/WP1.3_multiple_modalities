@@ -1343,10 +1343,36 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         #print(f"type(Dro) after CopyRts() = {type(Dro)}\n")
     
     elif SrcRoiColMod == 'SEG':
+        """
         SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
         SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
         TrgPixArrBySeg, TrgF2SindsBySeg,\
         RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+        ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+        TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
+        = CopySeg(SrcSegFpath=SrcRoiColFpath, SrcSliceNum=SrcSliceNum, 
+                  SrcSegLabel=SrcRoiName, SrcDcmDir=SrcDcmDir, TrgDcmDir=TrgDcmDir, 
+                  UseCaseToApply=UseCaseToApply, TrgSegFpath=TrgRoiColFpath, 
+                  TrgSegLabel=TrgRoiName, TrgSliceNum=TrgSliceNum, 
+                  ResInterp=ResInterp, PreResVariance=PreResVar, 
+                  ApplyPostResBlur=ApplyPostResBlur, PostResVariance=PostResVar, 
+                  ForceReg=ForceReg, UseDroForTx=UseDroForTx,
+                  SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                  MaxIters=MaxIters, InitMethod=InitMethod,
+                  SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
+                  TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin, 
+                  ApplyPostTxBlur=ApplyPostTxBlur, PostTxVariance=PostTxVar, 
+                  #TxMatrix, GridDims, GridRes, VectGridData, 
+                  Dro=Dro, TxtToAddToSegLabel=TxtToAddToTrgRoiColName, 
+                  LogToConsole=LogToConsole,
+                  DictOfInputs=DictOfInputs, #ListOfInputs=ListOfInputs, 
+                  ListOfTimings=ListOfTimings, SampleDroDir=SampleDroDir)
+        """
+        SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+        SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+        TrgPixArrBySeg, TrgF2SindsBySeg,\
+        InitialTx, AlignedIm, FinalTx, RegIm, RegMethod,\
+        MetricValues, MultiresIters, SelxImFilt,\
         ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
         TrgRoiCol, Dro, DictOfInputs, ListOfInputs, ListOfTimings\
         = CopySeg(SrcSegFpath=SrcRoiColFpath, SrcSliceNum=SrcSliceNum, 
@@ -1418,6 +1444,7 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
         
     #return TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs,\
     #       ListOfInputs, TimingMsgs
+    """
     return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
            SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
            SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
@@ -1428,7 +1455,18 @@ def CopyXnatRoiCol(XnatUrl, XnatSession, ProjId, SubjLabel,
            ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
            ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
            TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfTimings
-
+    """
+    return SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+           SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+           SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+           SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+           TrgPixArrBySeg, TrgF2SindsBySeg,\
+           InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+           MultiresIters, SelxImFilt,\
+           ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+           ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+           ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
+           TrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfTimings
 
 
 
@@ -2639,13 +2677,45 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     DictOfInputs['DevOutputs'] = DevOutputs
     
     
-    
+    """
     SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
     SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
     SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
     SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
     TrgPixArrBySeg, TrgF2SindsBySeg,\
     RegIm, ListOfSitkTxs, SelxImFiltOrSitkTx, TxParams,\
+    ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+    ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+    ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
+    NewTrgRoiCol, Dro, PathsDict, XnatSession, DictOfInputs, ListOfTimings\
+    = CopyXnatRoiCol(XnatUrl=XnatUrl, XnatSession=XnatSession, 
+                     ProjId=ProjId, SubjLabel=SubjLabel, 
+                     SrcExpLabel=SrcExpLabel, SrcScanId=SrcScanId, 
+                     SrcSliceNum=SrcSliceNum, SrcRoiColMod=SrcRoiColMod,
+                     SrcRoiColName=SrcRoiColName, SrcRoiName=SrcRoiName,  
+                     TrgExpLabel=TrgExpLabel, TrgScanId=TrgScanId, 
+                     TrgSliceNum=TrgSliceNum, TrgRoiColMod=TrgRoiColMod,
+                     TrgRoiColName=TrgRoiColName, TrgRoiName=TrgRoiName, 
+                     TxtToAddToTrgRoiColName=TxtToAddToTrgRoiColName, 
+                     PathsDict=PathsDict, XnatDownloadDir=XnatDownloadDir, 
+                     LogToConsole=LogToConsole, ExportLogFiles=ExportLogFiles,
+                     ResInterp=ResInterp, PreResVar=PreResVar, 
+                     ApplyPostResBlur=ApplyPostResBlur, PostResVar=PostResVar, 
+                     ForceReg=ForceReg, UseDroForTx=UseDroForTx,
+                     SelxOrSitk=SelxOrSitk, Transform=Transform, 
+                     MaxIters=MaxIters, InitMethod=InitMethod,
+                     SrcFidsFpath=SrcFidsFpath, TrgFidsFpath=TrgFidsFpath, 
+                     TxInterp=TxInterp, ApplyPostTxBin=ApplyPostTxBin,
+                     ApplyPostTxBlur=ApplyPostTxBlur, PostTxVar=PostTxVar,
+                     DictOfInputs=DictOfInputs, SampleDroDir=SampleDroDir)
+    """
+    SrcDcmDir, TrgDcmDir, SrcIm, TrgIm, SrcRoiCol,\
+    SrcPtsByCntByRoi, SrcC2SindsByRoi, TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+    SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+    SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+    TrgPixArrBySeg, TrgF2SindsBySeg,\
+    InitialTx, AlignedIm, FinalTx, RegIm, RegMethod,\
+    MetricValues, MultiresIters, SelxImFilt,\
     ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
     ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
     ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi,\
@@ -2900,7 +2970,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     
     
     
-    """ Plot Contours """
+    """ Plot Contours / Segmentations """
 
     if PlotResults:
         import PlottingTools
@@ -2954,7 +3024,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
             importlib.reload(PlottingTools)
             #from PlottingTools import PlotContoursFromListOfRtss_v1
             from PlottingTools import PlotContoursFromListOfRtss_v4
-            from PlottingTools import PlotResResults
+            from PlottingTools import PlotResResults, plot_metricValues_v_iters
             from DicomTools import ImportDicom
             
             #PlotContoursFromListOfRtss_v1(ListOfRois, ListOfDicomDirs, 
@@ -3000,9 +3070,66 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
 
         else:
             from PlottingTools import PlotPixArrsFromListOfSegs_v1
+            from PlottingTools import PlotResResults, plot_metricValues_v_iters
+            from DicomTools import ImportDicom
             
             #print(f'SegPlotExportDir = {SegPlotExportDir}\n')
             #print(f'PlotFname = {PlotFname}\n')
+            
+            SrcDcmMod = ImportDicom(SrcDcmDir).Modality
+            TrgDcmMod = ImportDicom(TrgDcmDir).Modality
+            
+            FixTitle = f'{TrgDcmMod} {TrgScanId} (fixed)' 
+            MovTitle = f'{SrcDcmMod} {SrcScanId} (moving)' 
+            
+            """
+            if DictOfInputs['SourceOfTransformation'] == 'ImageRegistration':
+                ResTitle = f'{SrcDcmMod} {SrcScanId} {Transform} registered '\
+                           + f'to {TrgDcmMod} {TrgScanId}'
+                TxtToAddToFname = f'{SrcExpLabel}_{Transform}_reg_to_{TrgExpLabel}'
+            else:
+                # DictOfInputs['SourceOfTransformation'] = 'ParamsFromDRO'
+                
+                ResTitle = f'{SrcDcmMod} {SrcScanId} {Transform} transformed '\
+                           + f'to {TrgDcmMod} {TrgScanId} from DRO'
+                TxtToAddToFname = f'{SrcExpLabel}_{Transform}_Tx_to_{TrgExpLabel}'\
+                                  + 'from_DRO'
+            """
+            
+            AliTitle = f'{SrcDcmMod} {SrcScanId} {Transform} aligned '\
+                       + f'to {TrgDcmMod} {TrgScanId}'
+            ResTitle = f'{SrcDcmMod} {SrcScanId} {Transform} registered '\
+                       + f'to {TrgDcmMod} {TrgScanId}'
+            TxtToAddToFname = f'{SrcExpLabel}_{Transform}_reg_to_{TrgExpLabel}'
+            
+            if MetricValues:
+                plot_metricValues_v_iters(
+                    metricValues=MetricValues, multiresIters=MultiresIters, 
+                    exportPlot=ExportPlot, exportDir=SegPlotExportDir, 
+                    fname=TxtToAddToFname
+                    )
+            
+            FixInd = TrgIm.GetSize()[2]//2
+            MovInd = SrcIm.GetSize()[2]//2
+            
+            if AlignedIm:
+                PlotResResults(FixIm=TrgIm, MovIm=SrcIm, ResIm=AlignedIm, 
+                               #FixInd=MrT2Im.GetSize()[2]//2,
+                               #FixInd=MrT2Im_S - 25, MovInd=CtIm_S - 242,
+                               #FixInd=15, MovInd=223,
+                               FixInd=FixInd, MovInd=MovInd,
+                               FixTitle=FixTitle, MovTitle=MovTitle, ResTitle=AliTitle,
+                               ExportPlot=ExportPlot, ExportDir=SegPlotExportDir, 
+                               TxtToAddToFname=TxtToAddToFname)
+            
+            PlotResResults(FixIm=TrgIm, MovIm=SrcIm, ResIm=RegIm, 
+                           #FixInd=MrT2Im.GetSize()[2]//2,
+                           #FixInd=MrT2Im_S - 25, MovInd=CtIm_S - 242,
+                           #FixInd=15, MovInd=223,
+                           FixInd=FixInd, MovInd=MovInd,
+                           FixTitle=FixTitle, MovTitle=MovTitle, ResTitle=ResTitle,
+                           ExportPlot=ExportPlot, ExportDir=SegPlotExportDir, 
+                           TxtToAddToFname=TxtToAddToFname)
             
             PlotPixArrsFromListOfSegs_v1(ListOfRois, ListOfDicomDirs, 
                                          ListOfPlotTitles,
@@ -3056,6 +3183,7 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
     if DevOutputs:
         #return XnatSession, SrcRoiCol, TrgRoiCol, NewTrgRoiCol, Dro,\
         #       PathsDict, DictOfInputs, ListOfInputs, TimingMsgs, Times
+        """
         return XnatSession, SrcRoiCol, TrgRoiCol, NewTrgRoiCol, Dro,\
                PathsDict, DictOfInputs, TimingMsgs, Times,\
                SrcDcmDir, TrgDcmDir, SrcIm, TrgIm,\
@@ -3068,6 +3196,19 @@ def RunAll(TestNum=None, XnatSession=None, XnatUrl='default',
                ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
                ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
                ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi
-               
+        """
+        return XnatSession, SrcRoiCol, TrgRoiCol, NewTrgRoiCol, Dro,\
+               PathsDict, DictOfInputs, TimingMsgs, Times,\
+               SrcDcmDir, TrgDcmDir, SrcIm, TrgIm,\
+               SrcPtsByCntByRoi, SrcC2SindsByRoi,\
+               TrgPtsByCntByRoi, TrgC2SindsByRoi,\
+               SrcPixArrByRoi, SrcLabImByRoi, SrcF2SindsByRoi,\
+               SrcPixArrBySeg, SrcF2SindsBySeg, SrcLabImBySeg,\
+               TrgPixArrBySeg, TrgF2SindsBySeg,\
+               InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+               MultiresIters, SelxImFilt,\
+               ResSrcLabImByRoi, ResSrcPixArrByRoi, ResSrcF2SindsByRoi,\
+               ResSrcLabImBySeg, ResSrcPixArrBySeg, ResSrcF2SindsBySeg,\
+               ResSrcPtsByCntByRoi, ResSrcCntDataByCntByRoi, ResSrcC2SindsByRoi
     else:
         return XnatSession

@@ -3264,7 +3264,14 @@ def UpdateMultiresIterations():
     
     multires_iterations.append(len(metric_values))
 
-
+def update_metric_values(regMethod):
+    """ Callback invoked when the IterationEvent happens, update the data. 
+    """
+    
+    global metric_values, multires_iterations
+    
+    metric_values.append(regMethod.GetMetricValue())
+    
 def RegisterImagesSitk_OLD(FixIm, MovIm, Transform='affine', 
                        InitMethod='moments', NumControlPts=8,
                        FinalInterp='Linear',
@@ -3958,7 +3965,9 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     elif Transform in ['rigid', 'affine'] and InitMethod == 'landmarks':
         if LogToConsole:
             print('Running SitkNonDefRegWithFiducials()...\n')
+            print('Changing SamplingPercentage from 5 to 50%\n')
         
+        """
         RegIm, RegMethod, LandmarkTx, OptimisedTx,\
         FinalTx = SitkNonDefRegWithFiducials(FixIm=FixIm, MovIm=MovIm, 
                                              FixFidsFpath=FixFidsFpath, 
@@ -3967,6 +3976,20 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
                                              SamplingPercentage=SamplingPercentage,
                                              NumIters=500, 
                                              LogToConsole=LogToConsole)
+        """
+        
+        SamplingPercentage = 50
+        
+        InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+        MultiresIters = SitkNonDefRegWithFiducials(
+            FixIm=FixIm, MovIm=MovIm, 
+            FixFidsFpath=FixFidsFpath, 
+            MovFidsFpath=MovFidsFpath,
+            RegTxName=Transform, 
+            SamplingPercentage=SamplingPercentage,
+            NumIters=500, 
+            LogToConsole=LogToConsole
+            )
         
         """ Don't need to add LandmarkTx and FinalTx since 
         SitkNonDefRegWithFiducials uses ITKv4 method. """
@@ -3975,12 +3998,25 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
     elif Transform in ['rigid', 'affine'] and InitMethod != 'landmarks':
         if LogToConsole:
             print('Running SitkNonDefReg()...\n')
+            print('Changing SamplingPercentage from 5 to 50%\n')
         
+        """
         RegIm, RegMethod, InitialTx,\
         FinalTx = SitkNonDefReg(FixIm=FixIm, MovIm=MovIm, RegTxName=Transform, 
                                 InitMethod=InitMethod,
                                 SamplingPercentage=SamplingPercentage,
                                 NumIters=500, LogToConsole=LogToConsole)
+        """
+        
+        SamplingPercentage = 50
+        
+        InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+        MultiresIters = SitkNonDefReg(
+            FixIm=FixIm, MovIm=MovIm, RegTxName=Transform, 
+            InitMethod=InitMethod,
+            SamplingPercentage=SamplingPercentage,
+            NumIters=500, LogToConsole=LogToConsole
+            )
         
         #""" Even though InitialTx might be a landmark transform (if InitMethod
         #= 'landmarks'), it won't be needed. """
@@ -3989,8 +4025,10 @@ def RegisterImagesSitk(FixIm, MovIm, Transform='affine',
         
         LandmarkTx = None # 01/09/21
     
-    return RegIm, LandmarkTx, FinalTx # 01/09/21
+    #return RegIm, LandmarkTx, FinalTx # 01/09/21
     #return RegIm, ListOfSitkTxs # 01/09/21
+    return InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, MetricValues,\
+        MultiresIters # 09/09/21
 
 
 
@@ -4701,21 +4739,28 @@ def SitkNonDefReg(FixIm, MovIm, RegTxName='affine', InitTx=None,
     RegMethod.SetOptimizerScalesFromPhysicalShift()
     
     
-    if LogToConsole:
-        if PlotToConsole:
-            # Connect all of the observers for plotting during registration:
-            RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
-            RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
-            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                                 UpdateMultiresIterations) 
-            RegMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: PlotValues(RegMethod))
-        else:
-            RegMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: command_iteration(RegMethod))
-            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
-                                 lambda: command_multi_iteration(RegMethod))
-    
+    #if LogToConsole:
+    if PlotToConsole:
+        # Connect all of the observers for plotting during registration:
+        RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+        #RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             UpdateMultiresIterations) 
+        RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: PlotValues(RegMethod))
+    else:
+        # Need to run start_plot to initialise metric_values and
+        # multires_iterations, even if not plotting:
+        RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             UpdateMultiresIterations)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_metric_values(RegMethod))
+        RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: command_iteration(RegMethod))
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                             lambda: command_multi_iteration(RegMethod))
+
     # Get the number of valid points:
     NumOfValidPts = RegMethod.GetMetricNumberOfValidPoints()
     
@@ -4763,12 +4808,17 @@ def SitkNonDefReg(FixIm, MovIm, RegTxName='affine', InitTx=None,
     if True:#LogToConsole:
         print(f'*Took {Dtime} s to perform image registration.\n')
     
+    AlignedIm = sitk.Resample(
+        MovIm, FixIm, InitialTx, sitk.sitkLinear, 0.0, MovIm.GetPixelID()
+        )
     
     frequency = 2500  # Hz
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
     
-    return RegIm, RegMethod, InitialTx, FinalTx
+    #return RegIm, RegMethod, InitialTx, FinalTx
+    return InitialTx, AlignedIm, FinalTx, RegIm, RegMethod, metric_values,\
+        multires_iterations
 
 
 
@@ -4955,20 +5005,27 @@ def SitkNonDefRegWithFiducials(FixIm, MovIm,
     RegMethod.SetOptimizerScalesFromPhysicalShift()
     
     
-    if LogToConsole:
-        if PlotToConsole:
-            # Connect all of the observers for plotting during registration:
-            RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
-            RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
-            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                                 UpdateMultiresIterations) 
-            RegMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: PlotValues(RegMethod))
-        else:
-            RegMethod.AddCommand(sitk.sitkIterationEvent, 
-                                 lambda: command_iteration(RegMethod))
-            RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
-                                 lambda: command_multi_iteration(RegMethod))
+    #if LogToConsole:
+    if PlotToConsole:
+        # Connect all of the observers for plotting during registration:
+        RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+        #RegMethod.AddCommand(sitk.sitkEndEvent, EndPlot)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             UpdateMultiresIterations) 
+        RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: PlotValues(RegMethod))
+    else:
+        # Need to run start_plot to initialise metric_values and
+        # multires_iterations, even if not plotting:
+        RegMethod.AddCommand(sitk.sitkStartEvent, StartPlot)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             UpdateMultiresIterations)
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
+                             update_metric_values(RegMethod))
+        RegMethod.AddCommand(sitk.sitkIterationEvent, 
+                             lambda: command_iteration(RegMethod))
+        RegMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
+                             lambda: command_multi_iteration(RegMethod))
     
     # Get the number of valid points:
     NumOfValidPts = RegMethod.GetMetricNumberOfValidPoints()
@@ -5039,7 +5096,9 @@ def SitkNonDefRegWithFiducials(FixIm, MovIm,
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
     
-    return RegIm, RegMethod, LandmarkTx, OptimisedTx, FinalTx
+    #return RegIm, RegMethod, LandmarkTx, OptimisedTx, FinalTx
+    return LandmarkTx, AlignedIm, FinalTx, RegIm, RegMethod, metric_values,\
+        multires_iterations
 
 
 

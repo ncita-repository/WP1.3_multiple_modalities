@@ -16,9 +16,13 @@ reload(testing.test_download_data)
 import io_tools.import_data
 reload(io_tools.import_data)
 
+import io_tools.exports
+reload(io_tools.exports)
+
 #from testing.test_fetch_config import ConfigFetcherTester
 from testing.test_download_data import DataDownloaderTester
 from io_tools.import_data import DataImporter
+from io_tools.exports import export_im
 
 
 class DataImporterTester:
@@ -90,6 +94,35 @@ class DataImporterTester:
         self.srcDataset = srcDataset
         self.trgDataset = trgDataset
 
+    def export_ims(self):
+            
+        print('* Exporting images..\n')
+        
+        srcDataset = self.srcDataset
+        trgDataset = self.trgDataset
+        params = self.params
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        imExportDir = cfgDict['imExportDir']
+        
+        # List of datasets:
+        dsets = [srcDataset, trgDataset]
+        
+        dsetNames = ['src', 'trg']
+        
+        # List of images to export:
+        images = [dset.image for dset in dsets]
+        
+        # List of file names (will be modified in loop below):
+        fnames = [f'{runID}_{name}Im' for name in dsetNames]
+        
+        for d in range(len(images)):
+            export_im(
+                images[d], filename=fnames[d],
+                fileFormat='HDF5ImageIO', exportDir=imExportDir
+            )
+                    
 def test_import_data_210812(runID, params=None):
     """
     Run unit or integrated test of import_data.

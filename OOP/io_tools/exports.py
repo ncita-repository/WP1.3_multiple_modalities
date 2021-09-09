@@ -322,7 +322,7 @@ def export_list_to_csv_NOT_WORKING(items, filename, exportDir='cwd'):
     
     return
 
-def export_im(im, filename, fileFormat='NrrdImageIO', exportDir='cwd'):
+def export_im(im, filename, fileFormat='HDF5ImageIO', exportDir='cwd'):
     """ 
     Export a SimpleITK Image in a desired format. 
     
@@ -336,7 +336,7 @@ def export_im(im, filename, fileFormat='NrrdImageIO', exportDir='cwd'):
         The desired format can be any format specified here:
             https://simpleitk.readthedocs.io/en/master/IO.html#transformations
         e.g. 'HDF5ImageIO', 'NiftiImageIO', 'NrrdImageIO'. The default value is
-        'NrrdImageIO'.
+        'HDF5ImageIO'.
     exportDir : str, optional
         If provided the directory to which the file will be exported to. If the
         directory doesn't exist it will be created. The default value is 'cwd',

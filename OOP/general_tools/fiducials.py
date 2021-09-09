@@ -357,12 +357,14 @@ def get_landmark_tx(
     if txName == 'bspline':
         landmarkTx = sitk.LandmarkBasedTransformInitializer(
             transform=sitkTx, fixedLandmarks=fixPts, movingLandmarks=movPts,
-            referenceImage=fixIm, numberOfControlPoints=4)
-            #BSplineNumberOfControlPoints=numControlPts)
+            referenceImage=fixIm, numberOfControlPoints=4
+            #BSplineNumberOfControlPoints=numControlPts
+            )
     else:
         landmarkTx = sitk.LandmarkBasedTransformInitializer(
             transform=sitkTx, fixedLandmarks=fixPts, movingLandmarks=movPts,
-            referenceImage=fixIm)
+            referenceImage=fixIm
+            )
     
     # Cast landmarkTx from sitkTransform to the desired sitk transform:
     # (01/07/21)

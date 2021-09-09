@@ -288,12 +288,17 @@ class PropagatorTester:
         resInterp = cfgDict['resInterp']
         trgIm = trgDataset.image
         resIm = newDataset.image # resampled source or source-registered-to-target 
+        alignedIm = newDataset.alignedIm # pre-registration aligned image
+        # (which may be None, e.g. if registration wasn't performed)
         
         resExportDir = cfgDict['resPlotsExportDir']
         
         #print(useCaseToApply)
         
-        # Prepare plot title for new dataset:
+        # Prepare plot title for the aligned image:
+        aliTitle = f'Src aligned to Trg ({initMethod})'
+        
+        # Prepare plot title for the resampled/registered image:
         if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
             resTitle = 'Src '
             if useCaseToApply in ['3a', '3b', '4a', '4b']:
@@ -307,16 +312,23 @@ class PropagatorTester:
             
             midInd = trgIm.GetSize()[2] // 2
             
-            # Prepare filename for exported plot:
-            fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
-            fname = fname.replace('(', '').replace(')', '')
+            # List of images to plot and the plot titles:
+            images = [alignedIm, resIm]
+            titles = [aliTitle, resTitle]
             
-            compare_res_results(
-                resIm0=trgIm, resIm1=resIm, resInd=midInd,
-                resTitle0='Target image', resTitle1=resTitle,
-                exportPlot=exportPlot, exportDir=resExportDir,
-                fname=fname
-            )
+            for image, title in zip(images, titles):
+                if image: # i.e. not None
+                    # Prepare filename for exported plot:
+                    fname = f'{runID}_' + \
+                        title.replace(' ', '_').replace(',', '')
+                    fname = fname.replace('(', '').replace(')', '')
+                    
+                    compare_res_results(
+                        resIm0=trgIm, resIm1=image, resInd=midInd,
+                        resTitle0='Target image', resTitle1=title,
+                        exportPlot=exportPlot, exportDir=resExportDir,
+                        fname=fname
+                    )
     
     def plot_roi_over_dicom_ims(self):
         """ 

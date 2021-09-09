@@ -152,6 +152,7 @@ class Propagator:
         # registration or parsing of a DRO:
         self.initRegTx = None # initial registration transform
         self.initRegTxParams = None
+        self.alignedIm = None # from resampling usinig initRegTx
         #self.finalTx = None # from registration or DRO
         #self.sitkTx = None
         #self.regIm = None
@@ -1179,8 +1180,8 @@ class Propagator:
         print(f'fixFidsFpath = {fixFidsFpath}')
         print(f'movFidsFpath = {movFidsFpath}\n')
         
-        self.image, self.initRegTx, self.resTx, self.metricValues,\
-            self.multiresIters = register_im(
+        self.initRegTx, self.alignedIm, self.resTx, self.image,\
+            self.metricValues, self.multiresIters = register_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 

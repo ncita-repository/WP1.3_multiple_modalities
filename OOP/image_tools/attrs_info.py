@@ -19,7 +19,8 @@ reload(general_tools.general)
 
 
 import numpy as np
-from image_tools.imports import import_im
+#from image_tools.imports import import_im
+from io_tools.imports import import_im
 #from image_tools.operations import im_min, im_max
 from dicom_tools.imports import import_dcms, get_dcm_fpaths
 from general_tools.general import get_items_unique_to_within, get_unique_items

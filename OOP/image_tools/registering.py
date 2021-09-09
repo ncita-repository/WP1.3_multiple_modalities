@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from ipywidgets import interact, fixed
 
-from general_tools.general import check_file_ext
+#from general_tools.general import check_file_ext
 from general_tools.fiducials import get_landmark_tx
 #import image_tools.registration_utilities as ru
 import image_tools.registration_callbacks as rc
@@ -285,9 +285,11 @@ def rigid_reg_im(
     """ Similarity metric settings. """
     regMethod.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
     #regMethod.SetMetricAsJointHistogramMutualInformation()
-    regMethod.SetMetricSamplingStrategy(regMethod.RANDOM)
+    #print('\n\n\n*** Changing MetricSamplingStrategy from RANDOM to NONE (08/09/21)\n\n\n')
+    regMethod.SetMetricSamplingStrategy(regMethod.RANDOM) # 08/09
     #regMethod.SetMetricSamplingStrategy(regMethod.REGULAR)
-    regMethod.SetMetricSamplingPercentage(samplingPercentage)
+    #regMethod.SetMetricSamplingStrategy(regMethod.NONE) # 08/09
+    regMethod.SetMetricSamplingPercentage(samplingPercentage) # 08/09
     #regMethod.SetMetricSamplingPercentage(
     #    samplingPercentage, sitk.sitkWallClock
     #    )
@@ -296,6 +298,9 @@ def rigid_reg_im(
     shrinkFactors = [4,2,1]
     smoothingSigmas = [2,1,1]
     #smoothingSigmas = [2,1,0]
+    #print('\n\n\n*** Changed smoothingSigmas from [2,1,1] to [4,2,1] on',
+    #      '08/09/21\n\n\n')
+    #smoothingSigmas = [4,2,1]
     
     # 06/09/21
     #shrinkFactors = [8,4,2,1]
@@ -406,6 +411,7 @@ def rigid_reg_im(
     print(f"Optimizer stopping condition: {stopConditionDesc}")
     #print(f"Final Iteration: {finalIterNum}")
     
+    # Resample movIm using finalTx to get the registered image:
     regIm = sitk.Resample(
         movIm, fixIm, finalTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
         )
@@ -425,7 +431,14 @@ def rigid_reg_im(
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
     
-    return regIm, initialTx, finalTx, metric_values, multires_iterations
+    # Resample movIm using intialTx to get the pre-registration aligned image 
+    # (for info only - not required):
+    alignedIm = sitk.Resample(
+        movIm, fixIm, initialTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
+        )
+    
+    return initialTx, alignedIm, finalTx, regIm, metric_values,\
+        multires_iterations
 
 def bspline_reg_im(
         fixIm, movIm, fixFidsFpath='', movFidsFpath='', numControlPts=8,
@@ -661,8 +674,15 @@ def bspline_reg_im(
     frequency = 2500  # Hz
     duration = 1500  # ms
     winsound.Beep(frequency, duration)
-
-    return regIm, initialTx, finalTx, metric_values, multires_iterations
+    
+    # Resample movIm using intialTx to get the pre-registration aligned image 
+    # (for info only - not required):
+    alignedIm = sitk.Resample(
+        movIm, fixIm, initialTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
+        )
+    
+    return initialTx, alignedIm, finalTx, regIm, metric_values,\
+        multires_iterations
 
 def register_im(
         fixIm, movIm, regTxName='affine', initMethod='landmarks',
@@ -760,8 +780,8 @@ def register_im(
         if p2c:
             print('Running bspline_reg()...\n')
             
-        regIm, initialTx, finalTx, metric_values, multires_iterations\
-            = bspline_reg_im(
+        initialTx, alignedIm, regIm, finalTx, metric_values,\
+            multires_iterations = bspline_reg_im(
                 fixIm=fixIm, movIm=movIm,
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
@@ -801,8 +821,8 @@ def register_im(
         learningRate = 1.0
         samplingPercentage = 50
         
-        regIm, initialTx, finalTx, metric_values, multires_iterations\
-            = rigid_reg_im(
+        initialTx, alignedIm, finalTx, regIm, metric_values,\
+            multires_iterations = rigid_reg_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 
@@ -812,4 +832,5 @@ def register_im(
                 p2c=p2c, regPlotFpath=regPlotFpath
                 )
     
-    return regIm, initialTx, finalTx, metric_values, multires_iterations
+    return initialTx, alignedIm, finalTx, regIm, metric_values,\
+        multires_iterations

@@ -7,10 +7,11 @@ Created on Tue Jul  6 13:52:44 2021
 
 """ High-level conversions between pixel arrays and images and visa versa. """
 
+
 import numpy as np
 import SimpleITK as sitk
 from conversion_tools.inds_pts_pixarrs import pixarr_to_labarr
-from image_tools.attrs_info import get_im_info
+#from image_tools.attrs_info import get_im_info
 
 
 def pixarr_to_im(pixarr, f2sInds, refIm):
@@ -133,6 +134,7 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     
     #from ImageTools import GetImageInfo
     #from GeneralTools import UniqueItems, AreListsEqualToWithinEpsilon
+    from image_tools.attrs_info import get_im_info
     
     if p2c:
         print('\n\nStart', '-'*110)

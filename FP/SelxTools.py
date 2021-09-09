@@ -578,6 +578,8 @@ def RegisterImagesSelx(FixIm, MovIm, Transform='affine',
     import SimpleITK as sitk
     import time
     
+    print(f'\n\n*** InitMethod = {InitMethod}\n')
+    
     if not Transform in ['translation', 'rigid', 'affine', 'bspline']:
         msg = f'The chosen transform (Transform), {Transform}, is not one of '\
               + 'the accepted inputs: \'translation\', \'rigid\', \'affine\','\

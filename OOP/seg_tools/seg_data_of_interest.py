@@ -5,11 +5,13 @@ Created on Tue Jul  6 16:50:51 2021
 @author: ctorti
 """
 
-def get_seg_data_of_interest(
+def get_seg_data_of_interest_MOVED(
         seg, allF2SindsBySeg, segNums, segLabs, segLab, slcNum, p2c=False
         ):
     # TODO tidy docstrings 16/07
     """   
+    09/09/21: Moved to seg_tools.seg_data.py
+    
     Get data of interest from a SEG.
     
     Parameters
@@ -226,8 +228,12 @@ def get_seg_data_of_interest(
         
     return pixarrBySeg, f2sIndsBySeg
 
-def raise_error_if_no_seg_data_of_interest(f2sIndsBySeg, segLabs, slcNum):
+def raise_error_if_no_seg_data_of_interest_MOVED(
+        f2sIndsBySeg, segLabs, slcNum
+        ):
     """
+    09/09/21: Moved to seg_tools.seg_data.py
+    
     Raise error if there is no matching SEG data of interest.
 
     Parameters
