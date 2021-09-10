@@ -13,14 +13,15 @@ from shapely.geometry import Polygon, Point
 from scipy.sparse import issparse
 from skimage.measure import find_contours
 
-from general_tools.console_printing import print_pts_by_cnt
-from general_tools.console_printing import print_pixarr_by_seg
+from general_tools.console_printing import (
+    print_pts_by_cnt, print_pixarr_by_seg
+    )
 #from image_tools.imports import import_im
-from io_tools.imports import import_im
+#from io_tools.imports import import_im
 from conversion_tools.inds_pts import inds_to_pts, pts_to_cntdata, pts_to_inds
 
 
-def indsByCnt_to_pixarr(indsByCnt, refImage):
+def indsByCnt_to_pixarr(indsByCnt, refIm):
     """
     Convert a list of indices grouped by contour to a pixel array.
     
@@ -29,7 +30,7 @@ def indsByCnt_to_pixarr(indsByCnt, refImage):
     indsByCnt : list of lists of lists of ints
         A list (for each contour) of a list (for all polygons) of a list (for 
         each dimension) of indices.
-    refImage : SimpleITK image
+    refIm : SimpleITK image
         Reference image whose size will be used to define the shape of the 
         pixel array.
         
@@ -47,7 +48,7 @@ def indsByCnt_to_pixarr(indsByCnt, refImage):
     #from shapely.geometry import Polygon, Point
     #from itertools import product
     
-    imSize = refImage.GetSize()
+    imSize = refIm.GetSize()
     
     Ncontours = len(indsByCnt)
     
@@ -65,9 +66,12 @@ def indsByCnt_to_pixarr(indsByCnt, refImage):
                 
             xMin, yMin, xMax, yMax = poly.bounds
          
-            points = [Point(x, y) for x, y in
-                          product(np.arange(int(xMin), np.ceil(xMax)),
-                                  np.arange(int(yMin), np.ceil(yMax)))]
+            points = [
+                Point(x, y) for x, y in product(
+                    np.arange(int(xMin), np.ceil(xMax)),
+                    np.arange(int(yMin), np.ceil(yMax))
+                    )
+                ]
                       
             pointsInPoly = list(filter(poly.contains, points))
             
@@ -182,12 +186,14 @@ def get_labarrByRoi(rts, dicomDir, c2sIndsByRoi, refIm):
     indsByRoi = GetIndsByRoi(rts, dicomDir)
     
     for roiNum in range(len(indsByRoi)):
-        pixarr = indsByCnt_to_pixarr(indsByCnt=indsByRoi[roiNum], 
-                                     refImage=refIm)
+        pixarr = indsByCnt_to_pixarr(
+            indsByCnt=indsByRoi[roiNum], refIm=refIm
+            )
     
-        labarr = pixarr_to_labarr(pixarr=pixarr, 
-                                  numOfSlices=refIm.GetSize()[2], 
-                                  f2sInds=c2sIndsByRoi[roiNum])
+        labarr = pixarr_to_labarr(
+            pixarr=pixarr, numOfSlices=refIm.GetSize()[2], 
+            f2sInds=c2sIndsByRoi[roiNum]
+            )
         
         labarrByRoi.append(labarr)
     
@@ -446,10 +452,10 @@ def pixarr_to_listOfInds(pixarr, f2sInds):
         
     return listOfInds
 
-def pixarr_to_ptsByCnt(
-        pixarr, f2sInds, dicomDir, thresh=0.5, p2c=False
-        ):
+def pixarr_to_ptsByCnt(pixarr, f2sInds, refIm, thresh=0.5, p2c=False):
     """
+    10/09/21: Previously refIm parameter was dicomDir.
+    
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates.
  
@@ -462,8 +468,8 @@ def pixarr_to_ptsByCnt(
         A list (for each frame) of the slice numbers that correspond to each 
         frame in pixarr.  This is equivalent to a list of Per-Frame Functional 
         Groups Sequence-to-slice inds (PFFGStoSliceInds). 
-    dicomDir : str
-        Directory containing the DICOMs that relate to pixarr.
+    refIm : SimpleITK Image
+        The image that relates to pixarr.
     thresh : float, optional (0.5 by default)
         Threshold value used to binarise the labels in pixarr.
     p2c : bool, optional (False by default)
@@ -494,8 +500,6 @@ def pixarr_to_ptsByCnt(
         print('\n\n', '-'*120)
         print(f'Prior to conversion: \nf2sInds = {f2sInds}')
         print_pixarr_by_seg(pixarr)
-        
-    refIm = import_im(dicomDir)
     
     # Convert the pixel array to a list of indices-by-object-by-frame:
     """ A list of objects originating from the same frame will be treated as 
@@ -541,9 +545,11 @@ def pixarr_to_ptsByCnt(
     return ptsByCnt, cntdataByCnt, c2sInds
 
 def pixarrByRoi_to_ptsByCntByRoi(
-        pixarrByRoi, f2sIndsByRoi, dicomDir, thresh=0.5, p2c=False
+        pixarrByRoi, f2sIndsByRoi, refIm, thresh=0.5, p2c=False
         ):
     """
+    10/09/21: Previously refIm parameter was dicomDir.
+    
     Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
     each point) of a list (for each dimension) of physical coordinates for each
     pixel array in a list of pixel-arrays-by-ROI.
@@ -558,8 +564,8 @@ def pixarrByRoi_to_ptsByCntByRoi(
         that correspond to each frame in each pixel array in pixarrByRoi.  This
         is equivalent to a list of Per-FrameFunctionalGroupsSequence-to-slice 
         indices (PFFGStoSliceInds).
-    dicomDir : str
-        Directory containing the DICOMs that relate to pixarr.
+    refIm : SimpleITK Image
+        The image that relates to pixarrByRoi.
     thresh : float, optional (0.5 by default)
         Threshold value used to binarise the labels in pixarr.
     p2c : bool, optional (False by default)
@@ -598,9 +604,9 @@ def pixarrByRoi_to_ptsByCntByRoi(
     for r in range(len(pixarrByRoi)):
         #if pixarrByRoi[r]:
         if pixarrByRoi[r].shape[0]:
-            ptsByCnt, cntdataByCnt, c2sInds\
-                = pixarr_to_ptsByCnt(pixarrByRoi[r], f2sIndsByRoi[r], 
-                                     dicomDir, thresh, p2c)
+            ptsByCnt, cntdataByCnt, c2sInds = pixarr_to_ptsByCnt(
+                pixarrByRoi[r], f2sIndsByRoi[r], refIm, thresh, p2c
+                )
             
             ptsByCntByRoi.append(ptsByCnt)
             cntdataByCntByRoi.append(cntdataByCnt)
@@ -618,7 +624,7 @@ def pixarrByRoi_to_ptsByCntByRoi(
  
     return ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi
 
-def inds_to_mask(inds, refImage):
+def inds_to_mask(inds, refIm):
     """
     Convert a list of indices to a (filled) mask (pixel array).
        
@@ -626,7 +632,7 @@ def inds_to_mask(inds, refImage):
     ----------
     inds : list of a list of ints
         A list (for all points) of a list (for each dimension) of indices.
-    refImage : SimpleITK image
+    refIm : SimpleITK image
         Reference image whose size will be used to define the shape of the 
         pixel array.
         
@@ -646,7 +652,7 @@ def inds_to_mask(inds, refImage):
         raise Exception(f"There are only {len(inds)} indices. A minimum of ",
                         "3 are required to define a closed contour.")
         
-    C, R, S = refImage.GetSize()
+    C, R, S = refIm.GetSize()
     
     mask = np.zeros((1, R, C))
     
@@ -657,9 +663,12 @@ def inds_to_mask(inds, refImage):
     
     xMin, yMin, xMax, yMax = poly.bounds
  
-    points = [Point(x, y) for x, y in 
-              product(np.arange(int(xMin), np.ceil(xMax)),
-                      np.arange(int(yMin), np.ceil(yMax)))]
+    points = [
+        Point(x, y) for x, y in product(
+            np.arange(int(xMin), np.ceil(xMax)),
+            np.arange(int(yMin), np.ceil(yMax))
+            )
+        ]
               
     pointsInPoly = list(filter(poly.contains, points))
     

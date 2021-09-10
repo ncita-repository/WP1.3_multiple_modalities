@@ -21,6 +21,8 @@ import dro_tools.create_tx_from_dro
 reload(dro_tools.create_tx_from_dro)
 import plotting_tools.plotting
 reload(plotting_tools.plotting)
+import general_tools.geometry
+reload(general_tools.geometry)
 
 import time
 import os
@@ -45,6 +47,9 @@ from general_tools.pixarr_ops import (
     )
 from plotting_tools.plotting import plot_pixarrBySeg
 from io_tools.exports import export_list_to_txt
+from general_tools.geometry import (
+    prop_of_segs_in_extent, prop_of_rois_in_extent
+    )
 
 class Propagator:
     # TODO modify the docstrings
@@ -91,19 +96,6 @@ class Propagator:
     """
     
     def __init__(self, srcDataset, trgDataset, params, dro=None):
-        
-        #cfgDict = params.cfgDict
-        #useCase = cfgDict['useCaseToApply']
-        #useDroForTx = cfgDict['useDroForTx']
-        #regTxName = cfgDict['regTxName']
-        #p2c = cfgDict['p2c']
-        
-        # TODO where to import DRO?
-        #dro = None # for now
-        
-        ## Create a new target dataset:
-        #self.newDataset = deepcopy(trgDataset)
-        #self = deepcopy(trgDataset)
         
         # Copy selected instance attributes from trgDataset:
         #self.dicomDir = trgDataset.dicomDir
@@ -165,6 +157,10 @@ class Propagator:
         self.preRegTx = None # will be updated for deformable DROs only
         self.preRegTxParams = None
         
+        # Check whether the RTS/SEG of interest intersects the target image's
+        # extent:
+        self.get_intersection_of_roi_and_trgIm(srcDataset, trgDataset, params)
+        
         # Determine which use case applies (and will be applied):
         self.which_use_case(srcDataset, trgDataset, params)
         
@@ -184,6 +180,49 @@ class Propagator:
         
         #self.propagate(params, srcDataset, trgDataset)
     
+    def get_intersection_of_roi_and_trgIm(self, srcDataset, trgDataset, params):
+        """
+        Get the intersection of the ROI and target image domain as a fraction.
+        
+        Parameters
+        ----------
+        srcDataset : DataImporter Object
+            Contains various data for the source DICOM series.
+        trgDataset : DataImporter Object
+            Contains various data for the target DICOM series.
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        
+        Returns
+        -------
+        self.fracProp : float
+            The fractional proportion (normalised to 1) of the points or voxels
+            that define the contour(s)/segmentation(s) to be copied/propagated
+            intersect the extent of trgIm.
+        """
+    
+        cfgDict = params.cfgDict
+        roicolMod = cfgDict['roicolMod']
+        p2c = cfgDict['p2c']
+        
+        if roicolMod == 'SEG':
+            fracProp = prop_of_segs_in_extent(
+                pixarrBySeg=srcDataset.pixarrByRoi, 
+                f2sIndsBySeg=srcDataset.f2sIndsByRoi, 
+                srcIm=srcDataset.image, 
+                trgIm=trgDataset.image, 
+                p2c=p2c
+                )
+        else:
+            fracProp = prop_of_rois_in_extent(
+                ptsByCntByRoi=srcDataset.ptsByCntByRoi,
+                trgIm=trgDataset.image, 
+                p2c=p2c
+                )
+        
+        self.fracProp = fracProp
+            
     def which_use_case(self, srcDataset, trgDataset, params):
         # TODO update docstrings
         """

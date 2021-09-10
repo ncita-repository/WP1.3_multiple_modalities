@@ -111,7 +111,8 @@ def download_im_asr(
     and 'SEG' for roicolMod = 'SEG'.
     """
     if roicolMod == 'RTSTRUCT':
-        collType_req = 'AIM'
+        #collType_req = 'AIM' # 10/09/21 I can't remember why I made it AIM
+        collType_req = 'RTSTRUCT' # 10/09/21
     else:
         collType_req = 'SEG'
     
@@ -309,6 +310,14 @@ def download_im_asr(
                 print("  This item's children DOES NOT contain items with",
                       "both field 'out/file' and 'references/seriesUID'.\n")
     
+    if len(matchingInds) == 0:
+        msg = f"No image assessors were found for:\n  projID = '{projID}'" +\
+            f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'" +\
+            f"\n  scanID = '{scanID}'\ncontaining matches on:" +\
+            f"\n  roicolMod = '{roicolMod}'\n  roicolName = " +\
+            f"{roicolName_req}."
+        raise Exception(msg)
+    
     if p2c:
         print(f'Matching indices = {matchingInds}')
     
@@ -375,6 +384,8 @@ def download_im_asr(
         print(f"Date and time of the ROI Collection of interest = {asrDate}",
               f"{asrTime}")
     
+    """ Moved above:
+    
     if roicolInd == None:
         msg = f"No image assessors were found for:\n  projID = '{projID}'"\
             + f"\n  subjLab = '{subjLab}'\n  expLab = '{expLab}'"\
@@ -382,6 +393,7 @@ def download_im_asr(
             + f"\n  roicolMod = '{roicolMod}'\n  roicolName_req ="\
             + f"{roicolName_req}."
         raise Exception(msg)
+    """
     
     """ Get the assessor of interest: """
     fname = label + '.dcm'

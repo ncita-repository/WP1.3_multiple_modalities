@@ -5,7 +5,7 @@ Created on Tue Jul  6 17:27:27 2021
 @author: ctorti
 """
 
-def get_frameNums(p2sIndsBySeg, segNum):
+def get_frameNums(f2sIndsBySeg, segNum):
     # seg, searchStr, dicomDir
     # this was modified on 16/07
     """
@@ -14,7 +14,7 @@ def get_frameNums(p2sIndsBySeg, segNum):
     
     Parameters
     ----------
-    p2sIndsBySeg : list of a list of ints
+    f2sIndsBySeg : list of a list of ints
         List (for each segment) of a list (for each frame) of the slice numbers 
         that correspond to each Per-frame Functional Groups Sequence.
     segNum : int
@@ -27,19 +27,19 @@ def get_frameNums(p2sIndsBySeg, segNum):
         pixel array that belongs to the segment of interest.  If only one frame 
         corresponds to the segment, the returned list will be of length one 
         (e.g. [3]).
-    p2sInds : list of ints
+    f2sInds : list of ints
         List of the slice numbers that correspond to each Per-frame Functional 
         Groups Sequence in the segment of interest. 
     """
     
-    # The p2sInds for the segment of interest:
-    p2sInds = p2sIndsBySeg[segNum]
+    # The f2sInds for the segment of interest:
+    f2sInds = f2sIndsBySeg[segNum]
     
     # The number of segments:
-    S = len(p2sIndsBySeg)
+    S = len(f2sIndsBySeg)
     
     # The number of frames in the segment of interest:
-    F = len(p2sInds)
+    F = len(f2sInds)
     
     n = 0 # initialise frame number counter
     
@@ -49,20 +49,20 @@ def get_frameNums(p2sIndsBySeg, segNum):
         if s == segNum:
             """ 
             This segment contains the frame(s) of interest, which are given by
-            the index of p2sInds[f] in p2sIndsBySeg[s] plus 
+            the index of f2sInds[f] in f2sIndsBySeg[s] plus 
             any frames that preceeded it (i.e. the frame counter n).
             """
             
             for f in range(F):
-                frameNum = n + p2sIndsBySeg[s].index(p2sInds[f])
+                frameNum = n + f2sIndsBySeg[s].index(f2sInds[f])
                 
                 frameNums.append(frameNum)
             
         else:
             # Add to the frame counter the number of frames in this segment:
-            n += len(p2sIndsBySeg[s])
+            n += len(f2sIndsBySeg[s])
     
-    return frameNums, p2sInds
+    return frameNums, f2sInds
 
 def get_RSOPuids_in_RIS(seg):
     """
@@ -151,7 +151,7 @@ def get_RSOPuids_in_PFFGS(seg):
         
     return rsopuids
 
-def get_p2sInds(seg, sopuids):
+def get_f2sInds(seg, sopuids):
     """
     Get a list of the slice numbers that correspond to each  
     Per-FrameFunctionalGroupsSequence in a SEG.
@@ -165,7 +165,7 @@ def get_p2sInds(seg, sopuids):
         
     Returns
     -------
-    p2sInds : list of ints
+    f2sInds : list of ints
         List (for each frame) of the slice numbers that correspond to each 
         Per-FrameFunctionalGroupsSequence in seg.
     """
@@ -173,21 +173,21 @@ def get_p2sInds(seg, sopuids):
     # Get the list of ReferencedSOPInstanceUIDs:
     rsopuids = get_RSOPuids_in_PFFGS(seg)
     
-    p2sInds = [] 
+    f2sInds = [] 
     
     for i in range(len(rsopuids)):
         if rsopuids[i] in sopuids:
             # Find the matching index of rsopuids[i] in sopuids:
-            p2sInds.append(sopuids.index(rsopuids[i]))
+            f2sInds.append(sopuids.index(rsopuids[i]))
         else:
             msg = f'ReferencedSOPInstanceUID[{i}], {rsopuids[i]}, is not in '\
                   + 'the list of SOPInstanceUIDs.'
             
             raise Exception(msg)
         
-    return p2sInds
+    return f2sInds
 
-def get_p2sIndsBySeg(seg, sopuids):
+def get_f2sIndsBySeg(seg, sopuids):
     """
     Get a list (per segment) of the slice numbers that correspond to each 
     Per-FrameFunctionalGroupsSequence in a SEG.
@@ -201,19 +201,19 @@ def get_p2sIndsBySeg(seg, sopuids):
     
     Returns
     -------
-    p2sIndsBySeg : list of a list of ints
+    f2sIndsBySeg : list of a list of ints
         List (for each segment) of a list (for each frame) of the slice numbers 
         that correspond to each Per-FrameFunctionalGroupsSequence in seg.
     """
     
-    p2sInds = get_p2sInds(seg, sopuids)
+    f2sInds = get_f2sInds(seg, sopuids)
     
     divs = get_DIVs(seg)
     
-    p2sIndsBySeg = group_list_by_seg(listToGroup=p2sInds, 
+    f2sIndsBySeg = group_list_by_seg(listToGroup=f2sInds, 
                                            divs=divs)
     
-    return p2sIndsBySeg
+    return f2sIndsBySeg
 
 def get_DIVs(seg):
     """
@@ -399,7 +399,7 @@ def get_frame_nums_OLD(seg, searchStr, dicomDir):
         pixel array that belongs to the segment of interest.  If only one frame 
         corresponds to the segment, the returned list will be of length one 
         (e.g. [3]).
-    p2sInds : list of ints
+    f2sInds : list of ints
         List of the slice numbers that correspond to each Per-frame Functional 
         Groups Sequence in the segment of interest. 
     """
@@ -414,24 +414,24 @@ def get_frame_nums_OLD(seg, searchStr, dicomDir):
     studyUID, seriesUID, FORUID, sopuids = get_dcm_uids(dicomDir)
     
     # Get the PerFrameFunctionalGroupsSequence-to-slice indices
-    # (p2sInds) and p2sInds grouped by segment
-    # (p2sIndsBySeg):
-    """ Note:  The p2sInds are integers that start from 0. """
-    p2sInds = get_p2sInds(seg, sopuids)
+    # (f2sInds) and f2sInds grouped by segment
+    # (f2sIndsBySeg):
+    """ Note:  The f2sInds are integers that start from 0. """
+    f2sInds = get_f2sInds(seg, sopuids)
     
-    p2sIndsBySeg = group_list_by_seg(listToGroup=p2sInds, 
+    f2sIndsBySeg = group_list_by_seg(listToGroup=f2sInds, 
                                            divs=divs)
     
     segNum = get_roicol_nums(seg, searchStr)
     
-    # The p2sInds for the segment of interest:
-    p2sInds = p2sIndsBySeg[segNum]
+    # The f2sInds for the segment of interest:
+    f2sInds = f2sIndsBySeg[segNum]
     
     # The number of segments:
-    S = len(p2sIndsBySeg)
+    S = len(f2sIndsBySeg)
     
     # The number of frames in the segment of interest:
-    F = len(p2sInds)
+    F = len(f2sInds)
     
     n = 0 # initialise frame number counter
     
@@ -441,17 +441,17 @@ def get_frame_nums_OLD(seg, searchStr, dicomDir):
         if s == segNum:
             """ 
             This segment contains the frame(s) of interest, which are given by
-            the index of p2sInds[f] in p2sIndsBySeg[s] plus 
+            the index of f2sInds[f] in f2sIndsBySeg[s] plus 
             any frames that preceeded it (i.e. the frame counter n).
             """
             
             for f in range(F):
-                frameNum = n + p2sIndsBySeg[s].index(p2sInds[f])
+                frameNum = n + f2sIndsBySeg[s].index(f2sInds[f])
                 
                 frameNums.append(frameNum)
             
         else:
             # Add to the frame counter the number of frames in this segment:
-            n += len(p2sIndsBySeg[s])
+            n += len(f2sIndsBySeg[s])
     
-    return frameNums, p2sInds
+    return frameNums, f2sInds

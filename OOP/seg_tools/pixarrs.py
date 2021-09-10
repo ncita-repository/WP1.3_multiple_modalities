@@ -8,7 +8,7 @@ Created on Tue Jul  6 17:19:16 2021
 
 import numpy as np
 from dicom_tools.metadata import get_dcm_uids
-from seg_tools.metadata import get_frameNums, get_p2sIndsBySeg
+from seg_tools.metadata import get_frameNums, get_f2sIndsBySeg
 from general_tools.console_printing import (
     print_inds_by_roi, print_pixarr_shape_by_seg
     )
@@ -32,7 +32,7 @@ def get_pixarr_in_seg(seg, dicomDir, searchStr):
     pixarrInSeg : Numpy array
         Sub-array of the SEG's pixel array that contains the frames that belong
         to the segment of interest. 
-    p2sIndsInSeg : list of ints
+    f2sIndsInSeg : list of ints
         List (for each segmentation) of the slice numbers that correspond to 
         each frame in pixarr.
     """
@@ -46,7 +46,7 @@ def get_pixarr_in_seg(seg, dicomDir, searchStr):
     # Get the frame numbers of the SEG's pixel array that correspond to the 
     # segment of interest, and the corresponding Per-frame Functional Groups
     # Sequence-to-slice indices:
-    frameNumsInSeg, p2sIndsInSeg = get_frameNums(seg, searchStr, dicomDir)
+    frameNumsInSeg, f2sIndsInSeg = get_frameNums(seg, searchStr, dicomDir)
     
     F = len(frameNumsInSeg)
     
@@ -55,7 +55,7 @@ def get_pixarr_in_seg(seg, dicomDir, searchStr):
     for i in range(F):  
         pixarrInSeg[i] = pixarr_all[frameNumsInSeg[i]]
     
-    return pixarrInSeg, p2sIndsInSeg
+    return pixarrInSeg, f2sIndsInSeg
 
 def get_pixarrBySeg(seg, f2sIndsBySeg, p2c=False):
     # seg, dicomDir, p2c=False
@@ -159,7 +159,7 @@ def get_pixarr_in_seg_OLD(seg, dicomDir, searchStr):
     pixarrInSeg : Numpy array
         Sub-array of the SEG's pixel array that contains the frames that belong
         to the segment of interest. 
-    p2sIndsInSeg : list of ints
+    f2sIndsInSeg : list of ints
         List (for each segmentation) of the slice numbers that correspond to 
         each frame in pixarr.
     """
@@ -171,7 +171,7 @@ def get_pixarr_in_seg_OLD(seg, dicomDir, searchStr):
     # Get the frame numbers of the SEG's pixel array that correspond to the 
     # segment of interest, and the corresponding Per-frame Functional Groups
     # Sequence-to-slice indices:
-    frameNumsInSeg, p2sIndsInSeg = get_frameNums(seg, searchStr, 
+    frameNumsInSeg, f2sIndsInSeg = get_frameNums(seg, searchStr, 
                                                            dicomDir)
     
     F = len(frameNumsInSeg)
@@ -181,7 +181,7 @@ def get_pixarr_in_seg_OLD(seg, dicomDir, searchStr):
     for i in range(F):  
         pixarrInSeg[i] = pixarr_all[frameNumsInSeg[i]]
     
-    return pixarrInSeg, p2sIndsInSeg
+    return pixarrInSeg, f2sIndsInSeg
 
 def get_pixarrBySeg_OLD(seg, dicomDir, p2c=False):
     """
@@ -227,7 +227,7 @@ def get_pixarrBySeg_OLD(seg, dicomDir, p2c=False):
     
     studyUID, seriesUID, FORUID, SOPUIDs = get_dcm_uids(dicomDir)
     
-    f2sIndsBySeg = get_p2sIndsBySeg(seg, SOPUIDs)
+    f2sIndsBySeg = get_f2sIndsBySeg(seg, SOPUIDs)
     
     Nsegs = len(f2sIndsBySeg)
     

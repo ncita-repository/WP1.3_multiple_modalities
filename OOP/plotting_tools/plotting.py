@@ -11,6 +11,7 @@ import time
 import os
 from pathlib import Path
 import SimpleITK as sitk
+import itk
 import matplotlib.pyplot as plt
 from pydicom import dcmread
 
@@ -746,7 +747,7 @@ def compare_res_results(
     
     #useCentre = True # 16/04/21 Not sure it's working as expected
     useCentre = False
-    
+        
     resPixarr0 = sitk.GetArrayViewFromImage(resIm0)[resInd,:,:]
     resPixarr1 = sitk.GetArrayViewFromImage(resIm1)[resInd,:,:]
     

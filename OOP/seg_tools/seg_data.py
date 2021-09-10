@@ -24,13 +24,13 @@ from image_tools.attrs_info import (
     )
 from dicom_tools.metadata import get_dcm_uids
 from dicom_tools.imports import get_dcm_fpaths
-from seg_tools.metadata import get_p2sIndsBySeg
+from seg_tools.metadata import get_f2sIndsBySeg
 from seg_tools.pixarrs import get_pixarrBySeg
 from conversion_tools.pixarrs_ims import imBySeg_to_pixarrBySeg
 
 
 def get_seg_data_of_interest(
-        seg, allF2SindsBySeg, segNums, segLabs, segLab, slcNum, p2c=False
+        seg, allF2SindsBySeg, segNums, allSegLabs, segLab, slcNum, p2c=False
         ):
     # TODO tidy docstrings 16/07
     """   
@@ -45,8 +45,8 @@ def get_seg_data_of_interest(
         frame in each pixel array in seg.
     segNums : list of ints
         List of the segment number(s) that match the segment of interest.  
-        The list may have a single int.
-    segLabs : list of strs
+        The list may be of length 1.
+    allSegLabs : list of strs
         List of all segment labels. Only used if printing results to console.
     segLab : str or None
         The SEG label of interest, or None (if all segments are of interest).
@@ -219,10 +219,10 @@ def get_seg_data_of_interest(
             if p2c:
                 # Limit the list of segment names to those that belong to the
                 # chosen segment(s):
-                segLabs = [segLabs[i] for i in segNums]
+                allSegLabs = [allSegLabs[i] for i in segNums]
             
                 print('\n   After limiting data to those whose segment name',
-                      f'matches {segLabs}:')
+                      f'matches {allSegLabs}:')
                 print_inds_by_roi(f2sIndsBySeg)
                 print_pixarr_shape_by_seg(pixarrBySeg)
                 
@@ -242,24 +242,24 @@ def get_seg_data_of_interest(
         
     return pixarrBySeg, f2sIndsBySeg
 
-def raise_error_if_no_seg_data_of_interest(f2sIndsBySeg, segLabs, slcNum):
+def raise_error_if_no_seg_data_of_interest(f2sIndsBySeg, allSegLabs, slcNum):
     """
     Raise error if there is no matching SEG data of interest.
-
+    
     Parameters
     ----------
     f2sIndsBySeg : list of a list of int
         List (for each segment) of the slice numbers that correspond to each
         frame in each pixel array in pixarrBySeg, i.e. the list is a sub-list 
         of allF2SindsBySeg.
-    segLabs : list of strs
+    allSegLabs : list of strs
         List (for each segment) of segment label(s).
     slcNum : int or None
-
+        The slice number of interest, or None if all slices are of interest.
+    
     Returns
     -------
     None.
-
     """
     
     if f2sIndsBySeg == []:
@@ -268,10 +268,10 @@ def raise_error_if_no_seg_data_of_interest(f2sIndsBySeg, segLabs, slcNum):
         if slcNum:
             msg += f"on slice {slcNum} "
               
-        msg += f"in any segment. There are {len(segLabs)} segments:"
+        msg += f"in any segment. There are {len(allSegLabs)} segments:"
         
-        for i in range(len(segLabs)):
-            msg += f"\nSegment {i+1} with label '{segLabs[i]}' has "\
+        for i in range(len(allSegLabs)):
+            msg += f"\nSegment {i+1} with label '{allSegLabs[i]}' has "\
                    + f"{len(f2sIndsBySeg[i])} segmentations that correspond "\
                    + f"to slices {f2sIndsBySeg[i]}" 
         raise Exception(msg)
@@ -309,7 +309,7 @@ def get_seg_data_from_list_of_segs(
         studyUID, seriesUID, FORUID, SOPUIDs = get_dcm_uids(listOfDicomDirs[i])
         
         if listOfSegs[i]:
-            f2sIndsBySeg = get_p2sIndsBySeg(listOfSegs[i], SOPUIDs)
+            f2sIndsBySeg = get_f2sIndsBySeg(listOfSegs[i], SOPUIDs)
             
             pixarrBySeg = get_pixarrBySeg(listOfSegs[i], f2sIndsBySeg, p2c)
             

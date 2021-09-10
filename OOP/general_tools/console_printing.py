@@ -12,7 +12,7 @@ def print_title(title):
     
     return
 
-def print_inds_by_roi(indsByRoi):
+def print_indsByRoi(indsByRoi):
     """ 
     Print the list of indices in each ROI, e.g. from a list of f2sIindsByRoi.
     """
@@ -41,7 +41,7 @@ def print_inds_by_roi(indsByRoi):
         
     return
 
-def print_pts_by_cnt(ptsByCnt):
+def print_ptsByCnt(ptsByCnt):
     """ Print the number of points in each contour in ptsByCnt. """
     
     C = len(ptsByCnt)
@@ -53,7 +53,7 @@ def print_pts_by_cnt(ptsByCnt):
     
     return
 
-def print_pts_by_cnt_by_roi(ptsByCntByRoi):
+def print_ptsByCntByRoi(ptsByCntByRoi):
     """ 
     Print the number of points in each contour of each ROI in ptsByCntByRoi. 
     """
@@ -74,7 +74,7 @@ def print_pts_by_cnt_by_roi(ptsByCntByRoi):
     
     return
 
-def print_pixarr_by_seg(pixarrBySeg):
+def print_pixarrBySeg(pixarrBySeg):
     """ 
     If pixarrBySeg is a list of pixel arrays (as the input variable name
     suggests):
@@ -96,7 +96,7 @@ def print_pixarr_by_seg(pixarrBySeg):
     
     return
 
-def print_pixarr_shape_by_seg(pixarrBySeg):
+def print_shape_of_pixarrBySeg(pixarrBySeg):
     #import numpy as np
     
     S = len(pixarrBySeg)

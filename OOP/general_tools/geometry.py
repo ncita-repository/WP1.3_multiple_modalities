@@ -104,7 +104,7 @@ def get_im_extent(image):
     
     return extent
 
-def get_slice_verts(image, sliceNum):
+def get_slice_verts(image, slcNum):
     """
     Get the vertices that define the 3D extent of a slice in a 3D image. 
     
@@ -112,7 +112,7 @@ def get_slice_verts(image, sliceNum):
     ----------
     image : SimpleITK image
         A 3D image.
-    sliceNum : int
+    slcNum : int
         The slice index of interest.
     
     Returns
@@ -126,19 +126,19 @@ def get_slice_verts(image, sliceNum):
     H = image.GetHeight()
     #D = image.GetDepth()
     
-    pts = [image.TransformContinuousIndexToPhysicalPoint((0, 0, sliceNum - 0.5)), 
-           image.TransformContinuousIndexToPhysicalPoint((W, 0, sliceNum - 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((W, H, sliceNum - 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((0, H, sliceNum - 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((0, H, sliceNum + 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((W, H, sliceNum + 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((W, 0, sliceNum + 0.5)),
-           image.TransformContinuousIndexToPhysicalPoint((0, 0, sliceNum + 0.5))
+    pts = [image.TransformContinuousIndexToPhysicalPoint((0, 0, slcNum - 0.5)), 
+           image.TransformContinuousIndexToPhysicalPoint((W, 0, slcNum - 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((W, H, slcNum - 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((0, H, slcNum - 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((0, H, slcNum + 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((W, H, slcNum + 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((W, 0, slcNum + 0.5)),
+           image.TransformContinuousIndexToPhysicalPoint((0, 0, slcNum + 0.5))
            ]
     
     return pts
 
-def prop_of_cnt_in_extent(points, trgDcmDir, p2c=False):
+def prop_of_cnt_in_extent(points, trgIm, p2c=False):
     """
     Determine what proportion of points that make up a contour intersect the
     volume of a 3D image.
@@ -148,11 +148,13 @@ def prop_of_cnt_in_extent(points, trgDcmDir, p2c=False):
     points : list of a list of floats
         A list (for each point) of a list (for each dimension) of coordinates, 
         e.g. [[x0, y0, z0], [x1, y1, z1], ...].
-    trgDcmDir : str
-        Directory containing the DICOMs that relate to the image grid/extent
-        within which the test is for.
-    p2c : bool, optional (False by default)
-        Denotes whether intermediate results will be logged to the console.
+    trgIm : SimpleITK Image
+        The image whose grid/extent is to be checked for intersection with the
+        points of interest (e.g. trgIm if copying contours from source to
+        target).
+    p2c : bool, optional
+        If True some results will be printed to the console. The default value
+        is False.
         
     Returns
     -------
@@ -161,9 +163,7 @@ def prop_of_cnt_in_extent(points, trgDcmDir, p2c=False):
         that intersect the extent of RefImage.
     """
     
-    im = import_im(trgDcmDir)
-    
-    verts = get_im_verts(im)
+    verts = get_im_verts(trgIm)
     
     isInside = []
     
@@ -207,7 +207,7 @@ def prop_of_cnt_in_extent(points, trgDcmDir, p2c=False):
                     
     return fracProp
 
-def prop_of_rois_in_extent(ptsByCntByRoi, trgDcmDir, p2c=False):
+def prop_of_rois_in_extent(ptsByCntByRoi, trgIm, p2c=False):
     """
     Determine what proportion of the points in a list of points by contour by
     ROI intersect with the volume of a 3D image.
@@ -217,22 +217,22 @@ def prop_of_rois_in_extent(ptsByCntByRoi, trgDcmDir, p2c=False):
     ptsByCntByRoi : list of list of a list of a list of floats
         List (for each ROI) of a list (for all contours) of a list (for each
         point) of a list (for each dimension) of coordinates.
-    trgDcmDir : str
-        Directory containing the DICOMs that relate to the image grid/extent
-        within which the test is for.
-    p2c : bool, optional (False by default)
-        Denotes whether intermediate results will be logged to the console.
+    trgIm : SimpleITK Image
+        The image whose grid/extent is to be checked for intersection with the
+        points of interest (e.g. trgIm if copying contours from source to
+        target).
+    p2c : bool, optional
+        If True some results will be printed to the console. The default value
+        is False.
         
     Returns
     -------
     fracProp : float
-        The fractional proportion (normalised to 1) of the points in Contour 
-        that intersect the extent of RefImage.
+        The fractional proportion (normalised to 1) of ptsByCntByRoi that
+        intersect the extent of trgIm.
     """
     
-    im = import_im(trgDcmDir)
-    
-    verts = get_im_verts(im)
+    verts = get_im_verts(trgIm)
     
     isInside = []
     
@@ -248,7 +248,7 @@ def prop_of_rois_in_extent(ptsByCntByRoi, trgDcmDir, p2c=False):
                     
     return fracProp
 
-def prop_of_pixarr_in_extent(pixarr, f2sInds, srcDcmDir, trgDcmDir, p2c=False):
+def prop_of_pixarr_in_extent(pixarr, f2sInds, srcIm, trgIm, p2c=False):
     """
     Determine what proportion of voxels that make up a 3D pixel array intersect
     with the volume of a 3D image.
@@ -261,13 +261,15 @@ def prop_of_pixarr_in_extent(pixarr, f2sInds, srcDcmDir, trgDcmDir, p2c=False):
         A list (for each frame) of the slice numbers that correspond to each 
         frame in pixarr.  This is equivalent to a list of Per-Frame Functional 
         Groups Sequence-to-slice inds (PFFGStoSliceInds). 
-    srcDcmDir : str
-        Directory containing the DICOMs that relate to pixarr.
-    trgDcmDir : str
-        Directory containing the DICOMs that relate to the image grid/extent
-        within which the test is for.
-    p2c : bool, optional (False by default)
-        Denotes whether intermediate results will be logged to the console.
+    srcIm : SimpleITK Image
+        The image that relates to pixarr.
+    trgIm : SimpleITK Image
+        The image whose grid/extent is to be checked for intersection with the
+        points of interest (e.g. trgIm if copying contours from source to
+        target).
+    p2c : bool, optional
+        If True some results will be printed to the console. The default value
+        is False.
         
     Returns
     -------
@@ -284,11 +286,9 @@ def prop_of_pixarr_in_extent(pixarr, f2sInds, srcDcmDir, trgDcmDir, p2c=False):
     # Convert the pixel array to a list (for each frame in pixarr) of a list 
     # (for each point) of a list (for each dimension) of physical coordinates:
     ptsByObjByFrame, cntdataByObjByFrame\
-        = pixarr_to_ptsByCnt(pixarr, f2sInds, srcDcmDir)
+        = pixarr_to_ptsByCnt(pixarr, f2sInds, srcIm)
     
-    im = import_im(trgDcmDir)
-    
-    verts = get_im_verts(im)
+    verts = get_im_verts(trgIm)
     
     isInside = []
     
@@ -344,8 +344,9 @@ def prop_of_pixarr_in_extent(pixarr, f2sInds, srcDcmDir, trgDcmDir, p2c=False):
     
     return fracProp
 
-def prop_of_segs_in_extent(pixarrBySeg, f2sIndsBySeg, srcDcmDir, trgDcmDir,
-                           p2c=False):
+def prop_of_segs_in_extent(
+        pixarrBySeg, f2sIndsBySeg, srcIm, trgIm, p2c=False
+        ):
     """
     Determine what proportion of voxels that make up a list of 3D pixel arrays 
     intersect with the volume of a 3D image.
@@ -359,19 +360,21 @@ def prop_of_segs_in_extent(pixarrBySeg, f2sIndsBySeg, srcDcmDir, trgDcmDir,
         A list (for each segment) of a list (for each frame) of the slice 
         numbers that correspond to each frame in each pixel array in 
         pixarrBySeg.   
-    srcDcmDir : str
-        Directory containing the DICOMs that relate to pixarrBySeg.
-    trgDcmDir : str
-        Directory containing the DICOMs that relate to the image grid/extent
-        within which the test is for.
-    p2c : bool, optional (False by default)
-        Denotes whether intermediate results will be logged to the console.
+    srcIm : SimpleITK Image
+        The image that relates to pixarrBySeg.
+    trgIm : SimpleITK Image
+        The image whose grid/extent is to be checked for intersection with the
+        points of interest (e.g. trgIm if copying contours from source to
+        target).
+    p2c : bool, optional
+        If True some results will be printed to the console. The default value
+        is False.
         
     Returns
     -------
     fracProp : float
-        The fractional proportion (normalised to 1) of voxels in PixArr that 
-        intersect the extent of RefImage.
+        The fractional proportion (normalised to 1) of voxels in pixarrBySeg that 
+        intersect the extent of trgIm.
     """
     
     #from conversion_tools.inds_pts_pixarrs import pixarrByRoi_to_ptsByCntByRoi
@@ -382,6 +385,6 @@ def prop_of_segs_in_extent(pixarrBySeg, f2sIndsBySeg, srcDcmDir, trgDcmDir,
         = pixarrByRoi_to_ptsByCntByRoi(pixarrBySeg, f2sIndsBySeg, 
                                        srcDcmDir, Thresh=0.5)
     
-    fracProp = prop_of_rois_in_extent(ptsByCntByRoi, trgDcmDir, p2c)
+    fracProp = prop_of_rois_in_extent(ptsByCntByRoi, trgIm, p2c)
     
     return fracProp

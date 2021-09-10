@@ -30,6 +30,10 @@ import seg_tools.metadata
 reload(seg_tools.metadata)
 import seg_tools.seg_data
 reload(seg_tools.seg_data)
+import rts_tools.metadata
+reload(rts_tools.metadata)
+import rts_tools.rts_data
+reload(rts_tools.rts_data)
 import dicom_tools.imports
 reload(dicom_tools.imports)
 import conversion_tools.pixarrs_ims
@@ -47,15 +51,21 @@ from pydicom import dcmread
 #from io_tools.import_dro import DroImporter
 #from io_tools.import_roicol import RoicollectionImporter
 from io_tools.imports import import_dicoms_as_im
-from io_tools.inputs_checker import are_inputs_valid, which_use_case
+from io_tools.inputs_checker import are_inputs_valid#, which_use_case
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
     )
 from seg_tools.metadata import (
-    get_DIVs, group_list_by_seg, get_p2sInds
+    get_DIVs, group_list_by_seg, get_f2sInds
     )
 from seg_tools.seg_data import (
     get_seg_data_of_interest, raise_error_if_no_seg_data_of_interest
+    )
+from rts_tools.metadata import (
+    get_c2sIndsByRoi, get_ptsByCntByRoi
+    )
+from rts_tools.rts_data import (
+    get_rts_data_of_interest, raise_error_if_no_rts_data_of_interest
     )
 from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
 from dicom_tools.imports import import_dcms
@@ -131,6 +141,15 @@ class DataImporter:
             self.roicolFpath = cfgDict['trgRoicolFpath']
             self.slcNum = cfgDict['trgSlcNum']
         
+        # Initialise attributes that will be updated:
+        self.divs = None
+        self.allF2Sinds = None
+        self.allF2SindsByRoi = None
+        self.roiNums = None
+        self.pixarrByRoi = None
+        self.f2sIndsByRoi = None
+        self.labimByRoi = None
+        
         #self.timings = params.timings
         #self.timingMsgs = params.timingMsgs
     
@@ -192,58 +211,6 @@ class DataImporter:
         
         # Get the RTS/SEG data of interest:
         self.get_seg_metadata(cfgDict, srcORtrg)
-        
-        #print(f'type(self.labimByRoi) = {type(self.labimByRoi)}')
-        #if not self.labimByRoi is None:
-        #    print(f'type(self.labimByRoi[0]) = {type(self.labimByRoi[0])}')
-    
-    def __init__210809(self, xnatParams, genParams):
-        
-        # TODO move DRO somewhere else since DroImporter requires params for
-        # Source and Target (06/08/21)
-        
-        # Import an appropriate DRO:
-        #self.droData = DroImporter(params)
-        #print(f'type(self.droData.dro) = {type(self.droData.dro)}\n')
-        
-        # Get DICOM UIDs:
-        self.get_dicom_uids(xnatParams['dicomDir'])
-        
-        # Import the ROI Collection:
-        self.import_roicol(xnatParams['roicolFpath'])
-        print(f'type(self.roicol) = {type(self.roicol)}\n')
-        
-        # Get ROI Names / segment labels (required elsewhere):
-        """ 
-        Note: roiNames may refer to either ROI Names (for RTS data) or SEG 
-        labels (for SEG data). It does not refer to the name of the ROI 
-        Collection itself.
-        """
-        self.roiNames = get_roicol_labels(self.roicol)
-        
-        # TODO Move this check somewhere else since it requires the Target 
-        # roiNames:
-        """
-        # Check if combination of input parameters are valid:
-        valid, errMsg = are_inputs_valid(params, trgRoiNames)
-        
-        if not valid:
-            # Raise exception:
-            raise Exception(errMsg)
-        """
-        
-        # TODO continue modifying code below to deal with only one dataset 
-        # (source or target), and necessary modification to functions to allow
-        # for input = None:
-        
-        # Get the RTS/SEG data of interest:
-        self.get_seg_metadata(xnatParams, genParams['p2c'])
-        
-        # Import a DICOM series as a list of Pydicom Objects:
-        self.get_dicoms(self, xnatParams['dicomDir'], genParams['p2c'])
-        
-        # Import a DICOM series as a SimpleITK Image:
-        self.get_image(self, xnatParams['dicomDir'])
     
     def __init__210805(self, params):
         
@@ -300,17 +267,17 @@ class DataImporter:
         # Import the Source and Target DICOM series as a SimpleITK Images:
         self.get_images(self, params)
     
-    #def add_timestamp(self, timingMsg):
-    #    # TODO update docstrings
-    #    """
-    #    Add timestamp and timing message. Replace the keyword 'dTime' in
-    #    timingMsg with the actual dTime calculated below.
-    #    """
-    #    self.timings.append(time.time())
-    #    dTime = round(self.timings[-1] - self.timings[-2], 1)
-    #    timingMsg.replace('dTime', f'{dTime}')
+    def add_timestamp_OLD(self, timingMsg):
+        # TODO update docstrings
+        """
+        Add timestamp and timing message. Replace the keyword 'dTime' in
+        timingMsg with the actual dTime calculated below.
+        """
+        self.timings.append(time.time())
+        dTime = round(self.timings[-1] - self.timings[-2], 1)
+        timingMsg.replace('dTime', f'{dTime}')
     #    self.timingMsgs.append(timingMsg)
-    #    print(f'*{timingMsg}')
+        print(f'*{timingMsg}')
     
     def get_dicom_uids(self):
         """
@@ -536,15 +503,7 @@ class DataImporter:
         self.roiName = roiName
         
         # Get metadata:
-        if self.roicol == None:
-            self.divs = None
-            self.allF2Sinds = None
-            self.allF2SindsByRoi = None
-            self.roiNums = None
-            self.pixarrByRoi = None
-            self.f2sIndsByRoi = None
-            self.labimByRoi = None
-        else:
+        if self.roicol != None:
             #print(self.roicol)
             print(type(self.roicol), '\n')
             
@@ -552,8 +511,9 @@ class DataImporter:
             self.divs = get_DIVs(self.roicol)
             
             # Get list of PerFrameFunctionalGroupsSequence-to-slice indices
-            # and the same grouped by segment:
-            self.allF2Sinds = get_p2sInds(
+            # (referred to as frame-to-slice indices, or f2sInds), and the same
+            # grouped by segment:
+            self.allF2Sinds = get_f2sInds(
                 seg=self.roicol, 
                 sopuids=self.sopuids
                 )
@@ -584,7 +544,7 @@ class DataImporter:
                 seg=self.roicol, 
                 allF2SindsBySeg=self.allF2SindsByRoi, 
                 segNums=self.roiNums, 
-                segLabs=self.roiNames,
+                allSegLabs=self.roiNames,
                 segLab=self.roiName,
                 slcNum=self.slcNum,
                 p2c=cfgDict['p2c']
@@ -609,6 +569,149 @@ class DataImporter:
                 p2c=cfgDict['p2c']
                 )
     
+    def get_rts_metadata(self):
+        # TODO update docstrings
+        """
+        Get metadata for a RTSTRUCT. 
+        
+        Since RTSTRUCT data may not be provided for Target, this function will
+        only get RTSTRUCT data for Source or Target (via the parameter 
+        srcORtrg).
+        
+        Parameters
+        ----------
+        self.cfgDict : dict
+            Dictionary containing various parameters.
+        self.srcORtrg : str
+            'src' or 'trg' for Source or Target.
+        
+        Returns
+        -------
+        self.divs : list of ints or None
+            Dimensional Index Values
+        self.allF2Sinds : list of ints or None
+            Frame-to-slice indices (i.e. slice indices corresponding to each
+            frame for the ROI Collection).
+        self.allF2SindsByRoi : list of a list of ints or None
+            A list of frame-to-slice indices for each ROI/segment in the ROI
+            Collection.
+        self.roiNums : list of ints or None
+            List of ints for each ROI/segment in the ROI Collection (e.g.
+            [0, 1] => 2 ROIs/segments).
+        self.pixarrByRoi : list of Numpy data array Objects or None
+            List of pixel arrays - one for each ROI/segment.
+        self.f2sIndsByRoi : list of a list of ints or None
+            List for each ROI/segment of a list of frame-to-slice indices.  
+        """
+        
+        cfgDict = self.cfgDict
+        p2c = cfgDict['p2c']
+        
+        if self.srcORtrg == 'src':
+            roiName = cfgDict['srcRoiName']
+            #slcNum = cfgDict['srcSlcNum']
+        else:
+            roiName = cfgDict['trgRoiName']
+            #slcNum = cfgDict['trgSlcNum']
+        # Store roiName for latter use:
+        self.roiName = roiName
+        
+        # Get metadata:
+        if self.roicol != None:
+            #print(self.roicol)
+            print(type(self.roicol), '\n')
+            
+            """
+            # Get list of DimensionIndexValues:
+            self.divs = get_DIVs(self.roicol)
+            
+            # Get list of ContourSequence-to-slice indices
+            # (referred to as frame-to-slice indices, or f2sInds for
+            # interchangability with SEG data), and the same
+            # grouped by segment:
+            self.allF2Sinds = get_f2sInds(
+                seg=self.roicol, 
+                sopuids=self.sopuids
+                )
+
+            self.allF2SindsByRoi = group_list_by_seg(
+                listToGroup=self.allF2Sinds, 
+                divs=self.divs
+                )
+            """
+            
+            #self.allF2SindsByRoi = get_c2sIndsByRoi(
+            #    rts=self.roicol, 
+            #    sopuids=self.sopuids
+            #    )
+            
+            self.allPtsByCntByRoi, self.allF2SindsByRoi = get_ptsByCntByRoi(
+                rts=self.roicol, 
+                sopuids=self.sopuids,
+                p2c=p2c
+                )
+            
+            # Get the segment number(s) that match the ROI name of
+            # interest (roiName):
+            """ 
+            e.g. 0 if the ROI of interest is the only ROI, or if it
+            is the first of several.
+            
+            Using the attribute srcRoiNums rather than srcSegNums for 
+            interchangability for ROI data.
+            """
+            self.roiNums = get_roicol_nums(
+                roicol=self.roicol,
+                searchStr=self.roiName)
+            
+            self.roiNames = get_roicol_labels(roicol=self.roicol)
+            
+            """
+            # Get the pixel array by segment and frame-to-slice indices by
+            # segment for the data of interest (to be copied):
+            self.pixarrByRoi, self.f2sIndsByRoi = get_seg_data_of_interest(
+                seg=self.roicol, 
+                allF2SindsBySeg=self.allF2SindsByRoi, 
+                segNums=self.roiNums, 
+                segLabs=self.roiNames,
+                segLab=self.roiName,
+                slcNum=self.slcNum,
+                p2c=cfgDict['p2c']
+                )
+            
+            # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
+            # there were no segmentations that matched the input parameters)
+            raise_error_if_no_seg_data_of_interest(
+                f2sIndsBySeg=self.f2sIndsByRoi, 
+                segLabs=self.roiNames, 
+                slcNum=self.slcNum
+                )
+            
+            # Get list of label images-by-ROI:
+            # Note this won't be used for use cases 1-2 but is needed for 3-5.
+            self.labimByRoi = pixarrByRoi_to_imByRoi(
+                pixarrByRoi=self.pixarrByRoi, 
+                f2sIndsByRoi=self.f2sIndsByRoi, 
+                refIm=self.image,
+                p2c=cfgDict['p2c']
+                )
+            """
+            
+            # Get the list of points by contour by ROI and the list of 
+            # contour-to-slice indices by ROI for the data of interest (to be 
+            # copied):
+            self.ptsByCntByRoi, self.f2sIndsByRoi = get_rts_data_of_interest(
+                rts=self.roicol,
+                allPtsByCntByRoi=self.allPtsByCntByRoi,
+                allC2SindsByRoi=self.allF2SindsByRoi,
+                roiNums=self.roiNums, 
+                allRoiNames=self.roiNames,
+                roiName=self.roiName,
+                slcNum=self.slcNum,
+                p2c=cfgDict['p2c']
+                )
+            
+            
     def get_seg_metadata_210809(self, xnatParams, p2c=False):
         """
         Get metadata for a SEG. 
@@ -1096,6 +1199,11 @@ class DataImporter:
         
         """
         
+        cfgDict = self.cfgDict
+        roicolMod = cfgDict['roicolMod']
+        p2c = cfgDict['p2c']
+        
+        
         if self.srcORtrg == 'src':
             toImport = 'source'
         else:
@@ -1105,8 +1213,6 @@ class DataImporter:
             + "Collection...\n"
         params.add_timestamp(timingMsg)
         
-        #cfgDict = self.cfgDict
-        p2c = self.cfgDict['p2c']
         
         # Import an appropriate DRO:
         #self.droData = DroImporter(params)
@@ -1160,8 +1266,11 @@ class DataImporter:
         self.imExtent = get_im_extent(self.image)
         
         # Get the RTS/SEG data of interest:
-        self.get_seg_metadata()
-        
+        if roicolMod == 'SEG':
+            self.get_seg_metadata()
+        else:
+            self.get_rts_metadata()
+            
         """
         Determining of the use case has been moved to image_tools.propagate.py
         since import_data is applied separately to Source and Target, hence
