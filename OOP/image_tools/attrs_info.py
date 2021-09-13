@@ -10,19 +10,19 @@ Created on Tue Jul  6 13:16:21 2021
 
 from importlib import reload
 
-import image_tools.imports
-reload(image_tools.imports)
-import dicom_tools.imports
-reload(dicom_tools.imports)
+import io_tools.imports
+reload(io_tools.imports)
+import dicom_tools.metadata
+reload(dicom_tools.metadata)
 import general_tools.general
 reload(general_tools.general)
 
 
 import numpy as np
 #from image_tools.imports import import_im
-from io_tools.imports import import_im
+from io_tools.imports import import_dcms, import_im
 #from image_tools.operations import im_min, im_max
-from dicom_tools.imports import import_dcms, get_dcm_fpaths
+from dicom_tools.metadata import get_dcm_fpaths
 from general_tools.general import get_items_unique_to_within, get_unique_items
 from conversion_tools.pixarrs_ims import im_to_pixarr
 from image_tools.operations import im_min, im_max

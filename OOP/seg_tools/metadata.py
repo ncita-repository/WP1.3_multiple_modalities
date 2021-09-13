@@ -250,7 +250,6 @@ def group_list_by_seg(listToGroup, divs):
     ----------
     listToGroup : list
         The list to be grouped.
-        
     divs : list of lists of ints
         List of DimensionIndexValues.
         

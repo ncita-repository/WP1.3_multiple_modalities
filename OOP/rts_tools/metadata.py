@@ -5,7 +5,7 @@ Created on Fri Sep 10 16:21:16 2021
 @author: ctorti
 """
 
-from copy import deepcopy
+#from copy import deepcopy
 #from DicomTools import GetDicomSOPuids
 from conversion_tools.inds_pts_cntdata import cntdata_to_pts
 #from GeneralTools import PrintIndsByRoi
@@ -49,16 +49,16 @@ def get_RSOPuidsByRoi(rts):
     
     RSOPuidsByRoi = []
     
-    roiCS = rts.ROIContourSequence
+    roiCntSeqs = rts.ROIContourSequence
     
-    for r in range(len(roiCS)):
-        sequences = roiCS[r].ContourSequence
+    for r in range(len(roiCntSeqs)):
+        cntSeqs = roiCntSeqs[r].ContourSequence
         
         # Initialise the list of ReferencedSOPInstanceUIDs for this ROI:
         RSOPuids = []
         
-        for sequence in sequences:
-            uid = sequence.ContourImageSequence[0].ReferencedSOPInstanceUID
+        for seq in cntSeqs:
+            uid = seq.ContourImageSequence[0].ReferencedSOPInstanceUID
             
             RSOPuids.append(uid)
         
@@ -84,12 +84,16 @@ def get_c2sIndsByRoi(rts, sopuids):
     c2sIndsByRoi : list of a list of ints
         List (for each ROI) of a list (for each contour) of slice numbers that 
         correspond to each sequence in ContourSequence.
+    c2sInds : list of ints
+        List (for each contour) of slice numbers that correspond to each 
+        sequence in ContourSequence (i.e. c2sIndsByRoi flattened).
     """
     
     # Get the ReferencedSOPInstanceUIDs from the ContourSequence by ROI:
     RSOPuidsByRoi = get_RSOPuidsByRoi(rts)
     
-    c2sIndsByRoi = [] 
+    c2sInds = []
+    c2sIndsByRoi = []
     
     # Loop through each list of ReferencedSOPInstanceUIDs:
     for i in range(len(RSOPuidsByRoi)):
@@ -99,9 +103,10 @@ def get_c2sIndsByRoi(rts, sopuids):
             # Find the matching index of RefUid in sopuids:
             inds.append(sopuids.index(RefUid))
             
+        c2sInds.extend(inds)
         c2sIndsByRoi.append(inds)
         
-    return c2sIndsByRoi
+    return c2sIndsByRoi, c2sInds
 
 def get_ptsByCntByRoi(rts, sopuids, p2c=False):
     """  
@@ -135,7 +140,7 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
     #from GeneralTools import PrintIndsByRoi
     
     # Get the ContourSequence-to-slice indices by ROI:
-    c2sIndsByRoi = get_c2sIndsByRoi(rts, sopuids)
+    c2sIndsByRoi, c2sInds = get_c2sIndsByRoi(rts, sopuids)
     
     numRois = len(c2sIndsByRoi)
     
@@ -205,4 +210,4 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
         
         print('-'*120)
 
-    return ptsByCntByRoi, c2sIndsByRoi
+    return ptsByCntByRoi, c2sIndsByRoi, c2sInds

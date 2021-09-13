@@ -8,6 +8,29 @@ Created on Tue Jul  6 13:07:41 2021
 import SimpleITK as sitk
 
 
+def get_dcm_fpaths(dicomDir):
+    """
+    Get a list of full filepaths for all DICOM files in a directory,
+    
+    Based on SimpleITK's ImageSeriesReader.
+    
+    Parameters
+    ----------
+    dicomDir : str
+        Path to directory containing DICOMs.
+    
+    Returns
+    -------
+    filepaths : list of strs
+        List of the full filepaths of all DICOM files in dicomDir.
+    """
+    
+    reader = sitk.ImageSeriesReader()
+    
+    filepaths = reader.GetGDCMSeriesFileNames(dicomDir)
+    
+    return filepaths
+
 def get_dcm_uids(dicomDir):
     """
     Get the Study, Series, Frame of Reference and SOP Instance UIDs for a DICOM 
@@ -113,9 +136,10 @@ def get_roicol_nums(roicol, searchStr):
     ----------
     roicol : Pydicom Object
         RTS or SEG object.
-    searchStr : str
+    searchStr : str or None
         All or part of the ROIName/SegmentLabel of the ROI/segment of interest.
-        If searchString is an empty string return the first ROI/segment number. 
+        If searchString is an empty string (or None) return all ROI/segment 
+        numbers. 
                        
     Returns
     -------
@@ -126,14 +150,17 @@ def get_roicol_nums(roicol, searchStr):
     
     roiLabels = get_roicol_labels(roicol)
     
-    roiNums = []
+    #roiNums = [] # 13/09/21
+    roiNums = list(range(len(roiLabels))) # 13/09/21
     
     if not roiLabels:
         msg = 'There are no ROIs in the RTS/SEG.'
         raise Exception(msg)
     
     if not searchStr in ["", None]: 
-        roiNums = [i for i, roiLabel in enumerate(roiLabels) if searchStr in roiLabel]
+        roiNums = [
+            i for i, roiLabel in enumerate(roiLabels) if searchStr in roiLabel
+            ]
         
         #print(f'\nroiNum = {roiNum}')
         
@@ -147,10 +174,9 @@ def get_roicol_nums(roicol, searchStr):
         #    raise Exception(msg)
             
         if not roiNums:
-            msg = "There is no ROI/segment in the RTS/SEG containing "\
-                  + f"names/labels {roiLabels} \nthat matches 'searchStr' "\
-                  + f"= '{searchStr}'."
-            
+            msg = "There is no ROI/segment in the RTS/SEG containing " + \
+                f"names/labels {roiLabels} \nthat matches 'searchStr' " + \
+                f"= '{searchStr}'."
             raise Exception(msg)
             
     return roiNums

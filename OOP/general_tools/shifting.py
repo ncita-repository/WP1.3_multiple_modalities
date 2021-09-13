@@ -45,8 +45,9 @@ def get_phys_shift_bt_slices(image0, sliceNum0, image1, sliceNum1):
             
     return mmShift
 
-def get_voxel_shift_bt_slices(image0, sliceNum0, image1, sliceNum1, refImage,
-                              fractional=False):
+def get_voxel_shift_bt_slices(
+        image0, sliceNum0, image1, sliceNum1, refImage, fractional=False
+        ):
     """
     Get the shift in voxels between sliceNum0 in image0 and sliceNum1 in image1
     based on the origins of the two slices (i.e. image0[0,0,sliceNum0] and
@@ -369,10 +370,12 @@ def z_shift_ptsByCntByRoi(PtsByCntByRoi, newZind, dicomDir):
         
     return NewPtsByCntByRoi
 
-def shift_ptsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum, 
-                        TrgImage, TrgSliceNum, refImage, ShiftInX=True,  
-                        ShiftInY=True, ShiftInZ=True, fractional=False, 
-                        LogToConsole=False):
+def shift_ptsByCntByRoi(
+        PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum, 
+        TrgImage, TrgSliceNum, refImage, ShiftInX=True,  
+        ShiftInY=True, ShiftInZ=True, fractional=False, 
+        LogToConsole=False
+        ):
     """
     Shift the points in each list of points in each list of contours in each
     list of ROIs.  
@@ -410,13 +413,13 @@ def shift_ptsByCntByRoi(PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum,
         print('Running of shift_ptsByCntByRoi():')
         print('\n\n', '-'*120)
         
-    """ Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
+    """ Get voxel shift between FromSliceNum in SrcImage and ToSliceNum in 
     TrgImage in the Target image domain: """
-    pixShift = get_pix_shift_bt_slices(image0=SrcImage, 
-                                       sliceNum0=SrcSliceNum, 
-                                       image1=TrgImage, 
-                                       sliceNum1=TrgSliceNum,
-                                       refImage=TrgImage)
+    pixShift = get_voxel_shift_bt_slices(
+        image0=SrcImage, sliceNum0=SrcSliceNum, 
+        image1=TrgImage, sliceNum1=TrgSliceNum,
+        refImage=TrgImage
+        )
     
     if LogToConsole:
         print(f'   pixShift between slices = {pixShift}')

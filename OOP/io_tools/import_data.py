@@ -34,10 +34,12 @@ import rts_tools.metadata
 reload(rts_tools.metadata)
 import rts_tools.rts_data
 reload(rts_tools.rts_data)
-import dicom_tools.imports
-reload(dicom_tools.imports)
+import dicom_tools.metadata
+reload(dicom_tools.metadata)
 import conversion_tools.pixarrs_ims
 reload(conversion_tools.pixarrs_ims)
+import conversion_tools.inds_pts_pixarrs
+reload(conversion_tools.inds_pts_pixarrs)
 
 
 #from xnat_tools.sessions import create_session
@@ -50,7 +52,7 @@ from pydicom import dcmread
 
 #from io_tools.import_dro import DroImporter
 #from io_tools.import_roicol import RoicollectionImporter
-from io_tools.imports import import_dicoms_as_im
+from io_tools.imports import (import_dcms, import_dicoms_as_im)
 from io_tools.inputs_checker import are_inputs_valid#, which_use_case
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
@@ -62,13 +64,13 @@ from seg_tools.seg_data import (
     get_seg_data_of_interest, raise_error_if_no_seg_data_of_interest
     )
 from rts_tools.metadata import (
-    get_c2sIndsByRoi, get_ptsByCntByRoi
+    get_ptsByCntByRoi
     )
 from rts_tools.rts_data import (
     get_rts_data_of_interest, raise_error_if_no_rts_data_of_interest
     )
 from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
-from dicom_tools.imports import import_dcms
+from conversion_tools.inds_pts_pixarrs import ptsByCntByRoi_to_pixarrByRoi
 from image_tools.attrs_info import get_im_attrs
 from general_tools.geometry import get_im_extent
 from io_tools.exports import export_im
@@ -565,7 +567,7 @@ class DataImporter:
             self.labimByRoi = pixarrByRoi_to_imByRoi(
                 pixarrByRoi=self.pixarrByRoi, 
                 f2sIndsByRoi=self.f2sIndsByRoi, 
-                refIm=self.image,
+                refIm=self.dcmIm,
                 p2c=cfgDict['p2c']
                 )
     
@@ -598,8 +600,6 @@ class DataImporter:
         self.roiNums : list of ints or None
             List of ints for each ROI/segment in the ROI Collection (e.g.
             [0, 1] => 2 ROIs/segments).
-        self.pixarrByRoi : list of Numpy data array Objects or None
-            List of pixel arrays - one for each ROI/segment.
         self.f2sIndsByRoi : list of a list of ints or None
             List for each ROI/segment of a list of frame-to-slice indices.  
         """
@@ -645,11 +645,12 @@ class DataImporter:
             #    sopuids=self.sopuids
             #    )
             
-            self.allPtsByCntByRoi, self.allF2SindsByRoi = get_ptsByCntByRoi(
-                rts=self.roicol, 
-                sopuids=self.sopuids,
-                p2c=p2c
-                )
+            self.allPtsByCntByRoi, self.allF2SindsByRoi, self.allF2Sinds = \
+                get_ptsByCntByRoi(
+                    rts=self.roicol, 
+                    sopuids=self.sopuids,
+                    p2c=p2c
+                    )
             
             # Get the segment number(s) that match the ROI name of
             # interest (roiName):
@@ -666,37 +667,6 @@ class DataImporter:
             
             self.roiNames = get_roicol_labels(roicol=self.roicol)
             
-            """
-            # Get the pixel array by segment and frame-to-slice indices by
-            # segment for the data of interest (to be copied):
-            self.pixarrByRoi, self.f2sIndsByRoi = get_seg_data_of_interest(
-                seg=self.roicol, 
-                allF2SindsBySeg=self.allF2SindsByRoi, 
-                segNums=self.roiNums, 
-                segLabs=self.roiNames,
-                segLab=self.roiName,
-                slcNum=self.slcNum,
-                p2c=cfgDict['p2c']
-                )
-            
-            # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
-            # there were no segmentations that matched the input parameters)
-            raise_error_if_no_seg_data_of_interest(
-                f2sIndsBySeg=self.f2sIndsByRoi, 
-                segLabs=self.roiNames, 
-                slcNum=self.slcNum
-                )
-            
-            # Get list of label images-by-ROI:
-            # Note this won't be used for use cases 1-2 but is needed for 3-5.
-            self.labimByRoi = pixarrByRoi_to_imByRoi(
-                pixarrByRoi=self.pixarrByRoi, 
-                f2sIndsByRoi=self.f2sIndsByRoi, 
-                refIm=self.image,
-                p2c=cfgDict['p2c']
-                )
-            """
-            
             # Get the list of points by contour by ROI and the list of 
             # contour-to-slice indices by ROI for the data of interest (to be 
             # copied):
@@ -708,9 +678,60 @@ class DataImporter:
                 allRoiNames=self.roiNames,
                 roiName=self.roiName,
                 slcNum=self.slcNum,
-                p2c=cfgDict['p2c']
+                p2c=p2c
                 )
             
+            # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
+            # there were no contours that matched the input parameters)
+            raise_error_if_no_rts_data_of_interest(
+                c2sIndsByRoi=self.f2sIndsByRoi, 
+                allRoiNames=self.roiNames, 
+                slcNum=self.slcNum
+                )
+    
+    def convert_rts_to_seg_metadata(self):
+        # TODO update docstrings
+        """
+        Get SEG metadata from RTSTRUCT metadata. 
+        
+        Parameters
+        ----------
+        self.cfgDict : dict
+            Dictionary containing various parameters.
+        self.srcORtrg : str
+            'src' or 'trg' for Source or Target.
+        
+        Returns
+        -------
+        self.pixarrByRoi : list of Numpy data array Objects or None
+            List of pixel arrays - one for each ROI/segment.
+        self.labimByRoi : list of SimpleITK Images or None
+            List for each ROI/segment of the SimpleITK Image representation of
+            the 3D pixel array.  
+        """
+        
+        if self.roicol != None:
+            # Convert the RTS data of interest to a list of 3D pixel arrays for
+            # each ROI:
+            """
+            Note: Conversion of contour data to pixel data and label images are
+            not required for use cases 1, 2a or 2b but for consistency with
+            SEG data those class attributes will be populated.
+            """
+            self.pixarrByRoi = ptsByCntByRoi_to_pixarrByRoi(
+                ptsByCntByRoi=self.ptsByCntByRoi, 
+                refIm=self.dcmIm, 
+                p2c=self.cfgDict['p2c']
+                )
+            
+            # Get list of label images-by-ROI:
+            # Note this won't be used for use cases 1-2 but is needed for 3-5.
+            self.labimByRoi = pixarrByRoi_to_imByRoi(
+                pixarrByRoi=self.pixarrByRoi, 
+                f2sIndsByRoi=self.f2sIndsByRoi, 
+                refIm=self.dcmIm,
+                p2c=self.cfgDict['p2c']
+                )
             
     def get_seg_metadata_210809(self, xnatParams, p2c=False):
         """
@@ -1110,7 +1131,8 @@ class DataImporter:
     
     def import_dicom_image(self):
         """
-        Imports a DICOM series as a SimpleITK Image.
+        Imports a DICOM series as a 3D SimpleITK Image and a 3D Numpy pixel 
+        array.
         
         Parameters
         ----------
@@ -1119,11 +1141,13 @@ class DataImporter:
             
         Returns
         -------
-        self.image : SimpleITK Image
+        self.dcmIm : SimpleITK Image
+            SimpleITK Image representation of the DICOM series.
+        self.dcmPixarr : SimpleITK Image
             SimpleITK Image representation of the DICOM series.
         """
         
-        self.image = import_dicoms_as_im(self.dicomDir)
+        self.dcmIm, self.dcmPixarr = import_dicoms_as_im(self.dicomDir)
     
     def import_images_210805(self, params):
         """
@@ -1154,7 +1178,7 @@ class DataImporter:
         
         Parameters
         ----------
-        self.image : SimpleITK Image
+        self.dcmIm : SimpleITK Image
             SimpleITK Image representation of the DICOM series.
         params : Params Object
             Object containing various parameters.
@@ -1169,7 +1193,7 @@ class DataImporter:
         """
         
         srcORtrg = self.srcORtrg
-        image = self.image
+        image = self.dcmIm
         
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
@@ -1242,17 +1266,6 @@ class DataImporter:
         # The list of ROI/segment numbers for the ROI(s)/segment(s) of interest:
         #self.roiNums = get_roicol_nums(self.roicol, self.roiName)
         
-        # TODO Move this check somewhere else since it requires the Target 
-        # roiNames:
-        """
-        # Check if combination of input parameters are valid:
-        valid, errMsg = are_inputs_valid(params, trgRoiNames)
-        
-        if not valid:
-            # Raise exception:
-            raise Exception(errMsg)
-        """
-        
         # Import a DICOM series as a list of Pydicom Objects:
         self.import_dicoms()
         
@@ -1263,13 +1276,15 @@ class DataImporter:
         self.get_image_attributes(params)
         
         # Get the image extent:
-        self.imExtent = get_im_extent(self.image)
+        self.imExtent = get_im_extent(self.dcmIm)
         
         # Get the RTS/SEG data of interest:
         if roicolMod == 'SEG':
             self.get_seg_metadata()
         else:
             self.get_rts_metadata()
+            
+            self.convert_rts_to_seg_metadata()
             
         """
         Determining of the use case has been moved to image_tools.propagate.py

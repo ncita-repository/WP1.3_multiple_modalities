@@ -19,10 +19,14 @@ reload(io_tools.import_data)
 import io_tools.exports
 reload(io_tools.exports)
 
+import plotting_tools.conversion_results
+reload(plotting_tools.conversion_results)
+
 #from testing.test_fetch_config import ConfigFetcherTester
 from testing.test_download_data import DataDownloaderTester
 from io_tools.import_data import DataImporter
 from io_tools.exports import export_im
+from plotting_tools.conversion_results import plot_mask_to_cnt_conversion
 
 
 class DataImporterTester:
@@ -93,6 +97,39 @@ class DataImporterTester:
         self.params = params
         self.srcDataset = srcDataset
         self.trgDataset = trgDataset
+        
+        p2c = params.cfgDict['p2c']
+        roicolMod = params.cfgDict['roicolMod']
+        
+        if p2c and roicolMod == 'RTSTRUCT':
+            # Check the result of conversion from contour to pixel data:
+            listOfIms = [srcDataset.dcmIm]
+            listOfDcmPixarr = [srcDataset.dcmPixarr]
+            listOfF2SindsByRoi = [srcDataset.f2sIndsByRoi]
+            listOfPtsByCntByRoi = [srcDataset.ptsByCntByRoi]
+            listOfPixarrByRoi = [srcDataset.pixarrByRoi]
+            listOfDcmDirs = [srcDataset.dicomDir]
+            listOfPlotTitles = ['Conversion for srcDataset']
+            
+            if trgDataset.roicol != None:
+                listOfIms.append(trgDataset.dcmIm)
+                listOfDcmPixarr.append(trgDataset.dcmPixarr)
+                listOfF2SindsByRoi.append(trgDataset.f2sIndsByRoi)
+                listOfPtsByCntByRoi.append(trgDataset.ptsByCntByRoi)
+                listOfPixarrByRoi.append(trgDataset.pixarrByRoi)
+                listOfDcmDirs.append(trgDataset.dicomDir) 
+                listOfPlotTitles.append('Conversion for srcDataset')
+            
+            plot_mask_to_cnt_conversion(
+                listOfIms=listOfIms, 
+                listOfDcmPixarr=listOfDcmPixarr, 
+                listOfF2SindsByRoi=listOfF2SindsByRoi,
+                listOfPtsByCntByRoi=listOfPtsByCntByRoi, 
+                listOfPixarrByRoi=listOfPixarrByRoi,
+                listOfDcmDirs=listOfDcmDirs, 
+                listOfPlotTitles=listOfPlotTitles,
+                p2c=p2c
+            )
 
     def export_ims(self):
             
