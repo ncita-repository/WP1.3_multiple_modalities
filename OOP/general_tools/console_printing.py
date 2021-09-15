@@ -9,70 +9,89 @@ def print_title(title):
     ul = '*' * len(title)
     print('\n' + title)
     print(ul + '\n')
-    
-    return
 
 def print_indsByRoi(indsByRoi):
     """ 
-    Print the list of indices in each ROI, e.g. from a list of f2sIindsByRoi.
+    Print the list of indices in each ROI, e.g. from a list of f2sIndsByRoi.
     """
     
-    R = len(indsByRoi)
-    print(f'There are {R} ROIs/segments in indsByRoi')
+    #print('\n\n', '-'*120)
+    #print('Running of print_indsByRoi():')
     
-    C = [len(indsByRoi[r]) for r in range(R)]
-    print(f'There are {C} contours/frames in each ROI/segment')
+    if indsByRoi:
+        R = len(indsByRoi)
+        print(f'\nThere are {R} ROIs/segments in indsByRoi')
+        
+        C = [len(indsByRoi[r]) for r in range(R)]
+        print(f'There are {C} contours/frames in each ROI/segment')
+        
+        print('indsByRoi:')
+        
+        for r in range(R):
+            if r == 0:
+                msg = f'   [{indsByRoi[r]}'
+            else:
+                msg = f'    {indsByRoi[r]}'
+            
+            if r < R - 1:
+                msg += ','
+            
+            if r == R - 1:
+                msg += ']'
+            
+            print(msg)
+    else:
+        print('\nNone or empty')
     
-    print('indsByRoi:')
-    
-    for r in range(R):
-        if r == 0:
-            msg = f'   [{indsByRoi[r]}'
-        else:
-            msg = f'    {indsByRoi[r]}'
-        
-        if r < R - 1:
-            msg += ','
-        
-        if r == R - 1:
-            msg += ']'
-                
-        print(msg)
-        
-    return
+    #print('\nEnd of print_indsByRoi\n')
+    #print('-'*120)
 
 def print_ptsByCnt(ptsByCnt):
     """ Print the number of points in each contour in ptsByCnt. """
     
-    C = len(ptsByCnt)
-    print(f'There are {C} contours')
+    #print('\n\n', '-'*120)
+    #print('Running of print_ptsByCnt():')
     
-    for c in range(C):
-        P = len(ptsByCnt[c])
-        print(f'   There are {P} points in the {c}^th contour')
-    
-    return
+    if ptsByCnt:
+        C = len(ptsByCnt)
+        print(f'\nThere are {C} contours')
+        
+        for c in range(C):
+            P = len(ptsByCnt[c])
+            print(f'   There are {P} points in the {c}^th contour')
+    else:
+        print('\nNone or empty')
+        
+    #print('\nEnd of print_ptsByCnt\n')
+    #print('-'*120)
 
 def print_ptsByCntByRoi(ptsByCntByRoi):
     """ 
     Print the number of points in each contour of each ROI in ptsByCntByRoi. 
     """
     
-    R = len(ptsByCntByRoi)
-    print('There are two ROIs/segments in indsByRoi')
+    #print('\n\n', '-'*120)
+    #print('Running of print_ptsByCntByRoi():')
     
-    #C = [len(ptsByCntByRoi[r]) for r in range(R)]
-    #print(f'There are {C} contours/frames in each ROI/segment')
-    
-    for r in range(R):
-        C = len(ptsByCntByRoi[r])
-        print(f'There are {C} contours in the {r}^th ROI')
+    if ptsByCntByRoi:
+        R = len(ptsByCntByRoi)
+        print(f'\nThere are {R} ROIs/segments in ptsByCntByRoi')
         
-        for c in range(C):
-            P = len(ptsByCntByRoi[r][c])
-            print(f'   There are {P} points in the {c}^th contour')
+        #C = [len(ptsByCntByRoi[r]) for r in range(R)]
+        #print(f'There are {C} contours/frames in each ROI/segment')
+        
+        for r in range(R):
+            C = len(ptsByCntByRoi[r])
+            print(f'There are {C} contours in the {r}^th ROI')
+            
+            for c in range(C):
+                P = len(ptsByCntByRoi[r][c])
+                print(f'   There are {P} points in the {c}^th contour')
+    else:
+        print('\nNone or empty')
     
-    return
+    #print('\nEnd of print_ptsByCntByRoi\n')
+    #print('-'*120)
 
 def print_pixarrBySeg(pixarrBySeg):
     """ 
@@ -85,40 +104,75 @@ def print_pixarrBySeg(pixarrBySeg):
         - print the shape of the pixel array.
     """
     
-    if isinstance(pixarrBySeg, list):
-        S = len(pixarrBySeg)
-        print(f'There are {S} pixel arrays in pixarrBySeg')
-        
-        for s in range(S):
-            print(f'   The {s}^th pixel array has shape {pixarrBySeg[s].shape}')
-    else:
-        print(f'The pixel array has shape {pixarrBySeg.shape}')
+    #print('\n\n', '-'*120)
+    #print('Running of print_pixarrBySeg():')
     
-    return
+    if pixarrBySeg:
+        if isinstance(pixarrBySeg, list):
+            S = len(pixarrBySeg)
+            print(f'\nThere are {S} pixel arrays in pixarrBySeg')
+            
+            for s in range(S):
+                print(f'   The {s}^th pixel array has shape {pixarrBySeg[s].shape}')
+        else:
+            print(f'\nThe pixel array has shape {pixarrBySeg.shape}')
+    else:
+        print('\nNone or empty')
+    
+    #print('\nEnd of print_pixarrBySeg\n')
+    #print('-'*120)
 
 def print_shape_of_pixarrBySeg(pixarrBySeg):
     #import numpy as np
     
-    S = len(pixarrBySeg)
+    #print('\n\n', '-'*120)
+    #print('Running of print_shape_of_pixarrBySeg():')
     
-    print('\n   Shape of pixarrBySeg:')
+    if pixarrBySeg:
+        S = len(pixarrBySeg)
+        
+        print('\nShape of pixarrBySeg:')
+        
+        for s in range(S):
+            if s == 0:
+                msg = f'[{pixarrBySeg[s].shape}'
+            else:
+                msg = f' {pixarrBySeg[s].shape}'
+            
+            if s < S - 1:
+                msg += ','
+            
+            if s == S - 1:
+                msg += ']'
+                    
+            print(msg)
     
-    for s in range(S):
-        if s == 0:
-            msg = f'   [{pixarrBySeg[s].shape}'
-        else:
-            msg = f'    {pixarrBySeg[s].shape}'
+        F = [pixarrBySeg[s].shape[0] for s in range(S)]
         
-        if s < S - 1:
-            msg += ','
+        print(f'Number of frames in each segment = {F}')
+    else:
+        print('\nNone or empty')
         
-        if s == S - 1:
-            msg += ']'
-                
-        print(msg)
+    #print('\nEnd of print_shape_of_pixarrBySeg\n')
+    #print('-'*120)
 
-    F = [pixarrBySeg[s].shape[0] for s in range(S)]
+def print_labimBySeg(labimBySeg):
+    """ 
+    labimBySeg is a list of SimpleITK Images:
+        - print the number of images in the list
+        - print the size of each image
+    """
     
-    print(f'   Number of frames in each segment = {F}')
+    #print('\n\n', '-'*120)
+    #print('Running of print_pixarrBySeg():')
     
-    return
+    if labimBySeg:
+        if isinstance(labimBySeg, list):
+            S = len(labimBySeg)
+            print(f'\nThere are {S} label images in labimBySeg')
+            
+            for s in range(S):
+                print(f'   The {s}^th label image has size',
+                      f'{labimBySeg[s].GetSize()}')
+    else:
+        print('\nNone or empty')

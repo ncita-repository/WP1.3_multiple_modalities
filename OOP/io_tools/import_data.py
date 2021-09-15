@@ -40,6 +40,8 @@ import conversion_tools.pixarrs_ims
 reload(conversion_tools.pixarrs_ims)
 import conversion_tools.inds_pts_pixarrs
 reload(conversion_tools.inds_pts_pixarrs)
+#import conversion_tools.inds_pts_cntdata
+#reload(conversion_tools.inds_pts_cntdata)
 
 
 #from xnat_tools.sessions import create_session
@@ -52,7 +54,7 @@ from pydicom import dcmread
 
 #from io_tools.import_dro import DroImporter
 #from io_tools.import_roicol import RoicollectionImporter
-from io_tools.imports import (import_dcms, import_dicoms_as_im)
+from io_tools.imports import import_dcms, import_dicoms_as_im
 from io_tools.inputs_checker import are_inputs_valid#, which_use_case
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
@@ -69,8 +71,9 @@ from rts_tools.metadata import (
 from rts_tools.rts_data import (
     get_rts_data_of_interest, raise_error_if_no_rts_data_of_interest
     )
-from conversion_tools.pixarrs_ims import pixarrByRoi_to_imByRoi
+from conversion_tools.pixarrs_ims import pixarrBySeg_to_labimBySeg
 from conversion_tools.inds_pts_pixarrs import ptsByCntByRoi_to_pixarrByRoi
+#from conversion_tools.inds_pts_cntdata import ptsByCntByRoi_to_cntdataByCntByRoi
 from image_tools.attrs_info import get_im_attrs
 from general_tools.geometry import get_im_extent
 from io_tools.exports import export_im
@@ -144,13 +147,19 @@ class DataImporter:
             self.slcNum = cfgDict['trgSlcNum']
         
         # Initialise attributes that will be updated:
-        self.divs = None
-        self.allF2Sinds = None
-        self.allF2SindsByRoi = None
-        self.roiNums = None
-        self.pixarrByRoi = None
-        self.f2sIndsByRoi = None
-        self.labimByRoi = None
+        self.divs = []
+        self.allF2Sinds = []
+        self.allF2SindsBySeg = []
+        self.roiNums = []
+        self.f2sIndsBySeg = []
+        self.pixarrBySeg = []
+        self.labimBySeg = []
+        self.allC2Sinds = []
+        self.allC2SindsByRoi = []
+        self.c2sIndsByRoi = []
+        self.ptsByCntByRoi = []
+        self.cntdataByCntByRoi = []
+        self.labimByRoi = []
         
         #self.timings = params.timings
         #self.timingMsgs = params.timingMsgs
@@ -481,16 +490,16 @@ class DataImporter:
         self.allF2Sinds : list of ints or None
             Frame-to-slice indices (i.e. slice indices corresponding to each
             frame for the ROI Collection).
-        self.allF2SindsByRoi : list of a list of ints or None
-            A list of frame-to-slice indices for each ROI/segment in the ROI
+        self.allF2SindsBySeg : list of a list of ints or None
+            A list of frame-to-slice indices for each segment in the ROI
             Collection.
         self.roiNums : list of ints or None
-            List of ints for each ROI/segment in the ROI Collection (e.g.
-            [0, 1] => 2 ROIs/segments).
-        self.pixarrByRoi : list of Numpy data array Objects or None
-            List of pixel arrays - one for each ROI/segment.
-        self.f2sIndsByRoi : list of a list of ints or None
-            List for each ROI/segment of a list of frame-to-slice indices.  
+            List of ints for each segment in the ROI Collection (e.g.
+            [0, 1] => 2 segments).
+        self.pixarrBySeg : list of Numpy data array Objects or None
+            List of pixel arrays - one for each segment.
+        self.f2sIndsBySeg : list of a list of ints or None
+            List for each segment of a list of frame-to-slice indices.  
         """
         
         cfgDict = self.cfgDict
@@ -520,7 +529,7 @@ class DataImporter:
                 sopuids=self.sopuids
                 )
 
-            self.allF2SindsByRoi = group_list_by_seg(
+            self.allF2SindsBySeg = group_list_by_seg(
                 listToGroup=self.allF2Sinds, 
                 divs=self.divs
                 )
@@ -542,9 +551,9 @@ class DataImporter:
             
             # Get the pixel array by segment and frame-to-slice indices by
             # segment for the data of interest (to be copied):
-            self.pixarrByRoi, self.f2sIndsByRoi = get_seg_data_of_interest(
+            self.pixarrBySeg, self.f2sIndsBySeg = get_seg_data_of_interest(
                 seg=self.roicol, 
-                allF2SindsBySeg=self.allF2SindsByRoi, 
+                allF2SindsBySeg=self.allF2SindsBySeg, 
                 segNums=self.roiNums, 
                 allSegLabs=self.roiNames,
                 segLab=self.roiName,
@@ -552,11 +561,11 @@ class DataImporter:
                 p2c=cfgDict['p2c']
                 )
             
-            # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
+            # Raise exception if self.f2sIndsBySeg is empty (i.e. if 
             # there were no segmentations that matched the input parameters)
             raise_error_if_no_seg_data_of_interest(
-                f2sIndsBySeg=self.f2sIndsByRoi, 
-                segLabs=self.roiNames, 
+                f2sIndsBySeg=self.f2sIndsBySeg, 
+                allSegLabs=self.roiNames, 
                 slcNum=self.slcNum
                 )
             
@@ -564,9 +573,9 @@ class DataImporter:
             """ 
             Note this won't be used for use cases 1-2 but is needed for 3-5.
             """
-            self.labimByRoi = pixarrByRoi_to_imByRoi(
-                pixarrByRoi=self.pixarrByRoi, 
-                f2sIndsByRoi=self.f2sIndsByRoi, 
+            self.labimBySeg = pixarrBySeg_to_labimBySeg(
+                pixarrBySeg=self.pixarrBySeg, 
+                f2sIndsBySeg=self.f2sIndsBySeg, 
                 refIm=self.dcmIm,
                 p2c=cfgDict['p2c']
                 )
@@ -591,17 +600,17 @@ class DataImporter:
         -------
         self.divs : list of ints or None
             Dimensional Index Values
-        self.allF2Sinds : list of ints or None
-            Frame-to-slice indices (i.e. slice indices corresponding to each
-            frame for the ROI Collection).
-        self.allF2SindsByRoi : list of a list of ints or None
-            A list of frame-to-slice indices for each ROI/segment in the ROI
+        self.allC2Sinds : list of ints or None
+            Contour-to-slice indices (i.e. slice indices corresponding to each
+            contour for the ROI Collection).
+        self.allC2SindsByRoi : list of a list of ints or None
+            A list of contour-to-slice indices for each ROI in the ROI 
             Collection.
         self.roiNums : list of ints or None
-            List of ints for each ROI/segment in the ROI Collection (e.g.
-            [0, 1] => 2 ROIs/segments).
-        self.f2sIndsByRoi : list of a list of ints or None
-            List for each ROI/segment of a list of frame-to-slice indices.  
+            List of ints for each ROI in the ROI Collection (e.g.
+            [0, 1] => 2 ROIs).
+        self.c2sIndsByRoi : list of a list of ints or None
+            List for each ROI of a list of contour-to-slice indices.  
         """
         
         cfgDict = self.cfgDict
@@ -645,12 +654,13 @@ class DataImporter:
             #    sopuids=self.sopuids
             #    )
             
-            self.allPtsByCntByRoi, self.allF2SindsByRoi, self.allF2Sinds = \
-                get_ptsByCntByRoi(
-                    rts=self.roicol, 
-                    sopuids=self.sopuids,
-                    p2c=p2c
-                    )
+            self.allPtsByCntByRoi, self.allCntdataByCntByRoi,\
+                self.allC2SindsByRoi, self.allC2Sinds = \
+                    get_ptsByCntByRoi(
+                        rts=self.roicol, 
+                        sopuids=self.sopuids,
+                        p2c=p2c
+                        )
             
             # Get the segment number(s) that match the ROI name of
             # interest (roiName):
@@ -670,21 +680,22 @@ class DataImporter:
             # Get the list of points by contour by ROI and the list of 
             # contour-to-slice indices by ROI for the data of interest (to be 
             # copied):
-            self.ptsByCntByRoi, self.f2sIndsByRoi = get_rts_data_of_interest(
-                rts=self.roicol,
-                allPtsByCntByRoi=self.allPtsByCntByRoi,
-                allC2SindsByRoi=self.allF2SindsByRoi,
-                roiNums=self.roiNums, 
-                allRoiNames=self.roiNames,
-                roiName=self.roiName,
-                slcNum=self.slcNum,
-                p2c=p2c
-                )
+            self.ptsByCntByRoi, self.cntdataByCntByRoi, self.c2sIndsByRoi =\
+                get_rts_data_of_interest(
+                    rts=self.roicol,
+                    allPtsByCntByRoi=self.allPtsByCntByRoi,
+                    allC2SindsByRoi=self.allC2SindsByRoi,
+                    roiNums=self.roiNums, 
+                    allRoiNames=self.roiNames,
+                    roiName=self.roiName,
+                    slcNum=self.slcNum,
+                    p2c=p2c
+                    )
             
-            # Raise exception if self.f2sIndsByRoi is empty (i.e. if 
+            # Raise exception if self.c2sIndsByRoi is empty (i.e. if 
             # there were no contours that matched the input parameters)
             raise_error_if_no_rts_data_of_interest(
-                c2sIndsByRoi=self.f2sIndsByRoi, 
+                c2sIndsByRoi=self.c2sIndsByRoi, 
                 allRoiNames=self.roiNames, 
                 slcNum=self.slcNum
                 )
@@ -703,9 +714,9 @@ class DataImporter:
         
         Returns
         -------
-        self.pixarrByRoi : list of Numpy data array Objects or None
+        self.pixarrBySeg : list of Numpy data array Objects or None
             List of pixel arrays - one for each ROI/segment.
-        self.labimByRoi : list of SimpleITK Images or None
+        self.labimBySeg : list of SimpleITK Images or None
             List for each ROI/segment of the SimpleITK Image representation of
             the 3D pixel array.  
         """
@@ -726,9 +737,9 @@ class DataImporter:
             
             # Get list of label images-by-ROI:
             # Note this won't be used for use cases 1-2 but is needed for 3-5.
-            self.labimByRoi = pixarrByRoi_to_imByRoi(
-                pixarrByRoi=self.pixarrByRoi, 
-                f2sIndsByRoi=self.f2sIndsByRoi, 
+            self.labimByRoi = pixarrBySeg_to_labimBySeg(
+                pixarrBySeg=self.pixarrByRoi, 
+                f2sIndsBySeg=self.c2sIndsByRoi, 
                 refIm=self.dcmIm,
                 p2c=self.cfgDict['p2c']
                 )
@@ -1077,10 +1088,10 @@ class DataImporter:
         self.srcDcms = import_dcms(dicomDir=srcDcmDir, p2c=p2c)
         self.trgDcms = import_dcms(dicomDir=trgDcmDir, p2c=p2c)
     
-    def get_image_attributes(self, params):
+    def get_image_attributes_from_dicoms(self, params):
         """
         Get image size, voxel spacings, image positions (IPPs), and direction 
-        cosines.
+        cosines from a DICOM series.
         
         Parameters
         ----------
@@ -1273,7 +1284,7 @@ class DataImporter:
         self.import_dicom_image()
         
         # Get the image attributes:
-        self.get_image_attributes(params)
+        self.get_image_attributes_from_dicoms(params)
         
         # Get the image extent:
         self.imExtent = get_im_extent(self.dcmIm)

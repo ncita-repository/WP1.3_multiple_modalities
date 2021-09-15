@@ -7,7 +7,9 @@ Created on Fri Sep 10 16:21:16 2021
 
 #from copy import deepcopy
 #from DicomTools import GetDicomSOPuids
-from conversion_tools.inds_pts_cntdata import cntdata_to_pts
+from conversion_tools.inds_pts_cntdata import (
+    cntdata_to_pts, ptsByCntByRoi_to_cntdataByCntByRoi
+    )
 #from GeneralTools import PrintIndsByRoi
     
 
@@ -129,9 +131,15 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
     ptsByCntByRoi : list of list of a list of a list of floats
         List (for each ROI) of a list (for all contours) of a list (for each
         point) of a list (for each dimension) of coordinates.
+    cntdataByCntByRoi : list of a list of a list of strs
+        List (for each ROI) of a list (for all contours) of a flat list of 
+        coordinates in ptsByCntByRoi converted from floats to strings.
     c2sIndsByRoi : list of a list of ints
         List (for each ROI) of a list (for each contour) of slice numbers that 
-        correspond to each contour. 
+        correspond to each contour.
+    c2sInds : list of ints
+        List (for each contour) of slice numbers that correspond to each 
+        contour.
     """
     
     #from copy import deepcopy
@@ -200,6 +208,10 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
         
         ptsByCntByRoi.append(ptsByCnt)
     
+    cntdataByCntByRoi = ptsByCntByRoi_to_cntdataByCntByRoi(
+        ptsByCntByRoi
+        )
+    
     if p2c:
         R = len(ptsByCntByRoi)
         
@@ -210,4 +222,4 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
         
         print('-'*120)
 
-    return ptsByCntByRoi, c2sIndsByRoi, c2sInds
+    return ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi, c2sInds

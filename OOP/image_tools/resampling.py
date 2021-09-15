@@ -22,7 +22,7 @@ from image_tools.operations import (
     )
 from conversion_tools.pixarrs_ims import im_to_pixarr
 from general_tools.fiducials import get_landmark_tx
-from plotting_tools.plotting import plot_two_ims
+from plotting_tools.general import plot_two_ims
 
 
 def resample_im(im, refIm, sitkTx=sitk.Transform(3, sitk.sitkIdentity),
@@ -753,8 +753,8 @@ def resample_labim(
         
     return resLabim, resPixarr, resF2Sinds
 
-def resample_labimByRoi(
-        labimByRoi, f2sIndsByRoi, im, refIm, sitkTx=sitk.Transform(), 
+def resample_labimBySeg(
+        labimBySeg, f2sIndsBySeg, im, refIm, sitkTx=sitk.Transform(), 
         interp='NearestNeighbor', applyPreResBlur=False, preResVar=(1,1,1), 
         applyPostResBlur=True, postResVar=(1,1,1), p2c=False
         ):
@@ -763,51 +763,55 @@ def resample_labimByRoi(
     
     Parameters
     ----------  
-    labimByRoi : list of SimpleITK Images
-        A list (for each ROI) of 3D label images to be resampled.
-    f2sIndsByRoi : list of a list of ints
-        List (for each ROI) of a list (for each frame) of slice numbers that 
-        correspond to each frame in the label images.
+    labimBySeg : list of SimpleITK Images
+        A list (for each segment) of 3D label images to be resampled.
+    f2sIndsBySeg : list of a list of ints
+        List (for each segment) of a list (for each frame) of slice numbers  
+        that correspond to each frame in the label images.
     srcIm : SimpleITK Image
-        The 3D image whose gridspace matches the gridspace of labimByRoi.
+        The 3D image whose gridspace matches the gridspace of labimBySeg.
     refIm : SimpleITK Image
-        The 3D image whose gridspace labimByRoi will be resampled to.
+        The 3D image whose gridspace labimBySeg will be resampled to.
     sitkTx : SimpleITK Transform, optional (sitk.Transform() by default)
         The SimpleITK Transform to be used. The identity transform is default.
-    interp : str, optional ('NearestNeighbor' by default)
+    interp : str, optional
         The type of interpolation to be used.  Acceptable inputs are:
         - 'NearestNeighbor'
         - 'LabelGaussian'
         - 'BlurThenLinear' (which represents a Gaussian image blur + resampling
-        using a linear interpolator + binary thresholding)
-    applyPreResBlur : bool, optional (False by default)
+        using a linear interpolator + binary thresholding). The default value
+        is 'NearestNeighbor'.
+    applyPreResBlur : bool, optional
         If True, the pre-resampled labim will be Gaussian blurred. This 
         argument is only applicable if interp is 'NearestNeighbor' or
         'LabelGaussian', since labim will be blurred prior to resampling if
-        interp is 'BlurThenLinear' regardless of the argument's value.
-    preResVar : tuple of floats, optional ((1,1,1) by default)
+        interp is 'BlurThenLinear' regardless of the argument's value. The
+        default value is False.
+    preResVar : tuple of floats, optional
         A tuple (for each dimension) of the variance to be applied if the 
         Source labelmap image(s) is/are to be Gaussian blurred prior to  
-        resampling.
-    applyPostResBlur : bool, optional (True by default)
+        resampling. The default value is (1,1,1).
+    applyPostResBlur : bool, optional
         If True, the post-resampled labelmap image will be Gaussian blurred.
-    postResVar : tuple of floats, optional ((1,1,1) by default)
+        The default value is True.
+    postResVar : tuple of floats, optional
         A tuple (for each dimension) of the variance to be applied if the 
         resampled labelmap image(s) is/are to be Gaussian blurred after  
-        resampling.
-    p2c : bool, optional (False by default)
-        Denotes whether some results will be logged to the console.
+        resampling. The default value is (1,1,1).
+    p2c : bool, optional
+        Denotes whether some results will be logged to the console. The
+        default value is False.
     
     Returns
     -------
-    resLabimByRoi : list of SimpleITK Images
-        The list (for each ROI) of resampled 3D label image.
-    resPixarrByRoi : list of Numpy Arrays
-        The list (for each ROI) of the pixel array representations of
-        resLabimByRoi.
-    resF2SindsByRoi : list of a list of ints
-        The list (for each ROI) of a list (for each frame) of the
-        frame-to-slice indices in resPixarrByRoi.
+    resLabimBySeg : list of SimpleITK Images
+        The list (for each segment) of resampled 3D label image.
+    resPixarrBySeg : list of Numpy Arrays
+        The list (for each segment) of the pixel array representations of
+        resLabimBySeg.
+    resF2SindsBySeg : list of a list of ints
+        The list (for each segment) of a list (for each frame) of the
+        frame-to-slice indices in resPixarrBySeg.
     
     Note
     ----
@@ -816,34 +820,34 @@ def resample_labimByRoi(
         
     if p2c:
         print('\n\n', '-'*120)
-        print('Running of resample_labimByRoi():')
+        print('Running of resample_labimBySeg():')
         print('\n\n', '-'*120)
         
-    resLabimByRoi = []
-    resPixarrByRoi = []
-    resF2SindsByRoi = []
+    resLabimBySeg = []
+    resPixarrBySeg = []
+    resF2SindsBySeg = []
     
-    for r in range(len(labimByRoi)):
+    for r in range(len(labimBySeg)):
         if p2c:
-            print(f'   Resampling of labimByRoi[{r}]...')
+            print(f'   Resampling of labimBySeg[{r}]...')
         
         resLabim, resPixarr, resF2Sinds\
             = resample_labim(
-                labim=labimByRoi[r], f2sInds=f2sIndsByRoi[r], im=im, 
+                labim=labimBySeg[r], f2sInds=f2sIndsBySeg[r], im=im, 
                 refIm=refIm, sitkTx=sitkTx, interp=interp, 
                 applyPreResBlur=applyPreResBlur, preResVar=preResVar, 
                 applyPostResBlur=applyPostResBlur, postResVar=postResVar, 
                 p2c=p2c
                 )
         
-        resLabimByRoi.append(resLabim)
-        resPixarrByRoi.append(resPixarr)
-        resF2SindsByRoi.append(resF2Sinds)
+        resLabimBySeg.append(resLabim)
+        resPixarrBySeg.append(resPixarr)
+        resF2SindsBySeg.append(resF2Sinds)
         
     if p2c:
-            print('-'*120)
+        print('-'*120)
         
-    return resLabimByRoi, resPixarrByRoi, resF2SindsByRoi
+    return resLabimBySeg, resPixarrBySeg, resF2SindsBySeg
 
 def align_ims_using_landmarks(
         transform, fixFidsFpath, movFidsFpath, fixIm, movIm, 

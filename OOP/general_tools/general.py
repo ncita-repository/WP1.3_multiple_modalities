@@ -118,8 +118,8 @@ def get_unique_items(items, ignoreZero=False, maintainOrder=False):
         
     Returns
     -------
-    uniqueItems : list of int/float or Numpy data array or None
-        List or Numpy array of unique items, or None if items is empty.
+    uniqueItems : list of int/float or Numpy data array
+        List or Numpy array of unique items (or [] if items = []).
     """
     
     if not isinstance(items, list) and not isinstance(items, np.ndarray):
@@ -141,7 +141,7 @@ def get_unique_items(items, ignoreZero=False, maintainOrder=False):
         #print(f'\nPost-flattened list (type {type(items)}) = {items}\n')
     
     if items.size == 0:
-        return None
+        return []
     
     if ignoreZero:
         inds = np.nonzero(items)

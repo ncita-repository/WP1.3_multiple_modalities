@@ -104,20 +104,19 @@ def pixarr_to_imsBySeg(pixarr, f2sIndsBySeg, frameNumsBySeg, refIm):
         
     return ims
 
-def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
+def pixarrBySeg_to_labimBySeg(pixarrBySeg, f2sIndsBySeg, refIm, p2c=False):
     """
-    Convert a 3D pixel array to a list (for each frame/contour) of a list (for 
-    each point) of a list (for each dimension) of physical coordinates for each
-    pixel array in a list of pixel-arrays-by-ROI.
+    Convert a 3D pixel array to a list (for each segment) of SimpleITK Image
+    representations of the pixel arrays.
  
     Parameters
     ----------
-    pixarrByRoi : list of Numpy arrays
+    pixarrBySeg : list of Numpy arrays
         A list (for each ROI) of a FxRxC (frames x rows x cols) Numpy array 
         containing F RxC masks in each pixel array.
-    f2sIndsByRoi : list of list of ints
+    f2sIndsBySeg : list of list of ints
         A list (for each ROI) of a list (for each frame) of the slice numbers 
-        that correspond to each frame in each pixel array in pixarrByRoi.  This
+        that correspond to each frame in each pixel array in pixarrBySeg.  This
         is equivalent to a list of Per-FrameFunctionalGroupsSequence-to-slice 
         indices (PFFGStoSliceInds). 
     refIm : SimpleITK image
@@ -127,9 +126,9 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     
     Returns
     -------
-    labimByRoi : list of SimpleITK images
+    labimBySeg : list of SimpleITK images
         A list (for each ROI) of 3D labelmap images representing the pixel
-        arrays in pixarrByRoi.
+        arrays in pixarrBySeg.
     """
     
     #from ImageTools import GetImageInfo
@@ -138,48 +137,48 @@ def pixarrByRoi_to_imByRoi(pixarrByRoi, f2sIndsByRoi, refIm, p2c=False):
     
     if p2c:
         print('\n\nStart', '-'*110)
-        print('Running of pixarrByRoi_to_imByRoi():')
+        print('Running of pixarrBySeg_to_imByRoi():')
         print('-'*120)
-        #print(f'   len(pixarrByRoi) = {len(pixarrByRoi)}')
+        #print(f'   len(pixarrBySeg) = {len(pixarrBySeg)}')
         
-    labimByRoi = []
-    f2sIndsByRoi_new = []
+    labimBySeg = []
+    f2sIndsBySeg_new = []
 
-    for r in range(len(pixarrByRoi)):
+    for r in range(len(pixarrBySeg)):
         labim = pixarr_to_im(
-            pixarr=pixarrByRoi[r], f2sInds=f2sIndsByRoi[r], refIm=refIm
+            pixarr=pixarrBySeg[r], f2sInds=f2sIndsBySeg[r], refIm=refIm
             )
         
-        labimByRoi.append(labim)
+        labimBySeg.append(labim)
     
         if p2c:
-            print(f'\n   Image info for labimByRoi[{r}]:')
+            print(f'\n   Image info for labimBySeg[{r}]:')
             
         pixID, pixIDtypeAsStr, uniqueVals, f2sInds = get_im_info(labim, p2c)
         
-        f2sIndsByRoi_new.append(f2sInds)
+        f2sIndsBySeg_new.append(f2sInds)
     
-    #""" Check that the number of unique f2sInds in f2sIndsByRoi_new matches the
-    #number of unique f2sInds in f2sIndsByRoi (i.e. that no frames were lost). """
+    #""" Check that the number of unique f2sInds in f2sIndsBySeg_new matches the
+    #number of unique f2sInds in f2sIndsBySeg (i.e. that no frames were lost). """
     #NumIn = []
     #NumOut = []
     #
-    #for r in range(len(f2sIndsByRoi)):
-    #    NumIn.append(len(UniqueItems(f2sIndsByRoi[r])))
+    #for r in range(len(f2sIndsBySeg)):
+    #    NumIn.append(len(UniqueItems(f2sIndsBySeg[r])))
     #    
-    #    NumOut.append(len(UniqueItems(f2sIndsByRoi_new[r])))
+    #    NumOut.append(len(UniqueItems(f2sIndsBySeg_new[r])))
     #    
     #print('\n', NumIn, NumOut)
     #
     #if not AreListsEqualToWithinEpsilon(NumIn, NumOut, epsilon=0.9):
-    #    print('\nWARNING:  The number of unique f2sIndsByRoi used to generate',
+    #    print('\nWARNING:  The number of unique f2sIndsBySeg used to generate',
     #          f'the labelmaps, {NumIn}, doesn\'t match that in the labelmap',
     #          f'images, {NumOut}.')
     
     if p2c:
         print('End', '-'*120)
         
-    return labimByRoi
+    return labimBySeg
 
 def im_to_pixarr(image, f2sInds=None):
     """

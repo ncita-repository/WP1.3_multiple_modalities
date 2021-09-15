@@ -5,12 +5,16 @@ Created on Wed Jul  7 12:03:04 2021
 @author: ctorti
 """
 
+from importlib import reload
+
+import conversion_tools.inds_pts_pixarrs
+reload(conversion_tools.inds_pts_pixarrs)
 
 from shapely.geometry import Point, MultiPoint
 #from image_tools.imports import import_im
-from io_tools.imports import import_im
+#from io_tools.imports import import_im
 from conversion_tools.inds_pts_pixarrs import pixarr_to_ptsByCnt
-from conversion_tools.inds_pts_pixarrs import pixarrByRoi_to_ptsByCntByRoi
+from conversion_tools.inds_pts_pixarrs import pixarrBySeg_to_ptsByCntByRoi
 
 
 def is_pt_in_poly(point, vertices):
@@ -382,8 +386,9 @@ def prop_of_segs_in_extent(
     # Convert the list of pixel arrays-by-segment to a list of 
     # points-by-contour-by-ROI:
     ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi\
-        = pixarrByRoi_to_ptsByCntByRoi(pixarrBySeg, f2sIndsBySeg, 
-                                       srcDcmDir, Thresh=0.5)
+        = pixarrBySeg_to_ptsByCntByRoi(
+            pixarrBySeg, f2sIndsBySeg, srcIm, thresh=0.5
+            )
     
     fracProp = prop_of_rois_in_extent(ptsByCntByRoi, trgIm, p2c)
     

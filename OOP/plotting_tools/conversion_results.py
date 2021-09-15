@@ -29,10 +29,10 @@ from image_tools.attrs_info import get_im_attrs_from_list_of_dicomDir
 from conversion_tools.inds_pts_cntdata import pts_to_inds
 
 
-def plot_mask_to_cnt_conversion(
-        listOfIms, listOfDcmPixarr, listOfF2SindsByRoi, 
-        listOfPtsByCntByRoi, listOfPixarrByRoi,
-        listOfDcmDirs, listOfPlotTitles,
+def plot_pts_and_pixarr(
+        listOfIms, listOfDcmPixarr, listOfF2SindsBySeg, listOfPixarrBySeg,
+        listOfC2SindsByRoi, listOfPtsByCntByRoi, #listOfDcmDirs,
+        listOfIPPs, listOfPlotTitles,
         exportPlot=False, exportDir=None, exportFname='', p2c=False):
     """ 
     08/06/21: Modelled on PlotPixArrsFromListOfLabImBySeg and 
@@ -65,14 +65,15 @@ def plot_mask_to_cnt_conversion(
     """
     
     print(f'len(listOfIms) = {len(listOfIms)}')
-    print(f'len(listOfF2SindsByRoi) = {len(listOfF2SindsByRoi)}')
+    print(f'len(listOfF2SindsBySeg) = {len(listOfF2SindsBySeg)}')
+    print(f'len(listOfPixarrBySeg) = {len(listOfPixarrBySeg)}')
+    print(f'len(listOfC2SindsByRoi) = {len(listOfC2SindsByRoi)}')
     print(f'len(listOfPtsByCntByRoi) = {len(listOfPtsByCntByRoi)}')
-    print(f'len(listOfPixarrByRoi) = {len(listOfPixarrByRoi)}')
-    print(f'len(listOfDcmDirs) = {len(listOfDcmDirs)}')
+    #print(f'len(listOfDcmDirs) = {len(listOfDcmDirs)}')
     #print(f'listOfF2SindsByRoi = {listOfF2SindsByRoi}')
     
-    listOfDcmFpaths, listOfSizes, listOfSpacings, listOfSlcThick, listOfIPPs,\
-        listOfDirections = get_im_attrs_from_list_of_dicomDir(listOfDcmDirs)
+    #listOfDcmFpaths, listOfSizes, listOfSpacings, listOfSlcThick, listOfIPPs,\
+    #    listOfDirections = get_im_attrs_from_list_of_dicomDir(listOfDcmDirs)
         
     # Get the maximum number of slices containing contours/segmentations in any
     # ROI/segment in any dataset:
@@ -84,9 +85,12 @@ def plot_mask_to_cnt_conversion(
     
     # Loop through each dataset:
     for i in range(len(listOfIms)):
-        f2sIndsByRoi = listOfF2SindsByRoi[i]
+        f2sIndsBySeg = listOfF2SindsBySeg[i]
+        c2sIndsByRoi = listOfC2SindsByRoi[i]
         
-        uniqueSinds = get_unique_items(f2sIndsByRoi)
+        uniqueF2Sinds = get_unique_items(f2sIndsBySeg)
+        uniqueC2Sinds = get_unique_items(c2sIndsByRoi)
+        uniqueSinds = get_unique_items([uniqueF2Sinds, uniqueC2Sinds])
         
         listOfUniqueSinds.append(uniqueSinds)
         
@@ -138,9 +142,10 @@ def plot_mask_to_cnt_conversion(
         for i in range(Ncols):
             dcmIm = listOfIms[i]
             dcmPixarr = listOfDcmPixarr[i]
+            f2sIndsBySeg = listOfF2SindsBySeg[i]
+            pixarrBySeg = listOfPixarrBySeg[i]
+            c2sIndsByRoi = listOfC2SindsByRoi[i]
             ptsByCntByRoi = listOfPtsByCntByRoi[i]
-            f2sIndsByRoi = listOfF2SindsByRoi[i]
-            pixarrBySeg = listOfPixarrByRoi[i]
             uniqueSinds = listOfUniqueSinds[i]
             
             IPPs = listOfIPPs[i]
@@ -153,7 +158,8 @@ def plot_mask_to_cnt_conversion(
             if p2c:
                 print(f'\n   i = {i}')
                 print(f'   plotTitle = {plotTitle}')
-                print(f'   f2sIndsByRoi = {f2sIndsByRoi}')
+                print(f'   f2sIndsBySeg = {f2sIndsBySeg}')
+                print(f'   c2sIndsByRoi = {c2sIndsByRoi}')
                 print(f'   uniqueSinds = {uniqueSinds}')
             
             # Continue if rowNum does not exceed the number of unique slice indices:
@@ -172,159 +178,173 @@ def plot_mask_to_cnt_conversion(
                     print(f'   sInd = {sInd}')
                     print(f'   IPP = {IPP}')
                 
-                # Loop through each segment:
-                for s in range(len(pixarrBySeg)):
-                    f2sInds = f2sIndsByRoi[s]
-                    segPixarr = pixarrBySeg[s]
-                    
-                    """ There are only len(cMaps) colormaps defined above. Wrap the 
-                    segment index s if there are more segments than the number of 
-                    defined colormaps. """
-                    if s < len(cMaps):
-                        cMap = cMaps[s]
-                    else:
-                        m = s//len(cMaps)
+                if pixarrBySeg:
+                    # Loop through each segment:
+                    for s in range(len(pixarrBySeg)):
+                        f2sInds = f2sIndsBySeg[s]
+                        segPixarr = pixarrBySeg[s]
                         
-                        cMap = cMaps[s - m*len(cMaps)]
-                    
-                    if sInd in f2sInds:
-                        frameNums = [i for i, e in enumerate(f2sInds) if e==sInd]
+                        """ There are only len(cMaps) colormaps defined above. Wrap the 
+                        segment index s if there are more segments than the number of 
+                        defined colormaps. """
+                        if s < len(cMaps):
+                            cMap = cMaps[s]
+                        else:
+                            m = s//len(cMaps)
+                            
+                            cMap = cMaps[s - m*len(cMaps)]
                         
-                        # Loop through all frame numbers:
-                        for f in range(len(frameNums)):
-                            frameNum = frameNums[f]
-                        
-                            segFrame = segPixarr[frameNum]
+                        if sInd in f2sInds:
+                            frameNums = [i for i, e in enumerate(f2sInds) if e==sInd]
+                            
+                            # Loop through all frame numbers:
+                            for f in range(len(frameNums)):
+                                frameNum = frameNums[f]
+                            
+                                segFrame = segPixarr[frameNum]
+                                
+                                if p2c:
+                                    print(f'      sliceNum = {sInd} is in f2sInds')
+                                    print(f'      frameNum = {frameNum}')
+                                    print(f'      segFrame.shape = {segFrame.shape}')
+                            
+                                #ax = plt.subplot(Nrows, Ncols, n)
+                                #im = ax.imshow(segFrame, cmap=plt.cm.nipy_spectral, 
+                                #               alpha=alpha)
+                                ax.imshow(segFrame, cmap=cMap, alpha=segAlpha)
+                                
+                                #frameTxt = f'frame {frameNum}'
+                            #if len(frameNums) > 1:
+                            #    frameTxt = f'Conversion to segmentations {frameNums}'
+                            #else:
+                            #    frameTxt = f'Conversion to segmentations {frameNum}'
+                            #frameTxt = f'Contour-to-segmentation # {frameNums}'
+                            nobrackets = f'{frameNums}'.replace('[', '').replace(']', '')
+                            if i == 0:
+                                #frameTxt = f'Contour-to-segmentation # {nobrackets}'
+                                frameTxt = f'Segmentation # {nobrackets}'
+                            else:
+                                frameTxt = f'Segmentation # {nobrackets}'
+                        else:
+                            frameTxt = 'No Segmentations'
                             
                             if p2c:
-                                print(f'      sliceNum = {sInd} is in f2sInds')
-                                print(f'      frameNum = {frameNum}')
-                                print(f'      segFrame.shape = {segFrame.shape}')
-                        
-                            #ax = plt.subplot(Nrows, Ncols, n)
-                            #im = ax.imshow(segFrame, cmap=plt.cm.nipy_spectral, 
-                            #               alpha=alpha)
-                            ax.imshow(segFrame, cmap=cMap, alpha=segAlpha)
+                                print(f'      sInd = {sInd} is NOT in f2sInds')
                             
-                            #frameTxt = f'frame {frameNum}'
-                        #if len(frameNums) > 1:
-                        #    frameTxt = f'Conversion to segmentations {frameNums}'
-                        #else:
-                        #    frameTxt = f'Conversion to segmentations {frameNum}'
-                        #frameTxt = f'Contour-to-segmentation # {frameNums}'
-                        nobrackets = f'{frameNums}'.replace('[', '').replace(']', '')
-                        if i == 0:
-                            frameTxt = f'Contour-to-segmentation # {nobrackets}'
-                        else:
-                            frameTxt = f'Segmentation # {nobrackets}'
-                    else:
-                        frameTxt = 'No Segmentations'
+                        sliceTxt = f'slice # {sInd}'
+                        zPosTxt = f'z = {IPP[2]:.2f} mm'
+                        #plotTitle = plotTitle.replace(' ', '\:')
+                        #plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle) \
+                        #            + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
+                        ##plotTitle = r"$\bf{plotTitle}$\," \
+                        ##            + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
                         
-                        if p2c:
-                            print(f'      sInd = {sInd} is NOT in f2sInds')
+                        if rowNum > 0:
+                            plotTitle = ''
+                        plotTitle += f'\n\n{sliceTxt}'
+                        plotTitle += f'\n{frameTxt}'
+                        plotTitle += f'\n{zPosTxt}'
                         
-                    #sliceTxt = f'slice {sInd}'
-                    #zPosTxt = f'z = {round(IPP[2], 2)} mm'
-                    #plotTitle = plotTitle.replace(' ', '\:')
-                    #plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle) \
-                    #            + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
-                    ##plotTitle = r"$\bf{plotTitle}$\," \
-                    ##            + f'\n\n{sliceTxt}\n{frameTxt}\n{zPosTxt}'
-                    #
-                    #ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                    #ax.set_title(plotTitle)
-                
-                # Loop through each ROI:
-                for r in range(len(f2sIndsByRoi)):
-                    c2sInds = f2sIndsByRoi[r]
-                    ptsByCnt = ptsByCntByRoi[r]
+                        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                        ax.set_title(plotTitle)
+                else:
+                    frameTxt = 'No Segmentations'
                     
-                    """ There are only len(colours) colours defined above. Wrap the 
-                    ROI index r if there are more ROIs than the number of defined 
-                    colours. """
-                    if r < len(colours):
-                        colour = colours[r]
-                    else:
-                        m = r//len(colours)
+                if ptsByCntByRoi:
+                    # Loop through each ROI:
+                    for r in range(len(ptsByCntByRoi)):
+                        c2sInds = c2sIndsByRoi[r]
+                        ptsByCnt = ptsByCntByRoi[r]
                         
-                        colour = colours[r - m*len(colours)]
-                
-                    if sInd in c2sInds:
-                        #contourNum = c2sInds.index(sliceNum) # there may be more 
-                        # than one contour for sliceNum!!
-                        contourNums = [i for i, e in enumerate(c2sInds) if e==sInd]
-                        
-                        #print(f'contourNums = {contourNums}')
-                        
-                        numPtsByCnt = []
-                        
-                        # Loop through all contour numbers:
-                        for c in range(len(contourNums)):
-                            colour2 = colours[c] 
+                        """ There are only len(colours) colours defined above. Wrap the 
+                        ROI index r if there are more ROIs than the number of defined 
+                        colours. """
+                        if r < len(colours):
+                            colour = colours[r]
+                        else:
+                            m = r//len(colours)
                             
-                            contourNum = contourNums[c]
+                            colour = colours[r - m*len(colours)]
+                    
+                        if sInd in c2sInds:
+                            #contourNum = c2sInds.index(sliceNum) # there may be more 
+                            # than one contour for sliceNum!!
+                            contourNums = [i for i, e in enumerate(c2sInds) if e==sInd]
                             
-                            pts = ptsByCnt[contourNum]
+                            #print(f'contourNums = {contourNums}')
                             
-                            numPtsByCnt.append(len(pts))
+                            numPtsByCnt = []
                             
-                            #print(f'\npts = {pts}')
+                            # Loop through all contour numbers:
+                            for c in range(len(contourNums)):
+                                colour2 = colours[c] 
+                                
+                                contourNum = contourNums[c]
+                                
+                                pts = ptsByCnt[contourNum]
+                                
+                                numPtsByCnt.append(len(pts))
+                                
+                                #print(f'\npts = {pts}')
+                                
+                                inds = pts_to_inds(points=pts, refIm=dcmIm)
+                                
+                                if p2c:
+                                    print(f'      sInd = {sInd} is in c2sInds')
+                                    print(f'      contourNum = {contourNum}')
+                                    #print(f'      contour = {contour}')
+                                    print(f'      len(pts) = {len(pts)}')
+                                
+                                #ax = plt.subplot(Nrows, Ncols, n)
+                                
+                                # Unpack the contour points' indices:
+                                X, Y, Z = unpack(inds)
+                                
+                                # Plot the contour points:
+                                #ax = plt.plot(X, Y, linewidth=0.5, c='r')
+                                #ax.plot(X, Y, linewidth=0.5, c='r')
+                                #ax.plot(X, Y, linewidth=lineWidth, c=colour)
+                                ax.plot(X, Y, linewidth=lineWidth, c=colour2)
                             
-                            inds = pts_to_inds(points=pts, refIm=dcmIm)
+                            #if len(contourNums) > 1:
+                            #    contourTxt = f'contours {contourNums}'
+                            #else:
+                            #    contourTxt = f'contour {contourNum}'
+                            #contourTxt = f'contour # {contourNums}'
+                            nobrackets = f'{contourNums}'.replace('[', '').replace(']', '')
+                            if i == 0:
+                                contourTxt = f'contour # {nobrackets}'
+                            else:
+                                contourTxt = f'Segmentation-to-contour # {nobrackets}'
+                            nobrackets = f'{numPtsByCnt}'.replace('[', '').replace(']', '')
+                            ptsTxt = f'No. of points: {nobrackets}'
+                        else:
+                            contourTxt = 'No contour'
+                            ptsTxt = 'No. of points: 0'
                             
                             if p2c:
-                                print(f'      sInd = {sInd} is in c2sInds')
-                                print(f'      contourNum = {contourNum}')
-                                #print(f'      contour = {contour}')
-                                print(f'      len(pts) = {len(pts)}')
-                            
-                            #ax = plt.subplot(Nrows, Ncols, n)
-                            
-                            # Unpack the contour points' indices:
-                            X, Y, Z = unpack(inds)
-                            
-                            # Plot the contour points:
-                            #ax = plt.plot(X, Y, linewidth=0.5, c='r')
-                            #ax.plot(X, Y, linewidth=0.5, c='r')
-                            #ax.plot(X, Y, linewidth=lineWidth, c=colour)
-                            ax.plot(X, Y, linewidth=lineWidth, c=colour2)
+                                print(f'      sInd = {sInd} is NOT in c2sInds')
                         
-                        #if len(contourNums) > 1:
-                        #    contourTxt = f'contours {contourNums}'
-                        #else:
-                        #    contourTxt = f'contour {contourNum}'
-                        #contourTxt = f'contour # {contourNums}'
-                        nobrackets = f'{contourNums}'.replace('[', '').replace(']', '')
-                        if i == 0:
-                            contourTxt = f'contour # {nobrackets}'
+                        sliceTxt = f'slice # {sInd}'
+                        zPosTxt = f'z = {IPP[2]:.2f} mm'
+                        if rowNum == 0:
+                            # For Latex:
+                            #plotTitle = plotTitle.replace(' ', '\:')
+                            #plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle)
+                            pass
                         else:
-                            contourTxt = f'Segmentation-to-contour # {nobrackets}'
-                        nobrackets = f'{numPtsByCnt}'.replace('[', '').replace(']', '')
-                        ptsTxt = f'No. of points: {nobrackets}'
-                    else:
-                        contourTxt = 'No contour'
-                        ptsTxt = 'No. of points: 0'
+                            plotTitle = ''
+                        plotTitle += f'\n\n{sliceTxt}'
+                        if i == 0:
+                            plotTitle += f'\n{contourTxt}\n{ptsTxt}\n{frameTxt}'
+                        else:
+                            plotTitle += f'\n{frameTxt}\n{contourTxt}\n{ptsTxt}'
+                        plotTitle += f'\n{zPosTxt}'
                         
-                        if p2c:
-                            print(f'      sInd = {sInd} is NOT in c2sInds')
-                    
-                    sliceTxt = f'slice # {sInd}'
-                    zPosTxt = f'z = {round(IPP[2], 2)} mm'
-                    if rowNum == 0:
-                        plotTitle = plotTitle.replace(' ', '\:')
-                        plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle)
-                    else:
-                        plotTitle = ''
-                    plotTitle += f'\n\n{sliceTxt}'
-                    if i == 0:
-                        plotTitle += f'\n{contourTxt}\n{ptsTxt}\n{frameTxt}'
-                    else:
-                        plotTitle += f'\n{frameTxt}\n{contourTxt}\n{ptsTxt}'
-                    plotTitle += f'\n{zPosTxt}'
-                    
-                    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                    ax.set_title(plotTitle)
-                    
+                        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                        ax.set_title(plotTitle)
+                else:
+                    contourTxt = 'No contours'
             n += 1 # increment sub-plot number
     
     if exportPlot:

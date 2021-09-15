@@ -32,6 +32,40 @@ def ind_to_pt(index, refIm):
         [[x0, y0, z0], [x1, y1, z1], ...].
     """
     
+    # Check the data type of the first element in index:
+    if isinstance(index[0], int):
+        point = refIm.TransformIndexToPhysicalPoint(index)
+    elif isinstance(index[0], float):
+        point = refIm.TransformContinuousIndexToPhysicalPoint(index)
+    else:
+        msg = f"The data type of index is {type(index[0])}. It must be either"\
+              + " 'int' or 'float'."
+        raise Exception(msg)
+         
+    return list(point)
+
+def ind_to_pt_210921(index, refIm):
+    """
+    14/09/21: This is unnecessarily complex.
+    
+    Convert an index (in the Image Coordinate System) to a physical point (in 
+    the Patient Coordinate System).
+    
+    Parameters
+    ----------
+    index : list of ints or floats
+        A list (for each dimension) of an index, e.g. 
+        [[i0, j0, k0], [i1, j1, k1], ...].
+    refIm : SimpleITK image
+        A 3D image that occupies the grid that index belongs to.
+        
+    Returns
+    -------
+    point : list of floats
+        A list (for each dimension) of the coordinates of index, e.g.
+        [[x0, y0, z0], [x1, y1, z1], ...].
+    """
+    
     #import numpy
     #from general_tools.general import get_list_of_dtypes
     

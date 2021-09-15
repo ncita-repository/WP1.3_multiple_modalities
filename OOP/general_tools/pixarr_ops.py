@@ -12,7 +12,7 @@ import numpy as np
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_nums, get_roicol_labels
     )
-from seg_tools.metadata import get_p2sIndsBySeg
+#from seg_tools.metadata import get_f2sIndsBySeg
 
 
 def mean_frame_in_pixarr(

@@ -10,7 +10,9 @@ reload(general_tools.console_printing)
 from general_tools.console_printing import (
     print_indsByRoi, print_ptsByCntByRoi
     )
-
+from conversion_tools.inds_pts_cntdata import (
+    cntdata_to_pts, ptsByCntByRoi_to_cntdataByCntByRoi
+    )
 
 def get_rts_data_of_interest(
         rts, allPtsByCntByRoi, allC2SindsByRoi, roiNums, 
@@ -51,6 +53,9 @@ def get_rts_data_of_interest(
         List (for each ROI) of a list (for all contours) of a list (for each
         point) of a list (for each dimension) of coordinates to be copied from 
         the RTS.
+    cntdataByCntByRoi : list of a list of a list of strs
+        List (for each ROI) of a list (for all contours) of a flat list of 
+        coordinates in ptsByCntByRoi converted from floats to strings.
     c2sIndsByRoi : list of a list of integers
         List (for each ROI) of a list (for each contour) of slice numbers that 
         correspond to each contour to be copied from the RTS.
@@ -212,6 +217,10 @@ def get_rts_data_of_interest(
             ptsByCntByRoi = list(allPtsByCntByRoi)
             c2sIndsByRoi = list(allC2SindsByRoi)
     
+    cntdataByCntByRoi = ptsByCntByRoi_to_cntdataByCntByRoi(
+        ptsByCntByRoi
+        )
+    
     if p2c:
         print('\n   Final outputs of get_rts_data_of_interest():')
         print_ptsByCntByRoi(ptsByCntByRoi)
@@ -220,7 +229,7 @@ def get_rts_data_of_interest(
         #print(f'   ptsByCntByRoi = {ptsByCntByRoi}')
         print('-'*120)
         
-    return ptsByCntByRoi, c2sIndsByRoi
+    return ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi
 
 
 def raise_error_if_no_rts_data_of_interest(c2sIndsByRoi, allRoiNames, slcNum):

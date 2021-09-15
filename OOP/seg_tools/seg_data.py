@@ -17,13 +17,12 @@ reload(conversion_tools.pixarrs_ims)
 
 import numpy as np
 from copy import deepcopy
-from general_tools.console_printing import print_inds_by_roi
-from general_tools.console_printing import print_pixarr_shape_by_seg
+from general_tools.console_printing import print_indsByRoi
+from general_tools.console_printing import print_shape_of_pixarrBySeg
 from image_tools.attrs_info import (
     get_im_attrs, get_im_attrs_from_list_of_dicomDir
     )
-from dicom_tools.metadata import get_dcm_uids
-from dicom_tools.imports import get_dcm_fpaths
+from dicom_tools.metadata import get_dcm_uids, get_dcm_fpaths
 from seg_tools.metadata import get_f2sIndsBySeg
 from seg_tools.pixarrs import get_pixarrBySeg
 from conversion_tools.pixarrs_ims import imBySeg_to_pixarrBySeg
@@ -126,7 +125,7 @@ def get_seg_data_of_interest(
     F, R, C = allPixarrBySeg[0].shape
     
     if p2c:
-        print_inds_by_roi(allF2SindsBySeg)
+        print_indsByRoi(allF2SindsBySeg)
     
     # Initialise variable that indicates if the SEG data was reduced by
     # frame/slice number (FromSliceNum):
@@ -194,9 +193,9 @@ def get_seg_data_of_interest(
         if p2c and reducedBySlc:
             print('\n   After limiting data to those that relate to slice',
                   f'number {slcNum}:')#, the f2sIndsBySeg =')
-            print_inds_by_roi(f2sIndsBySeg)
+            print_indsByRoi(f2sIndsBySeg)
             print('   pixarrBySeg = ', pixarrBySeg)
-            print_pixarr_shape_by_seg(pixarrBySeg)
+            print_shape_of_pixarrBySeg(pixarrBySeg)
     
     # Initialise variable that indicates if the SEG data was reduced by
     # chosen segment label (segLab):
@@ -223,8 +222,8 @@ def get_seg_data_of_interest(
             
                 print('\n   After limiting data to those whose segment name',
                       f'matches {allSegLabs}:')
-                print_inds_by_roi(f2sIndsBySeg)
-                print_pixarr_shape_by_seg(pixarrBySeg)
+                print_indsByRoi(f2sIndsBySeg)
+                print_shape_of_pixarrBySeg(pixarrBySeg)
                 
         else:
             pixarrBySeg = deepcopy(allPixarrBySeg)
@@ -236,8 +235,8 @@ def get_seg_data_of_interest(
     
     if p2c:
         print('\n   Final outputs of get_seg_data_of_interest():')
-        print_pixarr_shape_by_seg(pixarrBySeg)
-        print_inds_by_roi(f2sIndsBySeg)
+        print_shape_of_pixarrBySeg(pixarrBySeg)
+        print_indsByRoi(f2sIndsBySeg)
         print('-'*120)
         
     return pixarrBySeg, f2sIndsBySeg

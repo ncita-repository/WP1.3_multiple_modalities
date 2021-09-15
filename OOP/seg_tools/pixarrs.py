@@ -10,7 +10,7 @@ import numpy as np
 from dicom_tools.metadata import get_dcm_uids
 from seg_tools.metadata import get_frameNums, get_f2sIndsBySeg
 from general_tools.console_printing import (
-    print_inds_by_roi, print_pixarr_shape_by_seg
+    print_indsByRoi, print_shape_of_pixarrBySeg
     )
 
 def get_pixarr_in_seg(seg, dicomDir, searchStr):
@@ -106,7 +106,7 @@ def get_pixarrBySeg(seg, f2sIndsBySeg, p2c=False):
     if p2c:
         print(f'pixarr_all.shape = {pixarr_all.shape}')
         #print('f2sIndsBySeg =')
-        print_inds_by_roi(f2sIndsBySeg)
+        print_indsByRoi(f2sIndsBySeg)
         
     pixarrBySeg = []
     
@@ -128,7 +128,7 @@ def get_pixarrBySeg(seg, f2sIndsBySeg, p2c=False):
         pixarrBySeg.append(pixarr)
     
     if p2c:
-        print_pixarr_shape_by_seg(pixarrBySeg)
+        print_shape_of_pixarrBySeg(pixarrBySeg)
         print('-'*120)
         
     return pixarrBySeg
@@ -234,7 +234,7 @@ def get_pixarrBySeg_OLD(seg, dicomDir, p2c=False):
     if p2c:
         print(f'   pixarr_all.shape = {pixarr_all.shape}')
         #print('   f2sIndsBySeg =')
-        print_inds_by_roi(f2sIndsBySeg)
+        print_indsByRoi(f2sIndsBySeg)
         
     pixarrBySeg = []
     
@@ -256,7 +256,7 @@ def get_pixarrBySeg_OLD(seg, dicomDir, p2c=False):
         pixarrBySeg.append(pixarr)
     
     if p2c:
-        print_pixarr_shape_by_seg(pixarrBySeg)
+        print_shape_of_pixarrBySeg(pixarrBySeg)
         print('-'*120)
         
     return pixarrBySeg, f2sIndsBySeg

@@ -340,7 +340,22 @@ class DataDownloader:
         trgRoicolName = cfgDict['trgRoicolName']
         trgRoiName = cfgDict['trgRoiName']
         
+        items = [
+            projID, subjLab, srcExpLab, srcScanID, srcSlcNum,\
+            srcRoicolName, srcRoiName, roicolMod, trgExpLab,\
+            trgScanID, trgSlcNum, trgRoicolName, trgRoiName
+            ]
+        
+        names = [
+            'projID', 'subjLab', 'srcExpLab', 'srcScanID', 'srcSlcNum',\
+            'srcRoicolName', 'srcRoiName', 'roicolMod', 'trgExpLab',\
+            'trgScanID', 'trgSlcNum', 'trgRoicolName', 'trgRoiName'
+            ]
+        
+        maxL = max([len(name) for name in names])
+        
         print(f'* Fetching data from XNAT for runID = {runID}')
+        """
         print(f'  projID = {projID}\n  subjLab = {subjLab}\n  srcExpLab ='
               f'{srcExpLab}\n  srcScanID = {srcScanID}\n  srcSlcNum =',
               f'{srcSlcNum}\n  srcRoicolName = {srcRoicolName}\n  srcRoiName',
@@ -348,6 +363,12 @@ class DataDownloader:
               f'{trgExpLab}\n  trgScanID = {trgScanID}\n  trgSlcNum =',
               f'{trgSlcNum}\n  trgRoicolName = {trgRoicolName}\n  trgRoiName',
               f'= {trgRoiName}\n')
+        """
+        for name, item in zip(names, items):
+            L = len(name)
+            d = maxL - L
+            print(' '*d + f'{name} = {item}')
+        print('')
         
     def download_210818(self):
         # TODO update docstrings

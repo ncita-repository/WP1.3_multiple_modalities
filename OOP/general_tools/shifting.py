@@ -7,17 +7,18 @@ Created on Wed Jul  7 13:24:52 2021
 
 import numpy as np
 from general_tools.general import get_unique_items
-from image_tools.imports import import_im
-from conversion_tools.inds_pts import pts_to_inds, inds_to_pts
+from io_tools.imports import import_im
+from conversion_tools.inds_pts_cntdata import pts_to_inds, inds_to_pts
+from general_tools.console_printing import print_indsByRoi, print_ptsByCntByRoi
 
-def replace_ind_in_C2SindsByRoi_OBSOLETE(C2SindsByRoi, IndToReplace, ReplacementInd):
+def replace_ind_in_C2SindsByRoi(c2sIndsByRoi, indToReplace, replacementInd):
     # See replace_ind_in_f2sIndsByRoi in propagate.propagate.py
-    for r in range(len(C2SindsByRoi)):
-        for c in range(len(C2SindsByRoi[r])):
-            if C2SindsByRoi[r][c] == IndToReplace:
-                C2SindsByRoi[r][c] = ReplacementInd
+    for r in range(len(c2sIndsByRoi)):
+        for c in range(len(c2sIndsByRoi[r])):
+            if c2sIndsByRoi[r][c] == indToReplace:
+                c2sIndsByRoi[r][c] = replacementInd
     
-    return C2SindsByRoi
+    return c2sIndsByRoi
 
 def get_phys_shift_bt_slices(image0, sliceNum0, image1, sliceNum1):
     """
@@ -161,10 +162,10 @@ def shift_frame(frame, voxShift):
             
     return shiftedFrame
 
-def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage, 
-                                SrcSliceNum, TrgImage, TrgSliceNum, refImage, 
-                                ShiftInX=True, ShiftInY=True, ShiftInZ=True, 
-                                fractional=False, LogToConsole=False):
+def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, srcIm, 
+                                srcSlcNum, trgIm, trgSlcNum, refImage, 
+                                shiftInX=True, shiftInY=True, shiftInZ=True, 
+                                fractional=False, p2c=False):
     """
     See shift_frames_in_pixarrBySeg in propagate.propagate.py
     
@@ -182,25 +183,25 @@ def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage,
     F2SindsBySeg : list of a list of ints
         List (for each segment) of a list (for each frame) of slice numbers that 
         correspond to each frame in the pixel arrays in PixArrBySeg.
-    SrcImage : SimpleITK image
+    srcIm : SimpleITK image
         The Source 3D image.
-    SrcSliceNum : int
+    srcSlcNum : int
         The slice number within the Source image stack that the segment relates
         to.
-    TrgImage : SimpleITK image
+    trgIm : SimpleITK image
         The Target 3D image.
-    TrgSliceNum : int
+    trgSlcNum : int
         The slice number within the Target image stack that the segment is to  
         be copied to following the shift in z-components.
     refImage : SimpleITK image
         The reference image whose voxel spacings will be used to convert apply
-        the shift in pixels (e.g. TrgImage).
-    ShiftInX / ShiftInY / ShiftInZ : bool, optional (True by default)
-        If True the pixel shift between the origins of SrcImage and TrgImage
+        the shift in pixels (e.g. trgIm).
+    shiftInX / shiftInY / shiftInZ : bool, optional (True by default)
+        If True the pixel shift between the origins of srcIm and trgIm
         will be applied along the x / y / z direction.
     fractional : bool, optional (False by default)
         If True the pixel shift will be rounded to the nearest integer value.
-    LogToConsole : bool, optional (False by default)
+    p2c : bool, optional (False by default)
         Denotes whether some results will be logged to the console.
     
     Returns
@@ -212,20 +213,20 @@ def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage,
         PixArrBySeg.
     """
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of shift_frames_in_pixarrBySeg():')
         print('\n\n', '-'*120)
         
-    # Get pixel shift between FromSliceNum in SrcImage and ToSliceNum in 
-    # TrgImage in the Target image domain:
+    # Get pixel shift between FromSliceNum in srcIm and ToSliceNum in 
+    # trgIm in the Target image domain:
     voxShift = get_voxel_shift_bt_slices(
-        image0=SrcImage, sliceNum0=SrcSliceNum, image1=TrgImage, 
-        sliceNum1=TrgSliceNum, refImage=TrgImage
+        image0=srcIm, sliceNum0=srcSlcNum, image1=trgIm, 
+        sliceNum1=trgSlcNum, refImage=trgIm
         )
     
-    if LogToConsole:
-        print(f'   \npixShift between slices = {voxShift}')
+    if p2c:
+        print(f'   \nvoxShift between slices = {voxShift}')
         print(f'   \nF2SindsBySeg prior to shifting = {F2SindsBySeg}')
         
         #print(f'\n   Prior to shifting frames:')
@@ -235,14 +236,14 @@ def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage,
         #    print(f'      type(PixArrBySeg[{r}]) = {type(PixArrBySeg[r])}')
         #    print(f'      PixArrBySeg[{r}].shape = {PixArrBySeg[r].shape}')
     
-    if not ShiftInX:
+    if not shiftInX:
         voxShift[0] = 0
-    if not ShiftInY:
+    if not shiftInY:
         voxShift[1] = 0
-    if not ShiftInZ:
+    if not shiftInZ:
         voxShift[2] = 0
     
-    if LogToConsole:
+    if p2c:
         print(f'   \nvoxShift that will be applied = {voxShift}')
         
     for s in range(len(PixArrBySeg)):
@@ -253,7 +254,7 @@ def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage,
             #print(f'   PixArrBySeg[{s}].shape = {PixArrBySeg[s].shape}')
             
             # Replace PixArrBySeg[s] with the result of shifting the in-plane 
-            # elements, and replace F2SindsBySeg[s] with [TrgSliceNum]:
+            # elements, and replace F2SindsBySeg[s] with [trgSlcNum]:
             PixArrBySeg[s] = shift_frame(
                 frame=PixArrBySeg[s], voxShift=voxShift
                 )
@@ -262,18 +263,18 @@ def shift_frames_in_pixarrBySeg_OBSOLETE(PixArrBySeg, F2SindsBySeg, SrcImage,
             #print(f'   type(PixArrBySeg[{s}]) = {type(PixArrBySeg[s])}')
             #print(f'   PixArrBySeg[{s}].shape = {PixArrBySeg[s].shape}')
             
-            #F2SindsBySeg[s] = [TrgSliceNum] # 11/02
+            #F2SindsBySeg[s] = [trgSlcNum] # 11/02
             
             # Shift the frame-to-slice indices by voxShift[2]:
             F2SindsBySeg[s] = [F2SindsBySeg[s][i] + voxShift[2] for i in range(len(F2SindsBySeg[s]))]
             
-            if LogToConsole:
+            if p2c:
                 unique = get_unique_items(Items=PixArrBySeg[s], IgnoreZero=False)
                 
                 print(f'\nThere are {len(unique)} unique items in',
                       f'PixArrBySeg[{s}] after shifting the frame.')
     
-    if LogToConsole:
+    if p2c:
         print(f'   F2SindsBySeg after shifting = {F2SindsBySeg}')
         print('-'*120)
         
@@ -309,74 +310,196 @@ def change_z_inds(indices, newZind):
         
     return indices
 
-def z_shift_ptsByCntByRoi(PtsByCntByRoi, newZind, dicomDir):
+def z_shift_ptsByCntByRoi(ptsByCntByRoi, newZind, dcmIm):
     """
-    Shift the z-component of the points in PtsByCntByRoi (as required when
+    14/09/21: It seems for use case 1 or 2a, I previously ran:
+        1. ReplaceIndInC2SindsByRoi() (now called change_z_inds())
+        2. ZshiftPtsByCntByRoi (now z_shift_ptsByCntByRoi())
+        3. ShiftPtsByCntByRoi() (now shift_ptsByCntByRoi()) 
+    
+    But #3 did what #1-2 did, so it seems there was redundancy (?).
+    
+    Shift the z-component of the points in ptsByCntByRoi (as required when
     making a direct copy of contour points).
     
     Parameters
     ----------
-    PtsByCntByRoi : list of list of a list of a list of floats
+    ptsByCntByRoi : list of list of a list of a list of floats
         List (for each ROI) of a list (for all contours) of a list (for each
         point) of a list (for each dimension) of coordinates.
     newZind : int
         The value to re-assign to the z-components (i.e. k) of Indeces (e.g.
         ToSliceNum).
-    dicomDir : str
-        Directory containing the corresponding DICOMs.
+    dcmIm : SimpleITK Image
+        SimpleITK Image representation of the DICOM series.
     
     Returns
     -------
-    NewPtsByCntByRoi : list of list of a list of a list of floats
-        As PtsByCntByRoi but with modified z-components.
+    shiftedPtsByCntByRoi : list of list of a list of a list of floats
+        As ptsByCntByRoi but with modified z-components.
     """
     
     #from ImageTools import ImportImage
     #from ConversionTools import Points2Indices, Indices2Points
     
     # Import the image:
-    Im = import_im(dicomDir)
+    #dcmIm = import_im(dicomDir)
     
-    """ Convert PtsByCntByRoi to indices, modify the z-component of the
+    """ Convert ptsByCntByRoi to indices, modify the z-component of the
     indices, then convert back to physical points. """
     
-    #IndsByCntByRoi = []
-    NewPtsByCntByRoi = []
+    #indsByCntByRoi = []
+    shiftedPtsByCntByRoi = []
     
     # Iterate through ROIs:
-    for r in range(len(PtsByCntByRoi)): 
-        #IndsByCnt = []
-        NewPtsByCnt = []
+    for r in range(len(ptsByCntByRoi)): 
+        #indsByCnt = []
+        shiftedPtsByCnt = []
         
-        if PtsByCntByRoi[r]:
+        if ptsByCntByRoi[r]:
             # Iterate through contours:
-            for c in range(len(PtsByCntByRoi[r])):
-                pts = PtsByCntByRoi[r][c]
+            for c in range(len(ptsByCntByRoi[r])):
+                pts = ptsByCntByRoi[r][c]
                 
-                inds = pts_to_inds(Points=pts, RefIm=Im, Rounding=False)
+                inds = pts_to_inds(points=pts, refIm=dcmIm, rounding=False)
                 
                 # Modify the z-component (k) of the indices to newZind:
                 inds = change_z_inds(inds, newZind)
                 
-                #IndsByCnt.append(inds)
+                #indsByCnt.append(inds)
                 
                 # Convert back to physical points:
-                pts = inds_to_pts(inds, RefIm=Im)
+                pts = inds_to_pts(inds, refIm=dcmIm)
                 
-                NewPtsByCnt.append(pts)
+                shiftedPtsByCnt.append(pts)
         
-        #IndsByCntByRoi.append(IndsByCnt)
-        NewPtsByCntByRoi.append(NewPtsByCnt)
+        #indsByCntByRoi.append(indsByCnt)
+        shiftedPtsByCntByRoi.append(shiftedPtsByCnt)
         
-    return NewPtsByCntByRoi
+    return shiftedPtsByCntByRoi
 
 def shift_ptsByCntByRoi(
-        PtsByCntByRoi, C2SindsByRoi, SrcImage, SrcSliceNum, 
-        TrgImage, TrgSliceNum, refImage, ShiftInX=True,  
-        ShiftInY=True, ShiftInZ=True, fractional=False, 
-        LogToConsole=False
+        ptsByCntByRoi, c2sIndsByRoi, voxShift, refIm, p2c=False
         ):
     """
+    14/09/21: 
+    
+    Shift the points in each list of points in each list of contours in each
+    list of ROIs given the required voxel shift.
+    
+    The points in ptsByCntByRoi will be converted to indices, modified based on
+    required voxel shift, then convert back points. 
+    
+    Parameters
+    ----------
+    ptsByCntByRoi : list of list of a list of a list of floats
+        List (for each ROI) of a list (for each contour) of a list (for each
+        point) of a list (for each dimension) of coordinates.
+    c2sIndsByRoi : list of a list of ints
+        List (for each ROI) of a list (for each contour) of indices that denote
+        the slice number that the contour relates to.
+    voxShift : list of ints
+        A list (for each dimension) of the required voxel shift.
+    refIm : SimpleITK Image
+        The image whose image domain the points will relate to (e.g. trgIm for
+        copying of points from source to target domain).
+    
+    Returns
+    -------
+    shiftedPtsByCntByRoi : list of list of a list of a list of floats
+        Modified ptsByCntByRoi.
+    shiftedC2SindsByRoi : list of a list of ints
+        Modified c2sIndsByRoi.
+    
+    Notes
+    -----
+    Example uses: 
+        - to compensate for differences in z-positions of a single-contour 
+        Source points to be "direct" copied to a Target slice at a different  
+        stack position
+        - compensating for differences in the origin of Source and Target 
+        images for relationship-preserving copies of images with equal voxel 
+        spacings
+    """
+    
+    if p2c:
+        print('\n\n', '-'*120)
+        print('Running of shift_ptsByCntByRoi():')
+        print('\n\n', '-'*120)
+        print('\nPre-shift:')
+        print_indsByRoi(c2sIndsByRoi)
+        print_ptsByCntByRoi(ptsByCntByRoi)
+    
+    dim = len(voxShift)
+    
+    #indsByCntByRoi = []
+    shiftedPtsByCntByRoi = []
+    shiftedC2SindsByRoi = []
+    
+    # Iterate through ROIs:
+    for r in range(len(ptsByCntByRoi)): 
+        #indsByCnt = []
+        shiftedPtsByCnt = []
+        shiftedC2Sinds = []
+        
+        # If the list of points-by-contour for this ROI is not empty..
+        if ptsByCntByRoi[r]:
+            # Iterate through contours:
+            for c in range(len(ptsByCntByRoi[r])):
+                c2sInd = c2sIndsByRoi[r][c]
+                pts = ptsByCntByRoi[r][c]
+                
+                # Convert from points to indices:
+                #inds = pts_to_inds(points=pts, refIm=refIm, rounding=False)
+                listOfInds = pts_to_inds(
+                    points=pts, refIm=refIm, rounding=False
+                    )
+                
+                #print(f'\nvoxShift = {voxShift}, \nlistOfInds = {listOfInds}')
+                
+                # Apply the required pixel shifts:
+                #shiftedInds = [
+                #    inds[i] + voxShift[i] for i in range(len(voxShift))
+                #    ]
+                shiftedInds = [
+                    [inds[i] + voxShift[i] for i in range(dim)] for inds in listOfInds
+                    ]
+                
+                #indsByCnt.append(inds)
+                #print(f'\n\ntype(inds) = {type(inds)}')
+                #print(f'\n\ntype(inds[0]) = {type(inds[0])}')
+                
+                # Convert back to physical points:
+                shiftedPts = inds_to_pts(shiftedInds, refIm=refIm)
+                
+                shiftedPtsByCnt.append(shiftedPts)
+                
+                # Shift the contour-to-slice indices by voxShift[2]:
+                #c2sIndsByRoi[r][c] += voxShift[2]
+                shiftedC2Sinds.append(c2sInd + voxShift[2])
+        
+        #indsByCntByRoi.append(indsByCnt)
+        shiftedPtsByCntByRoi.append(shiftedPtsByCnt)
+        shiftedC2SindsByRoi.append(shiftedC2Sinds)
+        
+        if p2c:
+            print('\nPost-shift:')
+            print_indsByRoi(shiftedC2SindsByRoi)
+            print_ptsByCntByRoi(shiftedPtsByCntByRoi)
+            print('\nEnd of shift_ptsByCntByRoi\n')
+            print('-'*120)
+        
+    return shiftedPtsByCntByRoi, shiftedC2SindsByRoi
+
+def shift_ptsByCntByRoi_210914(
+        ptsByCntByRoi, c2sIndsByRoi, srcIm, srcSlcNum, 
+        trgIm, trgSlcNum, refImage, 
+        shiftInX=True, shiftInY=True, shiftInZ=True, 
+        fractional=False, p2c=False
+        ):
+    """
+    14/09/21: 
+    
     Shift the points in each list of points in each list of contours in each
     list of ROIs.  
     
@@ -390,9 +513,12 @@ def shift_ptsByCntByRoi(
     
     Parameters
     ----------
-    PtsByCntByRoi : list of list of a list of a list of floats
+    ptsByCntByRoi : list of list of a list of a list of floats
         List (for each ROI) of a list (for all contours) of a list (for each
         point) of a list (for each dimension) of coordinates.
+    c2sIndsByRoi : list of a list of ints
+        List (for each ROI) of a list (for each contour) of indices that denote
+        the slice number that the contour relates to.
     newZind : int
         The value to re-assign to the z-components (i.e. k) of Indeces (e.g.
         ToSliceNum).
@@ -401,131 +527,131 @@ def shift_ptsByCntByRoi(
     
     Returns
     -------
-    NewPtsByCntByRoi : list of list of a list of a list of floats
-        As PtsByCntByRoi but with modified z-components.
+    shiftedPtsByCntByRoi : list of list of a list of a list of floats
+        As ptsByCntByRoi but with modified z-components.
     """
     
     #from ImageTools import ImportImage
     #from ConversionTools import Points2Indices, Indices2Points
     
-    if LogToConsole:
+    if p2c:
         print('\n\n', '-'*120)
         print('Running of shift_ptsByCntByRoi():')
         print('\n\n', '-'*120)
         
-    """ Get voxel shift between FromSliceNum in SrcImage and ToSliceNum in 
-    TrgImage in the Target image domain: """
-    pixShift = get_voxel_shift_bt_slices(
-        image0=SrcImage, sliceNum0=SrcSliceNum, 
-        image1=TrgImage, sliceNum1=TrgSliceNum,
-        refImage=TrgImage
+    """ Get voxel shift between FromSliceNum in srcIm and ToSliceNum in 
+    trgIm in the Target image domain: """
+    voxShift = get_voxel_shift_bt_slices(
+        image0=srcIm, sliceNum0=srcSlcNum, 
+        image1=trgIm, sliceNum1=trgSlcNum,
+        refImage=trgIm
         )
     
-    if LogToConsole:
-        print(f'   pixShift between slices = {pixShift}')
+    if p2c:
+        print(f'   voxShift between slices = {voxShift}')
     
-    if not ShiftInX:
-        pixShift[0] = 0
-    if not ShiftInY:
-        pixShift[1] = 0
-    if not ShiftInZ:
-        pixShift[2] = 0
+    if not shiftInX:
+        voxShift[0] = 0
+    if not shiftInY:
+        voxShift[1] = 0
+    if not shiftInZ:
+        voxShift[2] = 0
     
-    if LogToConsole:
-        print(f'   pixShift that will be applied = {pixShift}')
+    if p2c:
+        print(f'   voxShift that will be applied = {voxShift}')
     
     
-    """ Convert PtsByCntByRoi to indices, modify the indices, then convert back
+    """ Convert ptsByCntByRoi to indices, modify the indices, then convert back
     to physical points. """
     
-    #IndsByCntByRoi = []
-    NewPtsByCntByRoi = []
-    NewC2SindsByRoi = []
+    #indsByCntByRoi = []
+    shiftedPtsByCntByRoi = []
+    shiftedC2SindsByRoi = []
     
     # Iterate through ROIs:
-    for r in range(len(PtsByCntByRoi)): 
-        #IndsByCnt = []
-        NewPtsByCnt = []
-        NewC2Sinds = []
+    for r in range(len(ptsByCntByRoi)): 
+        #indsByCnt = []
+        shiftedPtsByCnt = []
+        shiftedC2Sinds = []
         
-        if PtsByCntByRoi[r]:
+        if ptsByCntByRoi[r]:
             # Iterate through contours:
-            for c in range(len(PtsByCntByRoi[r])):
-                Pts = PtsByCntByRoi[r][c]
+            for c in range(len(ptsByCntByRoi[r])):
+                pts = ptsByCntByRoi[r][c]
                 
-                """ Inds are the list of relationship-preserving indices that
-                correspond to Pts: """
-                Inds = pts_to_inds(Points=Pts, RefIm=TrgImage, Rounding=False)
+                """ inds are the list of relationship-preserving indices that
+                correspond to pts: """
+                inds = pts_to_inds(points=pts, refIm=trgIm, rounding=False)
                 
-                #print(f'\n\npixShift = {pixShift}, \nInds = {Inds}')
+                #print(f'\n\nvoxShift = {voxShift}, \ninds = {inds}')
                 
                 """ Apply the required pixel shifts: """
-                Inds = [Inds[i] + pixShift[i] for i in range(len(pixShift))]
+                inds = [inds[i] + voxShift[i] for i in range(len(voxShift))]
                 
-                #IndsByCnt.append(inds)
-                #print(f'\n\ntype(Inds) = {type(Inds)}')
-                #print(f'\n\ntype(Inds[0]) = {type(Inds[0])}')
+                #indsByCnt.append(inds)
+                #print(f'\n\ntype(inds) = {type(inds)}')
+                #print(f'\n\ntype(inds[0]) = {type(inds[0])}')
                 
                 """ Convert back to physical points: """
-                Pts = inds_to_pts(Inds, RefIm=TrgImage)
+                pts = inds_to_pts(inds, refIm=trgIm)
                 
-                NewPtsByCnt.append(Pts)
+                shiftedPtsByCnt.append(pts)
                 
-                """ Shift the contour-to-slice indices by pixShift[2]: """
-                #C2SindsByRoi[r][c] += pixShift[2]
-                NewC2Sinds.append(C2SindsByRoi[r][c] + pixShift[2])
+                """ Shift the contour-to-slice indices by voxShift[2]: """
+                #c2sIndsByRoi[r][c] += voxShift[2]
+                shiftedC2Sinds.append(c2sIndsByRoi[r][c] + voxShift[2])
         
-        #IndsByCntByRoi.append(IndsByCnt)
-        NewPtsByCntByRoi.append(NewPtsByCnt)
-        NewC2SindsByRoi.append(NewC2Sinds)
+        #indsByCntByRoi.append(indsByCnt)
+        shiftedPtsByCntByRoi.append(shiftedPtsByCnt)
+        shiftedC2SindsByRoi.append(shiftedC2Sinds)
         
-    return NewPtsByCntByRoi, NewC2SindsByRoi
+    return shiftedPtsByCntByRoi, shiftedC2SindsByRoi
 
 def get_srcF2SindsByRoi_to_trgF2SindsByRoi(
-        SrcF2SindsByRoi, SrcImage, TrgImage):
+        srcF2SindsByRoi, srcIm, trgIm):
     """
-    Shift the indices in SrcF2SindsByRoi to account for any differences in the
-    origins of SrcIm and TrgIm.
+    Shift the indices in srcF2SindsByRoi to account for any differences in the
+    origins of srcIm and trgIm.
 
     Parameters
     ----------
-    SrcF2SindsByRoi : list of a list of ints
+    srcF2SindsByRoi : list of a list of ints
         List (for each segment/ROI) of a list (for each segmentation/contour) 
         of slice numbers that correspond to each Source segmentation/contour.
-    SrcImage : SimpleITK Image
+    srcIm : SimpleITK Image
         The Source 3D image.
-    TrgImage : SimpleITK Image
+    trgIm : SimpleITK Image
         The Target 3D image.
 
     Returns
     -------
-    TrgF2SindsByRoi : list of a list of ints
+    trgF2SindsByRoi : list of a list of ints
         List (for each segment/ROI) of a list (for each segmentation/contour) 
         of slice numbers that correspond to each Source segmentation/contour in 
         the Target image domain.
     """
     
-    SrcOrigin = SrcImage.GetOrigin()
-    TrgOrigin = TrgImage.GetOrigin()
+    srcOrigin = srcIm.GetOrigin()
+    trgOrigin = trgIm.GetOrigin()
     
-    #dim = len(SrcOrigin)
-    #mmDiff = [TrgOrigin[i] - SrcOrigin[i] for i in range(dim)]
+    #dim = len(srcOrigin)
+    #mmDiff = [trgOrigin[i] - srcOrigin[i] for i in range(dim)]
     
-    Dz_mm = TrgOrigin[2] - SrcOrigin[2]
+    dz_mm = trgOrigin[2] - srcOrigin[2]
     
-    dk = TrgImage.GetSpacing()[2]
+    dk = trgIm.GetSpacing()[2]
     
-    Dz_pix = round(Dz_mm/dk)
+    dz_pix = round(dz_mm/dk)
     
-    TrgF2SindsByRoi = []
+    trgF2SindsByRoi = []
     
-    for r in range(len(SrcF2SindsByRoi)):
-        TrgF2Sinds = []
+    for r in range(len(srcF2SindsByRoi)):
+        trgF2Sinds = []
         
-        for c in range(len(SrcF2SindsByRoi[r])):
-            #TrgF2Sinds.append(SrcF2SindsByRoi[r][c] + Dz_pix)
-            TrgF2Sinds.append(SrcF2SindsByRoi[r][c] - Dz_pix)
+        for c in range(len(srcF2SindsByRoi[r])):
+            #trgF2Sinds.append(srcF2SindsByRoi[r][c] + dz_pix)
+            trgF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
             
-        TrgF2SindsByRoi.append(TrgF2Sinds)
+        trgF2SindsByRoi.append(trgF2Sinds)
     
-    return TrgF2SindsByRoi
+    return trgF2SindsByRoi

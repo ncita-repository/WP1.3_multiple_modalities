@@ -6,7 +6,7 @@ Created on Thu Jul  8 08:51:21 2021
 """
 
 import SimpleITK as sitk
-from conversion_tools.inds_pts import inds_to_pts
+from conversion_tools.inds_pts_cntdata import inds_to_pts
 from general_tools.general import flatten_list
     
     

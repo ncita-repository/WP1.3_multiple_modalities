@@ -13,12 +13,12 @@ from shapely.geometry import Polygon, Point
 from scipy.sparse import issparse
 from skimage.measure import find_contours
 
-from general_tools.console_printing import (
-    print_pts_by_cnt, print_pixarr_by_seg
-    )
+from general_tools.console_printing import print_ptsByCnt, print_pixarrBySeg
 #from image_tools.imports import import_im
 #from io_tools.imports import import_im
-from conversion_tools.inds_pts import inds_to_pts, pts_to_cntdata, pts_to_inds
+from conversion_tools.inds_pts_cntdata import (
+    inds_to_pts, pts_to_cntdata, pts_to_inds
+    )
 
 
 def indsByCnt_to_pixarr(indsByCnt, refIm):
@@ -151,7 +151,7 @@ def pixarr_to_labarr(pixarr, numOfSlices, f2sInds):
     
     return labarr
 
-def get_labarrByRoi(rts, dicomDir, c2sIndsByRoi, refIm):
+def get_labarrBySeg(rts, dicomDir, c2sIndsByRoi, refIm):
     """ 
     Get a list of zero-padded 3D Numpy arrays - one per ROI.
     
@@ -169,7 +169,7 @@ def get_labarrByRoi(rts, dicomDir, c2sIndsByRoi, refIm):
     
     Returns
     -------
-    labarrByRoi : list of Numpy arrays
+    labarrBySeg : list of Numpy arrays
         A list of 3D zero-padded labelmap Numpy arrays - one per contour.
     
     Note
@@ -181,7 +181,7 @@ def get_labarrByRoi(rts, dicomDir, c2sIndsByRoi, refIm):
     
     from RtsTools import GetIndsByRoi
     
-    labarrByRoi = []
+    labarrBySeg = []
     
     indsByRoi = GetIndsByRoi(rts, dicomDir)
     
@@ -195,9 +195,9 @@ def get_labarrByRoi(rts, dicomDir, c2sIndsByRoi, refIm):
             f2sInds=c2sIndsByRoi[roiNum]
             )
         
-        labarrByRoi.append(labarr)
+        labarrBySeg.append(labarr)
     
-    return labarrByRoi
+    return labarrBySeg
 
 def ptsByCnt_to_pixarr(ptsByCnt, refIm, p2c=False):
     """ 
@@ -228,8 +228,6 @@ def ptsByCnt_to_pixarr(ptsByCnt, refIm, p2c=False):
     indsByCnt = []
     
     if ptsByCnt == []:
-        import numpy as np
-        
         C, R, F = refIm.GetSize()
         
         #pixarr = np.zeros((F, R, C), dtype='uint')
@@ -291,7 +289,7 @@ def ptsByCntByRoi_to_pixarrByRoi(ptsByCntByRoi, refIm, p2c=False):
         
     if p2c:
         shapes = [pixarrByRoi[r].shape for r in range(R)]
-        print(f'   Shape of each pixarrByRoi = {shapes}')
+        print(f'   Shape of each pixarrBySeg = {shapes}')
         print('-'*120)
     
     return pixarrByRoi
@@ -499,7 +497,7 @@ def pixarr_to_ptsByCnt(pixarr, f2sInds, refIm, thresh=0.5, p2c=False):
         print('Running of pixarr_to_ptsByCnt():')
         print('\n\n', '-'*120)
         print(f'Prior to conversion: \nf2sInds = {f2sInds}')
-        print_pixarr_by_seg(pixarr)
+        print_pixarrBySeg(pixarr)
     
     # Convert the pixel array to a list of indices-by-object-by-frame:
     """ A list of objects originating from the same frame will be treated as 
@@ -522,7 +520,7 @@ def pixarr_to_ptsByCnt(pixarr, f2sInds, refIm, thresh=0.5, p2c=False):
     
     for f in range(len(indsByObjByFrame)):
         for o in range(len(indsByObjByFrame[f])):
-            pts = inds_to_pts(inds=indsByObjByFrame[f][o], refIm=refIm)
+            pts = inds_to_pts(indices=indsByObjByFrame[f][o], refIm=refIm)
             
             ptsByCnt.append(pts)
             
@@ -539,13 +537,13 @@ def pixarr_to_ptsByCnt(pixarr, f2sInds, refIm, thresh=0.5, p2c=False):
     
     if p2c:
         print(f'\nAfter conversion: \nc2sInds = {c2sInds}')
-        print_pts_by_cnt(ptsByCnt)
+        print_ptsByCnt(ptsByCnt)
         print('-'*120)
  
     return ptsByCnt, cntdataByCnt, c2sInds
 
-def pixarrByRoi_to_ptsByCntByRoi(
-        pixarrByRoi, f2sIndsByRoi, refIm, thresh=0.5, p2c=False
+def pixarrBySeg_to_ptsByCntByRoi(
+        pixarrBySeg, f2sIndsBySeg, refIm, thresh=0.5, p2c=False
         ):
     """
     10/09/21: Previously refIm parameter was dicomDir.
@@ -556,31 +554,34 @@ def pixarrByRoi_to_ptsByCntByRoi(
  
     Parameters
     ----------
-    pixarrByRoi : list of Numpy arrays
-        A list (for each ROI) of a FxRxC (frames x rows x cols) Numpy array 
+    pixarrBySeg : list of Numpy arrays
+        A list (for each segment) of a FxRxC (frames x rows x cols) Numpy array 
         containing F RxC masks in each pixel array.
-    f2sIndsByRoi : list of list of ints
-        A list (for each ROI) of a list (for each frame) of the slice numbers 
-        that correspond to each frame in each pixel array in pixarrByRoi.  This
-        is equivalent to a list of Per-FrameFunctionalGroupsSequence-to-slice 
-        indices (PFFGStoSliceInds).
+    f2sIndsBySeg : list of list of ints
+        A list (for each segment) of a list (for each frame) of the slice 
+        numbers that correspond to each frame in each pixel array in 
+        pixarrBySeg.  This is equivalent to a list of 
+        Per-FrameFunctionalGroupsSequence-to-slice indices (PFFGStoSliceInds).
     refIm : SimpleITK Image
-        The image that relates to pixarrByRoi.
-    thresh : float, optional (0.5 by default)
-        Threshold value used to binarise the labels in pixarr.
-    p2c : bool, optional (False by default)
-        Denotes whether some results will be logged to the console.
+        The SimpleITK Image representation of the DICOM series that pixarrBySeg
+        relates to.
+    thresh : float, optional
+        Threshold value used to binarise the labels in pixarr. The default
+        value is 0.5.
+    p2c : bool, optional
+        Denotes whether some results will be logged to the console. The default
+        values is False.
  
     Returns
     -------
     ptsByCntByRoi : list of a list of a list of floats
         A list (for each ROI) of a list (for each contour) of a list (for each 
         dimension) of the physical coordinates that define each pixel array in
-        pixarrByRoi.
+        pixarrBySeg.
     cntdataByObjByFrame : list of a list of a list of str
         A list (for each ROI) of a list (for each contour) of a flattened list 
         of [x, y, z] physical coordinates that define each pixel array in
-        pixarrByRoi.
+        pixarrBySeg.
     c2sIndsByRoi : list of a list of ints
         List (for each ROI) of a list (for each contour) of slice numbers that 
         correspond to each contour in ptsByCntByRoi.
@@ -588,24 +589,24 @@ def pixarrByRoi_to_ptsByCntByRoi(
     
     if p2c:
         print('\n\n', '-'*120)
-        print('Running of pixarrByRoi_to_ptsByCntByRoi():')
+        print('Running of pixarrBySeg_to_ptsByCntByRoi():')
         print('\n\n', '-'*120)
         
     ptsByCntByRoi = []
     cntdataByCntByRoi = []
     c2sIndsByRoi = []
     
-    #print(f'\n\n\npixarrByRoi = {pixarrByRoi}')
-    #print(f'len(pixarrByRoi) = {len(pixarrByRoi)}')
-    #for r in range(len(pixarrByRoi)):
-    #    print(f'type(pixarrByRoi[{r}]) = {type(pixarrByRoi[r])}')
-    #    print(f'pixarrByRoi[{r}].shape = {pixarrByRoi[r].shape}')
+    #print(f'\n\n\npixarrBySeg = {pixarrBySeg}')
+    #print(f'len(pixarrBySeg) = {len(pixarrBySeg)}')
+    #for r in range(len(pixarrBySeg)):
+    #    print(f'type(pixarrBySeg[{r}]) = {type(pixarrBySeg[r])}')
+    #    print(f'pixarrBySeg[{r}].shape = {pixarrBySeg[r].shape}')
     
-    for r in range(len(pixarrByRoi)):
-        #if pixarrByRoi[r]:
-        if pixarrByRoi[r].shape[0]:
+    for r in range(len(pixarrBySeg)):
+        #if pixarrBySeg[r]:
+        if pixarrBySeg[r].shape[0]:
             ptsByCnt, cntdataByCnt, c2sInds = pixarr_to_ptsByCnt(
-                pixarrByRoi[r], f2sIndsByRoi[r], refIm, thresh, p2c
+                pixarrBySeg[r], f2sIndsBySeg[r], refIm, thresh, p2c
                 )
             
             ptsByCntByRoi.append(ptsByCnt)
