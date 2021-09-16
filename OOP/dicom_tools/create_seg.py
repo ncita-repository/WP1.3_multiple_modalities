@@ -66,17 +66,26 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     import datetime
     from copy import deepcopy
     import numpy as np
-    from general_tools.general import flatten_list, get_unique_items
-    from general_tools.general import reduce_list_of_str_floats_to_16
+    from general_tools.general import (
+        flatten_list, get_unique_items, reduce_list_of_str_floats_to_16
+        )
     #from dicom_tools.imports import import_dicoms
     #from dicom_tools.metadata import get_roicol_labels
     #from image_tools.attrs_info import get_im_attrs
     from seg_tools.metadata import get_RSOPuids_in_RIS
+    from general_tools.console_printing import (
+        print_indsByRoi, print_pixarrBySeg
+    )
     
     srcSeg = srcDataset.roicol
     srcSegLabel = srcDataset.roiName
     allSrcSegLabels = srcDataset.roiNames
     
+    """ 
+    Since the source SEG has been copied/propagated to the target domain, it's
+    the tags from the target DICOMs that are relevant. The image attributes of
+    newDataset are the same as that of trgDataset.
+    """
     trgDicoms = trgDataset.dicoms
     trgSeg = trgDataset.roicol
     #trgImSize = trgDataset.imSize
@@ -85,24 +94,18 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     #trgIPPs = trgDataset.imPositions
     #trgDirs = trgDataset.imDirections 
     
-    newPixarrBySeg = newDataset.pixarrByRoi
-    newF2SindsBySeg = newDataset.f2sIndsByRoi
+    newF2SindsBySeg = newDataset.f2sIndsBySeg
+    newPixarrBySeg = newDataset.pixarrBySeg
     
+    addToRoicolLab = params.cfgDict['addToRoicolLab']
     p2c = params.cfgDict['p2c']
     
     if p2c:
         print('\n\n', '-'*120)
         print('Running of create_seg():')
         print('\n\n', '-'*120)
-        print(f'   newF2SindsBySeg = {newF2SindsBySeg}')
-        F = len(newF2SindsBySeg)
-        print(f'   len(newF2SindsBySeg) = {F}')
-        for f in range(F):
-            print(f'   len(newF2SindsBySeg[{f}]) = {len(newF2SindsBySeg[f])}')
-        P = len(newPixarrBySeg)
-        print(f'   len(newPixarrBySeg) = {P}')
-        for p in range(P):
-            print(f'   newPixarrBySeg[{p}].shape = {newPixarrBySeg[p].shape}')
+        print_indsByRoi(newF2SindsBySeg)
+        print_pixarrBySeg(newPixarrBySeg)
     
     """ Use trgSeg or srcSeg as a template for newSeg. """
     if trgSeg:
@@ -150,11 +153,14 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     # Generate a new SeriesInstanceUID.
     newSeg.SeriesInstanceUID = generate_uid()
     
-    #newDate = time.strftime("%Y%m%d", time.gmtime())
-    #newTime = time.strftime("%H%M%S", time.gmtime())
+    #currentDate = time.strftime("%Y%m%d", time.gmtime())
+    #currentTime = time.strftime("%H%M%S", time.gmtime())
     timeNow = datetime.datetime.now()
-    newDate = timeNow.strftime('%Y%m%d')
-    newTime = timeNow.strftime('%H%M%S.%f')
+    currentDate = timeNow.strftime('%Y%m%d')
+    currentTime = timeNow.strftime('%H%M%S.%f')
+    
+    if addToRoicolLab == '':
+        addToRoicolLab = timeNow.strftime(' %Y%m%d %H%M%S')
     
     """ 
     If trgSeg != None, some tags will not need to be replaced. 
@@ -168,21 +174,19 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
         except AttributeError:
             pass
         #newSeg.ContentDate = trgDicoms[0].ContentDate
-        newSeg.ContentDate = newDate
+        newSeg.ContentDate = currentDate
         newSeg.StudyTime = trgDicoms[0].StudyTime
         try:
             newSeg.SeriesTime = trgDicoms[0].SeriesTime
         except AttributeError:
             pass
         #newSeg.ContentTime = trgDicoms[0].ContentTime
-        newSeg.ContentTime = newTime
+        newSeg.ContentTime = currentTime
         newSeg.Manufacturer = trgDicoms[0].Manufacturer
-        """
         try:
-            newSeg.SeriesDescription += AddTxtToSegLabel
+            newSeg.SeriesDescription += addToRoicolLab
         except AttributeError:
-            newSeg.SeriesDescription = AddTxtToSegLabel
-        """
+            newSeg.SeriesDescription = addToRoicolLab
         newSeg.PatientName = trgDicoms[0].PatientName
         newSeg.PatientID = trgDicoms[0].PatientID
         newSeg.PatientBirthDate = trgDicoms[0].PatientBirthDate
@@ -270,8 +274,10 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
         if i > N - 1:
             # Increase the sequence by one.
             #newSeg.ReferencedSeriesSequence[0]\
-            #      .ReferencedInstanceSequence.append(newSeg.ReferencedSeriesSequence[0]\
-            #                                               .ReferencedInstanceSequence[-1])
+            #      .ReferencedInstanceSequence.append(
+            #          newSeg.ReferencedSeriesSequence[0]\
+            #                 .ReferencedInstanceSequence[-1]
+            #                 )
                      
             lastItem = deepcopy(newSeg.ReferencedSeriesSequence[0]\
                                       .ReferencedInstanceSequence[-1])

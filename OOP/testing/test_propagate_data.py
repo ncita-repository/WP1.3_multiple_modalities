@@ -18,14 +18,14 @@ reload(testing.test_import_data)
 import io_tools.import_dro
 reload(io_tools.import_dro)
 
-import image_tools.propagate
-reload(image_tools.propagate)
+import io_tools.propagate
+reload(io_tools.propagate)
 
 import dro_tools.create_dro
 reload(dro_tools.create_dro)
 
-import seg_tools.create_seg
-reload(seg_tools.create_seg)
+import dicom_tools.create_seg
+reload(dicom_tools.create_seg)
 
 import plotting_tools.plotting
 reload(plotting_tools.plotting)
@@ -39,9 +39,9 @@ from pathlib import Path
 import SimpleITK as sitk
 from testing.test_import_data import DataImporterTester
 from io_tools.import_dro import DroImporter
-from image_tools.propagate import Propagator
+from io_tools.propagate import Propagator
 from dro_tools.create_dro import DroCreator
-from seg_tools.create_seg import create_seg
+from dicom_tools.create_seg import create_seg
 #from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
 from plotting_tools.plotting import (
     plot_pixarrs_from_list_of_segs_and_images, compare_res_results,
@@ -138,7 +138,9 @@ class PropagatorTester:
         self.newDataset = newDataset
         # Update params:
         params = self.params
+        
         useCaseToApply = params.cfgDict['useCaseToApply']
+        roicolMod = params.cfgDict['roicolMod']
         
         """ Creating a new ROI Collection and DRO (if applicable) is not
         required but adding it to more fully test (23/08/2021). """

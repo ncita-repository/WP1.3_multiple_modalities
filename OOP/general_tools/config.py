@@ -71,7 +71,7 @@ def create_config_files(cfgDir, password=""):
     """
     
     # Current working directory:
-    cwd = os.getcwd()
+    #cwd = os.getcwd()
     
     # Default download directory for XNAT data:
     ddd = os.path.join(Path.home(), "Downloads", "xnat_downloads")
@@ -116,11 +116,11 @@ def create_config_files(cfgDir, password=""):
     fidsDir = r'C:\Code\WP1.3_multiple_modalities\OOP\fiducials'
     
     """
-    Chose whether or not to export the (new) target ROI Collection (i.e.
-    RTS or SEG), DRO, transforms, label images, plots and logs:
+    Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
+    DRO, transforms, label images, plots and logs:
     """
-    #exportTrgRoicol = False
-    exportTrgRoicol = True
+    #exportRoicol = False
+    exportRoicol = True
     exportIm = False # 3D DICOM images
     #exportDro = False
     exportDro = True
@@ -131,6 +131,17 @@ def create_config_files(cfgDir, password=""):
     #exportLogs = False
     exportLogs = True
     
+    
+    """
+    The parameter addToRoicolLabel allows for adding text to the 
+    StructureSetLab (SSL) of the new DICOM-RTSTRUCT or SeriesDescription (SD)
+    of the new DICOM-SEG file, 
+    e.g. New SSL/SD = SSD/SD copied from the Source RTS/SEG + addToRoicolLabel
+    The default value of addToRoicolLab will the empty string, which will
+    result in the addition of the timestamp of the file creation,
+    e.g. "{copied SSL/SD} 20210323 101748".
+    """
+    addToRoicolLab = '' # the current timestamp will be added
     
     """ 
     When searching XNAT for the source ROI Collection that matches the required
@@ -226,7 +237,7 @@ def create_config_files(cfgDir, password=""):
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
         'resPlotsExportDir' : resPlotsExportDir,
-        'exportTrgRoicol' : exportTrgRoicol,
+        'exportRoicol' : exportRoicol,
         'exportDro' : exportDro,
         'exportTx' : exportTx,
         'exportIm' : exportIm,
@@ -234,6 +245,7 @@ def create_config_files(cfgDir, password=""):
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
         'whichSrcRoicol' : whichSrcRoicol,
+        'addToRoicolLab' : addToRoicolLab,
         'uploadDro' : uploadDro,
         'overwriteDro' : overwriteDro,
         'p2c' : p2c
@@ -318,7 +330,7 @@ def create_config_files(cfgDir, password=""):
         'rtsPlotsExportDir' : rtsPlotsExportDir,
         'segPlotsExportDir' : segPlotsExportDir,
         'resPlotsExportDir' : resPlotsExportDir,
-        'exportTrgRoicol' : exportTrgRoicol,
+        'exportRoicol' : exportRoicol,
         'exportDro' : exportDro,
         'exportTx' : exportTx,
         'exportIm' : exportIm,
@@ -326,6 +338,7 @@ def create_config_files(cfgDir, password=""):
         'exportPlots' : exportPlots,
         'exportLogs' : exportLogs,
         'whichSrcRoicol' : whichSrcRoicol,
+        'addToRoicolLab' : addToRoicolLab,
         'uploadDro' : uploadDro,
         'overwriteDro' : overwriteDro,
         'p2c' : p2c
@@ -1223,8 +1236,8 @@ def create_general_params_file_OLD(cfgDir):
     Chose whether or not to export the (new) target ROI Collection (i.e.
     RTS or SEG), DRO, plots and logs:
     """
-    #exportTrgRoicol = False
-    exportTrgRoicol = True
+    #exportRoicol = False
+    exportRoicol = True
     
     #exportDro = False
     exportDro = True

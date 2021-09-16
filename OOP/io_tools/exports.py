@@ -379,8 +379,10 @@ def export_im(im, filename, fileFormat='HDF5ImageIO', exportDir='cwd'):
     
     return
 
-def export_newRoicol(newRoicol, srcRoicolFpath, exportDir, fname=''):
+def export_newRoicol_MOVED(newRoicol, srcRoicolFpath, exportDir, fname=''):
     """
+    16/09/21: Moved to dicom_tools.create_roicol.py
+    
     Export ROI Collection (RTS/SEG) to disk.  
     
     Parameters

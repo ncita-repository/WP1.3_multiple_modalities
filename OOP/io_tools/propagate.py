@@ -29,7 +29,7 @@ reload(general_tools.console_printing)
 import time
 import os
 from pathlib import Path
-from copy import deepcopy
+#from copy import deepcopy
 import SimpleITK as sitk
 
 from general_tools.shifting import (
@@ -214,7 +214,9 @@ class Propagator:
         
         #self.propagate(params, srcDataset, trgDataset)
     
-    def get_intersection_of_roi_and_trgIm(self, srcDataset, trgDataset, params):
+    def get_intersection_of_roi_and_trgIm(
+            self, srcDataset, trgDataset, params
+            ):
         """
         Get the intersection of the ROI and target image domain as a fraction.
         
@@ -1238,7 +1240,7 @@ class Propagator:
             
             self.f2sIndsBySeg = newF2SindsBySeg
             self.pixarrBySeg = newPixarrBySeg
-            self.f2sIndsByRoi = newF2SindsByRoi
+            self.c2sIndsByRoi = newC2SindsByRoi
             self.ptsByCntByRoi = newPtsByCntByRoi
             
             if p2c:
@@ -1332,8 +1334,6 @@ class Propagator:
                     newZind=trgDataset.slcNum,
                     dcmIm=srcDataset.dcmIm
                     )
-                
-                
             elif useCaseToApply == '2b':
                 # Shift points:
                 self.shift_points(srcDataset, trgDataset, params)
@@ -1440,7 +1440,9 @@ class Propagator:
                 print(f'   newF2SindsByRoi = {newF2SindsByRoi}')
                 print('-'*120)
 
-    def make_relationship_preserving_copy(self, params, srcDataset, trgDataset):
+    def make_relationship_preserving_copy(
+            self, params, srcDataset, trgDataset
+            ):
         # TODO update docstrings
         """
         Perform a relationship-preserving copy of the segmentation(s)/
@@ -2223,7 +2225,7 @@ class Propagator:
             # Convert from pixel array data to contour data:
             print('\nNeed to convert from pixel array to contour data...')
             
-        
+    
     def export_data(self, srcDataset, trgDataset, params):
         
         #exportLabim = params.cfgDict['exportLabim']

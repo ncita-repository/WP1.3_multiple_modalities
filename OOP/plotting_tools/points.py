@@ -16,14 +16,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 #from pydicom import dcmread
 
-import seg_tools.seg_data
-reload(seg_tools.seg_data)
+import dicom_tools.seg_data
+reload(dicom_tools.seg_data)
 import general_tools.general
 reload(general_tools.general)
 
 from general_tools.general import get_unique_items, unpack
 from image_tools.attrs_info import get_im_attrs_from_list_of_dicomDir
-#from seg_tools.seg_data import (
+#from dicom_tools.seg_data import (
 #    get_seg_data_from_list_of_segs, get_seg_data_from_list_of_labimByRoi
 #    )
 #from conversion_tools.pixarrs_ims import im_to_pixarr

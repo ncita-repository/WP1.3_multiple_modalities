@@ -6,13 +6,13 @@ Created on Tue Jul  6 16:12:04 2021
 """
 
 from importlib import reload
-import dicom_tools.metadata
-reload(dicom_tools.metadata)
+import dicom_tools.dcm_metadata
+reload(dicom_tools.dcm_metadata)
 
 import json
 import SimpleITK as sitk
 from pydicom import read_file
-from dicom_tools.metadata import get_dcm_fpaths
+from dicom_tools.dcm_metadata import get_dcm_fpaths
 
 
 def import_dcms(dicomDir, sortMethod='slices', p2c=False):

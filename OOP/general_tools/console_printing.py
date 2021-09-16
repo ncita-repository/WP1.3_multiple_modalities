@@ -67,7 +67,8 @@ def print_ptsByCnt(ptsByCnt):
 
 def print_ptsByCntByRoi(ptsByCntByRoi):
     """ 
-    Print the number of points in each contour of each ROI in ptsByCntByRoi. 
+    Print the number of points in each contour of each ROI in ptsByCntByRoi
+    or cntdataByCntByRoi. 
     """
     
     #print('\n\n', '-'*120)

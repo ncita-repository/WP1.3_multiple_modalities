@@ -26,16 +26,16 @@ import io_tools.import_roicol
 reload(io_tools.import_roicol)
 import io_tools.inputs_checker
 reload(io_tools.inputs_checker)
-import seg_tools.metadata
-reload(seg_tools.metadata)
-import seg_tools.seg_data
-reload(seg_tools.seg_data)
-import rts_tools.metadata
-reload(rts_tools.metadata)
-import rts_tools.rts_data
-reload(rts_tools.rts_data)
-import dicom_tools.metadata
-reload(dicom_tools.metadata)
+import dicom_tools.seg_metadata
+reload(dicom_tools.seg_metadata)
+import dicom_tools.seg_data
+reload(dicom_tools.seg_data)
+import dicom_tools.rts_metadata
+reload(dicom_tools.rts_metadata)
+import dicom_tools.rts_data
+reload(dicom_tools.rts_data)
+import dicom_tools.dcm_metadata
+reload(dicom_tools.dcm_metadata)
 import conversion_tools.pixarrs_ims
 reload(conversion_tools.pixarrs_ims)
 import conversion_tools.inds_pts_pixarrs
@@ -56,19 +56,19 @@ from pydicom import dcmread
 #from io_tools.import_roicol import RoicollectionImporter
 from io_tools.imports import import_dcms, import_dicoms_as_im
 from io_tools.inputs_checker import are_inputs_valid#, which_use_case
-from dicom_tools.metadata import (
+from dicom_tools.dcm_metadata import (
     get_dcm_uids, get_roicol_labels, get_roicol_nums
     )
-from seg_tools.metadata import (
+from dicom_tools.seg_metadata import (
     get_DIVs, group_list_by_seg, get_f2sInds
     )
-from seg_tools.seg_data import (
+from dicom_tools.seg_data import (
     get_seg_data_of_interest, raise_error_if_no_seg_data_of_interest
     )
-from rts_tools.metadata import (
+from dicom_tools.rts_metadata import (
     get_ptsByCntByRoi
     )
-from rts_tools.rts_data import (
+from dicom_tools.rts_data import (
     get_rts_data_of_interest, raise_error_if_no_rts_data_of_interest
     )
 from conversion_tools.pixarrs_ims import pixarrBySeg_to_labimBySeg

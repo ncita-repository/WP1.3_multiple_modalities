@@ -7,8 +7,8 @@ Created on Tue Jul  6 10:39:57 2021
 
 from importlib import reload
 
-import dicom_tools.metadata
-reload(dicom_tools.metadata)
+import dicom_tools.dcm_metadata
+reload(dicom_tools.dcm_metadata)
 import image_tools.attrs_info
 reload(image_tools.attrs_info)
 import image_tools.imports
@@ -18,7 +18,7 @@ reload(general_tools.general)
 import general_tools.geometry
 reload(general_tools.geometry)
 
-from dicom_tools.metadata import get_dcm_uids, get_roicol_labels
+from dicom_tools.dcm_metadata import get_dcm_uids, get_roicol_labels
 from image_tools.attrs_info import get_im_attrs
 #from image_tools.imports import import_im
 from io_tools.imports import import_im
