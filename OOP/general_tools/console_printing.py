@@ -37,7 +37,7 @@ def print_indsByRoi(indsByRoi):
                 msg += ','
             
             if r == R - 1:
-                msg += ']'
+                msg += '\n    ]'
             
             print(msg)
     else:
@@ -144,7 +144,7 @@ def print_shape_of_pixarrBySeg(pixarrBySeg):
                 msg += ','
             
             if s == S - 1:
-                msg += ']'
+                msg += '\n    ]'
                     
             print(msg)
     

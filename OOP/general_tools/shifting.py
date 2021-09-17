@@ -6,19 +6,24 @@ Created on Wed Jul  7 13:24:52 2021
 """
 
 import numpy as np
+from copy import deepcopy
 from general_tools.general import get_unique_items
-from io_tools.imports import import_im
+#from io_tools.imports import import_im
 from conversion_tools.inds_pts_cntdata import pts_to_inds, inds_to_pts
 from general_tools.console_printing import print_indsByRoi, print_ptsByCntByRoi
 
 def replace_ind_in_C2SindsByRoi(c2sIndsByRoi, indToReplace, replacementInd):
-    # See replace_ind_in_f2sIndsByRoi in propagate.propagate.py
-    for r in range(len(c2sIndsByRoi)):
-        for c in range(len(c2sIndsByRoi[r])):
-            if c2sIndsByRoi[r][c] == indToReplace:
-                c2sIndsByRoi[r][c] = replacementInd
     
-    return c2sIndsByRoi
+    #newC2SindsByRoi = list(c2sIndsByRoi) # this modifies c2sIndsByRoi despite
+    # use of list() to make a copy
+    newC2SindsByRoi = deepcopy(c2sIndsByRoi)
+    
+    for r in range(len(newC2SindsByRoi)):
+        for c in range(len(newC2SindsByRoi[r])):
+            if newC2SindsByRoi[r][c] == indToReplace:
+                newC2SindsByRoi[r][c] = replacementInd
+    
+    return newC2SindsByRoi
 
 def get_phys_shift_bt_slices(image0, sliceNum0, image1, sliceNum1):
     """

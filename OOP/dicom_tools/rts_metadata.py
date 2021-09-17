@@ -6,11 +6,12 @@ Created on Fri Sep 10 16:21:16 2021
 """
 
 #from copy import deepcopy
-#from DicomTools import GetDicomSOPuids
 from conversion_tools.inds_pts_cntdata import (
     cntdata_to_pts, ptsByCntByRoi_to_cntdataByCntByRoi
     )
-#from GeneralTools import PrintIndsByRoi
+from general_tools.console_printing import (
+    print_indsByRoi, print_ptsByCntByRoi
+)
     
 
 def get_RSOPuidsByRoi(rts):
@@ -156,9 +157,9 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
         print('\n\n', '-'*120)
         print('Running of get_ptsByCntByRoi():')
         print('\n\n', '-'*120)
-        print(f'   c2sIndsByRoi = {c2sIndsByRoi}')
-        #PrintIndsByRoi(c2sIndsByRoi)
-        print(f'   numRois = {numRois}')
+        #print(f'   c2sIndsByRoi = {c2sIndsByRoi}')
+        print_indsByRoi(c2sIndsByRoi)
+        print(f'numRois = {numRois}')
     
     ptsByCntByRoi = []
     
@@ -213,13 +214,11 @@ def get_ptsByCntByRoi(rts, sopuids, p2c=False):
         )
     
     if p2c:
-        R = len(ptsByCntByRoi)
-        
-        print(f'\n   len(ptsByCntByRoi) = {R}')
-        
-        for r in range(R):
-            print(f'      len(ptsByCntByRoi[{r}]) = {len(ptsByCntByRoi[r])}')
-        
+        #R = len(ptsByCntByRoi)
+        #print(f'\n   len(ptsByCntByRoi) = {R}')
+        #for r in range(R):
+        #    print(f'      len(ptsByCntByRoi[{r}]) = {len(ptsByCntByRoi[r])}')
+        print_ptsByCntByRoi(ptsByCntByRoi)
         print('-'*120)
 
     return ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi, c2sInds

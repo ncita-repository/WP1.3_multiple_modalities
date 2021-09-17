@@ -32,7 +32,7 @@ from conversion_tools.inds_pts_cntdata import pts_to_inds
 def plot_pts_and_pixarr(
         listOfIms, listOfDcmPixarr, listOfF2SindsBySeg, listOfPixarrBySeg,
         listOfC2SindsByRoi, listOfPtsByCntByRoi, #listOfDcmDirs,
-        listOfIPPs, listOfPlotTitles,
+        listOfIPPs, listOfPlotTitles, fontSize=12,
         exportPlot=False, exportDir=None, exportFname='', p2c=False):
     """ 
     08/06/21: Modelled on PlotPixArrsFromListOfLabImBySeg and 
@@ -115,12 +115,12 @@ def plot_pts_and_pixarr(
     colours = ['r', 'b', 'm', 'c', 'k', 'y']
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
-    dcmAlpha = 0.2
-    dcmAlpha = 0.5
-    #dcmAlpha = 1
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
+    dcmAlpha = 0.7
     
-    segAlpha = 0.5
-    #segAlpha = 0.2
+    #segAlpha = 0.5
+    segAlpha = 0.2
     
     if exportPlot:
         dpi = 120
@@ -245,8 +245,9 @@ def plot_pts_and_pixarr(
                         plotTitle += f'\n{frameTxt}'
                         plotTitle += f'\n{zPosTxt}'
                         
-                        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                        ax.set_title(plotTitle)
+                        ax.set_xlabel('Pixels', fontsize=fontSize)
+                        ax.set_ylabel('Pixels', fontsize=fontSize)
+                        ax.set_title(plotTitle, fontsize=fontSize)
                 else:
                     frameTxt = 'No Segmentations'
                     
@@ -341,8 +342,9 @@ def plot_pts_and_pixarr(
                             plotTitle += f'\n{frameTxt}\n{contourTxt}\n{ptsTxt}'
                         plotTitle += f'\n{zPosTxt}'
                         
-                        ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
-                        ax.set_title(plotTitle)
+                        ax.set_xlabel('Pixels', fontsize=fontSize)
+                        ax.set_ylabel('Pixels', fontsize=fontSize)
+                        ax.set_title(plotTitle, fontsize=fontSize)
                 else:
                     contourTxt = 'No contours'
             n += 1 # increment sub-plot number
@@ -357,7 +359,7 @@ def plot_pts_and_pixarr(
         
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
             
-        exportFname = currentDateTime + '_' + exportFname + '.jpg'
+        exportFname = f'{exportFname}_{currentDateTime}.jpg'
         
         exportFpath = os.path.join(exportDir, exportFname)
         

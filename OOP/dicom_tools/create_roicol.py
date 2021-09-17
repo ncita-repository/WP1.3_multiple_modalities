@@ -22,6 +22,8 @@ import dicom_tools.error_check_rts
 reload(dicom_tools.error_check_rts)
 import dicom_tools.error_check_seg
 reload(dicom_tools.error_check_seg)
+import plotting_tools.general
+reload(plotting_tools.general)
 
 import os
 from pathlib import Path
@@ -35,6 +37,7 @@ from dicom_tools.create_seg import create_seg
 from dicom_tools.create_rts import create_rts
 from dicom_tools.error_check_rts import error_check_rts
 from dicom_tools.error_check_seg import error_check_seg
+from plotting_tools.general import plot_pixarrs_from_list_of_segs_and_images
 
 #from general_tools.general import (
 #    reduce_list_of_str_floats_to_16, generate_reg_fname
@@ -213,17 +216,26 @@ class RoicolCreator:
         
         if roicolMod == 'RTSTRUCT': 
             exportDir = cfgDict['rtsExportDir']
+            
+            # datetime when RTS file was generated without fractional seconds:
+            dateTime = roicol.StructureSetDate + '_' +\
+                str(round(float(roicol.StructureSetTime)))
         else:
             exportDir = cfgDict['segExportDir']
+            
+            # datetime when the SEG file was generated without fractional s:
+            dateTime = roicol.ContentDate + '_' +\
+                str(round(float(roicol.ContentTime)))
         
-        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        #currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
         if fname == '':
             #if useDroForTx:
             #    fname = f'{runID}_DRO_newRoicol_{currentDateTime}.dcm'
             #else:
-            #    fname = f'{runID}_newRoicol_{currentDateTime}.dcm' 
-            fname = f'{runID}_{roicolMod}_{currentDateTime}.dcm' 
+            #    fname = f'{runID}_newRoicol_{currentDateTime}.dcm'
+            #fname = f'{runID}_{roicolMod}_{currentDateTime}.dcm'
+            fname = f'{runID}_{roicolMod}_{dateTime}.dcm'
         
         if not os.path.isdir(exportDir):
             #os.mkdir(ExportDir)
@@ -237,4 +249,104 @@ class RoicolCreator:
         
         self.roicolFpath = fpath
         
-    
+    def plot_roi_over_dicoms(
+            self, srcDataset, trgDataset, newDataset, params
+            ):
+        """ 
+        Plot copied/propagated ROI overlaid on DICOM images 
+        """
+        
+        print('* Plotting ROI over DICOMs..\n')
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        roicolMod = cfgDict['roicolMod']
+        exportPlot = cfgDict['exportPlots']
+        #p2c = cfgDict['p2c']
+        p2c = False
+        useCaseToApply = cfgDict['useCaseToApply']
+        forceReg = cfgDict['forceReg']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        resInterp = cfgDict['resInterp']
+        #trgIm = trgDataset.image
+        #resIm = newDataset.image # resampled source or source-registered-to-target 
+        
+        #resExportDir = cfgDict['resPlotsExportDir']
+        
+        if roicolMod == 'RTSTRUCT':
+            roiExportDir = cfgDict['rtsPlotsExportDir']
+        else:
+            roiExportDir = cfgDict['segPlotsExportDir']
+        
+        # Prepare plot title for new dataset:
+        method = 'Src ROI '
+        if useCaseToApply in ['1', '2a']:
+            method += 'NRPC to Trg over Trg DICOMs '
+        elif useCaseToApply == '2b':
+            method += 'RPC to Trg over Trg DICOMs '
+        elif useCaseToApply in ['3a', '4a']:
+            method += f'NRPP to Trg over Trg DICOMs \n(res, {resInterp})'
+        elif useCaseToApply in ['3b', '4b']:
+            method += f'RPP to Trg over Trg DICOMs\n(res, {resInterp})'
+        elif useCaseToApply == '5a':
+            if useDroForTx:
+                method += 'NRPP to Trg over Trg DICOMs ' +\
+                     f'\n({regTxName} DRO, {resInterp})'
+            else:
+                method += 'NRPP to Trg over Trg DICOMs ' +\
+                    f'\n({regTxName} reg, {initMethod}, {resInterp})'
+        elif useCaseToApply == '5b':
+            if useDroForTx:
+                method += 'RPP to Trg over Trg DICOMs ' +\
+                    f'\n({regTxName} DRO, {resInterp})'
+            else:
+                method += 'RPP to Trg over Trg DICOMs ' +\
+                    f'\n({regTxName} reg, {initMethod}, {resInterp})'
+        
+        #print(method)
+        
+        listOfRoicol = [srcDataset.roicol, self.roicol]
+        """
+        Note: newDataset does not have a dicomDir since DICOMs are not
+        generated for the resampled/registered source dataset, but for the
+        purposes of pulling metadata (sizes, spacings, IPPs, directions, etc)
+        relevant to the resampled/registered dataset, getting it from the
+        target dataset is equivalent.
+        """
+        listOfDicomDirs = [srcDataset.dicomDir, trgDataset.dicomDir]
+        
+        listOfImages = [srcDataset.dcmIm, newDataset.dcmIm]
+        listOfPlotTitles = ['Src ROI over Src DICOMs', method]
+        
+        """
+        plot_pixarrs_from_list_of_segs_v3(
+        listOfSegs, listOfDicomDirs, listOfPlotTitles, exportPlot=exportPlot,
+            exportDir=exportDir, runID=runID, useCaseToApply=useCaseToApply,
+            forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
+            initMethod=initMethod, resInterp=resInterp, p2c=p2c
+        )
+        """
+        
+        # Prepare filename for exported plot:
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        if useDroForTx:
+            fname = f'{runID}_DRO'
+        else:
+            fname = f'{runID}_'
+        fname += method.replace(' ', '_').replace(',', '')
+        fname = fname.replace('(', '').replace(')', '').replace('\n', '')
+        fname += f'_{currentDateTime}'
+            
+        plot_pixarrs_from_list_of_segs_and_images(
+            listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
+            exportPlot=exportPlot, exportDir=roiExportDir,
+            runID=runID, useCaseToApply=useCaseToApply,
+            forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
+            initMethod=initMethod, resInterp=resInterp, 
+            fname=fname, fontSize=12, p2c=p2c
+            #fname='', p2c=p2c
+        )

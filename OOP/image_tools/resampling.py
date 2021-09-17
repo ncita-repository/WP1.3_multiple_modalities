@@ -544,22 +544,50 @@ def resample_labim(
     aliasing.
     
     Link: https://github.com/SimpleITK/SimpleITK/issues/1277
+    
+    Rather than applying a Gaussian blur by default, might consider only 
+    blurring if the labelim is very sparse (i.e. if there's only 1 segmentation
+    as indicated by a length of 1 for f2sInds). Although blurring is needed to
+    avoid aliasing effects common for resampling of single (or possibly more)
+    framed segments, it's probably unneccessary for multi-framed ones.
     """
     
-    if p2c:
-        print('\n\n', '-'*120)
-        print('Running of resample_labim():')
-        print('The chosen resampler (transform) sitkTx:')
-        print(f'  Name is {sitkTx.GetName()}')
-        print(f'  Parameters is {sitkTx.GetParameters()}')
-        print(f'  Fixed Parameters is {sitkTx.GetFixedParameters()}')
-        print(f'The chosen interpolation is {interp}.\n')
-        
     if not interp in ['NearestNeighbor', 'LabelGaussian', 'BlurThenLinear']:
         msg = f"The chosen interpolation, {interp}, is not one of the "\
               + "accepted arguments: 'NearestNeighbor', 'LabelGaussian', or "\
               + "'BlurThenLinear'."
         raise Exception(msg)
+    
+    if p2c:
+        print('\n\n', '-'*120)
+        print('Running of resample_labim():')
+        print(f'Resampler (transform) Name = {sitkTx.GetName()}')
+        print(f'                Parameters = {sitkTx.GetParameters()}')
+        print(f'          Fixed Parameters = {sitkTx.GetFixedParameters()}')
+        print(f'The chosen interpolation is {interp}.\n')
+    
+    """ 
+    17/09/21: If interp = 'BlurThenLinear' but there are multiple indices in 
+    f2sInds overwrite interp to 'NearestNeighbor' (or 'LabelGaussian'?) and
+    overwrite applyPreResBlur and applyPostResBlur to False.
+    """
+    F = len(f2sInds)
+    
+    if 0: #F > 1 and interp == 'BlurThenLinear':
+        #interp = 'NearestNeighbor'
+        interp = 'LabelGaussian'
+        print(f'*** Since there are {F} frames in this segment the',
+              f'interpolation has been overwritten to {interp}.\n')
+        
+        if applyPreResBlur:
+            applyPreResBlur = False
+            print('*** The parameter applyPreResBlur has been overwritten',
+                  f'to {applyPreResBlur}.\n')
+        
+        if applyPostResBlur:
+            applyPostResBlur = False
+            print('*** The parameter applyPostResBlur has been overwritten',
+                  f'to {applyPostResBlur}.\n')
     
     # Store the interpolation set as metadata:
     labim.SetMetaData("resInterpSet", interp)

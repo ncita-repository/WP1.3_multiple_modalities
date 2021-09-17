@@ -97,7 +97,12 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     newF2SindsBySeg = newDataset.f2sIndsBySeg
     newPixarrBySeg = newDataset.pixarrBySeg
     
-    addToRoicolLab = params.cfgDict['addToRoicolLab']
+    # addToSeriesDesc will be added to SeriesDescription
+    addToSeriesDesc = params.cfgDict['addToRoicolLab']
+    
+    # addToSegLab will be added to SegmentLabel:
+    addToSegLab = ' (copied)'
+    
     p2c = params.cfgDict['p2c']
     
     if p2c:
@@ -159,8 +164,8 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     currentDate = timeNow.strftime('%Y%m%d')
     currentTime = timeNow.strftime('%H%M%S.%f')
     
-    if addToRoicolLab == '':
-        addToRoicolLab = timeNow.strftime(' %Y%m%d %H%M%S')
+    if addToSeriesDesc == '':
+        addToSeriesDesc = timeNow.strftime(' %Y%m%d %H%M%S')
     
     """ 
     If trgSeg != None, some tags will not need to be replaced. 
@@ -184,9 +189,9 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
         newSeg.ContentTime = currentTime
         newSeg.Manufacturer = trgDicoms[0].Manufacturer
         try:
-            newSeg.SeriesDescription += addToRoicolLab
+            newSeg.SeriesDescription += addToSeriesDesc
         except AttributeError:
-            newSeg.SeriesDescription = addToRoicolLab
+            newSeg.SeriesDescription = addToSeriesDesc
         newSeg.PatientName = trgDicoms[0].PatientName
         newSeg.PatientID = trgDicoms[0].PatientID
         newSeg.PatientBirthDate = trgDicoms[0].PatientBirthDate
@@ -224,7 +229,6 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
         
         # Convert to string with maximum:
         #IOP = [float(item) for item in IOP]
-        
         
         newSeg.SharedFunctionalGroupsSequence[0]\
               .PlaneOrientationSequence[0]\
@@ -309,16 +313,17 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     
     # Loop through all srcSegNums.
     for s in range(len(srcSegNums)):
-        SegNum = srcSegNums[s]
+        segNum = srcSegNums[s]
         
-        """Replace the s^th SegmentSequence in newSeg with the SegNum^th 
+        """Replace the s^th SegmentSequence in newSeg with the segNum^th 
         SegmentSequence in srcSeg."""
-        newSeg.SegmentSequence[s] = deepcopy(srcSeg.SegmentSequence[SegNum])
+        newSeg.SegmentSequence[s] = deepcopy(srcSeg.SegmentSequence[segNum])
         
         newSeg.SegmentSequence[s].SegmentNumber = int(s+1)
         
         newSeg.SegmentSequence[s]\
-              .SegmentLabel = srcSeg.SegmentSequence[SegNum].SegmentLabel
+              .SegmentLabel = srcSeg.SegmentSequence[segNum].SegmentLabel +\
+                  addToSegLab
         
     # Check if there are more sequences in SegmentSequence than required.
     N = len(newSeg.SegmentSequence)

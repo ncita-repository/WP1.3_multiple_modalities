@@ -725,9 +725,21 @@ class DataImporter:
             # Convert the RTS data of interest to a list of 3D pixel arrays for
             # each ROI:
             """
-            Note: Conversion of contour data to pixel data and label images are
+            Note: 
+            
+            Conversion of contour data to pixel data and label images are
             not required for use cases 1, 2a or 2b but for consistency with
             SEG data those class attributes will be populated.
+            
+            The frames in pixarrByRoi are conversions of contours in the same
+            order of the points in ptsByCntByRoi, and they correspond to the
+            DICOM slice indices in c2sIndsByRoi (which are not necessarily in
+            a sorted order!). Hence the frames in pixarrByRoi are also not
+            necessarily in a sorted (e.g. ascending) order.
+            
+            The conversion from ptsByCnt to pixarr preserves info on th
+            presence of multiple contours for any given slice, since each
+            frame in pixarr corresponds to a contour in ptsByCnt.
             """
             self.pixarrByRoi = ptsByCntByRoi_to_pixarrByRoi(
                 ptsByCntByRoi=self.ptsByCntByRoi, 
@@ -736,7 +748,21 @@ class DataImporter:
                 )
             
             # Get list of label images-by-ROI:
-            # Note this won't be used for use cases 1-2 but is needed for 3-5.
+            """
+            Note:
+            
+            This won't be used for use cases 1-2 but is needed for 3-5.
+            
+            The conversion from pixarr to labim results in "loss" of knowledge
+            of the pixel data that makes up each frame in labim. There may be
+            cases where multiple segmentations (or contours) existed for the 
+            same slice index (repeated indices in f2sIndsBySeg or c2sIndsByRoi).
+            Hence if converting from labim back to pixarr using 
+            imBySeg_to_pixarrBySeg(), the list of f2sIndsBySeg returned from
+            that function may have fewer items than the original list of
+            f2sIndsBySeg (or c2sIndsByRoi) that relate to the pixel data parsed
+            from the SEG (or converted from contour data parsed from the RTS).
+            """
             self.labimByRoi = pixarrBySeg_to_labimBySeg(
                 pixarrBySeg=self.pixarrByRoi, 
                 f2sIndsBySeg=self.c2sIndsByRoi, 

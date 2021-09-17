@@ -27,8 +27,11 @@ reload(dro_tools.create_dro)
 import dicom_tools.create_seg
 reload(dicom_tools.create_seg)
 
-import plotting_tools.plotting
-reload(plotting_tools.plotting)
+import plotting_tools.general
+reload(plotting_tools.general)
+
+import plotting_tools.res_reg_results
+reload(plotting_tools.res_reg_results)
 
 import io_tools.exports
 reload(io_tools.exports)
@@ -43,9 +46,11 @@ from io_tools.propagate import Propagator
 from dro_tools.create_dro import DroCreator
 from dicom_tools.create_seg import create_seg
 #from plotting_tools.plotting import plot_pixarrs_from_list_of_segs_v3
-from plotting_tools.plotting import (
-    plot_pixarrs_from_list_of_segs_and_images, compare_res_results,
-    plot_metricValues_v_iters
+from plotting_tools.general import (
+    plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_images
+    )
+from plotting_tools.res_reg_results import(
+    plot_metricValues_v_iters, compare_res_results 
     )
 from io_tools.exports import (export_im, export_list_to_txt, export_newRoicol)
 

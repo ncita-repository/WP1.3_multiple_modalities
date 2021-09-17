@@ -96,7 +96,12 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
     newPtsByCntByRoi = newDataset.ptsByCntByRoi
     newCntdataByCntByRoi = newDataset.cntdataByCntByRoi
     
-    addToRoicolLab = params.cfgDict['addToRoicolLab']
+    # addToStructSetLab will be added to the StructureSetLabel.
+    addToStructSetLab = params.cfgDict['addToRoicolLab']
+    
+    # addToRoiName will be added to ROIName:
+    addToRoiName = ' (copied)'
+    
     p2c = params.cfgDict['p2c']
     
     if p2c:
@@ -132,8 +137,8 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
     currentDate = timeNow.strftime('%Y%m%d')
     currentTime = timeNow.strftime('%H%M%S.%f')
     
-    if addToRoicolLab == '':
-        addToRoicolLab = timeNow.strftime(' %Y%m%d %H%M%S')
+    if addToStructSetLab == '':
+        addToStructSetLab = timeNow.strftime(' %Y%m%d %H%M%S')
     
     """ 
     If trgRts != None, some tags will not need to be replaced.
@@ -173,9 +178,9 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
               .SeriesInstanceUID = trgDicoms[0].SeriesInstanceUID
        
     try:
-        newRts.StructureSetLabel += addToRoicolLab
+        newRts.StructureSetLabel += addToStructSetLab
     except AttributeError:
-        newRts.StructureSetLabel = addToRoicolLab
+        newRts.StructureSetLabel = addToStructSetLab
     # Modify StructureSetDate and StructureSetTime to the present:
     newRts.StructureSetDate = currentDate
     newRts.StructureSetTime = currentTime
@@ -243,12 +248,10 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
                   .RTReferencedSeriesSequence[0]\
                   .ContourImageSequence.pop()
     
-    
     #times.append(time.time())
     #Dtime = round(times[-1] - times[-2], 1)
     #if True:#p2c:
     #    print(f'\nTook {Dtime} s to modify 'ContourImageSequence.')
-    
     
     """ Modify StructureSetROISequence. """
     for r in range(len(newC2SindsByRoi)):
@@ -270,8 +273,7 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
            
         newRts.StructureSetROISequence[r]\
               .ROIName = newRts.StructureSetROISequence[r]\
-                               .ROIName + addToRoicolLab
-    
+                               .ROIName + addToRoiName
     
     # Check if there are more sequences in StructureSetROISequence than 
     # required:
@@ -286,8 +288,7 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
     #Dtime = round(times[-1] - times[-2], 1)
     #if True:#p2c:
     #    print(f'\nTook {Dtime} s to modify 'StructureSetROISequence.')
-        
-        
+    
     """ 
     Modify ROIContourSequence. 
     """
@@ -393,7 +394,6 @@ def create_rts(srcDataset, trgDataset, newDataset, params):
     #Dtime = round(times[-1] - times[-2], 1)
     #if True:#p2c:
     #    print(f'\nTook {Dtime} s to modify 'ROIContourSequence.')
-    
     
     """ 
     Modify RTROIObservationsSequence. 

@@ -497,7 +497,7 @@ def pixarr_to_ptsByCnt(pixarr, f2sInds, refIm, thresh=0.5, p2c=False):
         print('Running of pixarr_to_ptsByCnt():')
         print('\n\n', '-'*120)
         print(f'Prior to conversion: \nf2sInds = {f2sInds}')
-        print_pixarrBySeg(pixarr)
+        print_pixarrBySeg([pixarr])
     
     # Convert the pixel array to a list of indices-by-object-by-frame:
     """ A list of objects originating from the same frame will be treated as 

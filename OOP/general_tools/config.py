@@ -355,6 +355,17 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['trgExpLab'] = 'Session4'
     cfg[runID]['trgScanID'] = '10'
     
+    # Datasets to propagate RTS across two DICOM series with the same slice
+    # thicknes:
+    """ 
+    Force registration to account for different patient position despite same
+    FORuid.
+    """
+    runID = 'NCITA_test_RR2_force_reg'
+    cfg[runID] = dict(cfg['NCITA_test_RR2'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
     # Datasets to propagate RTS from one DICOM series to another with greater
     # slice thickness:
     runID = 'NCITA_test_RR3'
@@ -368,6 +379,17 @@ def create_config_files(cfgDir, password=""):
     cfg[runID] = dict(cfg['NCITA_test_RR2'])
     cfg[runID]['runID'] = runID
     cfg[runID]['trgScanID'] = '11'
+    
+    # Datasets to propagate RTS from one DICOM series to another with smaller
+    # slice thickness:
+    """ 
+    Force registration to account for different patient position despite same
+    FORuid.
+    """
+    runID = 'NCITA_test_RR4_force_reg'
+    cfg[runID] = dict(cfg['NCITA_test_RR4'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
     
     # Datasets to propagate RTS from one DICOM series to another with greater
     # slice thickness:
@@ -530,6 +552,17 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'SEG'
     
+    # Datasets to propagate SEG across two DICOM series with the same slice
+    # thickness:
+    """ 
+    Force registration to account for different patient position despite same
+    FORuid.
+    """
+    runID = 'NCITA_test_SR2_force_reg'
+    cfg[runID] = dict(cfg['NCITA_test_SR2'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
     # Datasets to propagate SEG from one DICOM series to another with greater
     # slice thickness:
     runID = 'NCITA_test_SR3'
@@ -543,6 +576,17 @@ def create_config_files(cfgDir, password=""):
     cfg[runID] = dict(cfg['NCITA_test_RR4'])
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'SEG'
+    
+    # Datasets to propagate SEG from one DICOM series to another with smaller
+    # slice thickness:
+    """ 
+    Force registration to account for different patient position despite same
+    FORuid.
+    """
+    runID = 'NCITA_test_SR4_force_reg'
+    cfg[runID] = dict(cfg['NCITA_test_SR4'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
     
     # Datasets to propagate SEG from one DICOM series to another with greater
     # slice thickness:

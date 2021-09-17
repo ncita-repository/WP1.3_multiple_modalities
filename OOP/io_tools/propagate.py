@@ -21,10 +21,15 @@ import dro_tools.create_tx_from_dro
 reload(dro_tools.create_tx_from_dro)
 import plotting_tools.general
 reload(plotting_tools.general)
+import plotting_tools.res_reg_results
+reload(plotting_tools.res_reg_results)
+import plotting_tools.conversion_results
+reload(plotting_tools.conversion_results)
 import general_tools.geometry
 reload(general_tools.geometry)
 import general_tools.console_printing
 reload(general_tools.console_printing)
+
 
 import time
 import os
@@ -41,6 +46,7 @@ from general_tools.general import (
     #does_instance_variable_exist
     )
 from conversion_tools.pixarrs_ims import pixarr_to_im
+from conversion_tools.inds_pts_pixarrs import pixarrBySeg_to_ptsByCntByRoi
 from image_tools.attrs_info import get_im_info
 from image_tools.resampling import resample_im, resample_labimBySeg
 from image_tools.registering import register_im
@@ -50,13 +56,18 @@ from dro_tools.create_tx_from_dro import (
 from general_tools.pixarr_ops import (
     mean_frame_in_pixarrBySeg, or_frame_of_pixarrBySeg
     )
-from plotting_tools.general import plot_pixarrBySeg
-from io_tools.exports import export_list_to_txt
+from io_tools.exports import (export_im, export_list_to_txt, export_newRoicol)
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
 from general_tools.console_printing import print_indsByRoi, print_ptsByCntByRoi
-from plotting_tools.res_reg_results import compare_res_results
+from plotting_tools.general import (
+    plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_images
+    )
+from plotting_tools.res_reg_results import(
+    plot_metricValues_v_iters, compare_res_results 
+    )
+from plotting_tools.conversion_results import plot_pts_and_pixarr
 
 class Propagator:
     # TODO modify the docstrings
@@ -787,11 +798,11 @@ class Propagator:
         if useCaseToApply in ['1', '2a', '2b']:
             #slcNum = srcDataset.slcNum # initial value
             if roicolMod == 'RTSTRUCT':
-                _2sIndsBy_ = srcDataset.c2sIndsByRoi # initial value
-                pixarrBy_ = srcDataset.pixarrByRoi # initial value
+                _2sIndsBy_ = list(srcDataset.c2sIndsByRoi)
+                pixarrBy_ = list(srcDataset.pixarrByRoi)
             else:
-                _2sIndsBy_ = srcDataset.f2sIndsBySeg # initial value
-                pixarrBy_ = srcDataset.pixarrBySeg # initial value
+                _2sIndsBy_ = list(srcDataset.f2sIndsBySeg)
+                pixarrBy_ = list(srcDataset.pixarrBySeg)
         
         elif useCaseToApply in ['3a', '3b', '4a', '4b']:
             # Use the resampled source slice number for srcSlcNum, and the
@@ -800,11 +811,11 @@ class Propagator:
             #srcPixarrByRoi = self.resPixarrByRoi # does this still exist? (06/09/21)
             #slcNum = self.slcNum # (06/09/21)
             if roicolMod == 'RTSTRUCT':
-                _2sIndsBy_ = self.c2sIndsByRoi # (15/09/21)
-                pixarrBy_ = self.pixarrByRoi # (15/09/21)
+                _2sIndsBy_ = list(self.c2sIndsByRoi) # (15/09/21)
+                pixarrBy_ = list(self.pixarrByRoi) # (15/09/21)
             else:
-                _2sIndsBy_ = self.f2sIndsBySeg # (06/09/21)
-                pixarrBy_ = self.pixarrBySeg # (06/09/21)
+                _2sIndsBy_ = list(self.f2sIndsBySeg) # (06/09/21)
+                pixarrBy_ = list(self.pixarrBySeg) # (06/09/21)
         
         if p2c:
             print(f'   _2sIndsBy_ prior to shifting = {_2sIndsBy_}')
@@ -1305,7 +1316,7 @@ class Propagator:
         roicolMod = params.cfgDict['roicolMod']
         
         timingMsg = "Making a non-relationship-preserving copy of the "\
-                + "source ROI Collection.\n"
+                + "source ROI Collection...\n"
         params.add_timestamp(timingMsg)
         
         # Replace all indices in source with srcDataset.slcNum with
@@ -1328,6 +1339,10 @@ class Propagator:
                     replacementInd=trgDataset.slcNum
                     )
                 
+                print('\n\n\n*** srcDataset.c2sIndsByRoi:')
+                print_indsByRoi(srcDataset.c2sIndsByRoi)
+                print('\n\n\n')
+        
                 # Shift the out-of-plane (z) components of the points:
                 self.ptsByCntByRoi = z_shift_ptsByCntByRoi(
                     ptsByCntByRoi=srcDataset.ptsByCntByRoi,
@@ -1342,6 +1357,10 @@ class Propagator:
                 self.shift_frames(srcDataset, trgDataset, params)
         else:
             self.shift_frames(srcDataset, trgDataset, params)
+        
+        #print('\n\n\n*** srcDataset.c2sIndsByRoi:')
+        #print_indsByRoi(srcDataset.c2sIndsByRoi)
+        #print('\n\n\n')
         
         # Any pixel array(s) and corresponding F2Sinds for any ROI(s)/segment(s)
         # that may be present in trgDataset:
@@ -1396,13 +1415,13 @@ class Propagator:
         #srcF2SindsBySeg = srcDataset.f2sIndsBySeg # 15/09/21
         
         """
-        Note: In this function srcF2SindsByRoi will refer to either frame-to
+        Note: In this function src_2SindsBy_ will refer to either frame-to
         -slice indices by segment, or contour-to-slice indices by ROI.
         """
         if roicolMod == 'RTSTRUCT':
-            srcF2SindsByRoi = srcDataset.c2sIndsByRoi  # 15/09/21
+            src_2SindsBy_ = srcDataset.c2sIndsByRoi # 15/09/21
         else:
-            srcF2SindsByRoi = srcDataset.f2sIndsBySeg  # 15/09/21
+            src_2SindsBy_ = srcDataset.f2sIndsBySeg # 15/09/21
         
         srcOrigin = srcIm.GetOrigin()
         trgOrigin = trgIm.GetOrigin()
@@ -1417,28 +1436,35 @@ class Propagator:
         dz_pix = round(dz_mm/dk)
         
         #trgF2SindsByRoi = []
-        newF2SindsByRoi = []
+        new_2SindsBy_ = []
         
-        for r in range(len(srcF2SindsByRoi)):
+        for r in range(len(src_2SindsBy_)):
             #trgF2Sinds = []
-            newF2Sinds = []
+            new_2Sinds = []
             
-            for c in range(len(srcF2SindsByRoi[r])):
+            for c in range(len(src_2SindsBy_[r])):
                 ##trgF2Sinds.append(srcF2SindsByRoi[r][c] + dz_pix)
                 #trgF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
-                newF2Sinds.append(srcF2SindsByRoi[r][c] - dz_pix)
+                new_2Sinds.append(src_2SindsBy_[r][c] - dz_pix)
                 
             #trgF2SindsByRoi.append(trgF2Sinds)
-            newF2SindsByRoi.append(newF2Sinds)
-        
-        #self.f2sIndsByRoi = trgF2SindsByRoi
-        self.f2sIndsByRoi = newF2SindsByRoi
+            new_2SindsBy_.append(new_2Sinds)
         
         if p2c:
-                print(f'   srcF2SindsByRoi = {srcF2SindsByRoi}')
+                #print(f'   src_2SindsBy_ = {src_2SindsBy_}')
+                print('   src_2SindsBy_:')
+                print_indsByRoi(src_2SindsBy_)
                 #print(f'   trgF2SindsByRoi = {trgF2SindsByRoi}')
-                print(f'   newF2SindsByRoi = {newF2SindsByRoi}')
+                #print(f'   new_2SindsBy_ = {new_2SindsBy_}')
+                print('\n   new_2SindsBy_:')
+                print_indsByRoi(new_2SindsBy_)
                 print('-'*120)
+        
+        #self.f2sIndsByRoi = trgF2SindsByRoi
+        if roicolMod == 'RTSTRUCT':
+            self.c2sIndsByRoi = new_2SindsBy_
+        else:
+            self.f2sIndsBySeg = new_2SindsBy_
 
     def make_relationship_preserving_copy(
             self, params, srcDataset, trgDataset
@@ -1630,6 +1656,15 @@ class Propagator:
         
         timingMsg = "Took [*] s to resample source label images.\n"
         params.add_timestamp(timingMsg)
+        
+        print('\n\n\nBefore resampling label images:')
+        if roicolMod == 'RTSTRUCT':
+            print_indsByRoi(self.c2sIndsByRoi)
+        else:
+            print_indsByRoi(self.f2sIndsBySeg)
+        print('\nAfter resampling label images:')
+        print_indsByRoi(_2sIndsBy_)
+        print('\n\n\n')
         
         if roicolMod == 'RTSTRUCT':
             self.c2sIndsByRoi = _2sIndsBy_
@@ -1986,6 +2021,8 @@ class Propagator:
         
         """
         
+        roicolMod = params.cfgDict['roicolMod']
+        
         """
         May need to reduce multi-framed NRP copies to a single framed pixel 
         array (using frame averaging or logical OR operation).
@@ -2003,10 +2040,11 @@ class Propagator:
         # Any pixel array(s) and corresponding F2Sinds for any ROI(s)/
         # segment(s) that may be present in trgDataset:
         self.add_modified_data_to_existing_trgDataset(trgDataset, params)
+        
+        if roicolMod == 'RTSTRUCT':
+            self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
     
-    def convert_pixarr_to_cntdata(
-            self, srcDataset, trgDataset, newDataset, params
-            ):
+    def convert_pixarr_to_cntdata(self, srcDataset, trgDataset, params):
         # TODO update docstrings
         """
         Convert pixel array (segmentation) data to contour data, and update the
@@ -2032,8 +2070,51 @@ class Propagator:
             coordinates in ptsByCntByRoi converted from floats to strings.
         """
         
-        pass
-    
+        self.ptsByCntByRoi, self.cntdataByCntByRoi, self.c2sIndsByRoi =\
+                pixarrBySeg_to_ptsByCntByRoi(
+                    pixarrBySeg=self.pixarrByRoi,
+                    f2sIndsBySeg=self.c2sIndsByRoi,
+                    refIm=trgDataset.dcmIm,
+                    p2c=params.cfgDict['p2c']
+                    )
+
+    def make_relationship_preserving_propagation(
+            self, srcDataset, trgDataset, params
+            ):
+        # TODO update docstrings
+        """
+        Perform a relationship-preserving propagation of the 
+        segmentation(s)/contour(s) in srcDataset to trgDataset.
+        
+        Parameters
+        ----------
+        srcDataset : DataImporter Object
+            DataImporter Object for the source DICOM series.
+        trgDataset : DataImporter Object
+            DataImporter Object for the target DICOM series.
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+            
+        Returns
+        -------
+        
+        Note
+        ----
+        The result of applying the method resample_src_labims() updated
+        self.f2sIndsBySeg, self.pixarrBySeg and self.labimBySeg for SEG, and
+        slf.c2sIndsByRoi, aelf.pixarrByRoi and self.labimByRoi for RTSTRUCT.
+        
+        For relation-preserving propagations of SEG data no further steps are
+        required, but for RTSTUCT the pixarrByRoi need to be converted to
+        ptsByCntByRoi and cntdataByCntByRoi.
+        """
+        
+        roicolMod = params.cfgDict['roicolMod']
+        
+        if roicolMod == 'RTSTRUCT':
+            self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
+        
     def execute(self, srcDataset, trgDataset, params, dro):
         # TODO update docstrings
         """
@@ -2214,11 +2295,15 @@ class Propagator:
                 srcDataset, trgDataset, params
                 )
         
-        """
+        
         if useCase in ['3b', '4b', '5b']:
-            self.pixarrBySeg = self.resPixarrByRoi
-            self.f2sIndsBySeg = self.resF2SindsByRoi
-        """
+            #self.pixarrBySeg = self.resPixarrByRoi
+            #self.f2sIndsBySeg = self.resF2SindsByRoi
+            
+            self.make_relationship_preserving_propagation(
+                srcDataset, trgDataset, params
+                )
+        
         
         if (useCase in ['3a', '3b', '4a', '4b', '5a', '5b'] and
                 roicolMod == 'RTSTRUCT'):
@@ -2309,4 +2394,339 @@ class Propagator:
                     filename=fname+'_params.txt', 
                     exportDir=txExportDir
                     )
+    
+    def plot_roi_over_dicom_im(self, srcDataset, trgDataset, params):
+        """ 
+        Plot along columns:
+        col 1 : Src points (srcDataset.ptsByCntByRoi) or pixel arrays 
+                (srcDataset.pixarrBySeg) over Src DICOM image 
+                (srcDataset.dcmIm)
+        col 2 : Src points or pixel arrays copied/propagated to Trg domain 
+                (self.ptsByCntByRoi or self.pixarrBySeg) over Trg DICOM image 
+                (trgDataset.dcmIm)
         
+        for use cases 1-2; or
+        
+        col 1 : Src points (srcDataset.ptsByCntByRoi) or pixel arrays 
+                (srcDataset.pixarrBySeg) over Src DICOM image 
+                (srcDataset.dcmIm)
+        col 2 : Src points or pixel arrays copied/propagated to Trg domain 
+                (self.ptsByCntByRoi or self.pixarrBySeg) over Src-to-Trg 
+                resampled/registered/transformed DICOM image (self.dcmIm)
+        col 3 : Src points or pixel arrays copied/propagated to Trg domain 
+                (self.ptsByCntByRoi or self.pixarrBySeg) over Trg DICOM image 
+                (trgDataset.dcmIm)
+        
+        for use cases 3-5.
+        """
+        
+        print('* Plotting ROI over DICOM images..\n')
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        roicolMod = cfgDict['roicolMod']
+        exportPlot = cfgDict['exportPlots']
+        #p2c = cfgDict['p2c']
+        p2c = False
+        useCaseToApply = cfgDict['useCaseToApply']
+        forceReg = cfgDict['forceReg']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        resInterp = cfgDict['resInterp']
+        #trgIm = trgDataset.image
+        #resIm = newDataset.image # resampled source or source-registered-to-target 
+        
+        #resExportDir = cfgDict['resPlotsExportDir']
+        
+        fontSize = 11
+        
+        # Prepare plot title for overlays over trgDataset.dcmIm and over 
+        # self.dcmIm (= the new dataset):
+        if roicolMod == 'RTSTRUCT':
+            roiExportDir = cfgDict['rtsPlotsExportDir']
+            
+            srcTitle = 'Src pts '
+        else:
+            roiExportDir = cfgDict['segPlotsExportDir']
+            
+            srcTitle = 'Src pixarr '
+        
+        if useCaseToApply in ['1', '2a']:
+            newTitle = srcTitle + 'NRPC to Trg over New im '
+        elif useCaseToApply == '2b':
+            newTitle = srcTitle + 'RPC to Trg over New im '
+        elif useCaseToApply in ['3a', '4a']:
+            newTitle = srcTitle + 'NRPP to Trg over New im ' +\
+                f'\n(res, {resInterp})'
+        elif useCaseToApply in ['3b', '4b']:
+            newTitle = srcTitle + 'RPP to Trg over New im ' +\
+                f'\n(res, {resInterp})'
+        elif useCaseToApply == '5a':
+            if useDroForTx:
+                newTitle = srcTitle + 'NRPP to Trg over New im ' +\
+                     f'\n({regTxName} DRO, {resInterp})'
+            else:
+                newTitle = srcTitle + 'NRPP to Trg over New im ' +\
+                    f'\n({regTxName} reg, {initMethod}, {resInterp})'
+        elif useCaseToApply == '5b':
+            if useDroForTx:
+                newTitle = srcTitle + 'RPP to Trg over New im ' +\
+                    f'\n({regTxName} DRO, {resInterp})'
+            else:
+                newTitle = srcTitle + 'RPP to Trg over New im ' +\
+                    f'\n({regTxName} reg, {initMethod}, {resInterp})'
+        
+        trgTitle = newTitle.replace('New', 'Trg')
+        srcTitle += 'over Src im'
+        
+        if useCaseToApply in ['1', '2a', '2b']:
+            listOfC2SindsByRoi = [srcDataset.c2sIndsByRoi, self.c2sIndsByRoi]
+            listOfPtsByCntByRoi = [srcDataset.ptsByCntByRoi, self.ptsByCntByRoi]
+            listOfF2SindsBySeg = [srcDataset.f2sIndsBySeg, self.f2sIndsBySeg]
+            listOfPixarrBySeg = [srcDataset.pixarrBySeg, self.pixarrBySeg]
+            listOfIms = [srcDataset.dcmIm, trgDataset.dcmIm]
+            listOfDcmPixarr = [srcDataset.dcmPixarr, trgDataset.dcmPixarr]
+            listOfIPPs = [srcDataset.imPositions, trgDataset.imPositions]
+            listOfPlotTitles = [srcTitle, trgTitle]
+        else:
+            listOfC2SindsByRoi = [
+                srcDataset.c2sIndsByRoi, self.c2sIndsByRoi, self.c2sIndsByRoi
+                ]
+            listOfPtsByCntByRoi = [
+                srcDataset.ptsByCntByRoi, self.ptsByCntByRoi, self.ptsByCntByRoi
+                ]
+            listOfF2SindsBySeg = [
+                srcDataset.f2sIndsBySeg, self.f2sIndsBySeg, self.f2sIndsBySeg
+                ]
+            listOfPixarrBySeg = [
+                srcDataset.pixarrBySeg, self.pixarrBySeg, self.pixarrBySeg
+                ]
+            listOfIms = [srcDataset.dcmIm, self.dcmIm, trgDataset.dcmIm]
+            listOfDcmPixarr = [
+                srcDataset.dcmPixarr, self.dcmPixarr, trgDataset.dcmPixarr
+                ]
+            listOfIPPs = [
+                srcDataset.imPositions, self.imPositions, trgDataset.imPositions
+                ]
+            listOfPlotTitles = [srcTitle, newTitle, trgTitle]
+    
+        
+        # Prepare filename for exported plot:
+        
+        #currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        if useDroForTx:
+            fname = f'{runID}_DRO'
+        else:
+            fname = f'{runID}_'
+        fname += trgTitle.replace(' ', '_').replace(',', '')
+        fname = fname.replace('(', '').replace(')', '').replace('\n', '')
+        #fname += f'_{currentDateTime}'
+            
+        plot_pts_and_pixarr(
+            listOfIms=listOfIms, 
+            listOfDcmPixarr=listOfDcmPixarr, 
+            listOfF2SindsBySeg=listOfF2SindsBySeg,
+            listOfPixarrBySeg=listOfPixarrBySeg,
+            listOfC2SindsByRoi=listOfC2SindsByRoi,
+            listOfPtsByCntByRoi=listOfPtsByCntByRoi,  
+            listOfIPPs=listOfIPPs,
+            listOfPlotTitles=listOfPlotTitles,
+            fontSize=fontSize, exportPlot=exportPlot, exportDir=roiExportDir, 
+            exportFname=fname, p2c=p2c
+        )
+        
+    def plot_metric_v_iters(self, params):
+        """ 
+        Plot the metric values v iterations from the registeration.
+        
+        Note that metric values will only exist if registration was performed,
+        so this plot will only be produced if useDroForTx = False.
+        """
+        
+        cfgDict = params.cfgDict
+        useCaseToApply = cfgDict['useCaseToApply']
+        useDroForTx = cfgDict['useDroForTx']
+        
+        if '5' in useCaseToApply and not useDroForTx:
+            runID = cfgDict['runID']
+            exportPlot = cfgDict['exportPlots']
+            #p2c = cfgDict['p2c']
+            #forceReg = cfgDict['forceReg']
+            
+            regTxName = cfgDict['regTxName']
+            initMethod = cfgDict['initMethod']
+            resInterp = cfgDict['resInterp']
+            
+            resExportDir = cfgDict['resPlotsExportDir']
+            
+            #print(useCaseToApply)
+            
+            metricValues = self.metricValues
+            multiresIters = self.multiresIters
+            
+            print('* Plotting metric v iterations from registeration..\n')
+            
+            # Prepare plot title:
+            resTitle = f'Metric v iters for Src reg to Trg ({regTxName}, '\
+                + f'{initMethod}, {resInterp})'
+            
+            # Prepare filename for exported plot:
+            fname = f'{runID}_' + resTitle.replace(' ', '_').replace(',', '')
+            fname = fname.replace('(', '').replace(')', '')
+            
+            plot_metricValues_v_iters(
+                metricValues=metricValues, multiresIters=multiresIters, 
+                exportPlot=exportPlot, exportDir=resExportDir,
+                fname=fname
+                )
+    
+    def plot_res_results(self, srcDataset, trgDataset, params):
+        """ 
+        Plot a single slice from trgIm and resIm and compare to assess result
+        of resampling/registering.
+        """
+        
+        print('* Plotting resampled/registered results..\n')
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        #roicolMod = cfgDict['roicolMod']
+        exportPlot = cfgDict['exportPlots']
+        #p2c = cfgDict['p2c']
+        useCaseToApply = cfgDict['useCaseToApply']
+        #forceReg = cfgDict['forceReg']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        resInterp = cfgDict['resInterp']
+        trgIm = trgDataset.dcmIm
+        resIm = self.dcmIm # resampled source or source-registered-to-target 
+        alignedIm = self.alignedIm # pre-registration aligned image
+        # (which may be None, e.g. if registration wasn't performed)
+        
+        resExportDir = cfgDict['resPlotsExportDir']
+        
+        #print(useCaseToApply)
+        
+        # Prepare plot title for the aligned image:
+        aliTitle = f'Src aligned to Trg \n({initMethod})'
+        
+        # Prepare plot title for the resampled/registered image:
+        if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+            resTitle = 'Src '
+            if useCaseToApply in ['3a', '3b', '4a', '4b']:
+                resTitle += f'res to Trg \n({resInterp})'
+            elif useCaseToApply in ['5a', '5b']:
+                if useDroForTx:
+                    resTitle += f'tx to Trg \n({regTxName} DRO, {resInterp})'
+                else:
+                    resTitle += f'reg to Trg \n({regTxName}, {initMethod}, '\
+                        + f'{resInterp})'
+            
+            midInd = trgIm.GetSize()[2] // 2
+            
+            # List of images to plot and the plot titles:
+            images = [alignedIm, resIm]
+            titles = [aliTitle, resTitle]
+            
+            for image, title in zip(images, titles):
+                if image: # i.e. not None
+                    # Prepare filename for exported plot:
+                    fname = f'{runID}_' + \
+                        title.replace(' ', '_').replace(',', '')
+                    fname = fname.replace('(', '').replace(')', '')
+                    fname = fname.replace('\n', '')
+                    
+                    compare_res_results(
+                        resIm0=trgIm, resIm1=image, resInd=midInd,
+                        resTitle0='Target image', resTitle1=title,
+                        exportPlot=exportPlot, exportDir=resExportDir,
+                        fname=fname
+                    )
+    
+    
+    
+    def export_labims(self, srcDataset, trgDataset, params):
+        
+        print('* Exporting label images..\n')
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        useDroForTx = cfgDict['useDroForTx']
+        labimExportDir = cfgDict['labimExportDir']
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        # List of datasets:
+        dsets = [srcDataset, trgDataset, self]
+        
+        dsetNames = ['src', 'trg', 'new']
+        
+        # List of labimByRoi to export:
+        listOfLabimByRoi = [dset.labimByRoi for dset in dsets]
+        
+        # List of file names (will be modified in loop below):
+        if useDroForTx:
+            fnames = [
+                f'{runID}_DRO_{name}Labim_{currentDateTime}' for name in dsetNames
+                ]
+        else:
+            fnames = [
+                f'{runID}_{name}Labim_{currentDateTime}' for name in dsetNames
+                ]
+        
+        for d in range(len(listOfLabimByRoi)):
+            labimByRoi = listOfLabimByRoi[d]
+            fname = fnames[d]
+            
+            if labimByRoi: # if not None
+                # Loop through each labim (for each ROI):
+                for r in range(len(labimByRoi)):
+                    export_im(
+                        labimByRoi[r], filename=f'{fname}{r}',
+                        fileFormat='HDF5ImageIO', exportDir=labimExportDir
+                    )
+    
+    def export_tx_and_params(self, params):
+        
+        print('* Exporting transforms and transform parameters..\n')
+        
+        cfgDict = params.cfgDict
+        runID = cfgDict['runID']
+        useDroForTx = cfgDict['useDroForTx']
+        txExportDir = cfgDict['txExportDir']
+        
+        # Create the export directory if it doesn't already exist:
+        if not os.path.isdir(txExportDir):
+            #os.mkdir(exportDir)
+            Path(txExportDir).mkdir(parents=True)
+        
+        resTx = self.resTx
+        initRegTx = self.initRegTx
+        preRegTx = self.preRegTx
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        # List of transforms to export and their names:
+        txs = [resTx, initRegTx, preRegTx]
+        txNames = ['resTx', 'initRegTx', 'preRegTx']
+        
+        for tx, txName in zip(txs, txNames):
+            if tx: # is not None
+                if useDroForTx:
+                    fname = f'{runID}_DRO_{txName}_{currentDateTime}'
+                else:
+                    fname = f'{runID}_{txName}_{currentDateTime}'
+                
+                # Export tx as a TFM:
+                fpath = os.path.join(txExportDir, fname + '.tfm')
+                sitk.WriteTransform(tx, fpath)
+                
+                # Export the tx parameters as a TXT:
+                export_list_to_txt(
+                    items=tx.GetParameters(),
+                    filename=fname,
+                    exportDir=txExportDir
+                    )
