@@ -6,8 +6,18 @@ Created on Thu Jul  8 16:07:37 2021
 """
 
 from importlib import reload
+
 import general_tools.console_printing
 reload(general_tools.console_printing)
+import dicom_tools.seg_data
+reload(dicom_tools.seg_data)
+import general_tools.general
+reload(general_tools.general)
+import general_tools.geometry
+reload(general_tools.geometry)
+import dicom_tools.rts_data
+reload(dicom_tools.rts_data)
+
 
 import time
 import os
@@ -17,12 +27,8 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 from pydicom import dcmread
 
-import dicom_tools.seg_data
-reload(dicom_tools.seg_data)
-import general_tools.general
-reload(general_tools.general)
-
-from general_tools.general import get_unique_items
+from general_tools.general import get_unique_items, unpack
+from general_tools.geometry import get_ind_of_nearest_slice
 from dicom_tools.seg_data import (
     get_seg_data_from_list_of_segs, get_seg_data_from_list_of_labimByRoi
     )
@@ -30,32 +36,252 @@ from conversion_tools.pixarrs_ims import im_to_pixarr, imBySeg_to_pixarrBySeg
 from general_tools.console_printing import (
     print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
     )
-
+from dicom_tools.rts_data import get_rts_data_from_list_of_rtss
+from conversion_tools.inds_pts_cntdata import pts_to_inds
     
-def plot_two_ims(im0, ind0, plotLabel0, im1, ind1, plotLabel1):
+def plot_two_ims(
+        im0, im1, ind0, ind1=None, plotTitle0='im0', plotTitle1='im1',
+        exportPlot=False, exportDir='cwd', fname='', fontSize=12
+        ):
+    """
+    Plot a frame from two 3D SimpleITK images.
+    
+    The images must have the same in-plane resolution.
+    
+    Parameters
+    ----------
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
+    ind0 : int
+        The slice index for im0.
+    ind1 : int, optional
+        The slice index for im1. If an int is not provided, the slice in im1 
+        nearest in z-position will be plotted. The default value is None.
+    plotTitle0 : str, optional
+        The plot title for im0. The default value is 'im0'.
+    plotTitle1 : str, optional
+        The plot title for im0. The default value is 'im0'.
+    exportPlot : bool, optional
+        If True, the plot will be exported to disk. The default value is False.
+    exportDir : str, optional
+        The directory where the plot will be exported if exportPlot is True. 
+        The default value is 'cwd' = the current working directory.
+    fname : str, optional
+        The file name that will be assigned to the exported plot if exportPlot
+        is True. The default value is ''.
+    fontSize : int, optional
+        The font size for the plot title and axes labels. The default value is 
+        12.
+    
+    Returns
+    -------
+    None
+    """
+    
+    # Use the origin or central pixel to report the z-position?
+    #useCentre = True # 16/04/21 Not sure it's working as expected
+    useCentre = False
+    
+    if exportPlot:
+        dpi = 120
+    else:
+        dpi = 80
+    
+    if useCentre:
+        R0, C0, S0 = im0.GetSize()
+        i0 = R0//2
+        j0 = C0//2
+        
+        R1, C1, S1 = im1.GetSize()
+        i1 = R1//2
+        j1 = C1//2
+    else:
+        i0, j0, i1, j1 = 0, 0, 0, 0
+    
+    z0 = im0.TransformIndexToPhysicalPoint([i0,j0,ind0])[2]
+    z1 = im1.TransformIndexToPhysicalPoint([i1,j1,ind1])[2]
     
     pixarr0 = sitk.GetArrayViewFromImage(im0)[ind0,:,:]
     pixarr1 = sitk.GetArrayViewFromImage(im1)[ind1,:,:]
     
-    z0 = im0.TransformIndexToPhysicalPoint([0,0,ind0])[2]
-    z1 = im1.TransformIndexToPhysicalPoint([0,0,ind1])[2]
+    plotTitle0 = f'{plotTitle0}\n\nk = {ind0}\nz = {z0:.2f} mm'
+    plotTitle1 = f'{plotTitle1}\n\nk = {ind1}\nz = {z1:.2f} mm'
     
-    plotLabel0 = f'{plotLabel0}\nz = {round(z0, 2)} mm'
-    plotLabel1 = f'{plotLabel1}\nz = {round(z1, 2)} mm'
-    
-    plt.subplots(1, 2, figsize=(15,8))
+    plt.subplots(1, 2, figsize=(15,8), dpi=dpi)
     
     plt.subplot(1, 2, 1)
     plt.imshow(pixarr0, cmap=plt.cm.Greys_r);
-    plt.title(plotLabel0)
+    plt.title(plotTitle0, fontsize=fontSize)
     plt.axis('off')
     
     plt.subplot(1, 2, 2)
     plt.imshow(pixarr1, cmap=plt.cm.Greys_r);
-    plt.title(plotLabel1)
+    plt.title(plotTitle1, fontsize=fontSize)
     plt.axis('off')
     
-    plt.show()
+    #plt.show()
+    
+    if exportPlot:
+        if exportDir == 'cwd':
+            exportDir = os.getcwd()
+        
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        
+        if fname == '':
+            exportFname = currentDateTime + '.jpg'
+        else:
+            exportFname = fname + '.jpg'
+        
+        exportFpath = os.path.join(exportDir, exportFname)
+        
+        plt.savefig(exportFpath, bbox_inches='tight')
+        
+        print(f'Plot exported to:\n {exportFpath}\n')
+    
+    return
+
+def plot_two_ims_and_diff(
+        im0, im1, ind0, ind1=None, plotTitle0='im0', plotTitle1='im1',
+        exportPlot=False, exportDir='cwd', fname='', fontSize=12,
+        cBarForDiffIm=False
+        ):
+    """
+    Plot a frame from two 3D SimpleITK images, a blended image and a difference
+    image.
+    
+    The images must have the same in-plane resolution.
+    
+    Parameters
+    ----------
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
+    ind0 : int
+        The slice index for im0.
+    ind1 : int, optional
+        The slice index for im1. If an int is not provided, the slice in im1 
+        nearest in z-position will be plotted. The default value is None.
+    cBarForDiffIm : bool, optional
+        If True a colorbar will be included for the difference image. The 
+        default value is False.
+    plotTitle0 : str, optional
+        The plot title for im0. The default value is 'im0'.
+    plotTitle1 : str, optional
+        The plot title for im0. The default value is 'im0'.
+    exportPlot : bool, optional
+        If True, the plot will be exported to disk. The default value is False.
+    exportDir : str, optional
+        The directory where the plot will be exported if exportPlot is True. 
+        The default value is 'cwd' = the current working directory.
+    fname : str, optional
+        The file name that will be assigned to the exported plot if exportPlot
+        is True. The default value is ''.
+    fontSize : int, optional
+        The font size for the plot title and axes labels. The default value is 
+        12.
+    
+    Returns
+    -------
+    None
+    """
+    
+    # Use the origin or central pixel to report the z-position?
+    #useCentre = True # 16/04/21 Not sure it's working as expected
+    useCentre = False
+    
+    if exportPlot:
+        dpi = 120
+    else:
+        dpi = 80
+    
+    if useCentre:
+        R0, C0, S0 = im0.GetSize()
+        i0 = R0//2
+        j0 = C0//2
+        
+        R1, C1, S1 = im1.GetSize()
+        i1 = R1//2
+        j1 = C1//2
+    else:
+        i0, j0, i1, j1 = 0, 0, 0, 0
+    
+    if ind1 == None:
+        ind1, minDiff = get_ind_of_nearest_slice(
+            refIm=im0, refInd=ind0, im=im1
+            )
+    
+    z0 = im0.TransformIndexToPhysicalPoint([i0,j0,ind0])[2]
+    z1 = im1.TransformIndexToPhysicalPoint([i1,j1,ind1])[2]
+    
+    pixarr0 = sitk.GetArrayViewFromImage(im0)[ind0,:,:]
+    pixarr1 = sitk.GetArrayViewFromImage(im1)[ind1,:,:]
+    
+    alpha = 0.5
+    
+    blendedIm = (1.0 - alpha)*im0[:,:,ind0] + alpha*im1[:,:,ind1]
+    
+    diffIm = im0[:,:,ind0] - im1[:,:,ind1]
+    
+    plotTitle0 = f'{plotTitle0}\n\nk = {ind0}\nz = {z0:.2f} mm'
+    plotTitle1 = f'{plotTitle1}\n\nk = {ind1}\nz = {z1:.2f} mm'
+    blendedTitle = f'Blended image\n\nk = {ind1}\nz = {z1:.2f} mm'
+    diffTitle = f'Difference image\n\nk = {ind1}\nz = {z1:.2f} mm'
+    
+    plt.subplots(2, 2, figsize=(10,11), dpi=dpi)
+    
+    plt.subplot(2, 2, 1)
+    plt.imshow(pixarr0, cmap=plt.cm.Greys_r);
+    plt.title(plotTitle0, fontsize=fontSize)
+    plt.axis('off')
+    
+    plt.subplot(2, 2, 2)
+    plt.imshow(pixarr1, cmap=plt.cm.Greys_r);
+    plt.title(plotTitle1, fontsize=fontSize)
+    plt.axis('off')
+    
+    plt.subplot(2, 2, 3)
+    plt.imshow(sitk.GetArrayViewFromImage(blendedIm), cmap=plt.cm.Greys_r);
+    plt.title(blendedTitle, fontsize=fontSize)
+    plt.axis('off')
+    
+    ax = plt.subplot(2, 2, 4)
+    im = ax.imshow(sitk.GetArrayViewFromImage(diffIm), cmap=plt.cm.Greys_r);
+    ax.set_title(diffTitle, fontsize=fontSize)
+    ax.axis('off')
+    if cBarForDiffIm:
+        #cbar = plt.colorbar(im, ax=ax)
+        #cbar.mappable.set_clim(0, MaxVal)
+        plt.colorbar(im, ax=ax)
+    
+    #plt.show()
+    
+    if exportPlot:
+        if exportDir == 'cwd':
+            exportDir = os.getcwd()
+        
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        
+        if fname == '':
+            exportFname = currentDateTime + '.jpg'
+        else:
+            exportFname = fname + '.jpg'
+        
+        exportFpath = os.path.join(exportDir, exportFname)
+        
+        plt.savefig(exportFpath, bbox_inches='tight')
+        
+        print(f'Plot exported to:\n {exportFpath}\n')
     
     return
 
@@ -152,7 +378,7 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
     (listOfDicomsDir)
     --> use plot_pixarrs_from_list_of_segs_and_dicomDirs()
     
-    2) From a list of SimpleITK images (listOfImages) 
+    2) From a list of SimpleITK images (listOfDicomIms) 
     --> use plot_pixarrs_from_list_of_segs_and_images
     
     both of which then calls this function. 
@@ -209,8 +435,8 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
     cMaps = ['Reds', 'Blues', 'Greens', 'Oranges', 'Purples']
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
-    dcmAlpha = 0.2
-    dcmAlpha = 0.5
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
     dcmAlpha = 0.7
     
     #segAlpha = 0.5
@@ -225,7 +451,7 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
     
     if Ncols < 3:
         fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(7*Ncols, 10*Nrows), dpi=dpi
+            Nrows, Ncols, figsize=(7*Ncols, 11*Nrows), dpi=dpi
             )
     else:
         fig, ax = plt.subplots(
@@ -432,8 +658,8 @@ def plot_pixarrs_from_list_of_segs_and_dicomDirs(
         
     return
 
-def plot_pixarrs_from_list_of_segs_and_images(
-        listOfSegs, listOfImages, listOfDicomDirs, listOfPlotTitles,
+def plot_pixarrs_from_list_of_segs_and_dicom_ims(
+        listOfSegs, listOfDicomIms, listOfDicomDirs, listOfPlotTitles,
         exportPlot=False, exportDir='cwd', runID='', useCaseToApply='',
         forceReg=False, useDroForTx=False, regTxName='', initMethod='', 
         resInterp='', fname='', fontSize=12, p2c=False
@@ -450,7 +676,7 @@ def plot_pixarrs_from_list_of_segs_and_images(
     
     listOfSegs is a list (which could be of length 1) of SEG (Pydicom) objects.
     
-    listOfImages is a list (which could be of length 1) of 3D SimpleITK Image
+    listOfDicomIms is a list (which could be of length 1) of 3D SimpleITK Image
     representations of the DICOMs.
     
     listOfDicomDirs is a list (which could be of length 1) of strings 
@@ -474,16 +700,15 @@ def plot_pixarrs_from_list_of_segs_and_images(
         listOfImIPPs, listOfImDirections, listOfDicomFpaths\
             = get_seg_data_from_list_of_segs(listOfSegs, listOfDicomDirs, p2c)
     
-    # Get a list of pixel arrays for each dicom for each dataset:
+    # Store the 3D pixel arrays for each dataset:
     listOfDicomPixarrs = []
     
     # Loop through each dataset:
-    for i in range(len(listOfImages)):
-        image = listOfImages[i]
+    for i in range(len(listOfDicomIms)):
+        image = listOfDicomIms[i]
         
-        pixarr = im_to_pixarr(image)
-        
-        listOfDicomPixarrs.append(pixarr)
+        #listOfDicomPixarrs.append(im_to_pixarr(image)) # 20/09/21
+        listOfDicomPixarrs.append(sitk.GetArrayViewFromImage(image))
     
     plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
         listOfSegs, listOfDicomPixarrs, listOfDicomDirs, listOfPlotTitles,
@@ -582,9 +807,9 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims_v1(
     cMaps = ['Reds', 'Blues', 'Greens', 'Oranges', 'Purples']
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
-    dcmAlpha = 0.2
-    dcmAlpha = 0.5
-    #dcmAlpha = 1
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
+    dcmAlpha = 0.7
     
     segAlpha = 0.5
     #segAlpha = 0.2
@@ -810,9 +1035,9 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
     cMaps = ['Reds', 'Blues', 'Greens', 'Oranges', 'Purples']
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
-    dcmAlpha = 0.2
-    dcmAlpha = 0.5
-    #dcmAlpha = 1
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
+    dcmAlpha = 0.7
     
     segAlpha = 0.5
     #segAlpha = 0.2
@@ -843,13 +1068,13 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
             dicomIm = listOfDicomIm[i]
             dicom3dPixarr = sitk.GetArrayViewFromImage(dicomIm)
             
-            #dicomFpaths = listOfDicomFpaths[i]
             IPPs = listOfIPPs[i]
             #origin = listOfOrigins[i]
             #directions = listOfDirections[i]
             #spacings = listOfSpacings[i]
             plotTitle = listOfPlotTitles[i]
             #dicomDir = listOfDicomDir[i]
+            #dicomFpaths = listOfDicomFpaths[i]
             
             if p2c:
                 print(f'\n   i = {i}')
@@ -859,20 +1084,20 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
             
             # Continue if rowNum does not exceed the number of unique slice indeces:
             if rowNum < len(uniqueSinds):
-                Sind = uniqueSinds[rowNum]
+                sInd = uniqueSinds[rowNum]
                 
                 ax = plt.subplot(Nrows, Ncols, n)
                 
-                #dicomPixarr = dcmread(dicomFpaths[Sind]).pixel_array
-                dicom2dPixarr = dicom3dPixarr[Sind]
+                #dicomPixarr = dcmread(dicomFpaths[sInd]).pixel_array
+                dicom2dPixarr = dicom3dPixarr[sInd]
                 
                 #im = ax.imshow(dicomPixarr, cmap=plt.cm.Greys_r)
                 ax.imshow(dicom2dPixarr, cmap=plt.cm.Greys_r, alpha=dcmAlpha)
                 
-                IPP = IPPs[Sind]
+                IPP = IPPs[sInd]
                 
                 if p2c:
-                    print(f'   Sind = {Sind}')
+                    print(f'   sInd = {sInd}')
                     print(f'   IPP = {IPP}')
                     
                 # Loop through each ROI/segment:
@@ -892,9 +1117,9 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
                         
                         cMap = cMaps[s - m*len(cMaps)]
                         
-                    if Sind in f2sInds:
+                    if sInd in f2sInds:
                         frameNums = [
-                            i for i, e in enumerate(f2sInds) if e==Sind
+                            i for i, e in enumerate(f2sInds) if e==sInd
                             ]
                         
                         # Loop through all frame numbers:
@@ -904,7 +1129,7 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
                             frame = segPixarr[frameNum]
                             
                             if p2c:
-                                print(f'      SliceNum = {Sind} is in f2sInds')
+                                print(f'      SliceNum = {sInd} is in f2sInds')
                                 print(f'      frameNum = {frameNum}')
                                 #print(f'      Contour = {Contour}')
                                 print(f'      frame.shape = {frame.shape}')
@@ -924,9 +1149,9 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
                         frameTxt = 'No frame'
                         
                         if p2c:
-                            print(f'      Sind = {Sind} is NOT in f2sInds')
+                            print(f'      sInd = {sInd} is NOT in f2sInds')
                         
-                    sliceTxt = f'Slice {Sind}'
+                    sliceTxt = f'Slice {sInd}'
                     zPosTxt = f'z = {round(IPP[2], 2)} mm'
                     plotTitle = plotTitle.replace(' ', '\:')
                     plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle) \
@@ -1052,8 +1277,12 @@ def plot_labim_over_dicom_im(dicomIm, labim, dpi=80, p2c=False):
     #cMap = plt.cm.gist_rainbow
     
     # Set the transparency of labelmaps to be overlaid over DICOMs:
-    #alpha = 0.2
-    alpha = 0.5
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
+    dcmAlpha = 0.7
+    
+    segAlpha = 0.5
+    #segAlpha = 0.2
     
     # Set the number of subplot rows and columns:
     Ncols = 1
@@ -1070,13 +1299,265 @@ def plot_labim_over_dicom_im(dicomIm, labim, dpi=80, p2c=False):
         s = labF2Sinds[f]
         
         #ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r)
-        ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r, alpha=alpha)
+        ax.imshow(dicomPixarr[s], cmap=plt.cm.Greys_r, alpha=dcmAlpha)
         
-        ax.imshow(labPixarr[f], cmap=cMap, alpha=alpha)
+        ax.imshow(labPixarr[f], cmap=cMap, alpha=segAlpha)
                 
         ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
         ax.set_title(f'Frame = {f}, Slice {s}')
                 
         n += 1 # increment sub-plot number
+        
+    return
+
+def plot_contours_from_list_of_rtss_and_dicom_ims(
+        listOfRtss, listOfDicomIms, listOfDicomDirs, listOfPlotTitles,
+        exportPlot=False, exportDir='cwd', runID='', useCaseToApply='',
+        forceReg=False, useDroForTx=False, regTxName='', initMethod='', 
+        resInterp='', fname='', fontSize=12, p2c=False
+        ):
+    """ 
+    Previously called PlotContoursFromListOfRtss_v4.
+    
+    02/06/2021
+    
+    Note:
+        
+    Modification of v1. Rather than plotting 
+    AllSliceNums = UniqueItems(Items=ListOfC2SindsByRoi)
+    will just plot frames with contours since C2Sinds for Src and Trg can 
+    relate to very different depths, leading to a confusing plot.
+    
+    listOfRtss is a list (which could be of length 1) of RTS (Pydicom) objects.
+    
+    listOfDicomIms is a list (which could be of length 1) of 3D SimpleITK Image
+    representations of the DICOMs.
+    
+    ListOfDicomDirs is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs that correspond to each RTS.
+    
+    ListOfPlotTitles is a list (which could be of length 1) of text for each
+    plot title.
+    
+    
+    Plot has different DATASETS ALONG COLUMNS and different SLICES ALONG ROWS. 
+    """
+    
+    listOfPtsByCntByRoi, listOfC2SindsByRoi, listOfImSizes, listOfImSpacings,\
+         listOfImIPPs, listOfImDirections, listOfDicomFpaths =\
+             get_rts_data_from_list_of_rtss(listOfRtss, listOfDicomDirs, p2c)   
+    
+    # Initialise the maximum number of slices containing contours in any ROI in  
+    # any dataset:
+    maxNumSlices = 0
+    
+    # The list (for each dataset) of the unique set of slice numbers that 
+    # correspond to all contours in all ROIs:
+    listOfUniqueSinds = []
+    
+    # Loop through each dataset:
+    for i in range(len(listOfC2SindsByRoi)):
+        c2sIndsByRoi = listOfC2SindsByRoi[i]
+        
+        uniqueSinds = get_unique_items(c2sIndsByRoi)
+        
+        listOfUniqueSinds.append(uniqueSinds)
+        
+        if len(uniqueSinds) > maxNumSlices:
+            maxNumSlices = len(uniqueSinds)
+    
+    print(f'listOfC2SindsByRoi = {listOfC2SindsByRoi}')
+    print(f'listOfUniqueSinds = {listOfUniqueSinds}')
+    print(f'maxNumSlices = {maxNumSlices}')
+    
+    """ Prepare the figure. """
+    
+    # Set the number of subplot rows and columns:
+    Ncols = len(listOfRtss)
+    Nrows = maxNumSlices
+    
+    lineWidth = 0.5
+    lineWidth = 2
+    colours = ['r', 'b', 'm', 'c', 'k', 'y']
+    
+    # Set the transparency of the DICOM images:
+    #dcmAlpha = 0.2
+    #dcmAlpha = 0.5
+    dcmAlpha = 0.7
+    
+    if exportPlot:
+        dpi = 120
+    else:
+        dpi = 80
+    
+    n = 1 # initialised sub-plot number
+    
+    if Ncols < 3:
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(7*Ncols, 11*Nrows), 
+                               dpi=dpi)
+    else:
+        fig, ax = plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), 
+                               dpi=dpi)
+    
+    # Loop through each slice/frame number (i.e. each row in the plot):
+    for rowNum in range(maxNumSlices):
+        # Loop through each dataset:
+        for i in range(Ncols):
+            ptsByCntByRoi = listOfPtsByCntByRoi[i]
+            c2sIndsByRoi = listOfC2SindsByRoi[i]
+            uniqueSinds = listOfUniqueSinds[i]
+            dicomIm = listOfDicomIms[i]
+            dicom3dPixarr = sitk.GetArrayViewFromImage(dicomIm)
+            
+            IPPs = listOfImIPPs[i]
+            #Origin = listOfOrigins[i]
+            #Directions = listOfDirections[i]
+            #Spacings = listOfSpacings[i]
+            plotTitle = listOfPlotTitles[i]
+            #dicomDir = listOfDicomDirs[i]
+            #dicomFpaths = listOfDcmFpaths[i]
+            
+            if p2c:
+                print(f'\n   i = {i}')
+                print(f'   plotTitle = {plotTitle}')
+                print(f'   c2sIndsByRoi = {c2sIndsByRoi}')
+                print(f'   uniqueSinds = {uniqueSinds}')
+            
+            # Continue if rowNum does not exceed the number of unique slice indices:
+            if rowNum < len(uniqueSinds):
+                sInd = uniqueSinds[rowNum]
+                
+                ax = plt.subplot(Nrows, Ncols, n)
+                
+                #dicomPixArr = dcmread(dicomFpaths[sInd]).pixel_array
+            
+                ax.imshow(
+                    dicom3dPixarr[sInd], cmap=plt.cm.Greys_r, alpha=dcmAlpha
+                    )
+                
+                IPP = IPPs[sInd]
+            
+                # Loop through each ROI:
+                for r in range(len(c2sIndsByRoi)):
+                    c2sInds = c2sIndsByRoi[r]
+                    ptsByCnt = ptsByCntByRoi[r]
+                    
+                    """ 
+                    There are only len(colours) colours defined above. Wrap the 
+                    ROI index r if there are more ROIs than the number of 
+                    defined colours. 
+                    """
+                    if r < len(colours):
+                        colour = colours[r]
+                    else:
+                        m = r//len(colours)
+                        
+                        colour = colours[r - m*len(colours)]
+                
+                    if sInd in c2sInds:
+                        #contourNum = c2sInds.index(SliceNum) # there may be more 
+                        # than one contour for SliceNum!!
+                        contourNums = [
+                            i for i, e in enumerate(c2sInds) if e==sInd
+                            ]
+                        
+                        #print(f'contourNums = {contourNums}')
+                        
+                        numPtsByCnt = []
+                        
+                        # Loop through all contour numbers:
+                        for c in range(len(contourNums)):
+                            contourNum = contourNums[c]
+                            
+                            pts = ptsByCnt[contourNum]
+                            
+                            numPtsByCnt.append(len(pts))
+                            
+                            #print(f'\n\n\npts = {pts}')
+                            
+                            inds = pts_to_inds(points=pts, refIm=dicomIm)
+                            
+                            if p2c:
+                                print(f'      sInd = {sInd} is in c2sInds')
+                                print(f'      contourNum = {contourNum}')
+                                #print(f'      contour = {contour}')
+                                print(f'      len(pts) = {len(pts)}')
+                            
+                            #ax = plt.subplot(Nrows, Ncols, n)
+                            
+                            # Unpack the contour points' indices:
+                            i, j, k = unpack(inds)
+                                
+                            # Plot the contour points:
+                            #ax = plt.plot(i, j, linewidth=0.5, c='r')
+                            #ax.plot(i, j, linewidth=0.5, c='r')
+                            ax.plot(i, j, linewidth=lineWidth, c=colour)
+                        
+                        #if len(contourNums) > 1:
+                        #    contourTxt = f'Contours {contourNums}'
+                        #else:
+                        #    contourTxt = f'Contour {contourNum}'
+                        #contourTxt = f'Contour # {contourNums}'
+                        nobrackets = f'{contourNums}'.replace('[', '').replace(']', '')
+                        contourTxt = f'Contour # {nobrackets}'
+                        
+                        nobrackets = f'{numPtsByCnt}'.replace('[', '').replace(']', '')
+                        ptsTxt = f'No. of points: {nobrackets}'
+                    else:
+                        contourTxt = 'No contour'
+                        ptsTxt = 'No. of points: 0'
+                        
+                        if p2c:
+                            print(f'      sInd = {sInd} is NOT in c2sInds')
+                    
+                    sliceTxt = f'Slice # {sInd}'
+                    zPosTxt = f'z = {round(IPP[2], 2)} mm'
+                    #plotTitle = plotTitle.replace(' ', '\:')
+                    #plotTitle = r"$\bf{{{x}}}$".format(x=plotTitle) \
+                    #            + f'\n\n{sliceTxt}\n{contourTxt}\n{ptsTxt}\n{zPosTxt}'
+                    plotTitle = f'{plotTitle}\n\n{sliceTxt}\n{contourTxt}\n{ptsTxt}\n{zPosTxt}'
+                    
+                    ax.set_xlabel('Pixels'); ax.set_ylabel('Pixels')
+                    ax.set_title(plotTitle)
+            
+            n += 1 # increment sub-plot number
+    
+    
+    if exportPlot:
+        if exportDir == 'cwd':
+            exportDir = os.getcwd()
+        
+        if not os.path.isdir(exportDir):
+            #os.mkdir(exportDir)
+            Path(exportDir).mkdir(parents=True)
+        
+        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            
+        #exportFname = currentDateTime + '_' + fname + '.jpg'
+        
+        if fname == '':
+            exportFname = ''
+            if runID:
+                exportFname += runID + '_'
+            if ('5' in useCaseToApply or forceReg):
+                if useDroForTx:
+                    exportFname += 'useDroForTx_'
+                else:
+                    exportFname += regTxName + '_'
+                    exportFname += initMethod + '_'
+            exportFname += resInterp + '_'
+            
+            #if fname:
+            #    exportFname += fname + '_'
+            
+            exportFname += currentDateTime + '.jpg'
+        else:
+            exportFname = fname + '.jpg'
+        
+        exportFpath = os.path.join(exportDir, exportFname)
+        
+        plt.savefig(exportFpath, bbox_inches='tight')
+        
+        print(f'Plot exported to:\n {exportFpath}\n')
         
     return

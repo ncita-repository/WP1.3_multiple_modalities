@@ -15,10 +15,10 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 #from pydicom import dcmread
 
-import dicom_tools.seg_data
-reload(dicom_tools.seg_data)
-import general_tools.general
-reload(general_tools.general)
+#import dicom_tools.seg_data
+#reload(dicom_tools.seg_data)
+#import general_tools.general
+#reload(general_tools.general)
 
 #from general_tools.general import get_unique_items
 #from dicom_tools.seg_data import (
@@ -26,11 +26,15 @@ reload(general_tools.general)
 #    )
 #from conversion_tools.pixarrs_ims import im_to_pixarr
 
+from image_tools.operations import normalise_im
+from general_tools.pixarr_ops import checkered_frame
 
 def plot_metricValues_v_iters(
         metricValues, multiresIters, exportPlot=False, 
         exportDir='cwd', fname=''
         ):
+    
+    plt.figure(figsize=(10,8))
     
     plt.plot(metricValues, 'r')
     plt.plot(multiresIters, 
@@ -66,6 +70,9 @@ def plot_fix_mov_ims_v2(
     """ Callback invoked by the interact IPython method for scrolling 
     through the image stacks of the two images (moving and fixed). """
     
+    fixIm = normalise_im(fixIm)
+    movIm = normalise_im(movIm)
+    
     fixPixArr = sitk.GetArrayViewFromImage(fixIm)[fixInd,:,:]
     movPixArr = sitk.GetArrayViewFromImage(movIm)[movInd,:,:]
     
@@ -95,77 +102,126 @@ def plot_fix_mov_ims_v2(
     return
 
 def compare_res_results(
-        resIm0, resIm1, resInd,
-        resTitle0='Resampled image 0', resTitle1='Resampled image 1', 
-        exportPlot=False, exportDir='cwd', fname='',
+        im0, im1, k,
+        title0='Resampled image 0', title1='Resampled image 1', 
+        exportPlot=False, exportDir='cwd', fname='', fontSize=12,
         cBarForDiffIm=False
         ):
     """
-    Callback invoked by the IPython interact method for scrolling and 
-    modifying the alpha blending of an image stack of two images that 
-    occupy the same physical space.
+    Plot two SimpleITK images, a blended image and a difference image.
     
     Can be used to compare two resampled/registered images, or to compare a
     registered/resampled image to the reference/fixed image.
+    
+    Parameters
+    ----------
+    im0 : SimpleITK Image
+    im1 : SimpleITK Image
+    k : int
+        The slice index for im0 and im1.
+    cBarForDiffIm : bool, optional
+        If True a colorbar will be included for the difference image. The 
+        default value is False.
+    title0 : str, optional
+        The plot title for im0. The default value is 'Resampled image 0'.
+    title1 : str, optional
+        The plot title for im0. The default value is 'Resampled image 01'.
+    exportPlot : bool, optional
+        If True, the plot will be exported to disk. The default value is False.
+    exportDir : str, optional
+        The directory where the plot will be exported if exportPlot is True. 
+        The default value is 'cwd' = the current working directory.
+    fname : str, optional
+        The file name that will be assigned to the exported plot if exportPlot
+        is True. The default value is ''.
+    fontSize : int, optional
+        The font size for the plot title and axes labels. The default value is 
+        12.
+        
+    Returns
+    -------
+    None
+    
+    Note
+    ----
+    It will be assumed that im0 and im1 have the same size/dimensions, as will
+    be the case for resampled/registered images.
     """
     
+    # Use the origin or central pixel to report the z-position?
     #useCentre = True # 16/04/21 Not sure it's working as expected
     useCentre = False
-        
-    resPixarr0 = sitk.GetArrayViewFromImage(resIm0)[resInd,:,:]
-    resPixarr1 = sitk.GetArrayViewFromImage(resIm1)[resInd,:,:]
+    
+    # Blending of the two images:
+    alpha = 0.5
     
     if useCentre:
-        # Assuming that resIm0 size = resIm1 size:
-        R, C, S = resIm0.GetSize()
+        # Assuming that im0 size = im1 size:
+        R, C, S = im0.GetSize()
         
-        i = R//2
-        j = C//2
+        i, j = R//2, C//2
     else:
-        i = 0
-        j = 0
-        
-    resZ = resIm0.TransformIndexToPhysicalPoint([i,j,resInd])[2]
+        i, j = 0, 0
     
-    resTitle0 = f'{resTitle0}\nk = {resInd}\nz = {round(resZ, 2)} mm'
-    resTitle1 = f'{resTitle1}\nk = {resInd}\nz = {round(resZ, 2)} mm'
+    im0 = normalise_im(im0)
+    im1 = normalise_im(im1)
+    
+    frame0 = sitk.GetArrayViewFromImage(im0)[k, :, :]
+    frame1 = sitk.GetArrayViewFromImage(im1)[k, :, :]
+    
+    blendedIm = (1.0 - alpha)*im0[:, :, k] + alpha*im1[:, :, k]
+    
+    diffIm = im0[:, :, k] - im1[:, :, k]
+    
+    checkeredFrame = checkered_frame(frame0, frame1)
+    
+    z = im0.TransformIndexToPhysicalPoint([i, j, k])[2]
+    
+    title0 = f'{title0}\n\nk = {k}\nz = {z:.2f} mm'
+    title1 = f'{title1}\n\nk = {k}\nz = {z:.2f} mm'
+    blendedTitle = f'Blended frame\n\nk = {k}\nz = {z:.2f} mm'
+    diffTitle = f'Difference frame\n\nk = {k}\nz = {z:.2f} mm'
+    checkeredTitle = f'Checkered frame\n\nk = {k}\nz = {z:.2f} mm'
     
     if exportPlot:
         dpi = 300
     else:
         dpi = 80
         
-    plt.subplots(2, 2, figsize=(10,10), dpi=dpi)
+    #plt.subplots(2, 2, figsize=(10,11), dpi=dpi)
+    plt.subplots(2, 3, figsize=(15,12), dpi=dpi)
     
-    alpha = 0.5
-    
-    blendedIm = (1.0 - alpha)*resIm0[:,:,resInd] + alpha*resIm1[:,:,resInd]
-    
-    diffIm = resIm0[:,:,resInd] - resIm1[:,:,resInd]
-    
-    plt.subplot(2, 2, 1)
-    plt.imshow(resPixarr0, cmap=plt.cm.Greys_r);
-    plt.title(resTitle0)
+    plt.subplot(2, 3, 1)
+    plt.imshow(frame0, cmap=plt.cm.Greys_r);
+    plt.title(title0, fontsize=fontSize)
     plt.axis('off')
     
-    plt.subplot(2, 2, 2)
-    plt.imshow(resPixarr1, cmap=plt.cm.Greys_r);
-    plt.title(resTitle1)
+    plt.subplot(2, 3, 2)
+    plt.imshow(frame1, cmap=plt.cm.Greys_r);
+    plt.title(title1, fontsize=fontSize)
     plt.axis('off')
     
-    plt.subplot(2, 2, 3)
+    plt.subplot(2, 3, 3)
+    plt.axis('off')
+    
+    plt.subplot(2, 3, 4)
     plt.imshow(sitk.GetArrayViewFromImage(blendedIm), cmap=plt.cm.Greys_r);
-    plt.title('Blended image')
+    plt.title(blendedTitle, fontsize=fontSize)
     plt.axis('off')
     
-    ax = plt.subplot(2, 2, 4)
+    ax = plt.subplot(2, 3, 5)
     im = ax.imshow(sitk.GetArrayViewFromImage(diffIm), cmap=plt.cm.Greys_r);
-    ax.set_title('Difference image')
+    ax.set_title(diffTitle, fontsize=fontSize)
     ax.axis('off')
     if cBarForDiffIm:
         #cbar = plt.colorbar(im, ax=ax)
         #cbar.mappable.set_clim(0, MaxVal)
         plt.colorbar(im, ax=ax)
+    
+    plt.subplot(2, 3, 6)
+    plt.imshow(checkeredFrame, cmap=plt.cm.Greys_r);
+    plt.title(checkeredTitle, fontsize=fontSize)
+    plt.axis('off')
     
     #plt.show()
     

@@ -12,6 +12,9 @@ import numpy as np
 import SimpleITK as sitk
 from conversion_tools.inds_pts_pixarrs import pixarr_to_labarr
 #from image_tools.attrs_info import get_im_info
+from general_tools.console_printing import (
+    print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
+    )
 
 
 def pixarr_to_im(pixarr, f2sInds, refIm):
@@ -21,7 +24,8 @@ def pixarr_to_im(pixarr, f2sInds, refIm):
     Parameters
     ----------
     pixarr : Numpy array
-        PixelData as a Numpy array.
+        PixelData as a FxRxC Numpy array, where F is the number of
+    segmentations/masks.
     f2sInds : list of ints
         The DICOM slice numbers that correspond to each frame in pixarr,
         e.g. PFFGStoSliceInds = PerFrameFunctionalGroupsSequence-to-slice
@@ -32,7 +36,8 @@ def pixarr_to_im(pixarr, f2sInds, refIm):
     Returns
     -------
     labim : SimpleITK Image
-        A SimpleITK image containing zero-padded indices from pixarr.
+        A CxRxS SimpleITK image, where S is the number of slices in the DICOM
+        series.
     """
     
     imSize = refIm.GetSize()
@@ -42,6 +47,12 @@ def pixarr_to_im(pixarr, f2sInds, refIm):
     #print(f'imSize[2] = {imSize[2]}')
     #print(f'FrameToSliceInds = {FrameToSliceInds}')
     
+    # Convert from sparse pixel array to zero-padded label array:
+    """
+    pixarr is a FxRxC array, where F is the number of segmentations/masks
+    labarr is a SxRxC array, where S is the number of slices in the DICOM 
+    series
+    """
     labarr = pixarr_to_labarr(
         pixarr=pixarr, numOfSlices=imSize[2], f2sInds=f2sInds
         )
@@ -129,6 +140,11 @@ def pixarrBySeg_to_labimBySeg(pixarrBySeg, f2sIndsBySeg, refIm, p2c=False):
     labimBySeg : list of SimpleITK images
         A list (for each ROI) of 3D labelmap images representing the pixel
         arrays in pixarrBySeg.
+    newF2SIndsBySeg list of list of ints
+        As f2sIndsBySeg but the new list may have fewer items, since any 
+        repeated index in f2sIndsBySeg (i.e. more than one segmentated object
+        on any given slice) will be combined into the same frame in the label
+        image. 
     """
     
     #from ImageTools import GetImageInfo
@@ -142,7 +158,7 @@ def pixarrBySeg_to_labimBySeg(pixarrBySeg, f2sIndsBySeg, refIm, p2c=False):
         #print(f'   len(pixarrBySeg) = {len(pixarrBySeg)}')
         
     labimBySeg = []
-    f2sIndsBySeg_new = []
+    newF2SIndsBySeg = []
 
     for r in range(len(pixarrBySeg)):
         labim = pixarr_to_im(
@@ -156,38 +172,33 @@ def pixarrBySeg_to_labimBySeg(pixarrBySeg, f2sIndsBySeg, refIm, p2c=False):
             
         pixID, pixIDtypeAsStr, uniqueVals, f2sInds = get_im_info(labim, p2c)
         
-        f2sIndsBySeg_new.append(f2sInds)
-    
-    #""" Check that the number of unique f2sInds in f2sIndsBySeg_new matches the
-    #number of unique f2sInds in f2sIndsBySeg (i.e. that no frames were lost). """
-    #NumIn = []
-    #NumOut = []
-    #
-    #for r in range(len(f2sIndsBySeg)):
-    #    NumIn.append(len(UniqueItems(f2sIndsBySeg[r])))
-    #    
-    #    NumOut.append(len(UniqueItems(f2sIndsBySeg_new[r])))
-    #    
-    #print('\n', NumIn, NumOut)
-    #
-    #if not AreListsEqualToWithinEpsilon(NumIn, NumOut, epsilon=0.9):
-    #    print('\nWARNING:  The number of unique f2sIndsBySeg used to generate',
-    #          f'the labelmaps, {NumIn}, doesn\'t match that in the labelmap',
-    #          f'images, {NumOut}.')
+        newF2SIndsBySeg.append(f2sInds)
     
     if p2c:
+        print('\nThe (original) f2sIndsBySeg corresponding to the input',
+              'pixarrBySeg:')
+        print_indsByRoi(f2sIndsBySeg)
+        print('\nThe new f2sIndsBySeg corresponding to the label image:')
+        print_indsByRoi(newF2SIndsBySeg)
         print('End', '-'*120)
         
-    return labimBySeg
+    return labimBySeg, newF2SIndsBySeg
 
 def im_to_pixarr(image, f2sInds=None):
     """
-    Convert a 3D SimpleITK Image to a 3D pixel array.  
+    Convert an CxRxS SimpleITK Image to a sparse FxRxC pixel array, where C/R
+    the number of columns/rows, S is the number of slices in the DICOM stack, 
+    and F is the number of non-empty frames in image.
+    
+    This function can be used for any image type, but is specifically used for
+    converting binary label images to sparse 3D pixel arrays (i.e. storing 
+    masks/segmentations).  To convert an CxRxS image to a SxRxC pixel array use
+    sitk.GetArrayViewFromImage(image).
     
     Parameters
     ----------
     image : SimpleITK Image
-        A image (e.g. labelmap).
+        A image (e.g. label image).
     f2sInds : list of ints, optional
         Use PerFrameFunctionalGroupsSequence-to-slice indices 
         (PFFGStoSliceInds) if they are known. If this input is not specified a 

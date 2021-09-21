@@ -23,7 +23,9 @@ from image_tools.operations import (
 from conversion_tools.pixarrs_ims import im_to_pixarr
 from general_tools.fiducials import get_landmark_tx
 from plotting_tools.general import plot_two_ims
-
+from general_tools.console_printing import (
+    print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
+    )
 
 def resample_im(im, refIm, sitkTx=sitk.Transform(3, sitk.sitkIdentity),
                 #sitkTx=sitk.Transform(), 
@@ -775,8 +777,8 @@ def resample_labim(
         print(f'resPixarr.shape = {resPixarr.shape}')
         print(f'resF2Sinds = {resF2Sinds}')
         plot_two_ims(
-            im0=labim, ind0=f2sInds[0], plotLabel0='Original label image', 
-            im1=resLabim, ind1=resF2Sinds[0], plotLabel1='Resampled label image')
+            im0=labim, ind0=f2sInds[0], plotTitle0='Original label image', 
+            im1=resLabim, ind1=resF2Sinds[0], plotTitle1='Resampled label image')
         print('-'*120)
         
     return resLabim, resPixarr, resF2Sinds
@@ -873,6 +875,11 @@ def resample_labimBySeg(
         resF2SindsBySeg.append(resF2Sinds)
         
     if p2c:
+        print('\nResults of resample_labimBySeg():')
+        print('\nInput f2sIndsBySeg:')
+        print_indsByRoi(f2sIndsBySeg)
+        print('\nOutput resF2SindsBySeg:')
+        print_indsByRoi(resF2SindsBySeg)
         print('-'*120)
         
     return resLabimBySeg, resPixarrBySeg, resF2SindsBySeg

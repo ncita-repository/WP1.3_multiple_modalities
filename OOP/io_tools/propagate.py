@@ -60,7 +60,9 @@ from io_tools.exports import (export_im, export_list_to_txt, export_newRoicol)
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
-from general_tools.console_printing import print_indsByRoi, print_ptsByCntByRoi
+from general_tools.console_printing import (
+    print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
+    )
 from plotting_tools.general import (
     plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_images
     )
@@ -117,21 +119,27 @@ class Propagator:
         
         # Copy selected instance attributes from srcDataset that will be
         # modified for useCases 3-5:
-        self.dcmIm = srcDataset.dcmIm
-        self.dcmPixarr = srcDataset.dcmPixarr
+        #self.dcmIm = srcDataset.dcmIm # 20/09/21
+        #self.dcmPixarr = srcDataset.dcmPixarr # 20/09/21
         
-        # Copy selected instance attributes from trgDataset:
+        """
+        Copy selected instance attributes from trgDataset that apply to the
+        new dataset:
+        """
+        self.dcmIm = trgDataset.dcmIm
+        self.dcmPixarr = trgDataset.dcmPixarr
         self.imSize = trgDataset.imSize
         self.imSpacings = trgDataset.imSpacings
         self.imSlcThick = trgDataset.imSlcThick
         self.imPositions = trgDataset.imPositions
         self.imDirections = trgDataset.imDirections
+        self.foruid = trgDataset.foruid
+        self.studyuid = trgDataset.studyuid
+        
         #self.dicomDir = trgDataset.dicomDir
         #self.dicoms = trgDataset.dicoms
         #self.divs = trgDataset.divs
         #self.f2sIndsByRoi = trgDataset.f2sIndsByRoi
-        self.foruid = trgDataset.foruid
-        #self.dcmIm = trgDataset.dcmIm # this will be changed for useCases 3-5; 14/09/21
         #self.pixarrByRoi = trgDataset.pixarrByRoi
         #self.roiName = trgDataset.roiName
         #self.roiNames = trgDataset.roiNames
@@ -140,15 +148,13 @@ class Propagator:
         #self.seriesuid = trgDataset.seriesuid
         #self.slcNum = trgDataset.slcNum
         #self.sopuids = trgDataset.sopuids
-        self.studyuid = trgDataset.studyuid
         
-        # Copy srcDataset and trgDataset:
-        #self.srcDataset = srcDataset
-        #self.trgDataset = trgDataset
-        
-        # Initialise instance attributes that will result from making a
-        # non-relationship-preserving copy, relationship-preserving copy or
-        # propagation of the source ROI Collection to the target domain:
+        """
+        Initialise instance attributes that will be modified when making a
+        non-relationship-preserving copy, relationship-preserving copy,
+        non-relationship-preserving propagation, or relationship-preserving
+        propagation of the source ROI Collection to the target domain:
+        """
         #self.pixarrByRoi = None # 14/09/21
         #self.f2sIndsByRoi = None # 14/09/21
         #self.labimByRoi = None # 14/09/21
@@ -159,6 +165,8 @@ class Propagator:
         self.c2sIndsByRoi = srcDataset.c2sIndsByRoi # 15/09/21
         self.ptsByCntByRoi = srcDataset.ptsByCntByRoi # 14/09/21
         self.cntdataByCntByRoi = srcDataset.cntdataByCntByRoi # 14/09/21
+        self.f2sIndsByRoi = srcDataset.f2sIndsBySeg # 21/09/21
+        self.pixarrByRoi = srcDataset.pixarrBySeg # 21/09/21
         self.labimByRoi = srcDataset.labimByRoi # 14/09/21
         
         # Initialise the SimpleITK Transform that will be used for resampling 
@@ -191,6 +199,14 @@ class Propagator:
         #self.regIm = None
         self.preRegTx = None # will be updated for deformable DROs only
         self.preRegTxParams = None
+        
+        """
+        Initialise self.resIm, which will result from resampling, transforming
+        (from DRO transform parameters) or registration:
+        """
+        self.resIm = None
+        self.resDcmPixarr = None
+        
         
         # TODO are inputs valid below
         """
@@ -1614,13 +1630,14 @@ class Propagator:
         roicolMod = params.cfgDict['roicolMod']
         
         if roicolMod == 'RTSTRUCT':
-            _2sIndsBy_ = srcDataset.c2sIndsByRoi
+            #_2sIndsBy_ = srcDataset.c2sIndsByRoi # 21/09/21
+            _2sIndsBy_ = srcDataset.f2sIndsByRoi # 21/09/21
             labimBy_ = srcDataset.labimByRoi
         else:
             _2sIndsBy_ = srcDataset.f2sIndsBySeg
             labimBy_ = srcDataset.labimBySeg
             
-        labimBy_, pixarrBy_, _2sIndsBy_ = resample_labimBySeg(
+        labimBy_, pixarrBy_, f2sIndsBy_ = resample_labimBySeg(
             labimBySeg=labimBy_,
             f2sIndsBySeg=_2sIndsBy_,
             im=srcDataset.dcmIm,
@@ -1657,21 +1674,12 @@ class Propagator:
         timingMsg = "Took [*] s to resample source label images.\n"
         params.add_timestamp(timingMsg)
         
-        print('\n\n\nBefore resampling label images:')
         if roicolMod == 'RTSTRUCT':
-            print_indsByRoi(self.c2sIndsByRoi)
-        else:
-            print_indsByRoi(self.f2sIndsBySeg)
-        print('\nAfter resampling label images:')
-        print_indsByRoi(_2sIndsBy_)
-        print('\n\n\n')
-        
-        if roicolMod == 'RTSTRUCT':
-            self.c2sIndsByRoi = _2sIndsBy_
+            self.f2sIndsByRoi = f2sIndsBy_
             self.pixarrByRoi = pixarrBy_
             self.labimByRoi = labimBy_
         else:
-            self.f2sIndsBySeg = _2sIndsBy_
+            self.f2sIndsBySeg = f2sIndsBy_
             self.pixarrBySeg = pixarrBy_
             self.labimBySeg = labimBy_
     
@@ -1737,10 +1745,11 @@ class Propagator:
             + f"{regTxName} registration with {initMethod} initialisation...\n"
         params.add_timestamp(timingMsg)
         
-        print(f'fixFidsFpath = {fixFidsFpath}')
-        print(f'movFidsFpath = {movFidsFpath}\n')
+        if p2c:
+            print(f'fixFidsFpath = {fixFidsFpath}')
+            print(f'movFidsFpath = {movFidsFpath}\n')
         
-        self.initRegTx, self.alignedIm, self.resTx, self.dcmIm,\
+        self.initRegTx, self.alignedIm, self.resTx, self.resIm,\
             self.metricValues, self.multiresIters = register_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
@@ -1749,20 +1758,22 @@ class Propagator:
                 p2c=p2c, regPlotFpath=resPlotFpath
                 )
         
-        self.dcmPixarr = sitk.GetArrayViewFromImage(self.dcmIm)
+        self.resDcmPixarr = sitk.GetArrayViewFromImage(self.resIm)
         
-        print(f'\nmetricValues = {self.metricValues}')
-        print(f'\nmultiresIters = {self.multiresIters}\n')
+        if p2c:
+            print(f'\nmetricValues = {self.metricValues}')
+            print(f'\nmultiresIters = {self.multiresIters}\n')
         
         #raise Exception('quitting')
         
-        # Plot registration result:
-        midInd = fixIm.GetSize()[2] // 2
-        
-        compare_res_results(
-            resIm0=fixIm, resIm1=self.dcmIm, resInd=midInd,
-            resTitle0='Target image', resTitle1='Registered'
-        )
+        if p2c:
+            # Plot registration result:
+            midInd = fixIm.GetSize()[2] // 2
+            
+            compare_res_results(
+                im0=fixIm, im1=self.resIm, k=midInd,
+                title0='Target image', title1='Registered image'
+            )
         
         # Get the registration transform parameters:
         #self.txParams = [str(item) for item in self.finalTx.GetParameters()]  # 01/09/21
@@ -2073,7 +2084,8 @@ class Propagator:
         self.ptsByCntByRoi, self.cntdataByCntByRoi, self.c2sIndsByRoi =\
                 pixarrBySeg_to_ptsByCntByRoi(
                     pixarrBySeg=self.pixarrByRoi,
-                    f2sIndsBySeg=self.c2sIndsByRoi,
+                    #f2sIndsBySeg=self.c2sIndsByRoi, # 21/09/21
+                    f2sIndsBySeg=self.f2sIndsByRoi, # 21/09/21
                     refIm=trgDataset.dcmIm,
                     p2c=params.cfgDict['p2c']
                     )
@@ -2240,6 +2252,7 @@ class Propagator:
             """
             if p2c:
                 print('Running useCase in ["3a", "3b", "4a" and "4b"]\n')
+            
             self.resample_src_labims(srcDataset, trgDataset, params)
             
             """ 
@@ -2249,12 +2262,21 @@ class Propagator:
             (e.g. for overlays of the resampled ROI Collection on the resampled
             DICOM image).
             """ 
-            self.dcmIm = resample_im(
+            self.resIm = resample_im(
                 srcDataset.dcmIm, refIm=trgDataset.dcmIm,
                 sitkTx=self.resTx, p2c=params.cfgDict['p2c']
                 )
             
-            self.dcmPixarr = sitk.GetArrayViewFromImage(self.dcmIm)
+            self.resDcmPixarr = sitk.GetArrayViewFromImage(self.resIm)
+            
+            if p2c:
+                # Plot resampled result:
+                midInd = trgDataset.dcmIm.GetSize()[2] // 2
+                
+                compare_res_results(
+                    resIm0=trgDataset.dcmIm, resIm1=self.resIm, resInd=midInd,
+                    resTitle0='Target image', resTitle1='Resampled image'
+                )
         
         if useCase in ['5a', '5b']:
             """
@@ -2304,12 +2326,15 @@ class Propagator:
                 srcDataset, trgDataset, params
                 )
         
-        
+        """
+        The conversion is done within 
+        make_non_relationship_preserving_propagation() and
+        make_relationship_preserving_propagation().
         if (useCase in ['3a', '3b', '4a', '4b', '5a', '5b'] and
                 roicolMod == 'RTSTRUCT'):
             # Convert from pixel array data to contour data:
             print('\nNeed to convert from pixel array to contour data...')
-            
+        """
     
     def export_data(self, srcDataset, trgDataset, params):
         
@@ -2420,6 +2445,18 @@ class Propagator:
         for use cases 3-5.
         """
         
+        """
+        Plot both contours and the segmentations that were converted to the 
+        contours (plotMasksForRts = True), or only the contours 
+        (plotMasksForRts = False)?
+        
+        This only applies to use cases for which the source label image was
+        resampled/registered to the target domain AND the ROI Collection is
+        RTSTRUCT.:
+        """
+        plotMasksForRts = False
+        plotMasksForRts = True
+        
         print('* Plotting ROI over DICOM images..\n')
         
         cfgDict = params.cfgDict
@@ -2496,15 +2533,23 @@ class Propagator:
             listOfPtsByCntByRoi = [
                 srcDataset.ptsByCntByRoi, self.ptsByCntByRoi, self.ptsByCntByRoi
                 ]
-            listOfF2SindsBySeg = [
-                srcDataset.f2sIndsBySeg, self.f2sIndsBySeg, self.f2sIndsBySeg
-                ]
-            listOfPixarrBySeg = [
-                srcDataset.pixarrBySeg, self.pixarrBySeg, self.pixarrBySeg
-                ]
-            listOfIms = [srcDataset.dcmIm, self.dcmIm, trgDataset.dcmIm]
+            if roicolMod == 'RTSTRUCT' and plotMasksForRts:
+                listOfF2SindsBySeg = [
+                    srcDataset.f2sIndsByRoi, self.f2sIndsByRoi, self.f2sIndsByRoi
+                    ]
+                listOfPixarrBySeg = [
+                    srcDataset.pixarrByRoi, self.pixarrByRoi, self.pixarrByRoi
+                    ]
+            else:
+                listOfF2SindsBySeg = [
+                    srcDataset.f2sIndsBySeg, self.f2sIndsBySeg, self.f2sIndsBySeg
+                    ]
+                listOfPixarrBySeg = [
+                    srcDataset.pixarrBySeg, self.pixarrBySeg, self.pixarrBySeg
+                    ]
+            listOfIms = [srcDataset.dcmIm, self.resIm, trgDataset.dcmIm]
             listOfDcmPixarr = [
-                srcDataset.dcmPixarr, self.dcmPixarr, trgDataset.dcmPixarr
+                srcDataset.dcmPixarr, self.resDcmPixarr, trgDataset.dcmPixarr
                 ]
             listOfIPPs = [
                 srcDataset.imPositions, self.imPositions, trgDataset.imPositions
@@ -2566,6 +2611,9 @@ class Propagator:
             metricValues = self.metricValues
             multiresIters = self.multiresIters
             
+            #print(f'metricValues = {self.metricValues}\n')
+            #print(f'multiresIters = {self.multiresIters}\n')
+            
             print('* Plotting metric v iterations from registeration..\n')
             
             # Prepare plot title:
@@ -2602,7 +2650,7 @@ class Propagator:
         initMethod = cfgDict['initMethod']
         resInterp = cfgDict['resInterp']
         trgIm = trgDataset.dcmIm
-        resIm = self.dcmIm # resampled source or source-registered-to-target 
+        resIm = self.resIm # resampled source or source-registered-to-target 
         alignedIm = self.alignedIm # pre-registration aligned image
         # (which may be None, e.g. if registration wasn't performed)
         
@@ -2640,14 +2688,37 @@ class Propagator:
                     fname = fname.replace('\n', '')
                     
                     compare_res_results(
-                        resIm0=trgIm, resIm1=image, resInd=midInd,
-                        resTitle0='Target image', resTitle1=title,
+                        im0=trgIm, im1=image, k=midInd,
+                        title0='Target image', title1=title,
                         exportPlot=exportPlot, exportDir=resExportDir,
                         fname=fname
                     )
     
-    
-    
+    def print_summary_of_results(self, srcDataset, trgDataset):
+        
+        dsets = [srcDataset, trgDataset, self]
+        dsetNames = ['srcDataset', 'trgDataset', 'self']
+        
+        print('\n')
+        for dset, name in zip(dsets, dsetNames):
+            print(f'\n*** Summary of results for {name}:')
+            print(f'\n{name}.f2sIndsBySeg:')
+            print_indsByRoi(dset.f2sIndsBySeg)
+            print(f'\n{name}.pixarrBySeg:')
+            print_pixarrBySeg(dset.pixarrBySeg)
+            print(f'\n{name}.labimBySeg:')
+            print_labimBySeg(dset.labimBySeg)
+            print(f'\n{name}.c2sIndsByRoi:')
+            print_indsByRoi(dset.c2sIndsByRoi)
+            print(f'\n{name}.ptsByCntByRoi:')
+            print_ptsByCntByRoi(dset.ptsByCntByRoi)
+            print(f'\n{name}.f2sIndsByRoi:')
+            print_indsByRoi(dset.f2sIndsByRoi)
+            print(f'\n{name}.pixarrByRoi:')
+            print_pixarrBySeg(dset.pixarrByRoi)
+            print(f'\n{name}.labimByRoi:')
+            print_labimBySeg(dset.labimByRoi)
+        
     def export_labims(self, srcDataset, trgDataset, params):
         
         print('* Exporting label images..\n')

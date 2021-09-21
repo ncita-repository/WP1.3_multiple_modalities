@@ -159,6 +159,8 @@ class DataImporter:
         self.c2sIndsByRoi = []
         self.ptsByCntByRoi = []
         self.cntdataByCntByRoi = []
+        self.f2sIndsByRoi = []
+        self.pixarrByRoi = []
         self.labimByRoi = []
         
         #self.timings = params.timings
@@ -573,7 +575,7 @@ class DataImporter:
             """ 
             Note this won't be used for use cases 1-2 but is needed for 3-5.
             """
-            self.labimBySeg = pixarrBySeg_to_labimBySeg(
+            self.labimBySeg, self.f2sIndsBySeg = pixarrBySeg_to_labimBySeg(
                 pixarrBySeg=self.pixarrBySeg, 
                 f2sIndsBySeg=self.f2sIndsBySeg, 
                 refIm=self.dcmIm,
@@ -718,7 +720,11 @@ class DataImporter:
             List of pixel arrays - one for each ROI/segment.
         self.labimBySeg : list of SimpleITK Images or None
             List for each ROI/segment of the SimpleITK Image representation of
-            the 3D pixel array.  
+            the 3D pixel array.
+        self.f2sIndsBySeg : list of list of ints
+            A list (for each ROI/segment) of a list (for each frame) of the 
+            slice numbers that correspond to each frame in the label image
+            representation of the pixel arrays. 
         """
         
         if self.roicol != None:
@@ -763,7 +769,7 @@ class DataImporter:
             f2sIndsBySeg (or c2sIndsByRoi) that relate to the pixel data parsed
             from the SEG (or converted from contour data parsed from the RTS).
             """
-            self.labimByRoi = pixarrBySeg_to_labimBySeg(
+            self.labimByRoi, self.f2sIndsByRoi = pixarrBySeg_to_labimBySeg(
                 pixarrBySeg=self.pixarrByRoi, 
                 f2sIndsBySeg=self.c2sIndsByRoi, 
                 refIm=self.dcmIm,

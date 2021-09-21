@@ -16,10 +16,15 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from ipywidgets import interact, fixed
 
+from importlib import reload
+import image_tools.operations
+reload(image_tools.operations)
+
 #from general_tools.general import check_file_ext
 from general_tools.fiducials import get_landmark_tx
 #import image_tools.registration_utilities as ru
 import image_tools.registration_callbacks as rc
+from image_tools.operations import normalise_im
 
 
 def command_iteration(method):
@@ -31,20 +36,20 @@ def command_multi_iteration(method):
     
 def start_plot():
     """ Callback invoked when the StartEvent happens, sets up our new data. """
-    global metric_values, multires_iterations
+    global metricValues, multiresIters
     
-    metric_values = []
-    multires_iterations = []
+    metricValues = []
+    multiresIters = []
 
 def end_plot():
     """ Callback invoked when the EndEvent happens, do cleanup of data and 
     figure. """
     
-    global metric_values, multires_iterations
+    global metricValues, multiresIters
     
     #""" 31/08/21
-    del metric_values
-    del multires_iterations
+    del metricValues
+    del multiresIters
     # Close figure, we don't want to get a duplicate of the plot latter on.
     plt.close()
     #"""
@@ -53,36 +58,36 @@ def plot_values(regMethod):
     """ Callback invoked when the IterationEvent happens, update the data 
     and display new figure. """
     
-    global metric_values, multires_iterations
+    global metricValues, multiresIters
     
-    metric_values.append(regMethod.GetMetricValue())                                       
+    metricValues.append(regMethod.GetMetricValue())                                       
     # Clear the output area (wait=True, to reduce flickering), and plot current data
     clear_output(wait=True) # <-- this clears all output
     #plt.clf() # doesn't have intended result
     # Plot the similarity metric values
-    plt.plot(metric_values, 'r')
-    plt.plot(multires_iterations, 
-             [metric_values[index] for index in multires_iterations], 
+    plt.plot(metricValues, 'r')
+    plt.plot(multiresIters, 
+             [metricValues[index] for index in multiresIters], 
              'b*')
     plt.xlabel('Iteration Number', fontsize=12)
     plt.ylabel('Metric Value', fontsize=12)
     plt.show()
 
-def update_multires_iterations():
+def update_multiresIters():
     """ Callback invoked when the sitkMultiResolutionIterationEvent happens, 
-    update the index into the metric_values list. """
+    update the index into the metricValues list. """
     
-    global metric_values, multires_iterations
+    global metricValues, multiresIters
     
-    multires_iterations.append(len(metric_values))
+    multiresIters.append(len(metricValues))
 
-def update_metric_values(regMethod):
+def update_metricValues(regMethod):
     """ Callback invoked when the IterationEvent happens, update the data. 
     """
     
-    global metric_values, multires_iterations
+    global metricValues, multiresIters
     
-    metric_values.append(regMethod.GetMetricValue())
+    metricValues.append(regMethod.GetMetricValue())
 
 def plot_fix_mov_ims(fixInd, movInd, fixPixarr, movPixarr):
     """ Callback invoked by the interact IPython method for scrolling 
@@ -115,11 +120,11 @@ def plot_blended_im(Ind, alpha, fixIm, resIm):
     plt.axis('off')
     plt.show()
 
-def plot_values_and_export(metric_values, multires_iterations, regPlotFpath):
+def plot_values_and_export(metricValues, multiresIters, regPlotFpath):
     
-    plt.plot(metric_values, 'r')
-    plt.plot(multires_iterations, 
-             [metric_values[ind] for ind in multires_iterations], 'b*')
+    plt.plot(metricValues, 'r')
+    plt.plot(multiresIters, 
+             [metricValues[ind] for ind in multiresIters], 'b*')
     plt.xlabel('Iteration number', fontsize=12)
     plt.ylabel('Metric value', fontsize=12)
     
@@ -220,7 +225,6 @@ def rigid_reg_im(
     """ metric values and multiresIters don't return expected values when
     plotToConsole = False!
     """
-    # TODO correct code so that metric values and iters returned when plotToConsole=False
     
     samplingPercentage = float(samplingPercentage/100)
     
@@ -275,8 +279,6 @@ def rigid_reg_im(
             fixIm, movIm, sitkTx, CTIF
             )
     
-    
-        
     """ Registration. """
     regMethod = sitk.ImageRegistrationMethod()
     
@@ -348,21 +350,23 @@ def rigid_reg_im(
     if plotToConsole:
         # Connect all of the observers for plotting during registration:
         regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
-        # Don't want to delete metric_values or multires_iterations since
+        # Don't want to delete metricValues or multiresIters since
         # I want to return them:
         #regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                             update_multires_iterations) 
+                             update_multiresIters) 
         regMethod.AddCommand(sitk.sitkIterationEvent, 
                              lambda: plot_values(regMethod))
     else:
-        # Need to run start_plot to initialise metric_values and
-        # multires_iterations, even if not plotting:
+        # Need to run start_plot to initialise metricValues and
+        # multiresIters, even if not plotting:
         regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                             update_multires_iterations)
+                             update_multiresIters)
+        #regMethod.AddCommand(sitk.sitkIterationEvent, 
+        #                     update_metricValues(regMethod))
         regMethod.AddCommand(sitk.sitkIterationEvent, 
-                             update_metric_values(regMethod))
+                             lambda: update_metricValues(regMethod))
         regMethod.AddCommand(sitk.sitkIterationEvent, 
                              lambda: command_iteration(regMethod))
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
@@ -392,9 +396,9 @@ def rigid_reg_im(
     
     """ Post registration analysis. """
     if p2c:
-        if plotToConsole:
+        if 1: #plotToConsole:
             plot_values_and_export(
-                metric_values, multires_iterations, regPlotFpath
+                metricValues, multiresIters, regPlotFpath
                 )
         print("-------")
         print('initialTx:')
@@ -437,8 +441,7 @@ def rigid_reg_im(
         movIm, fixIm, initialTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
         )
     
-    return initialTx, alignedIm, finalTx, regIm, metric_values,\
-        multires_iterations
+    return initialTx, alignedIm, finalTx, regIm, metricValues, multiresIters
 
 def bspline_reg_im(
         fixIm, movIm, fixFidsFpath='', movFidsFpath='', numControlPts=8,
@@ -604,21 +607,21 @@ def bspline_reg_im(
         # Connect all of the observers so that we can perform plotting  
         # during registration.
         regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
-        # Don't want to delete metric_values or multires_iterations since
+        # Don't want to delete metricValues or multiresIters since
         # I want to return them:
         #regMethod.AddCommand(sitk.sitkEndEvent, end_plot)
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                             update_multires_iterations) 
+                             update_multiresIters) 
         regMethod.AddCommand(sitk.sitkIterationEvent, 
                              lambda: plot_values(regMethod))
     else:
-        # Need to run start_plot to initialise metric_values and
-        # multires_iterations, even if not plotting:
+        # Need to run start_plot to initialise metricValues and
+        # multiresIters, even if not plotting:
         regMethod.AddCommand(sitk.sitkStartEvent, start_plot)
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent, 
-                             update_multires_iterations)
+                             update_multiresIters)
         regMethod.AddCommand(sitk.sitkIterationEvent, 
-                             update_metric_values(regMethod))
+                             update_metricValues(regMethod))
         regMethod.AddCommand(sitk.sitkIterationEvent, 
                              lambda: command_iteration(regMethod))
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
@@ -657,7 +660,7 @@ def bspline_reg_im(
     if p2c:
         if plotToConsole:
             plot_values_and_export(
-                metric_values, multires_iterations, regPlotFpath
+                metricValues, multiresIters, regPlotFpath
                 )
         print("-------")
         print('initialTx:')
@@ -681,8 +684,7 @@ def bspline_reg_im(
         movIm, fixIm, initialTx, sitk.sitkLinear, 0.0, movIm.GetPixelID()
         )
     
-    return initialTx, alignedIm, finalTx, regIm, metric_values,\
-        multires_iterations
+    return initialTx, alignedIm, finalTx, regIm, metricValues, multiresIters
 
 def register_im(
         fixIm, movIm, regTxName='affine', initMethod='landmarks',
@@ -776,12 +778,17 @@ def register_im(
                       + f"\nmovFidsFpath = {movFidsFpath}"
         raise Exception(msg)
     
+    print('\n\n\n*** New (21/09/21): Normalising images prior to',
+          'registration\n\n\n')
+    fixIm = normalise_im(fixIm)
+    movIm = normalise_im(movIm)
+    
     if regTxName == 'bspline':
         if p2c:
             print('Running bspline_reg()...\n')
             
-        initialTx, alignedIm, regIm, finalTx, metric_values,\
-            multires_iterations = bspline_reg_im(
+        initialTx, alignedIm, regIm, finalTx, metricValues,\
+            multiresIters = bspline_reg_im(
                 fixIm=fixIm, movIm=movIm,
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
@@ -821,8 +828,8 @@ def register_im(
         learningRate = 1.0
         samplingPercentage = 50
         
-        initialTx, alignedIm, finalTx, regIm, metric_values,\
-            multires_iterations = rigid_reg_im(
+        initialTx, alignedIm, finalTx, regIm, metricValues,\
+            multiresIters = rigid_reg_im(
                 fixIm=fixIm, movIm=movIm, 
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 
@@ -832,5 +839,4 @@ def register_im(
                 p2c=p2c, regPlotFpath=regPlotFpath
                 )
     
-    return initialTx, alignedIm, finalTx, regIm, metric_values,\
-        multires_iterations
+    return initialTx, alignedIm, finalTx, regIm, metricValues, multiresIters

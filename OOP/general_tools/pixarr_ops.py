@@ -12,7 +12,7 @@ import numpy as np
 from dicom_tools.metadata import (
     get_dcm_uids, get_roicol_nums, get_roicol_labels
     )
-#from seg_tools.metadata import get_f2sIndsBySeg
+from dicom_tools.seg_metadata import get_f2sIndsBySeg
 
 
 def mean_frame_in_pixarr(
@@ -309,7 +309,7 @@ def get_frame_from_pixarr(seg, dicomDir, searchStr, slcNum, p2c):
     
     studyuid, seriesuid, FORuid, SOPuids = get_dcm_uids(dicomDir)
     
-    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(seg, SOPuids)
+    PFFGStoSliceIndsBySeg = get_f2sIndsBySeg(seg, SOPuids)
     
     PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[segNum]
     
@@ -394,7 +394,7 @@ def get_frames_from_pixarr(seg, dicomDir, searchStr, p2c):
     
     studyuid, seriesuid, foruid, SOPuids = get_dcm_uids(dicomDir)
     
-    PFFGStoSliceIndsBySeg = get_PFFGS_to_sliceindsBySeg(seg, SOPuids)
+    PFFGStoSliceIndsBySeg = get_f2sIndsBySeg(seg, SOPuids)
     
     PFFGStoSliceIndsInSeg = PFFGStoSliceIndsBySeg[segNum]
     
@@ -439,3 +439,46 @@ def get_frames_from_pixarr(seg, dicomDir, searchStr, p2c):
             print(f'   np.amax(frames) = {np.amax(frames)}')
             
     return frames
+
+def normalise_frame(frame):
+    return frame/np.max(frame)
+
+def checkered_frame(frame0, frame1):
+    """ 
+    Produce a checkered frame composed from the top-left and bottom-right 
+    quadrants of one 2D frame with the top-right and bottom-left quadrants of
+    another 2D frame.
+    
+    The frames must have the same shape.
+    
+    Parameters
+    ----------
+    frame0 : Numpy data array
+    frame1 : Numpy data array
+    
+    Returns
+    -------
+    checkered : Numpy data array
+        Checkered result of combining frame0 and frame1.
+    """
+    
+    if frame0.shape != frame1.shape:
+        msg = f'Frame 0 with shape {frame0.shape} must be the same as Frame 1 ' +\
+            f'with shape {frame1.shape}!'
+        raise Exception(msg)
+    
+    R, C = frame0.shape
+    
+    r, c = R//2, C//2
+    
+    frame0 = normalise_frame(frame0)
+    frame1 = normalise_frame(frame1)
+    
+    checkered = np.zeros((R, C))
+    
+    checkered[0:r, 0:c] = frame0[0:r, 0:c]
+    checkered[r:, 0:c] = frame1[r:, 0:c]
+    checkered[0:r, c:] = frame1[0:r, c:]
+    checkered[r:, c:] = frame0[r:, c:]
+    
+    return checkered

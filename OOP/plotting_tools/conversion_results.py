@@ -27,7 +27,9 @@ from image_tools.attrs_info import get_im_attrs_from_list_of_dicomDir
 #    )
 #from conversion_tools.pixarrs_ims import im_to_pixarr
 from conversion_tools.inds_pts_cntdata import pts_to_inds
-
+from general_tools.console_printing import (
+    print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
+    )
 
 def plot_pts_and_pixarr(
         listOfIms, listOfDcmPixarr, listOfF2SindsBySeg, listOfPixarrBySeg,
@@ -130,11 +132,12 @@ def plot_pts_and_pixarr(
     n = 1 # initialised sub-plot number
     
     if Ncols < 3:
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(7*Ncols, 9*Nrows), 
-                               dpi=dpi)
+        #figSize = (7*Ncols, 9*Nrows)
+        figSize = (4*Ncols, 7*Nrows)
     else:
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 8*Nrows), 
-                               dpi=dpi)
+        #figSize = (4*Ncols, 8*Nrows)
+        figSize = (4*Ncols, 7*Nrows)
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice/frame number (i.e. each row in the plot):
     for rowNum in range(maxNumSlices):
@@ -162,7 +165,8 @@ def plot_pts_and_pixarr(
                 print(f'   c2sIndsByRoi = {c2sIndsByRoi}')
                 print(f'   uniqueSinds = {uniqueSinds}')
             
-            # Continue if rowNum does not exceed the number of unique slice indices:
+            # Continue if rowNum does not exceed the number of unique slice 
+            # indices:
             if rowNum < len(uniqueSinds):
                 sInd = uniqueSinds[rowNum]
                 
@@ -184,9 +188,11 @@ def plot_pts_and_pixarr(
                         f2sInds = f2sIndsBySeg[s]
                         segPixarr = pixarrBySeg[s]
                         
-                        """ There are only len(cMaps) colormaps defined above. Wrap the 
-                        segment index s if there are more segments than the number of 
-                        defined colormaps. """
+                        """
+                        There are only len(cMaps) colormaps defined above. Wrap 
+                        the segment index s if there are more segments than the
+                        number of defined colormaps.
+                        """
                         if s < len(cMaps):
                             cMap = cMaps[s]
                         else:
@@ -195,7 +201,9 @@ def plot_pts_and_pixarr(
                             cMap = cMaps[s - m*len(cMaps)]
                         
                         if sInd in f2sInds:
-                            frameNums = [i for i, e in enumerate(f2sInds) if e==sInd]
+                            frameNums = [
+                                i for i, e in enumerate(f2sInds) if e==sInd
+                                ]
                             
                             # Loop through all frame numbers:
                             for f in range(len(frameNums)):
@@ -257,9 +265,11 @@ def plot_pts_and_pixarr(
                         c2sInds = c2sIndsByRoi[r]
                         ptsByCnt = ptsByCntByRoi[r]
                         
-                        """ There are only len(colours) colours defined above. Wrap the 
-                        ROI index r if there are more ROIs than the number of defined 
-                        colours. """
+                        """ 
+                        There are only len(colours) colours defined above. Wrap 
+                        the ROI index r if there are more ROIs than the number 
+                        of defined colours.
+                        """
                         if r < len(colours):
                             colour = colours[r]
                         else:
@@ -268,9 +278,11 @@ def plot_pts_and_pixarr(
                             colour = colours[r - m*len(colours)]
                     
                         if sInd in c2sInds:
-                            #contourNum = c2sInds.index(sliceNum) # there may be more 
-                            # than one contour for sliceNum!!
-                            contourNums = [i for i, e in enumerate(c2sInds) if e==sInd]
+                            #contourNum = c2sInds.index(sliceNum) # there may  
+                            # be more than one contour for sliceNum!!
+                            contourNums = [
+                                i for i, e in enumerate(c2sInds) if e==sInd
+                                ]
                             
                             #print(f'contourNums = {contourNums}')
                             

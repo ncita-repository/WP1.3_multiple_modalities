@@ -13,7 +13,9 @@ from shapely.geometry import Polygon, Point
 from scipy.sparse import issparse
 from skimage.measure import find_contours
 
-from general_tools.console_printing import print_ptsByCnt, print_pixarrBySeg
+from general_tools.console_printing import (
+    print_ptsByCnt, print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg
+    )
 #from image_tools.imports import import_im
 #from io_tools.imports import import_im
 from conversion_tools.inds_pts_cntdata import (
@@ -621,6 +623,10 @@ def pixarrBySeg_to_ptsByCntByRoi(
     #print(f'\nc2sIndsByRoi = {c2sIndsByRoi}')
     
     if p2c:
+        print('\nf2sIndsBy_ prior to conversion from pixarr to points:')
+        print_indsByRoi(f2sIndsBySeg)
+        print('\nc2sIndsBy_ after to conversion from pixarr to points:')
+        print_indsByRoi(c2sIndsByRoi)
         print('-'*120)
  
     return ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi

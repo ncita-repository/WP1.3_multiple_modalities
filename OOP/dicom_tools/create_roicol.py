@@ -37,7 +37,10 @@ from dicom_tools.create_seg import create_seg
 from dicom_tools.create_rts import create_rts
 from dicom_tools.error_check_rts import error_check_rts
 from dicom_tools.error_check_seg import error_check_seg
-from plotting_tools.general import plot_pixarrs_from_list_of_segs_and_images
+from plotting_tools.general import (
+    plot_pixarrs_from_list_of_segs_and_images, 
+    plot_contours_from_list_of_rtss_and_dicom_ims
+    )
 
 #from general_tools.general import (
 #    reduce_list_of_str_floats_to_16, generate_reg_fname
@@ -289,7 +292,7 @@ class RoicolCreator:
         elif useCaseToApply in ['3a', '4a']:
             method += f'NRPP to Trg over Trg DICOMs \n(res, {resInterp})'
         elif useCaseToApply in ['3b', '4b']:
-            method += f'RPP to Trg over Trg DICOMs\n(res, {resInterp})'
+            method += f'RPP to Trg over Trg DICOMs \n(res, {resInterp})'
         elif useCaseToApply == '5a':
             if useDroForTx:
                 method += 'NRPP to Trg over Trg DICOMs ' +\
@@ -340,13 +343,24 @@ class RoicolCreator:
         fname += method.replace(' ', '_').replace(',', '')
         fname = fname.replace('(', '').replace(')', '').replace('\n', '')
         fname += f'_{currentDateTime}'
-            
-        plot_pixarrs_from_list_of_segs_and_images(
-            listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
-            exportPlot=exportPlot, exportDir=roiExportDir,
-            runID=runID, useCaseToApply=useCaseToApply,
-            forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
-            initMethod=initMethod, resInterp=resInterp, 
-            fname=fname, fontSize=12, p2c=p2c
-            #fname='', p2c=p2c
-        )
+        
+        if roicolMod == 'RTSTRUCT':
+            plot_contours_from_list_of_rtss_and_dicom_ims(
+                listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
+                exportPlot=exportPlot, exportDir=roiExportDir,
+                runID=runID, useCaseToApply=useCaseToApply,
+                forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
+                initMethod=initMethod, resInterp=resInterp, 
+                fname=fname, fontSize=12, p2c=p2c
+                #fname='', p2c=p2c
+            )
+        else:
+            plot_pixarrs_from_list_of_segs_and_images(
+                listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
+                exportPlot=exportPlot, exportDir=roiExportDir,
+                runID=runID, useCaseToApply=useCaseToApply,
+                forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
+                initMethod=initMethod, resInterp=resInterp, 
+                fname=fname, fontSize=12, p2c=p2c
+                #fname='', p2c=p2c
+            )

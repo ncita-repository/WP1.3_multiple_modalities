@@ -13,6 +13,11 @@ from general_tools.console_printing import (
 from conversion_tools.inds_pts_cntdata import (
     cntdata_to_pts, ptsByCntByRoi_to_cntdataByCntByRoi
     )
+from dicom_tools.dcm_metadata import get_dcm_uids, get_dcm_fpaths
+from dicom_tools.rts_metadata import get_ptsByCntByRoi
+from image_tools.attrs_info import (
+    get_im_attrs, get_im_attrs_from_list_of_dicomDir
+    )
 
 def get_rts_data_of_interest(
         rts, allPtsByCntByRoi, allC2SindsByRoi, roiNums, 
@@ -264,3 +269,82 @@ def raise_error_if_no_rts_data_of_interest(c2sIndsByRoi, allRoiNames, slcNum):
                    + f"{len(c2sIndsByRoi[i])} contours that correspond "\
                    + f"to slices {c2sIndsByRoi[i]}" 
         raise Exception(msg)
+
+def get_rts_data_from_list_of_rtss(
+        listOfRtss, listOfDicomDirs, p2c=False
+        ):
+    """ 
+    Note:
+    
+    listOfRtss is a list (which could be of length 1) of RTS (Pydicom) objects.
+    
+    listOfDicomDirs is a list (which could be of length 1) of strings 
+    containing the directory containing DICOMs that correspond to each RTS.
+    """
+    
+    if p2c:
+        print('\n\n', '-'*120)
+        print('Running of get_rts_data_from_list_of_rtss():')
+        print('\n\n', '-'*120)
+    
+    listOfPtsByCntByRoi = []
+    listOfC2SindsByRoi = []
+    #listOfPtsByCntBySlice = []
+    #listOfRoiNums = []
+    listOfImSizes = []
+    listOfImSpacings = []
+    listOfImSlcThicks = []
+    listOfImIPPs = []
+    listOfImDirections = []
+    listOfDicomFpaths = []
+    
+    for i in range(len(listOfRtss)):
+        if p2c:
+            print(f'\nlistOfRtss[{i}]:')
+        
+        studyUID, seriesUID, FORUID, SOPUIDs = get_dcm_uids(listOfDicomDirs[i]) 
+        
+        if listOfRtss[i]:
+            ptsByCntByRoi, cntdataByCntByRoi, c2sIndsByRoi, c2sInds =\
+                get_ptsByCntByRoi(
+                    listOfRtss[i], SOPUIDs, p2c
+                    )
+            
+            if p2c:
+                print_indsByRoi(c2sIndsByRoi)
+                print_ptsByCntByRoi(ptsByCntByRoi)
+                
+        else:
+            ptsByCntByRoi = []
+            c2sIndsByRoi = []
+            
+            if p2c:      
+                print('No contours for this dataset')
+        
+        #listOfRoiNums.append(RoiNum)
+        #listOfPtsByCntBySlice.append(ptsByCntBySlice)
+        listOfPtsByCntByRoi.append(ptsByCntByRoi)
+        listOfC2SindsByRoi.append(c2sIndsByRoi)
+        
+        imSize, imSpacings, imSlcThick, imIPPs, imDirections,\
+            warnings = get_im_attrs(listOfDicomDirs[i], p2c=p2c)
+        
+        listOfImSizes.append(imSize)
+        listOfImSpacings.append(imSpacings)
+        listOfImSlcThicks.append(imSlcThick)
+        listOfImIPPs.append(imIPPs)
+        listOfImDirections.append(imDirections)
+        listOfDicomFpaths.append(get_dcm_fpaths(listOfDicomDirs[i]))
+        
+        if p2c:      
+            #print(f'len(Contours) in "{SearchString}" = {len(Contours)}')
+            print(f'\nlen(listOfPtsByCntByRoi) = {len(listOfPtsByCntByRoi)}')
+            #print(f'c2sInds = {c2sInds}')
+            #[print(f'len(Contours{i}) = {len(Contours[i])}') for i in range(len(Contours))]
+            #print(f'\nlen(listOfPtsByCntBySlice) = {len(listOfPtsByCntBySlice)}')
+    
+    if p2c:
+        print('-'*120)
+        
+    return listOfPtsByCntByRoi, listOfC2SindsByRoi, listOfImSizes,\
+        listOfImSpacings, listOfImIPPs, listOfImDirections, listOfDicomFpaths

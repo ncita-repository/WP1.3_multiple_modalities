@@ -164,7 +164,7 @@ def prop_of_cnt_in_extent(points, trgIm, p2c=False):
     -------
     fracProp : float
         The fractional proportion (normalised to 1) of the points in Contour 
-        that intersect the extent of RefImage.
+        that intersect the extent of trgIm.
     """
     
     verts = get_im_verts(trgIm)
@@ -393,3 +393,59 @@ def prop_of_segs_in_extent(
     fracProp = prop_of_rois_in_extent(ptsByCntByRoi, trgIm, p2c)
     
     return fracProp
+
+def get_ind_of_nearest_slice(refIm, refInd, im, useCentre=True):
+    """ 
+    Get the index of the slice in im that is nearest in z-position to the
+    refInd^th slice in refIm.
+    
+    Parameters
+    ----------
+    refIm : SimpleITK Image
+    refInd : int
+        The slice index for refIm.
+    im : SimpleITK image
+        The image whose slice index nearest to refIm[refInd] is to be 
+        determined.
+    useCentre : bool, optional
+        If True, the z-position of the central pixel in each slice will be 
+        considered. If False, the origin (0, 0) of each slice will. The 
+        default value is True.
+    
+    Returns
+    -------
+    ind : int
+        The slice index in im whose z-position is nearest to refIm[refInd].
+    minDiff : float
+        The difference in z-position between refIm[refInd] and im[ind] in mm.
+    """
+    
+    R_r, C_r, S_r = refIm.GetSize()
+    R_i, C_i, S_i = im.GetSize()
+        
+    if useCentre:
+        i_r = R_r//2
+        j_r = C_r//2
+        
+        i_i = R_i//2
+        j_i = C_i//2
+    else:
+        i_r = 0
+        j_r = 0
+        
+        i_i = 0
+        j_i = 0
+    
+    # The z-position of refIm at refInd:
+    refZ = refIm.TransformIndexToPhysicalPoint([i_r,j_r,refInd])[2]
+    
+    # All z-positions in im:
+    Zs = [im.TransformIndexToPhysicalPoint([i_i,j_i,k])[2] for k in range(S_i)]
+    
+    diffs = [abs(refZ - Zs[k]) for k in range(S_i)]
+    
+    minDiff = min(diffs)
+    
+    ind = diffs.index(minDiff)
+    
+    return ind, minDiff

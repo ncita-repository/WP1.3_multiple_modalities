@@ -152,6 +152,40 @@ def im_min(im):
     
     return imFilt.GetMinimum()
 
+def get_im_stats(im):
+    """
+    Get various statistical values on a SimpleITK Image.
+
+    Parameters
+    ----------
+    im : SimpleITK Image
+
+    Returns
+    -------
+    imMin : float
+        Minimum value.
+    imMax : float
+        Maximum value.
+    imMean : float
+        Mean value.
+    imSigma : float
+        The standard deviation.
+    imVariance : float
+    imSum : float
+        The sum of all voxels.
+    """
+    imFilt = sitk.StatisticsImageFilter()
+    imFilt.Execute(im)
+    
+    imMin = imFilt.GetMinimum()
+    imMax = imFilt.GetMaximum()
+    imMean = imFilt.GetMean()
+    imSigma = imFilt.GetSigma()
+    imVariance = imFilt.GetVariance()
+    imSum = imFilt.GetSum()
+    
+    return imMin, imMax, imMean, imSigma, imVariance, imSum
+
 def im_max_by_frame(im):
     """
     Return a list of the maximum value of each frame in a SimpleITK Image .  
@@ -171,7 +205,7 @@ def im_max_by_frame(im):
     maxima = []
     
     for f in range(F):
-        maxima.append(im_max(image[:, :, f]))
+        maxima.append(im_max(im[:, :, f]))
     
     return maxima
 
@@ -215,6 +249,42 @@ def im_add(im0, im1):
     
     return imSum
 
+def normalise_im(im, normBy='sum'):
+    """
+    Normalise a SimpleITK image to 1.0.  
+    
+    Parameters
+    ----------
+    im : SimpleITK Image
+    normBy : str, optional
+        Denotes how the image will be normalised. Acceptable inputs include:
+            - 'sum' --> normalise by the sum of all voxels
+            - 'max' --> normalise by the maximum value
+        The default value is 'sum'.
+    
+    Returns
+    -------
+    normIm : SimpleITK Image
+        im normalised to 1.0
+    """
+    
+    if not isinstance(normBy, str):
+        msg = "The input 'normBy' must be a string."
+        raise Exception(msg)
+    
+    imMin, imMax, imMean, imSigma, imVariance, imSum = get_im_stats(im)
+    
+    if normBy == 'sum':
+        normIm = im/imSum
+    elif normBy == 'max':
+        normIm = im/imMax
+    else:
+        msg = "The input 'normBy' must be 'sum' or 'max'. '{normBy}' is " +\
+            "not an acceptable value."
+        raise Exception(msg)
+        
+    return normIm
+    
 def pixarr_sum_of_ims(ims):
     """
     Return Numpy pixel array representation of the sum of a list of images.
