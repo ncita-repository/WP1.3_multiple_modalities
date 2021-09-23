@@ -14,6 +14,8 @@ reload(general_tools.general)
 reload(dro_tools.create_spa_dro)
 reload(dro_tools.create_def_dro)
 reload(dro_tools.matrices)
+import xnat_tools.subject_assessors
+reload(xnat_tools.subject_assessors)
 
 import os
 from pathlib import Path
@@ -32,6 +34,7 @@ from dro_tools.matrices import (get_txMatrix_from_tx, get_tx_matrix_type)
 from general_tools.general import (
     reduce_list_of_str_floats_to_16, generate_reg_fname
     )
+from xnat_tools.subject_assessors import upload_subj_asr
 
 #from dro_tools.create_spa_dro import create_spa_dro_from_tx
 #from dro_tools.create_def_dro import create_def_dro_from_tx
@@ -1204,6 +1207,45 @@ class DroCreator:
             self.droFpath = fpath
         
             print(f'\nNew DICOM Registration Object exported to:\n {fpath}\n')
+    
+    def upload_dro(self, params):
+        """
+        Upload the DRO to XNAT if the DRO is to be uploaded, the use case to
+        apply was one that potentially required image registration, and if an
+        existing DRO was not used to by-pass registration.
+        
+        Parameters
+        ----------
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        
+        Returns
+        -------
+        None.
+        """
+        xnatSession = params.xnatSession
+        cfgDict = params.cfgDict
+        
+        useCaseToApply = cfgDict['useCaseToApply']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
+        uploadDro = cfgDict['uploadDro']
+        url = cfgDict['url']
+        projID = cfgDict['projID']
+        subjLab = cfgDict['subjLab']
+        
+        if uploadDro and '5' in useCaseToApply and not useDroForTx:
+            if regTxName in ['rigid', 'affine']:
+                droType = 'SRO_DRO'
+            else:
+                droType = 'DSRO_DRO'
+            
+            xnatSession = upload_subj_asr(
+                subj_asr_fpath=self.droFpath, 
+                url=url, proj_id=projID, subj_label=subjLab, 
+                content_label=droType, session=xnatSession
+                )
         
     def create_dro_OLD_DELETE(srcDataset, trgDataset, newDataset, params):
         # TODO update docstrings

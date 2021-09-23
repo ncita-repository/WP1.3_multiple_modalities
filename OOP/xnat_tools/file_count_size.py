@@ -41,7 +41,6 @@ def get_file_count_size_by_type_by_proj(url, session, data_by_proj=None,
     
     Notes
     -----
-    
     18/06/21: Expansion of combination of get_num_exps_by_project and 
     get_num_im_session_by_type_by_project, and replaces the latter.
     

@@ -9,7 +9,7 @@ Created on Fri Jul  9 12:42:57 2021
 """ Functions that apply basic operations on pixel arrays. """
 
 import numpy as np
-from dicom_tools.metadata import (
+from dicom_tools.dcm_metadata import (
     get_dcm_uids, get_roicol_nums, get_roicol_labels
     )
 from dicom_tools.seg_metadata import get_f2sIndsBySeg

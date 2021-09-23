@@ -98,6 +98,13 @@ def plot_two_ims(
     else:
         i0, j0, i1, j1 = 0, 0, 0, 0
     
+    if not ind1:
+        ind1, minDiff = get_ind_of_nearest_slice(
+            refIm=im0, refInd=ind0, im=im1
+            )
+    
+    print(ind1)
+    
     z0 = im0.TransformIndexToPhysicalPoint([i0,j0,ind0])[2]
     z1 = im1.TransformIndexToPhysicalPoint([i1,j1,ind1])[2]
     

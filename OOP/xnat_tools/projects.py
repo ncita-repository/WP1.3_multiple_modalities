@@ -10,19 +10,15 @@ def get_project_ids(url, session):
     """
     Get a list of project IDs for all projects in an XNAT.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
-    
     session : requests session
         A valid requests session.
     
-    
-    Outputs:
-    *******
-    
+    Returns
+    -------
     project_ids : list of str
         A list (for each project) of the project name.
     """
@@ -35,24 +31,19 @@ def get_project_ids(url, session):
 
     return project_ids
 
-
 def get_project_names(url, session):
     """
     Get a list of project names for all projects in an XNAT.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
-    
     session : requests session
         A valid requests session.
     
-    
-    Outputs:
-    *******
-    
+    Returns
+    -------
     project_names : list of str
         A list (for each project) of the project name.
     """
@@ -64,7 +55,6 @@ def get_project_names(url, session):
     project_names = [project['name'] for project in projects]
 
     return project_names
-
 
 def get_proj_desc_by_proj(url, session, data_by_proj=None):
     """

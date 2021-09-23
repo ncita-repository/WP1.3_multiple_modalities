@@ -152,13 +152,15 @@ def im_min(im):
     
     return imFilt.GetMinimum()
 
-def get_im_stats(im):
+def get_im_stats(im, p2c=False):
     """
     Get various statistical values on a SimpleITK Image.
 
     Parameters
     ----------
     im : SimpleITK Image
+    p2c : bool, optional
+        If True stats will be printed to the console.
 
     Returns
     -------
@@ -183,6 +185,14 @@ def get_im_stats(im):
     imSigma = imFilt.GetSigma()
     imVariance = imFilt.GetVariance()
     imSum = imFilt.GetSum()
+    
+    if p2c:
+        print(f'imMin = {imMin}')
+        print(f'imMax = {imMax}')
+        print(f'imMean = {imMean}')
+        print(f'imSigma = {imSigma}')
+        print(f'imVariance = {imVariance}')
+        print(f'imSum = {imSum}')
     
     return imMin, imMax, imMean, imSigma, imVariance, imSum
 
@@ -714,3 +724,38 @@ def recursive_gaussian_blur_im(im, sigma, direction, p2c=False):
         print(f'   blurredIm.GetPixelIDTypeAsString() = {blurredIm.GetPixelIDTypeAsString()}')
     
     return blurredIm
+
+def segment_im(im, threshFactor=0.25, kernelSize=3, p2c=False):
+    """
+    Segment a 3D SimpleITK Image using binary thresholding and a morphological
+    closing.
+    
+    Parameters
+    ---------- 
+    im : SimpleITK Image 
+        The 3D image to be segmented.
+    threshFactor : float, optional
+        The factor to apply to the mean value of im for binary thresholding,
+        e.g. 0.25*meanVal where meanVal is the mean value of im. The default
+        value is 0.25.
+    kernelSize : int, optional
+        The kernel size to use for morphological closing. The default value is
+        3.
+    p2c : bool, optional
+        Denotes whether some results will be logged to the console. The default
+        value is False.
+    
+    Returns
+    -------
+    seg : SimpleITK Image
+        The binary segmented image.
+    """
+    
+    imMin, imMax, imMean, imSigma, imVariance, imSum = get_im_stats(im, p2c)
+    
+    seg = im > threshFactor*imMean
+    
+    closing = sitk.BinaryMorphologicalClosingImageFilter()
+    closing.SetKernelRadius([kernelSize]*im.GetDimension())
+    
+    return closing.Execute(seg)

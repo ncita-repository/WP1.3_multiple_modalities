@@ -10,14 +10,13 @@ def get_im_sessions_by_type(url, session):
     """
     Return a dictionary of image sessions organised by type (e.g. MR, PET).
     
-
     Parameters
     ----------
     url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
     session : Requests Session
         A valid Requests Session for the XNAT of interest.
-
+    
     Returns
     -------
     ScanByScanType : dict
@@ -70,7 +69,6 @@ def get_im_sessions_by_type(url, session):
                 print(f' exp_id = {exp_id}')
                 print(f' date = {date}')
     
-    
             scans = request.json()
     
             for scan in scans['ResultSet']['Result']:
@@ -106,7 +104,6 @@ def get_im_sessions_by_type(url, session):
     
     return im_session_by_type
 
-
 def get_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     """
     Return a dictionary containing image sessions organised by image type by
@@ -114,7 +111,7 @@ def get_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     
     If passed a dictionary (with projects as keys), the image session details
     will be added to existing data (e.g. investigators organised by project).
-
+    
     Parameters
     ----------
     url : str
@@ -124,7 +121,7 @@ def get_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     data_by_proj : dict, optional
         A dictionary with projects as keys, containing data organised by 
         projects. The default is None.
-
+    
     Returns
     -------
     data_by_proj : dict
@@ -179,7 +176,6 @@ def get_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
                 print(f' exp_id = {exp_id}')
                 print(f' exp_date = {exp_date}')
     
-    
             scans = request.json()
     
             for scan in scans['ResultSet']['Result']:
@@ -216,7 +212,6 @@ def get_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     
     return data_by_proj
 
-
 def get_num_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     """
     Return a dictionary containing the number of image sessions organised by 
@@ -224,7 +219,7 @@ def get_num_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     
     If passed a dictionary (with projects as keys), the image session details
     will be added to existing data (e.g. investigators organised by project).
-
+    
     Parameters
     ----------
     url : string
@@ -234,7 +229,7 @@ def get_num_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     data_by_proj : dictionary or None, optional
         A dictionary with projects as keys, containing data organised by 
         projects. The default is None.
-
+    
     Returns
     -------
     data_by_proj : dictionary
@@ -249,7 +244,6 @@ def get_num_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     """
     
     #Alldata_by_proj = get_im_session_by_type_by_proj(url, session, data_by_proj)
-    
     
     request = session.get(f'{url}/data/experiments')
     
@@ -318,24 +312,23 @@ def get_num_im_sessions_by_type_by_proj(url, session, data_by_proj=None):
     
     return data_by_proj
 
-
 def get_num_exps_by_proj(url, session, data_by_proj=None):
     """
     Return a dictionary of the number of experiments organised by project.
     
     If passed a dictionary (with projects as keys), the number of experiments
     will be added to existing data (e.g. investigators organised by project).
-
+    
     Parameters
     ----------
-    url : string
+    url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
     session : Requests Session
         A valid Requests Session for the XNAT of interest.
     data_by_proj : dict, optional
         A dictionary with projects as keys, containing data organised by 
         projects. The default is None.
-
+    
     Returns
     -------
     exps_by_type : dict

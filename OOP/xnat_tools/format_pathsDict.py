@@ -7,9 +7,10 @@ Created on Fri Jul  2 16:28:41 2021
 
 
 def create_pathsDict_for_exp(projID, subjLab, expLab, pathsDict=None):
-    """ Populate a dictionary mimacking XNAT file hierarchy, and return the 
-    dictionary and the keys at the highest level. """
-    
+    """ 
+    Populate a dictionary mimacking XNAT file hierarchy, and return the 
+    dictionary and the keys at the highest level. 
+    """
     
     if pathsDict == None:
         pathsDict = {}
@@ -58,9 +59,10 @@ def create_pathsDict_for_exp(projID, subjLab, expLab, pathsDict=None):
     return pathsDict, keys
 
 def create_pathsDict_for_scan(projID, subjLab, expLab, scanID, pathsDict=None):
-    """ Populate a dictionary mimacking XNAT file hierarchy, and return the 
-    dictionary and the keys at the highest level. """
-    
+    """ 
+    Populate a dictionary mimacking XNAT file hierarchy, and return the 
+    dictionary and the keys at the highest level. 
+    """
     
     pathsDict, keys\
         = create_pathsDict_for_exp(projID, subjLab, expLab, pathsDict)
@@ -116,7 +118,8 @@ def create_pathsDict_for_scan(projID, subjLab, expLab, scanID, pathsDict=None):
 
 def create_pathsDict_for_im_asr(projID, subjLab, expLab, asrID, mod, fname,
                                 pathsDict=None):
-    """ Populate a dictionary mimacking XNAT file hierarchy, and return the 
+    """ 
+    Populate a dictionary mimacking XNAT file hierarchy, and return the 
     dictionary and the keys at the highest level.
     """
     
@@ -173,8 +176,9 @@ def create_pathsDict_for_im_asr(projID, subjLab, expLab, asrID, mod, fname,
     
     return pathsDict, keys
 
-def get_scan_asr_fname_and_id(pathsDict, projID, subjLab, expLab, asrMod, 
-                              asrName):
+def get_scan_asr_fname_and_id(
+        pathsDict, projID, subjLab, expLab, asrMod, asrName
+        ):
     """
     Get the filename and scan ID corresponding to a scan assessor given a
     name and modality.
@@ -231,10 +235,13 @@ def get_scan_asr_fname_and_id(pathsDict, projID, subjLab, expLab, asrMod,
     
     return asrFname, asrID
 
-def create_pathsDict_for_subj_asr(projID, subjLab, resID, name, 
-                                  pathsDict=None):
-    """ Populate a dictionary mimacking XNAT file hierarchy, and return the 
-    dictionary and the keys at the highest level. """
+def create_pathsDict_for_subj_asr(
+        projID, subjLab, resID, name, pathsDict=None
+        ):
+    """ 
+    Populate a dictionary mimacking XNAT file hierarchy, and return the 
+    dictionary and the keys at the highest level. 
+    """
     
     if pathsDict == None:
         pathsDict = {}
@@ -299,24 +306,20 @@ def reorder_keys_and_fill_zeros(data_by_proj):
     E.g. if there are no PET scans for a particular project, there will be no
     'PET' key, so add it and assign the number 0.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     data_by_proj : dict
         A dictionary with projects as keys, containing data organised by 
         projects.
     
-    Outputs:
-    *******
-    
+    Returns
+    -------
     new_data_by_proj : dict
         A dictionary with projects as keys, containing data organised by 
         projects.
     
-    
-    Notes:
-    *****
-    
+    Notes
+    -----
     Ensures that PI comes before CIs.
     Orders image sessions as follows: MR, CT, PET, SC, RTIMAGE.
     
@@ -329,20 +332,21 @@ def reorder_keys_and_fill_zeros(data_by_proj):
     original dictionary.
     """
     
-    new_order = ['PI', 'Project description', 'Co-investigators', 
-                'No. of users', 'Users', 
-                'First upload', 'Last upload', 
-                'No. of subjects', 'No. of experiments', 
-                'No. of MR sessions', 'No. of CT sessions', 'No. of PET sessions',
-                'Ave. image scans/session', 
-                'No. of MR scans', 'No. of CT scans', 'No. of PET scans',
-                'No. of OT scans',
-                'No. of DICOM image files [k]', 'Size of DICOM image files [MB]',
-                'No. of RTSTRUCT scans', #'Size of RTSTRUCT scans [MB]',
-                'No. of RTSTRUCT ROI files', #'Size of RTSTRUCT ROI files [MB]',
-                'No. of SEG ROI files', #'Size of SEG ROI files [MB]',
-                'No. of DICOM files [k]', 'Size of DICOM files [MB]'
-                ]
+    new_order = [
+        'PI', 'Project description', 'Co-investigators', 
+        'No. of users', 'Users', 
+        'First upload', 'Last upload', 
+        'No. of subjects', 'No. of experiments', 
+        'No. of MR sessions', 'No. of CT sessions', 'No. of PET sessions',
+        'Ave. image scans/session', 
+        'No. of MR scans', 'No. of CT scans', 'No. of PET scans',
+        'No. of OT scans',
+        'No. of DICOM image files [k]', 'Size of DICOM image files [MB]',
+        'No. of RTSTRUCT scans', #'Size of RTSTRUCT scans [MB]',
+        'No. of RTSTRUCT ROI files', #'Size of RTSTRUCT ROI files [MB]',
+        'No. of SEG ROI files', #'Size of SEG ROI files [MB]',
+        'No. of DICOM files [k]', 'Size of DICOM files [MB]'
+        ]
     
     #print(f'new_order = {new_order}\n')
     

@@ -12,6 +12,8 @@ def get_FOR_uid(url, proj_id, subj_label, exp_label, scan_id,
     """
     Get the FrameOfReferenceUID of a single DICOM within a specified scan.
     
+    Parameters
+    ----------
     url : str
         Address of XNAT (e.g. 'http://10.1.1.20').
     proj_id : str
@@ -31,10 +33,8 @@ def get_FOR_uid(url, proj_id, subj_label, exp_label, scan_id,
         The password for XNAT log-in.  If not provided (i.e. password = None)
         the user will be prompted to enter a password.
     
-    
-    Outputs:
-    *******
-    
+    Returns
+    -------
     FORuid : str
         The FrameOfReferenceUID of a DICOM within the DICOM series / XNAT scan
         of interest.
@@ -73,5 +73,3 @@ def get_FOR_uid(url, proj_id, subj_label, exp_label, scan_id,
     FORuid = dcm.FrameOfReferenceUID
     
     return FORuid
-
-

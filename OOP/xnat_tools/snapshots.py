@@ -12,44 +12,33 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     Get a "snapshot" of info from an XNAT broken down by projects, and 
     XNAT-wide.
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
-        
     username : str, optional
         The username for XNAT log-in.  If not provided (i.e. username = None)
         the user will be prompted to enter a user name.
-    
     password : str, optional
         The password for XNAT log-in.  If not provided (i.e. password = None)
         the user will be prompted to enter a password.
-    
     session : requests session, optional
         If provided a multiple XNAT session requests will be avoided.
-    
     export_xlsx : bool, optional
-    
     log_to_console : bool, optional
         If True some results will be printed to the console.
     
-    Outputs:
-    *******
-    
+    Returns
+    -------
     data_by_proj : dict
         A dictionary with projects as keys, containing data organised by 
         projects.
-    
     data_xnat_wide : dict
         A dictionary containing XNAT-wide analytics.
-    
     session : requests session
     
-    
-    Notes:
-    *****
-    
+    Notes
+    -----
     List of items of interest (message from Simon on 25/05/21):
 
     Project name
@@ -113,7 +102,6 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     from xnat_tools.dates_times import get_first_last_im_session_uploads_by_proj
     from xnat_tools.format_paths_dict import reorder_keys_and_fill_zeros
     
-    
     if session == None:
         session = create_session(url, username, password)
     
@@ -129,7 +117,6 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     
     #""" Get a list of PIs: """
     #PIs = [f"{item['pi_firstname']} {item['pi_lastname']}" for item in projects['ResultSet']['Result']]
-    
     
     
     """ Get a list of investigators grouped by project: """
@@ -262,22 +249,19 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     
     return data_by_proj, data_xnat_wide, session
 
-
 def get_xnat_wide_snapshot(data_by_proj):
     """ 
     Get XNAT-wide analytics (not broken down by project).
     
-    Inputs:
-    ******
-    
+    Parameters
+    ----------
     data_by_proj : dict
         A dictionary with projects as keys, containing data organised by 
         projects.
     
-    Outputs:
-    *******
-    
-    DataXnatWide : dict
+    Returns
+    -------
+    data_xnat_wide : dict
         A dictionary containing XNAT-wide analytics.
     """
     
@@ -345,31 +329,32 @@ def get_xnat_wide_snapshot(data_by_proj):
     ave_size_dcm_im_files_pp = round(size_dcm_im_files/num_projects, 2)
     
     
-    data_xnat_wide = {'No. of unique users' : len(unique_users),
-                      'Ave. users/project' : ave_num_users_pp,
-                      'No. of projects' : num_projects,
-                      'No. of subjects' : num_subjs,
-                      'Ave. subjects/project' : ave_num_subjs_pp,
-                      'No. of experiments' : num_exps,
-                      'Ave. experiments/project' : ave_num_exps_pp,
-                      'No. of MR sessions' : num_MR_sessions,
-                      'Ave. MR sessions/project' : ave_num_MR_sessions_pp,
-                      'No. of CT sessions' : num_CT_sessions,
-                      'Ave. CT sessions/project' : ave_num_CT_sessions_pp,
-                      'No. of PET sessions' : num_PET_sessions,
-                      'Ave. PET sessions/project' : ave_num_PET_sessions_pp,
-                      'No. of MR scans' : num_MR_scans,
-                      'Ave. MR scans/project' : ave_num_MR_scans_pp,
-                      'No. of CT scans' : num_CT_scans,
-                      'Ave. CT scans/project' : ave_num_CT_scans_pp,
-                      'No. of PET scans' : num_PET_scans,
-                      'Ave. PET scans/project' : ave_num_PET_scans_pp,
-                      'No. of OT scans' : num_OT_scans,
-                      'Ave. OT scans/project' : ave_num_OT_scans_pp,
-                      'No. of DICOM image files [M]' : round(num_dcm_im_files/1000, 2),
-                      'Ave. DICOM image files/project [k]' : ave_num_dcm_im_files_pp,
-                      'Size of DICOM image files [GB]' : round(size_dcm_im_files/1000, 2),
-                      'Ave. size of DICOM image files/project [MB]' : ave_size_dcm_im_files_pp
-                      }
+    data_xnat_wide = {
+        'No. of unique users' : len(unique_users),
+        'Ave. users/project' : ave_num_users_pp,
+        'No. of projects' : num_projects,
+        'No. of subjects' : num_subjs,
+        'Ave. subjects/project' : ave_num_subjs_pp,
+        'No. of experiments' : num_exps,
+        'Ave. experiments/project' : ave_num_exps_pp,
+        'No. of MR sessions' : num_MR_sessions,
+        'Ave. MR sessions/project' : ave_num_MR_sessions_pp,
+        'No. of CT sessions' : num_CT_sessions,
+        'Ave. CT sessions/project' : ave_num_CT_sessions_pp,
+        'No. of PET sessions' : num_PET_sessions,
+        'Ave. PET sessions/project' : ave_num_PET_sessions_pp,
+        'No. of MR scans' : num_MR_scans,
+        'Ave. MR scans/project' : ave_num_MR_scans_pp,
+        'No. of CT scans' : num_CT_scans,
+        'Ave. CT scans/project' : ave_num_CT_scans_pp,
+        'No. of PET scans' : num_PET_scans,
+        'Ave. PET scans/project' : ave_num_PET_scans_pp,
+        'No. of OT scans' : num_OT_scans,
+        'Ave. OT scans/project' : ave_num_OT_scans_pp,
+        'No. of DICOM image files [M]' : round(num_dcm_im_files/1000, 2),
+        'Ave. DICOM image files/project [k]' : ave_num_dcm_im_files_pp,
+        'Size of DICOM image files [GB]' : round(size_dcm_im_files/1000, 2),
+        'Ave. size of DICOM image files/project [MB]' : ave_size_dcm_im_files_pp
+        }
     
     return data_xnat_wide
