@@ -6,8 +6,9 @@ Created on Tue Jul  6 15:54:12 2021
 """
 
 
-def get_scan_asr_fname_and_id(pathsDict, projID, subjLab, expLab, asrMod, 
-                              asrName):
+def get_scan_asr_fname_and_id(
+        pathsDict, projID, subjLab, expLab, asrMod, asrName
+        ):
     """
     Get the filename and scan ID corresponding to a scan assessor given a
     name and modality.
@@ -36,18 +37,20 @@ def get_scan_asr_fname_and_id(pathsDict, projID, subjLab, expLab, asrMod,
     """
     
     # Get all IDs:
-    IDs = list(pathsDict['projects'][projID]['subjects'][subjLab]\
-               ['experiments'][expLab]['assessors'].keys()
-               )
+    IDs = list(
+        pathsDict['projects'][projID]['subjects'][subjLab]\
+        ['experiments'][expLab]['assessors'].keys()
+        )
 
     asrFname = None
     asrID = None
 
     for ID in IDs:
-        fnames = list(pathsDict['projects'][projID]['subjects'][subjLab]\
-                      ['experiments'][expLab]['assessors'][ID]\
-                      ['resources'][asrMod]['files'].keys()
-                      )
+        fnames = list(
+            pathsDict['projects'][projID]['subjects'][subjLab]\
+            ['experiments'][expLab]['assessors'][ID]\
+            ['resources'][asrMod]['files'].keys()
+            )
 
         for fname in fnames:
             name = pathsDict['projects'][projID]['subjects'][subjLab]\

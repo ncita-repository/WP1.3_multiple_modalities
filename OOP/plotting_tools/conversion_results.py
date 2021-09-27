@@ -66,13 +66,14 @@ def plot_pts_and_pixarr(
     Plot has different DATASETS ALONG COLUMNS and different SLICES ALONG ROWS. 
     """
     
-    print(f'len(listOfIms) = {len(listOfIms)}')
-    print(f'len(listOfF2SindsBySeg) = {len(listOfF2SindsBySeg)}')
-    print(f'len(listOfPixarrBySeg) = {len(listOfPixarrBySeg)}')
-    print(f'len(listOfC2SindsByRoi) = {len(listOfC2SindsByRoi)}')
-    print(f'len(listOfPtsByCntByRoi) = {len(listOfPtsByCntByRoi)}')
-    #print(f'len(listOfDcmDirs) = {len(listOfDcmDirs)}')
-    #print(f'listOfF2SindsByRoi = {listOfF2SindsByRoi}')
+    if p2c:
+        print(f'len(listOfIms) = {len(listOfIms)}')
+        print(f'len(listOfF2SindsBySeg) = {len(listOfF2SindsBySeg)}')
+        print(f'len(listOfPixarrBySeg) = {len(listOfPixarrBySeg)}')
+        print(f'len(listOfC2SindsByRoi) = {len(listOfC2SindsByRoi)}')
+        print(f'len(listOfPtsByCntByRoi) = {len(listOfPtsByCntByRoi)}')
+        #print(f'len(listOfDcmDirs) = {len(listOfDcmDirs)}')
+        #print(f'listOfF2SindsByRoi = {listOfF2SindsByRoi}')
     
     #listOfDcmFpaths, listOfSizes, listOfSpacings, listOfSlcThick, listOfIPPs,\
     #    listOfDirections = get_im_attrs_from_list_of_dicomDir(listOfDcmDirs)
@@ -99,9 +100,10 @@ def plot_pts_and_pixarr(
         if len(uniqueSinds) > maxNumSlices:
             maxNumSlices = len(uniqueSinds)
     
-    print(f'uniqueSinds = {uniqueSinds}')
-    print(f'listOfUniqueSinds = {listOfUniqueSinds}')
-    print(f'maxNumSlices = {maxNumSlices}')
+    if p2c:
+        print(f'uniqueSinds = {uniqueSinds}')
+        print(f'listOfUniqueSinds = {listOfUniqueSinds}')
+        print(f'maxNumSlices = {maxNumSlices}')
     
     
     """ Prepare the figure. """
@@ -143,6 +145,9 @@ def plot_pts_and_pixarr(
     for rowNum in range(maxNumSlices):
         # Loop through each data set:
         for i in range(Ncols):
+            if p2c:
+                print(f'\n   i = {i}')
+            
             dcmIm = listOfIms[i]
             dcmPixarr = listOfDcmPixarr[i]
             f2sIndsBySeg = listOfF2SindsBySeg[i]
@@ -159,7 +164,6 @@ def plot_pts_and_pixarr(
             #dcmDir = listOfDcmDirs[i]
             
             if p2c:
-                print(f'\n   i = {i}')
                 print(f'   plotTitle = {plotTitle}')
                 print(f'   f2sIndsBySeg = {f2sIndsBySeg}')
                 print(f'   c2sIndsByRoi = {c2sIndsByRoi}')

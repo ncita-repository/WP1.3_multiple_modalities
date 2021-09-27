@@ -164,7 +164,7 @@ class DataDownloader:
         """
         pathsDict = self.pathsDict
         
-        print(f'pathsDict = {pathsDict}\n')
+        #print(f'pathsDict = {pathsDict}\n')
         
         cfgDict = self.cfgDict
         #print(f'cfgDict = {cfgDict}\n')

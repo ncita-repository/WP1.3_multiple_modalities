@@ -398,14 +398,14 @@ class DroImporter:
                 
                 gridResRounded = [round(item, 2) for item in gridRes]
                 
-                msg = f"\n  There were {len(fnames)} subject assessors found,"\
-                    + f" of which {len(contentDateTimes)} were a {droType}, "\
-                    + "with\n  FrameOfReferenceUIDs matching those of the "\
-                    + "Source and Target image series, matching the transform"\
-                    + "'{regTxName}', \n  the most recent of which contains "\
-                    + f"the grid dimensions {gridDims}, grid resolution "\
-                    + f"{gridResRounded}, and vector grid data containing "\
-                    + f"{len(vectGridData)} elements.\n"
+                msg = f"* There were {len(fnames)} subject assessors found,"+\
+                    f" of which {len(contentDateTimes)} were a {droType}, " +\
+                    "with\n  FrameOfReferenceUIDs matching those of the " +\
+                    "Source and Target image series, matching the transform "+\
+                    "'{regTxName}', \n  the most recent of which contains " +\
+                    f"the grid dimensions {gridDims}, grid resolution " +\
+                    f"{gridResRounded}, and vector grid data containing " +\
+                    f"{len(vectGridData)} elements.\n"
             
             if regTxName in ['rigid', 'affine']:
                 txMatrix = txMatrices[newInd]
@@ -415,12 +415,12 @@ class DroImporter:
                 
                 txMatrixRounded = [round(item, 3) for item in txMatrix]
                 
-                msg = f"\n  There were {len(fnames)} subject assessors found,"\
-                    + f" of which {len(contentDateTimes)} were a {droType}, "\
-                    + "with\n  FrameOfReferenceUIDs matching those of the "\
-                    + "Source and Target image series, matching the transform"\
-                    + f"'{regTxName}', \n  the most recent of which contains "\
-                    + f"the transformation matrix: \n  {txMatrixRounded}\n"
+                msg = f"* There were {len(fnames)} subject assessors found," +\
+                    f" of which {len(contentDateTimes)} were a {droType}, " +\
+                    "with\n  FrameOfReferenceUIDs matching those of the " +\
+                    "Source and Target image series, matching the transform "+\
+                    f"'{regTxName}', \n  the most recent of which contains " +\
+                    f"the transformation matrix: \n  {txMatrixRounded}\n"
         else:
             dro = None
             txMatrix = None
@@ -428,10 +428,10 @@ class DroImporter:
             gridRes = None
             vectGridData = None
             
-            msg = "  There were no DROs with FrameOfReferenceUIDs matching "\
-                + "those of the Source ({srcFORuid}) \nand Target ({trgFORuid})"\
-                + " image series, and whose SOP Class matched the desired "\
-                + f"transform type ({regTxName}).\n"
+            msg = "* There were no DROs with FrameOfReferenceUIDs matching " +\
+                f"those of the Source ({srcFORuid}) \nand Target " +\
+                f"({trgFORuid}) image series, and whose SOP Class matched " +\
+                f"the desired transform type ({regTxName}).\n"
         print(msg)
         
         self.dro = dro

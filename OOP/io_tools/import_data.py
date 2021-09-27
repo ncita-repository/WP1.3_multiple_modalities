@@ -518,7 +518,7 @@ class DataImporter:
         # Get metadata:
         if self.roicol != None:
             #print(self.roicol)
-            print(type(self.roicol), '\n')
+            #print(type(self.roicol), '\n')
             
             # Get list of DimensionIndexValues:
             self.divs = get_DIVs(self.roicol)
@@ -630,7 +630,7 @@ class DataImporter:
         # Get metadata:
         if self.roicol != None:
             #print(self.roicol)
-            print(type(self.roicol), '\n')
+            #print(type(self.roicol), '\n')
             
             """
             # Get list of DimensionIndexValues:
@@ -1270,7 +1270,6 @@ class DataImporter:
         roicolMod = cfgDict['roicolMod']
         p2c = cfgDict['p2c']
         
-        
         if self.srcORtrg == 'src':
             toImport = 'source'
         else:
@@ -1279,7 +1278,6 @@ class DataImporter:
         timingMsg = f"* Importing the {toImport} DICOM scans and ROI "\
             + "Collection...\n"
         params.add_timestamp(timingMsg)
-        
         
         # Import an appropriate DRO:
         #self.droData = DroImporter(params)

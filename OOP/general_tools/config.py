@@ -182,8 +182,8 @@ def create_config_files(cfgDir, password=""):
     """
     Chose whether or not to print results to console (e.g. for debugging):
     """
-    #p2c = False
-    p2c = True
+    p2c = False
+    #p2c = True
     
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}
@@ -366,6 +366,15 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['forceReg'] = True
     
+    """ 
+    Use a pre-archived DRO rather than image registration to account for 
+    different patient position despite same FORuid.
+    """
+    runID = 'NCITA_test_RR2_use_dro'
+    cfg[runID] = dict(cfg['NCITA_test_RR2_force_reg'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['useDroForTx'] = True
+    
     # Datasets to propagate RTS from one DICOM series to another with greater
     # slice thickness:
     runID = 'NCITA_test_RR3'
@@ -390,6 +399,15 @@ def create_config_files(cfgDir, password=""):
     cfg[runID] = dict(cfg['NCITA_test_RR4'])
     cfg[runID]['runID'] = runID
     cfg[runID]['forceReg'] = True
+    
+    """ 
+    Use a pre-archived DRO rather than image registration to account for 
+    different patient position despite same FORuid.
+    """
+    runID = 'NCITA_test_RR4_use_dro'
+    cfg[runID] = dict(cfg['NCITA_test_RR4_force_reg'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['useDroForTx'] = True
     
     # Datasets to propagate RTS from one DICOM series to another with greater
     # slice thickness:
@@ -563,6 +581,15 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['forceReg'] = True
     
+    """ 
+    Use a pre-archived DRO rather than image registration to account for 
+    different patient position despite same FORuid.
+    """
+    runID = 'NCITA_test_SR2_use_dro'
+    cfg[runID] = dict(cfg['NCITA_test_SR2_force_reg'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['useDroForTx'] = True
+    
     # Datasets to propagate SEG from one DICOM series to another with greater
     # slice thickness:
     runID = 'NCITA_test_SR3'
@@ -587,6 +614,15 @@ def create_config_files(cfgDir, password=""):
     cfg[runID] = dict(cfg['NCITA_test_SR4'])
     cfg[runID]['runID'] = runID
     cfg[runID]['forceReg'] = True
+    
+    """ 
+    Use a pre-archived DRO rather than image registration to account for 
+    different patient position despite same FORuid.
+    """
+    runID = 'NCITA_test_SR4_use_dro'
+    cfg[runID] = dict(cfg['NCITA_test_SR4_force_reg'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['useDroForTx'] = True
     
     # Datasets to propagate SEG from one DICOM series to another with greater
     # slice thickness:

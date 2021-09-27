@@ -124,7 +124,7 @@ def download_scan(config, srcORtrg, xnatSession=None, pathsDict=None):
     pathsDict, keys\
         = create_pathsDict_for_scan(projID, subjLab, expLab, scanID, pathsDict)
     
-    print(f'pathsDict = {pathsDict}\n')
+    #print(f'pathsDict = {pathsDict}\n')
     
     if not 'dir' in keys:
         """ Get the experiment of interest: """

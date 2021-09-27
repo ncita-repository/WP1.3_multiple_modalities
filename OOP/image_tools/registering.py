@@ -858,6 +858,9 @@ def register_im(
         if p2c:
             print('Running rigid_reg_im()...\n')
         
+        optimiser = 'GDLS'
+        #optimiser = 'LBFGSB'
+        
         initialTx, alignedIm, finalTx, regIm, metricValues,\
             multiresIters = rigid_reg_im(
                 fixIm=fixIm, movIm=movIm, 
@@ -865,7 +868,7 @@ def register_im(
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
                 samplingPercentage=5, numIters=500, 
-                learningRate=1.0, optimiser='GDLS',
+                learningRate=1.0, optimiser=optimiser,
                 p2c=p2c, regPlotFpath=regPlotFpath
                 )
     

@@ -284,8 +284,12 @@ class Propagator:
                 p2c=p2c
                 )
         
-        self.fracProp = fracProp
+        if p2c:
+            print(f'{100*fracProp:.2f}% of the Source ROI Collection '
+                  'intersects the Target image domain.\n')
             
+        self.fracProp = fracProp
+    
     def which_use_case(self, srcDataset, trgDataset, params):
         # TODO update docstrings
         """
@@ -418,7 +422,7 @@ class Propagator:
                     useCaseThatApplies = '4b' # Relationship-preserving copy
         else:
             if isinstance(trgSlcNum, int):
-                useCaseThatApplies = '5a' # Direct copy
+                useCaseThatApplies = '5a' # Direct copy 
             else:
                 useCaseThatApplies = '5b' # Relationship-preserving copy
         
@@ -673,8 +677,8 @@ class Propagator:
             """
             # Use the resampled source slice number for srcSlcNum, and the
             # resampled pixel arrays for srcPixarrByRoi:
-            #im = self.dcmIm # 14/09/21
-            im = srcDataset.dcmIm # 14/09/21
+            im = self.dcmIm # 27/09/21
+            #im = srcDataset.dcmIm # 14/09/21
             #srcSlcNum = self.resSlcNum # does this still exist? (06/09/21)
             #srcPixarrByRoi = self.resPixarrByRoi # does this still exist? (06/09/21)
             #slcNum = self.slcNum # (06/09/21)
@@ -682,7 +686,7 @@ class Propagator:
             #pixarrByRoi = self.pixarrByRoi # (06/09/21)
             
             if p2c:
-                print('Source pixel arrays have been resampled so ',
+                print('Source pixel arrays have been resampled so',
                       'applying pixel shifts along z direction only.\n')
             
             # Apply pixel shift along z dimension only:
@@ -696,7 +700,8 @@ class Propagator:
         resampling srcIm to the target domain.
         """
         #srcIm = srcDataset.dcmIm
-        slcNum = srcDataset.slcNum
+        #slcNum = srcDataset.slcNum
+        slcNum = self.slcNum # 27/09/21
         
         trgIm = trgDataset.dcmIm
         trgSlcNum = trgDataset.slcNum
@@ -732,8 +737,8 @@ class Propagator:
             )
         """
         
-        print(f'\n\nslcNum = {slcNum}')
-        print(f'trgSlcNum = {trgSlcNum}')
+        print(f'\nslcNum = {slcNum}')
+        print(f'trgSlcNum = {trgSlcNum}\n')
         
         
         # Get voxel shift (in the trgIm domain) between slice slcNum in im and
@@ -815,7 +820,8 @@ class Propagator:
         if useCaseToApply in ['1', '2a', '2b']:
             #slcNum = srcDataset.slcNum # initial value
             if roicolMod == 'RTSTRUCT':
-                _2sIndsBy_ = list(srcDataset.c2sIndsByRoi)
+                #_2sIndsBy_ = list(srcDataset.c2sIndsByRoi)
+                _2sIndsBy_ = list(srcDataset.f2sIndsByRoi) # 27/09/21
                 pixarrBy_ = list(srcDataset.pixarrByRoi)
             else:
                 _2sIndsBy_ = list(srcDataset.f2sIndsBySeg)
@@ -829,7 +835,8 @@ class Propagator:
             #srcPixarrByRoi = self.resPixarrByRoi # does this still exist? (06/09/21)
             #slcNum = self.slcNum # (06/09/21)
             if roicolMod == 'RTSTRUCT':
-                _2sIndsBy_ = list(self.c2sIndsByRoi) # (15/09/21)
+                #_2sIndsBy_ = list(self.c2sIndsByRoi) # (15/09/21)
+                _2sIndsBy_ = list(self.f2sIndsByRoi) # 27/09/21
                 pixarrBy_ = list(self.pixarrByRoi) # (15/09/21)
             else:
                 _2sIndsBy_ = list(self.f2sIndsBySeg) # (06/09/21)
@@ -897,7 +904,8 @@ class Propagator:
         #self.f2sIndsBySeg = shiftedF2SindsBySeg
         """
         if roicolMod == 'RTSTRUCT':
-            self.c2sIndsByRoi = shifted_2SindsBy_
+            #self.c2sIndsByRoi = shifted_2SindsBy_
+            self.f2sIndsByRoi = shifted_2SindsBy_ # 27/09/21
             self.pixarrByRoi = shiftedPixarrBy_
         else:
             self.f2sIndsBySeg = shifted_2SindsBy_
@@ -1216,6 +1224,7 @@ class Propagator:
         """
         
         roicolMod = params.cfgDict['roicolMod']
+        useCaseToApply = params.cfgDict['useCaseToApply']
         p2c = params.cfgDict['p2c']
         
         if p2c:
@@ -1233,6 +1242,126 @@ class Propagator:
                     #print('   self.pixarrBySeg = shiftedPixarrBySeg')
                 print('-'*120)
         else:
+            #shiftedF2SindsByRoi = self.shiftedF2SindsByRoi
+            #shiftedPixarrByRoi = self.shiftedPixarrByRoi
+            shiftedF2SindsBySeg = self.f2sIndsBySeg
+            shiftedPixarrBySeg = self.pixarrBySeg
+            shiftedC2SindsByRoi = self.c2sIndsByRoi
+            shiftedPtsByCntByRoi = self.ptsByCntByRoi
+            shiftedF2SindsByRoi = self.f2sIndsByRoi
+            shiftedPixarrByRoi = self.pixarrByRoi
+            
+            # Concatenate the existing data from target with the shifted data:
+            trgF2SindsBySeg = trgDataset.f2sIndsBySeg
+            trgPixarrBySeg = trgDataset.pixarrBySeg
+            trgC2SindsByRoi = trgDataset.c2sIndsByRoi
+            trgPtsByCntByRoi = trgDataset.ptsByCntByRoi
+            trgF2SindsByRoi = trgDataset.f2sIndsByRoi
+            trgPixarrByRoi = trgDataset.pixarrByRoi
+            
+            R = len(trgC2SindsByRoi)
+            S = len(trgF2SindsBySeg)
+            T = len(trgF2SindsByRoi)
+                
+            newF2SindsBySeg = [
+                shiftedF2SindsBySeg[s] + trgF2SindsBySeg[s] for s in range(S)
+                ]
+            
+            newPixarrBySeg = [
+                shiftedPixarrBySeg[s] + trgPixarrBySeg[s] for s in range(S)
+                ]
+            
+            newC2SindsByRoi = [
+                shiftedC2SindsByRoi[r] + trgC2SindsByRoi[r] for r in range(R)
+                ]
+            
+            newPtsByCntByRoi = [
+                shiftedPtsByCntByRoi[r] + trgPtsByCntByRoi[r] for r in range(R)
+                ]
+            
+            newF2SindsByRoi = [
+                shiftedF2SindsByRoi[t] + trgF2SindsByRoi[t] for t in range(T)
+                ]
+            
+            newPixarrByRoi = [
+                shiftedPixarrByRoi[t] + trgPixarrByRoi[t] for t in range(T)
+                ]
+            
+            self.f2sIndsBySeg = newF2SindsBySeg
+            self.pixarrBySeg = newPixarrBySeg
+            self.c2sIndsByRoi = newC2SindsByRoi
+            self.ptsByCntByRoi = newPtsByCntByRoi
+            self.f2sIndsByRoi = newF2SindsByRoi
+            self.pixarrByRoi = newPixarrByRoi
+            
+            if p2c:
+                if roicolMod == 'RTSTRUCT':
+                    if useCaseToApply in ['1', '2a']:
+                        _2sIndsByRoi = shiftedC2SindsByRoi
+                        new_2SindsByRoi = newC2SindsByRoi
+                    else:
+                        _2sIndsByRoi = shiftedF2SindsByRoi
+                        new_2SindsByRoi = newF2SindsByRoi
+                    print('   There was ROI data to add from trgDataset')
+                    print(f'   shiftedC2SindsByRoi = {_2sIndsByRoi}')
+                    print('   after adding existing c2sIndsByRoi from',
+                          f'trgDataset = {new_2SindsByRoi}')
+                else:
+                    print('   There was SEG data to add from trgDataset')
+                    print(f'   shiftedF2SindsBySeg = {shiftedF2SindsBySeg}')
+                    print('   after adding existing f2sIndsBySeg from',
+                          f'trgDataset = {newF2SindsBySeg}')
+                print('-'*120)
+    
+    def add_modified_data_to_existing_trgDataset_pre270921(self, trgDataset, params):
+        """
+        Concatenate a list (by ROI/segment) of points/pixel arrays and of 
+        frame-to-slice indices (f2sIndsByRoi) to the corresponding instance
+        variables in trgDataset.
+        
+        The relevant instance variables in trgDataset may be None, e.g. if 
+        there was no ROI Collection imported for the target DICOM series
+        i.e. trgDataset.roicol = None). If so f2sIndsByRoi and ptsByCntByRoi/
+        pixarrByRoi will be shiftedF2SindsByRoi and shiftedPtsByCntByRoi/
+        shiftedPixarrByRoi.
+        
+        Parameters
+        ----------
+        trgDataset : DataImporter Object
+            DataImporter Object for the target DICOM series.
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+            
+        Returns
+        -------
+        self.pixarrByRoi : list of Numpy Arrays
+            The list (for each ROI) of the pixel arrays of the non-relationship
+            -preserving copy of the source ROI.
+        self.f2sIndsByRoi : list of a list of ints
+            The list (for each ROI) of a list (for each frame) of the
+            frame-to-slice indices in self.pixarrByRoi.
+        """
+        
+        roicolMod = params.cfgDict['roicolMod']
+        p2c = params.cfgDict['p2c']
+        
+        if p2c:
+            print('\n\n', '-'*120)
+            print(' Running of add_modified_data_to_existing_trgDataset():')
+            print('-'*120, '\n')
+        
+        if trgDataset.roicol == None:
+            if p2c:
+                print('   There is no ROI data to add from trgDataset')
+                if roicolMod == 'RTSTRUCT':
+                    print(f'   self.c2sIndsByRoi = {self.c2sIndsByRoi}')
+                else:
+                    print(f'   self.f2sIndsBySeg = {self.f2sIndsBySeg}')
+                    #print('   self.pixarrBySeg = shiftedPixarrBySeg')
+                print('-'*120)
+        else:
+            
             #shiftedF2SindsByRoi = self.shiftedF2SindsByRoi
             #shiftedPixarrByRoi = self.shiftedPixarrByRoi
             shiftedF2SindsBySeg = self.f2sIndsBySeg
@@ -1667,14 +1796,17 @@ class Propagator:
         params.cfgDict['resInterpUsed']\
             = labimBy_[0].GetMetaData('resInterpUsed')
         
+        """
         if params.cfgDict['p2c']:
-            print(f"resInterp = {params.cfgDict['resInterp']}")
+            print(f"\nresInterp = {params.cfgDict['resInterp']}")
             print(f"resInterpUsed = {params.cfgDict['resInterpUsed']}")
-            print('\n\n\nMetadata keys in labimBy_[0]:',
-                  labimBy_[0].GetMetaDataKeys())
+            print('\nMetadata keys in labimBy_[0]:',
+                  labimBy_[0].GetMetaDataKeys(), '\n')
+        """
         
         timingMsg = "Took [*] s to resample source label images.\n"
         params.add_timestamp(timingMsg)
+        print(timingMsg) # 27/09/21
         
         if roicolMod == 'RTSTRUCT':
             self.f2sIndsByRoi = f2sIndsBy_
@@ -1762,9 +1894,9 @@ class Propagator:
         
         self.resDcmPixarr = sitk.GetArrayViewFromImage(self.resIm)
         
-        if p2c:
-            print(f'\nmetricValues = {self.metricValues}')
-            print(f'\nmultiresIters = {self.multiresIters}\n')
+        #if p2c:
+        #    print(f'\nmetricValues = {self.metricValues}')
+        #    print(f'\nmultiresIters = {self.multiresIters}\n')
         
         #raise Exception('quitting')
         
@@ -1827,6 +1959,9 @@ class Propagator:
         trgIm = trgDataset.dcmIm
         p2c = params.cfgDict['p2c']
         
+        timingMsg = "Creating a transform from the DRO...\n"
+        params.add_timestamp(timingMsg)
+        
         if params.cfgDict['regTxName'] in ['rigid', 'affine']:
             resTx = create_tx_from_spa_dro(dro, p2c)
             self.resTx = resTx # update resTx
@@ -1887,7 +2022,13 @@ class Propagator:
                 self.resTx = compTx
                 self.resTxParams = list(compTx.GetParameters())
         
-        self.dcmIm = resIm
+        timingMsg = "Took [*] s to create the transform.\n"
+        params.add_timestamp(timingMsg)
+        
+        #self.dcmIm = resIm 
+        self.resIm = resIm # 27/09/21
+        
+        self.resDcmPixarr = sitk.GetArrayViewFromImage(self.resIm)
     
     def reduce_frames(self, params):
         # TODO update docstrings
@@ -1923,7 +2064,8 @@ class Propagator:
         
         if roicolMod == 'RTSTRUCT':
             pixarrBy_ = self.pixarrByRoi
-            _2sIndsBy_ = self.c2sIndsByRoi
+            #_2sIndsBy_ = self.c2sIndsByRoi
+            _2sIndsBy_ = self.f2sIndsByRoi # 27/09/21
         else:
             pixarrBy_ = self.pixarrBySeg
             _2sIndsBy_ = self.f2sIndsBySeg
@@ -2002,7 +2144,8 @@ class Propagator:
         
         if roicolMod == 'RTSTRUCT':
             self.pixarrByRoi = pixarrBy_
-            self.c2sIndsByRoi = _2sIndsBy_
+            #self.c2sIndsByRoi = _2sIndsBy_
+            self.f2sIndsByRoi = _2sIndsBy_ # 27/09/21
         else:
             self.pixarrBySeg = pixarrBy_
             self.f2sIndsBySeg = _2sIndsBy_
@@ -2036,10 +2179,12 @@ class Propagator:
         
         roicolMod = params.cfgDict['roicolMod']
         
-        """
-        May need to reduce multi-framed NRP copies to a single framed pixel 
-        array (using frame averaging or logical OR operation).
-        """
+        timingMsg = "Making a non-relationship-preserving propagation of "\
+                + "the source ROI Collection...\n"
+        params.add_timestamp(timingMsg)
+        
+        # May need to reduce multi-framed NRP copies to a single framed pixel 
+        # array (using frame averaging or logical OR operation):
         self.reduce_frames(params)
         
         # Get the required voxel shift to account for change from srcSlcNum 
@@ -2056,6 +2201,10 @@ class Propagator:
         
         if roicolMod == 'RTSTRUCT':
             self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
+        
+        timingMsg = "Took [*] s to make a non-relationship-preserving "\
+                + "propagation of the source ROI Collection.\n"
+        params.add_timestamp(timingMsg)
     
     def convert_pixarr_to_cntdata(self, srcDataset, trgDataset, params):
         # TODO update docstrings
@@ -2126,8 +2275,16 @@ class Propagator:
         
         roicolMod = params.cfgDict['roicolMod']
         
+        timingMsg = "Making a relationship-preserving propagation of the "\
+                + "source ROI Collection...\n"
+        params.add_timestamp(timingMsg)
+        
         if roicolMod == 'RTSTRUCT':
             self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
+        
+        timingMsg = "Took [*] s to make a relationship-preserving "\
+                + "propagation of the source ROI Collection.\n"
+        params.add_timestamp(timingMsg)
         
     def execute(self, srcDataset, trgDataset, params, dro):
         # TODO update docstrings
@@ -2204,6 +2361,7 @@ class Propagator:
         if p2c:
             print(f"params.cfgDict['runID'] = {params.cfgDict['runID']}")
             print(f'useCase = {useCase}')
+            print(f'useDroForTx = {useDroForTx}\n')
         
         if useCase in ['1', '2a']:
             """ 
@@ -2465,7 +2623,7 @@ class Propagator:
         runID = cfgDict['runID']
         roicolMod = cfgDict['roicolMod']
         exportPlot = cfgDict['exportPlots']
-        #p2c = cfgDict['p2c']
+        p2c = cfgDict['p2c']
         p2c = False
         useCaseToApply = cfgDict['useCaseToApply']
         forceReg = cfgDict['forceReg']
