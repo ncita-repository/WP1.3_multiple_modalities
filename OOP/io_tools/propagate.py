@@ -56,7 +56,7 @@ from dro_tools.create_tx_from_dro import (
 from general_tools.pixarr_ops import (
     mean_frame_in_pixarrBySeg, or_frame_of_pixarrBySeg
     )
-from io_tools.exports import (export_im, export_list_to_txt, export_newRoicol)
+from io_tools.exports import export_im, export_list_to_txt
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
@@ -64,7 +64,7 @@ from general_tools.console_printing import (
     print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
     )
 from plotting_tools.general import (
-    plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_images
+    plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_dicom_ims
     )
 from plotting_tools.res_reg_results import(
     plot_metricValues_v_iters, compare_res_results 
@@ -665,10 +665,11 @@ class Propagator:
                 shiftInZ = True
             """
         
-        elif useCaseToApply in ['3a', '4a']:
+        #elif useCaseToApply in ['3a', '4a']: # 26/09/21
+        elif useCaseToApply in ['3a', '4a', '5a']:
             """ 
             Determining the voxel shift is only relevant for non-relationship
-            -preserving copies for use cases 3-4.
+            -preserving propagations.
             """
             # Use the resampled source slice number for srcSlcNum, and the
             # resampled pixel arrays for srcPixarrByRoi:
@@ -820,7 +821,8 @@ class Propagator:
                 _2sIndsBy_ = list(srcDataset.f2sIndsBySeg)
                 pixarrBy_ = list(srcDataset.pixarrBySeg)
         
-        elif useCaseToApply in ['3a', '3b', '4a', '4b']:
+        #elif useCaseToApply in ['3a', '3b', '4a', '4b']: # 26/09/21
+        else:
             # Use the resampled source slice number for srcSlcNum, and the
             # resampled pixel arrays for srcPixarrByRoi:
             #srcSlcNum = self.resSlcNum # does this still exist? (06/09/21)
@@ -2274,8 +2276,8 @@ class Propagator:
                 midInd = trgDataset.dcmIm.GetSize()[2] // 2
                 
                 compare_res_results(
-                    resIm0=trgDataset.dcmIm, resIm1=self.resIm, resInd=midInd,
-                    resTitle0='Target image', resTitle1='Resampled image'
+                    im0=trgDataset.dcmIm, im1=self.resIm, k=midInd,
+                    title0='Target image', title1='Resampled image'
                 )
         
         if useCase in ['5a', '5b']:

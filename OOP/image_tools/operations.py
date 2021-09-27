@@ -7,6 +7,7 @@ Created on Tue Jul  6 14:20:01 2021
 
 """ Simple operations that apply to SimpleITK images. """
 
+import time
 import numpy as np
 import SimpleITK as sitk
 from conversion_tools.pixarrs_ims import im_to_pixarr
@@ -725,15 +726,21 @@ def recursive_gaussian_blur_im(im, sigma, direction, p2c=False):
     
     return blurredIm
 
-def segment_im(im, threshFactor=0.25, kernelSize=3, p2c=False):
+def segment_im(
+        im, closeHoles=True, threshFactor=0.25, kernelSize=3, 
+        numClosingOps=1, p2c=False
+        ):
     """
-    Segment a 3D SimpleITK Image using binary thresholding and a morphological
-    closing.
+    Segment a 3D SimpleITK Image using binary thresholding and (optional) a 
+    morphological closing.
     
     Parameters
     ---------- 
     im : SimpleITK Image 
         The 3D image to be segmented.
+    closeHoles : bool, optional
+        If True the binary thresholded image will be morphologically closed.
+        The default value is True.
     threshFactor : float, optional
         The factor to apply to the mean value of im for binary thresholding,
         e.g. 0.25*meanVal where meanVal is the mean value of im. The default
@@ -741,6 +748,9 @@ def segment_im(im, threshFactor=0.25, kernelSize=3, p2c=False):
     kernelSize : int, optional
         The kernel size to use for morphological closing. The default value is
         3.
+    numClosingOps : int, optional
+        The number of times to perform the hole closing operation. The default
+        value is 1.
     p2c : bool, optional
         Denotes whether some results will be logged to the console. The default
         value is False.
@@ -751,11 +761,24 @@ def segment_im(im, threshFactor=0.25, kernelSize=3, p2c=False):
         The binary segmented image.
     """
     
-    imMin, imMax, imMean, imSigma, imVariance, imSum = get_im_stats(im, p2c)
+    # Start timing:
+    times = [time.time()]    
+    
+    imMin, imMax, imMean, imSigma, imVariance, imSum = get_im_stats(
+        im, p2c=False
+        )
     
     seg = im > threshFactor*imMean
     
-    closing = sitk.BinaryMorphologicalClosingImageFilter()
-    closing.SetKernelRadius([kernelSize]*im.GetDimension())
+    if closeHoles:
+        closing = sitk.BinaryMorphologicalClosingImageFilter()
+        for i in range(numClosingOps):
+            closing.SetKernelRadius([kernelSize]*im.GetDimension())
+            seg = closing.Execute(seg)
     
-    return closing.Execute(seg)
+    times.append(time.time())
+    dTime = times[-1] - times[-2]
+    if p2c:
+        print(f'*Took {dTime:.4f} s to segment the image.\n')
+    
+    return seg

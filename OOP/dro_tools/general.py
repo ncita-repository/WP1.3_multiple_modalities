@@ -69,7 +69,8 @@ def modify_ref_im_seq(seq, dicoms, refAllSOPs=False, p2c=False):
     times.append(time.time())
     dtime = round(times[-1] - times[-2], 3)
     if p2c:
-        print(f'\n   *Took {dtime} s to add sequences to ReferencedImageSequence.')
+        print(f'\n   *Took {dtime} s to add sequences to',
+              'ReferencedImageSequence.')
         
     # Update the sequences:
     for i in range(N1):
@@ -127,16 +128,20 @@ def modify_ref_ser_seq(dro, seqNum, dicoms, refAllSOPs=False, p2c=False):
         reqRIS = len(dicoms)
         
         if p2c:
-            print(f'\nThere are {origRIS} sequences in',
-                  f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
-                  f'and {reqRIS} (= no. of DICOMs) required sequences.')
+            print(
+                f'\nThere are {origRIS} sequences in',
+                f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
+                f'and {reqRIS} (= no. of DICOMs) required sequences.'
+                )
     else:
         reqRIS = 1
         
         if p2c:
-            print(f'\nThere are {origRIS} sequences in',
-                  f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
-                  f'and {reqRIS} (the first DICOM) required sequence.')
+            print(
+                f'\nThere are {origRIS} sequences in',
+                f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence,',
+                f'and {reqRIS} (the first DICOM) required sequence.'
+                )
     
     # Add/remove sequences:
     if reqRIS > origRIS:
@@ -154,8 +159,10 @@ def modify_ref_ser_seq(dro, seqNum, dicoms, refAllSOPs=False, p2c=False):
     times.append(time.time())
     dtime = round(times[-1] - times[-2], 3)
     if p2c:
-        print(f'\n   *Took {dtime} s to add sequences to',
-              f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.')
+        print(
+            f'\n   *Took {dtime} s to add sequences to',
+            f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.'
+            )
         
     # Update the sequences:
     for i in range(reqRIS):
@@ -170,8 +177,10 @@ def modify_ref_ser_seq(dro, seqNum, dicoms, refAllSOPs=False, p2c=False):
     times.append(time.time())
     dtime = round(times[-1] - times[-2], 3)
     if p2c:
-        print(f'\n   *Took {dtime} s to update',
-              f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.')
+        print(
+            f'\n   *Took {dtime} s to update',
+            f'ReferencedSeriesSequence[{seqNum}].ReferencedInstanceSequence.'
+            )
     
     return dro
 
@@ -228,19 +237,19 @@ def modify_stu_con_oth_ref_ins_seq(
         reqRIS = len(dicoms)
         
         if p2c:
-            msg = f'\nThere are {origRIS} sequences in '\
-                + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
-                + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
-                + f' and {reqRIS} (= no. of DICOMs) required sequences.'
+            msg = f'\nThere are {origRIS} sequences in ' +\
+                f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'+\
+                '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,' +\
+                f' and {reqRIS} (= no. of DICOMs) required sequences.'
             print(msg)
     else:
         reqRIS = 1
         
         if p2c:
-            msg = f'\nThere are {origRIS} sequences in '\
-                + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
-                + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,'\
-                + f' and {reqRIS} (the first DICOM) required sequence.'
+            msg = f'\nThere are {origRIS} sequences in ' +\
+                f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'+\
+                '.ReferencedSeriesSequence[0].ReferencedInstanceSequence,' +\
+                f' and {reqRIS} (the first DICOM) required sequence.'
             print(msg)
     
     # Add/remove sequences:
@@ -264,9 +273,9 @@ def modify_stu_con_oth_ref_ins_seq(
     times.append(time.time())
     dtime = round(times[-1] - times[-2], 3)
     if p2c:
-        msg = f'\n   *Took {dtime} s to add sequences to '\
-            + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
-            + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
+        msg = f'\n   *Took {dtime} s to add sequences to ' +\
+            f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]' +\
+            '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
         print(msg)
         
     # Update the sequences:
@@ -284,9 +293,9 @@ def modify_stu_con_oth_ref_ins_seq(
     times.append(time.time())
     dtime = round(times[-1] - times[-2], 3)
     if p2c:
-        msg = f'\n   *Took {dtime} s to update '\
-            + f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]'\
-            + '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
+        msg = f'\n   *Took {dtime} s to update ' +\
+            f'StudiesContainingOtherReferencedInstancesSequence[{seqNum}]' +\
+            '.ReferencedSeriesSequence[0].ReferencedInstanceSequence.'
         print(msg)
     
     return dro

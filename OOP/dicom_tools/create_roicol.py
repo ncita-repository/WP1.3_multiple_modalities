@@ -38,7 +38,7 @@ from dicom_tools.create_rts import create_rts
 from dicom_tools.error_check_rts import error_check_rts
 from dicom_tools.error_check_seg import error_check_seg
 from plotting_tools.general import (
-    plot_pixarrs_from_list_of_segs_and_images, 
+    plot_pixarrs_from_list_of_segs_and_dicom_ims, 
     plot_contours_from_list_of_rtss_and_dicom_ims
     )
 
@@ -355,7 +355,7 @@ class RoicolCreator:
                 #fname='', p2c=p2c
             )
         else:
-            plot_pixarrs_from_list_of_segs_and_images(
+            plot_pixarrs_from_list_of_segs_and_dicom_ims(
                 listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
                 exportPlot=exportPlot, exportDir=roiExportDir,
                 runID=runID, useCaseToApply=useCaseToApply,

@@ -72,7 +72,7 @@ def create_seg(srcDataset, trgDataset, newDataset, params):
     #from dicom_tools.imports import import_dicoms
     #from dicom_tools.metadata import get_roicol_labels
     #from image_tools.attrs_info import get_im_attrs
-    from seg_tools.metadata import get_RSOPuids_in_RIS
+    from dicom_tools.seg_metadata import get_RSOPuids_in_RIS
     from general_tools.console_printing import (
         print_indsByRoi, print_pixarrBySeg
     )

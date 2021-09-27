@@ -134,8 +134,9 @@ def plot_values_and_export(metricValues, multiresIters, regPlotFpath):
 
 def rigid_reg_im(
         fixIm, movIm, regTxName='affine', initMethod='landmarks', 
-        fixFidsFpath='', movFidsFpath='', samplingPercentage=50, 
-        numIters=500, learningRate=1.0, p2c=False, regPlotFpath='',
+        fixFidsFpath='', movFidsFpath='', samplingPercentage=5, 
+        numIters=500, learningRate=1.0, optimiser='GDLS',
+        fixMask=None, movMask=None, p2c=False, regPlotFpath=''
         ):
     """  
     Register two 3D SimpleITK images using a non-deformable transformation 
@@ -177,6 +178,23 @@ def rigid_reg_im(
     learningRate : float, optional
         The learning rate used for the gradient descent optimiser. The default 
         value is 1.0.
+    optimiser : str, optional
+        The optimiser that will be used. Currently only the following values
+        are accepted:
+            - 'GD' = Gradient descent
+            - 'RSGD' = Regular step gradient descent
+            - 'GDLS' = Gradient descent line search
+            - 'LBFGSB' = Limited memory Broyden, Fletcher, Goldfarb, Shannon, 
+            Bound Constrained
+        The default value is 'GDSL'.
+    fixMask : SimpleITK Image
+        A 3D binary mask representing the volume within which sampling points 
+        will be considered in fixIm when optimising the registration.  The 
+        default value is None.
+    movMask : SimpleITK Image
+        A 3D binary mask representing the volume within which sampling points 
+        will be considered in movIm when optimising the registration.  The 
+        default value is None.
     p2c : bool, optional
         Denotes whether intermediate results will be logged to the console.
         The default value is False
@@ -194,12 +212,12 @@ def rigid_reg_im(
     finalTx : SimpleITK Transform
         The final SimpleITK Transform used to register/transform movIm to fixIm.
     
-    Note
-    ----
-    It appears that a high sampling percentage (e.g. 50%) is required to get 
-    good (and repeatable) results. Low values (e.g. 5%) result in poorer 
-    results and are highly variable from run to run (due to the use of clock
-    to generate samples).
+    Notes
+    -----
+    Depending on the optimiser used, a high sampling percentage (e.g. 50%)
+    seems to be required to get good (and repeatable) results. Low values 
+    (e.g. 5%) can yield poorer results, and can be highly variable from run to 
+    run (due to the use of clock to generate samples).
     
     An indication that the sampling percentage is too low is looking at the
     Metric value v Iteration Number during optimisation. A highly erratic plot
@@ -207,15 +225,51 @@ def rigid_reg_im(
     from the first resolution (of the multi-resolution strategy) looks very 
     "noisy" (the part of the plot between the first and second asterixes). 
     
-    https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
+    However, it appears that the Gradient Descent Line Search and LBFGSB
+    optimisers outperform Gradient Descent, and even yield decent results with 
+    low sampling percentages (1%).  In a test with 50 repeated runs with 1% 
+    sampling percentage, GDLS took on average 47 s v 42.5 s using LBFGSB, but 
+    the metric v iteration plots fo GDLS appeared much "better behaved" 
+    (smoother, less spiky) so might be more robust.
     
-    https://simpleitk.readthedocs.io/en/master/link_ImageRegistrationMethodBSpline3_docs.html
+    When comparing GDLS with 5% v 1% sampling percentage (50 runs), runs using
+    1% took 47 s v 72 s using 5%. The 5% were results were considerably better 
+    and more consistent.
+    
+    Further information on optimisers can be found here:
+    https://simpleitk.readthedocs.io/en/master/registrationOverview.html
+    
+    Python notebook example here:
+    https://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/Python_html/60_Registration_Introduction.html
     
     Since initial alignment is geometrical (use of fiducials), initialising the
     registration with a geometrical centering is suitable (moments is not).
     
-    It seems that a higher number of samples (e.g. 50%) is required to get
-    results that are not so dependent upon the random sampling.
+    Surprisingly, use of masks to limit the sample region did not yield an
+    improvement. Masks were obtained by a simple binary thresholding
+    segmentation, e.g.:
+    
+    from image_tools.operations import segment_im
+    
+    fixMask = segment_im(
+        fixIm, closeHoles=False, threshFactor=0.75, kernelSize=3, 
+        numClosingOps=1,
+    )
+    
+    or
+    
+    fixMask = segment_im(
+        fixIm, closeHoles=True, threshFactor=0.75, kernelSize=3, 
+        numClosingOps=1,
+    )
+    
+    which follows the binarisation step with a morphological closing operation.
+    The closing operation can add a significant processing burden for large
+    images (e.g. full body CT) and doesn't seem to make much difference. It's
+    likely that further tweaking is required. Likewise increasing the number of
+    closing operations (numClosingOps) didn't seem to make much of a difference
+    but things were developed and tested in a hurry so it's likely that there
+    are flaws in the implementation.
     """
     
     # Print simple metric values to console or plot of metric value v iteration?
@@ -295,6 +349,10 @@ def rigid_reg_im(
     #regMethod.SetMetricSamplingPercentage(
     #    samplingPercentage, sitk.sitkWallClock
     #    )
+    if fixMask:
+        regMethod.SetMetricFixedMask(fixMask)
+    if movMask:
+        regMethod.SetMetricMovingMask(movMask)
     
     """ Setup for the multi-resolution framework. """
     shrinkFactors = [4,2,1]
@@ -318,32 +376,28 @@ def rigid_reg_im(
     regMethod.SetInterpolator(sitk.sitkLinear)
     
     """ Optimizer settings. """
-    
-    """
-    regMethod.SetOptimizerAsGradientDescent(
-        learningRate=learningRate, numberOfIterations=500, 
-        convergenceMinimumValue=1e-6, convergenceWindowSize=10
-        )
-    """
-    
-    #""" 06/09/21
-    regMethod.SetOptimizerAsGradientDescent(
-        learningRate=learningRate, numberOfIterations=numIters, 
-        estimateLearningRate=regMethod.Once
-        )
-    #"""
-    # 06/09/21:
-    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, .001, 200)
-    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, 1e-6, 200)
-    #regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, 1e-8, 200)
-    
-    """
-    regMethod.SetOptimizerAsGradientDescentLineSearch(
-        learningRate=learningRate, numberOfIterations=100,
-        convergenceMinimumValue=1e-4, #convergenceMinimumValue=1e-6,
-        convergenceWindowSize=5
-        )
-    """
+    if optimiser == 'GD':
+        regMethod.SetOptimizerAsGradientDescent(
+            learningRate=learningRate, numberOfIterations=numIters,
+            convergenceMinimumValue=1e-6, convergenceWindowSize=10,
+            estimateLearningRate=regMethod.Once
+            )
+    elif optimiser == 'RSGD':
+        regMethod.SetOptimizerAsRegularStepGradientDescent(1.0, 1e-6, 200)
+    elif optimiser == 'GDLS':
+        regMethod.SetOptimizerAsGradientDescentLineSearch(
+            learningRate=learningRate, numberOfIterations=numIters,
+            convergenceMinimumValue=1e-6, convergenceWindowSize=10
+            )
+    elif optimiser == 'LBFGSB':
+        regMethod.SetOptimizerAsLBFGSB(
+            gradientConvergenceTolerance=1e-6,
+            numberOfIterations=numIters
+            )
+    else:
+        msg = "Accepted values for 'optimiser' include 'GD', 'RSGD', 'GDLS'"+\
+            f" and 'LBFGSB'. '{optimiser}' is not an allowed value."
+        raise Exception(msg)
     
     regMethod.SetOptimizerScalesFromPhysicalShift()
     
@@ -505,6 +559,8 @@ def bspline_reg_im(
     
     Zivy advised not to use gradient descent line search for bspline:
     https://github.com/SimpleITK/SimpleITK/issues/1415
+    
+    https://simpleitk.readthedocs.io/en/master/link_ImageRegistrationMethodBSpline3_docs.html
     """
     
     # Print simple metric values to console or plot of metric value v iteration?
@@ -778,10 +834,12 @@ def register_im(
                       + f"\nmovFidsFpath = {movFidsFpath}"
         raise Exception(msg)
     
+    """
     print('\n\n\n*** New (21/09/21): Normalising images prior to',
           'registration\n\n\n')
     fixIm = normalise_im(fixIm)
     movIm = normalise_im(movIm)
+    """
     
     if regTxName == 'bspline':
         if p2c:
@@ -793,40 +851,12 @@ def register_im(
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
                 numControlPts=8, samplingPercentage=5,
-                numIters=100, learningRate=5.0, p2c=p2c, regPlotFpath=regPlotFpath
+                numIters=100, learningRate=5.0, 
+                p2c=p2c, regPlotFpath=regPlotFpath
                 )
     else:
         if p2c:
             print('Running rigid_reg_im()...\n')
-        
-        """
-        learningRate = 1
-        learningRate = 5
-        #learningRate = 10
-        #learningRate = 0.5
-        if learningRate != 1:
-            print('\n* On 06/09 changed learning rate from 1 to',
-                  f'{learningRate}\n\n')
-        """
-        
-        """
-        samplingPercentage = 50
-        #samplingPercentage = 100
-        if samplingPercentage != 50:
-            print('\n* On 06/09 changed samplingPercentage from 50% to',
-                  f'{samplingPercentage}%\n\n')
-        """
-        
-        """
-        initMethod = 'moments'
-        #initMethod = 'geometry'
-        if initMethod != 'moments':
-            print('\n* On 06/09 changed initMethod from "moments" to',
-                  '"geometry"\n\n')
-        """
-        
-        learningRate = 1.0
-        samplingPercentage = 50
         
         initialTx, alignedIm, finalTx, regIm, metricValues,\
             multiresIters = rigid_reg_im(
@@ -834,8 +864,8 @@ def register_im(
                 regTxName=regTxName, initMethod=initMethod,
                 fixFidsFpath=fixFidsFpath, 
                 movFidsFpath=movFidsFpath,
-                samplingPercentage=samplingPercentage,
-                numIters=500, learningRate=learningRate, 
+                samplingPercentage=5, numIters=500, 
+                learningRate=1.0, optimiser='GDLS',
                 p2c=p2c, regPlotFpath=regPlotFpath
                 )
     
