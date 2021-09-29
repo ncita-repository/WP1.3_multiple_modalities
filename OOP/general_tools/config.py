@@ -182,8 +182,8 @@ def create_config_files(cfgDir, password=""):
     """
     Chose whether or not to print results to console (e.g. for debugging):
     """
-    p2c = False
-    #p2c = True
+    #p2c = False
+    p2c = True
     
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}

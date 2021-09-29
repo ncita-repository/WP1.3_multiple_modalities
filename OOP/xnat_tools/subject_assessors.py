@@ -110,7 +110,8 @@ def download_subj_asrs(
 def upload_subj_asr(
         subj_asr_fpath, url, proj_id, subj_label, 
         content_label='DRO', session=None, 
-        username=None, password=None):
+        username=None, password=None
+        ):
     """
     Upload a subject assessor to a particular subject in XNAT.
     
@@ -121,9 +122,9 @@ def upload_subj_asr(
     url : str
         Address of XNAT (e.g. 'http://10.1.1.20').
     proj_id : str
-        The project ID of interest.
+        The project ID of the project destination.
     subj_label : str
-        The subject label of interest. 
+        The subject label of the subject destination. 
     content_label : str, optional
         String to assign to content label. Suggested values are:
             - 'SRO_DRO' for Spatial Registration Object type of DICOM 
@@ -133,13 +134,16 @@ def upload_subj_asr(
             - 'DRO' generic
         The default value is 'DRO'.
     session : requests session, optional
-        If provided a new session request will be avoided.
+        If provided a new session request will be avoided. The default value
+        is None.
     username : str, optional
         The username for XNAT log-in.  If not provided (i.e. username = None)
-        the user will be prompted to enter a user name.
+        the user will be prompted to enter a user name. The default value is
+        None.
     password : str, optional
         The password for XNAT log-in.  If not provided (i.e. password = None)
-        the user will be prompted to enter a password.
+        the user will be prompted to enter a password. The default value is 
+        None.
     
     Returns
     -------
@@ -164,13 +168,11 @@ def upload_subj_asr(
     
     # Upload the resource:
     with open(subj_asr_fpath, 'rb') as file:
-        uri = f'{url}/data/projects/{proj_id}/subjects/{subj_label}/' +\
-            f'resources/DICOM/files/{fname_with_ext}'
+        uri = f"{url}/data/projects/{proj_id}/subjects/{subj_label}/" +\
+            f"resources/DICOM/files/{fname_with_ext}?inbody=true" +\
+            "&file_format=DICOM&overwrite=true"
         
-        request = session.put(
-            f'{uri}?inbody=true&file_format=DICOM&overwrite=true',
-            data=file
-            )
+        request = session.put(uri, data=file)
     
     # Raise status error if not None:
     if request.raise_for_status() != None:

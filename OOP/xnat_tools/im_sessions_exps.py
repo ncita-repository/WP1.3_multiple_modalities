@@ -5,6 +5,7 @@ Created on Mon Jul  5 16:48:57 2021
 @author: ctorti
 """
 
+from xnat_tools.sessions import create_session
 
 def get_im_sessions_by_type(url, session):
     """
@@ -395,3 +396,59 @@ def get_num_exps_by_proj(url, session, data_by_proj=None):
             #print(f'     after = {data_by_proj[project]['No. of Experiments']}')
     
     return data_by_proj
+
+def get_exp_id_from_label(
+        url, proj_id, subj_label, exp_label,
+        session=None, username=None, password=None
+        ):
+    """
+    Get an experiment ID from an experiment label (and project ID and subject
+    label).
+    
+    Parameters
+    ----------
+    url : str
+        URL of XNAT (e.g. 'http://10.1.1.20').
+    proj_id : str
+        The project ID of interest.
+    subj_label : str
+        The subject label of interest. 
+    exp_label : str
+        The experiment label of interest.
+    session : requests session, optional
+        If provided a new session request will be avoided. The default value
+        is None.
+    username : str, optional
+        The username for XNAT log-in.  If not provided (i.e. username = None)
+        the user will be prompted to enter a user name. The default value is
+        None.
+    password : str, optional
+        The password for XNAT log-in.  If not provided (i.e. password = None)
+        the user will be prompted to enter a password. The default value is 
+        None.
+    
+    Returns
+    -------
+    exp_id : str
+        The experiment ID of interest.
+    """
+    
+    if session == None:
+        session = create_session(url, username, password)
+    
+    uri = f'{url}/data/projects/{proj_id}/subjects/{subj_label}/experiments/'
+      
+    request = session.get(uri)
+    
+    exps = request.json()['ResultSet']['Result']
+    
+    exp_id = '' # initial value
+    
+    for exp in exps:
+        label = exp['label']
+        exp_id = exp['ID']
+        
+        if label == exp_label:
+            return exp_id
+    
+    return exp_id

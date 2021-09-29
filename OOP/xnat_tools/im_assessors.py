@@ -15,6 +15,8 @@ reload(general_tools.general)
 
 import os
 from pathlib import Path
+from pydicom import dcmread
+from io import BytesIO
 from xnat_tools.sessions import create_session
 from xnat_tools.format_pathsDict import create_pathsDict_for_im_asr
 from io_tools.general import get_user_input_as_int
@@ -1062,3 +1064,80 @@ def download_im_asr_Pre_210810(url, projId, subjLab, expLab, scanId, mod,
              'fpath' : fpath})
     
     return pathsDict, session
+
+def upload_roicol(
+        roicol_fpath, url, proj_id, session_id, coll_label='',
+        session=None, username=None, password=None
+    ):
+    """
+    Upload a ROI Collection to a particular image session in XNAT.
+    
+    Parameters
+    ----------
+    roicol_fpath : str
+        Full filepath of the ROI Collection to be uploaded to XNAT.
+    url : str
+        Address of XNAT (e.g. 'http://10.1.1.20').
+    proj_id : str
+        The project ID of the project destination.
+    session_id : str
+        The session ID label of the image session destination. 
+    coll_label : str, optional
+        String to assign to the collection label. If not provided the file name
+        from roicol_fpath will be used. The default value is ''.
+    session : requests session, optional
+        If provided a new session request will be avoided.
+    username : str, optional
+        The username for XNAT log-in.  If not provided (i.e. username = None)
+        the user will be prompted to enter a user name.
+    password : str, optional
+        The password for XNAT log-in.  If not provided (i.e. password = None)
+        the user will be prompted to enter a password.
+    
+    Returns
+    -------
+    session : requests session
+    """
+    
+    overwrite = 'false'
+    #overwrite = 'true'
+    
+    if session == None:
+        session = create_session(url, username, password)
+    
+    if coll_label == '':
+        fname_with_ext = os.path.split(roicol_fpath)[1]
+
+        fname, ext = os.path.splitext(
+            os.path.split(fname_with_ext)[1]
+            )
+
+        #fname += f'_{coll_label}'
+        #fname_with_ext = fname + ext
+        
+        coll_label = str(fname)
+    
+    #print(f'coll_label = {coll_label}')
+    
+    # Upload the ROI Collection:
+    with open(roicol_fpath, 'rb') as file:
+        ds = dcmread(file)
+        
+        mod = ds.Modality
+        
+        buf = BytesIO(file.read())
+        
+        uri = f"{url}/xapi/roi/projects/{proj_id}/sessions/{session_id}/" +\
+            f"collections/{coll_label}?overwrite={overwrite}&type={mod}"
+        
+        #print(f'\nuri = {uri}\n')
+        
+        request = session.put(uri, data=buf)
+    
+    # Raise status error if not None:
+    if request.raise_for_status() != None:
+        print(request.raise_for_status())
+        
+    print(f'The ROI Collection was uploaded to: \n{uri}\n')
+    
+    return session
