@@ -38,7 +38,7 @@ class ConfigFetcherTester:
     
     def __init__(self, cfgDir, runID):
         
-        print('Fetching parameters from local drive...\n')
+        #print('Fetching parameters from local drive...\n')
         
         # Instanstantiate a ConfigFetcher object:
         cfgObj = ConfigFetcher(cfgDir=cfgDir, runID=runID)

@@ -22,6 +22,10 @@ import dicom_tools.error_check_rts
 reload(dicom_tools.error_check_rts)
 import dicom_tools.error_check_seg
 reload(dicom_tools.error_check_seg)
+import xnat_tools.im_sessions_exps
+reload(xnat_tools.im_sessions_exps)
+import xnat_tools.im_assessors
+reload(xnat_tools.im_assessors)
 import plotting_tools.general
 reload(plotting_tools.general)
 
@@ -37,6 +41,8 @@ from dicom_tools.create_seg import create_seg
 from dicom_tools.create_rts import create_rts
 from dicom_tools.error_check_rts import error_check_rts
 from dicom_tools.error_check_seg import error_check_seg
+from xnat_tools.im_sessions_exps import get_exp_id_from_label
+from xnat_tools.im_assessors import upload_roicol
 from plotting_tools.general import (
     plot_pixarrs_from_list_of_segs_and_dicom_ims, 
     plot_contours_from_list_of_rtss_and_dicom_ims
@@ -251,6 +257,51 @@ class RoicolCreator:
         print(f'New {roicolMod} exported to:\n {fpath}\n')
         
         self.roicolFpath = fpath
+      
+    def upload_roicol(self, params, collLab=''):
+        """
+        Upload ROI Collection to XNAT.
+        
+        Parameters
+        ----------
+        params : DataDownloader Object
+            Contains parameters (cfgDict), file paths (pathsDict), timestamps
+            (timings) and timing messages (timingMsgs).
+        collLab : str, optional
+            Label to apply to the ROI Collection.  If not provided the file 
+            name from self.roicolFpath will be used. The default value is ''.
+        
+        Returns
+        -------
+        None.
+        """
+        
+        roicolFpath = self.roicolFpath
+        
+        xnatSession = params.xnatSession
+        cfgDict = params.cfgDict
+        
+        url = cfgDict['url']
+        projID = cfgDict['projID']
+        subjLab = cfgDict['subjLab']
+        expLab = cfgDict['trgExpLab']
+        
+        expID = get_exp_id_from_label(
+            url=url, 
+            proj_id=projID,
+            subj_label=subjLab,
+            exp_label=expLab,
+            session=params.xnatSession
+        )
+
+        xnatSession = upload_roicol(
+            roicol_fpath=roicolFpath, 
+            url=url,
+            proj_id=projID, 
+            session_id=expID, 
+            coll_label=collLab,
+            session=xnatSession
+        )
         
     def plot_roi_over_dicoms(
             self, srcDataset, trgDataset, newDataset, params

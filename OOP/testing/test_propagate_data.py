@@ -138,7 +138,7 @@ class PropagatorTester:
         newDataset = Propagator(srcDataset, trgDataset, params)
         
         # Propagate/copy the source ROI Collection:
-        newDataset.propagate(srcDataset, trgDataset, params, dro)
+        newDataset.execute(srcDataset, trgDataset, params, dro)
         
         self.newDataset = newDataset
         # Update params:
@@ -153,19 +153,20 @@ class PropagatorTester:
         
         self.newDataset.roicol = newRoicol
         
-        """ Note create_seg will need to be wrapped in another function along
-        with the yet-to-be-refactored create_rts. """
-        # TODO refactor create_rts and wrap it and create_seg into a new func (create_new_roicol)
+        """
+        Export the new ROI Collection - this is now done in a separate
+        class - see dicom_tools.create_roicol.py
+        """
+        #self.export_newRoiCol()
         
-        """ Export the new ROI Collection """
-        self.export_newRoiCol()
         
-        """ Create and export a new DRO (if applicable) """
+        """ Create and export a new DRO (if applicable) - this is done in a 
+        separate class so test outside of this Propagator-specific test...
+        
         if '5' in useCaseToApply:
             print('\n*** Commenting out create & export DRO from',
                   'test_propagate_data.py\n')
             
-            #""" 07/09/21
             # Instantiate a DroCreator Object:
             newDroData = DroCreator(newDataset, params)
             
@@ -176,19 +177,19 @@ class PropagatorTester:
             newDroData.export_dro(params)
             
             self.newDroData = newDroData
-            #"""
-        
+        """
     
         """ Export label images, tranforms and transform parameters """
-        self.export_labims()
-        self.export_tx_and_params()
+        #self.export_labims()
+        #self.export_tx_and_params()
         
         """ Plot results """
-        self.plot_metric_v_iters()
-        self.plot_res_results()
-        self.plot_roi_over_dicom_ims()
+        #self.plot_metric_v_iters()
+        #self.plot_res_results()
+        #self.plot_roi_over_dicom_ims()
     
-    def export_newRoiCol(self):
+    def export_newRoiCol_MOVED(self):
+        """ See dicom_tools.create_roicol.py """
         
         print('* Exporting the new Target ROI Collection..\n')
         
@@ -222,8 +223,10 @@ class PropagatorTester:
         
         self.newDataset.roicolFpath = newRoicolFpath
     
-    def plot_metric_v_iters(self):
+    def plot_metric_v_iters_MOVED(self):
         """ 
+        See io_tools.propagate.py 
+        
         Plot the metric values v iterations from the registeration.
         
         Note that metric values will only exist if registration was performed,
@@ -269,8 +272,10 @@ class PropagatorTester:
                     fname=fname
                     )
     
-    def plot_res_results(self):
+    def plot_res_results_MOVED(self):
         """ 
+        See io_tools.propagate.py
+        
         Plot a single slice from trgIm and resIm and compare to assess result
         of resampling/registering.
         """
@@ -337,8 +342,10 @@ class PropagatorTester:
                         fname=fname
                     )
     
-    def plot_roi_over_dicom_ims(self):
+    def plot_roi_over_dicom_ims_MOVED(self):
         """ 
+        See io_tools.propagate.py
+        
         Plot copied/propagated ROI overlaid on DICOM images 
         """
         
@@ -439,7 +446,8 @@ class PropagatorTester:
             #fname='', p2c=p2c
         )
 
-    def export_labims(self):
+    def export_labims_MOVED(self):
+        """ See io_tools.propagate.py """
         
         print('* Exporting label images..\n')
         
@@ -485,7 +493,8 @@ class PropagatorTester:
                         fileFormat='HDF5ImageIO', exportDir=labimExportDir
                     )
     
-    def export_tx_and_params(self):
+    def export_tx_and_params_MOVED(self):
+        """ See io_tools.propagate.py """
         
         print('* Exporting transforms and transform parameters..\n')
         

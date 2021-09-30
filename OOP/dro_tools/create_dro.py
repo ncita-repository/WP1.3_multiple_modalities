@@ -199,6 +199,9 @@ class DroCreator:
         self.gridRes = None
         self.vectGridData = None
         
+        # Initialise DRO:
+        self.dro = None
+        self.droFpath = ''
         
         # Get the transformation matrix and grid data (if the registration
         # transformation is a bspline):
@@ -1159,18 +1162,21 @@ class DroCreator:
             DICOM Spatial or Deformable Spatial Registration Object.
         """
         
+        useCaseToApply = params.cfgDict['useCaseToApply']
+        useDroForTx = params.cfgDict['useDroForTx']
         regTxName = params.cfgDict['regTxName']
         
-        timingMsg = "Creating the DICOM Registration Object...\n"
-        params.add_timestamp(timingMsg)
+        if '5' in useCaseToApply and not useDroForTx:
+            timingMsg = "Creating the DICOM Registration Object...\n"
+            params.add_timestamp(timingMsg)
+                
+            if regTxName == 'bspline':
+                self.create_def_dro(srcDataset, trgDataset, newDataset, params)
+            else:
+                self.create_spa_dro(srcDataset, trgDataset, newDataset, params)
             
-        if regTxName == 'bspline':
-            self.create_def_dro(srcDataset, trgDataset, newDataset, params)
-        else:
-            self.create_spa_dro(srcDataset, trgDataset, newDataset, params)
-        
-        timingMsg = "Took [*] s to create the DICOM Registration Object.\n"
-        params.add_timestamp(timingMsg)
+            timingMsg = "Took [*] s to create the DICOM Registration Object.\n"
+            params.add_timestamp(timingMsg)
     
     def export_dro(self, params):
         
@@ -1185,7 +1191,7 @@ class DroCreator:
         trgScanID = cfgDict['trgScanID']
         regTxName = cfgDict['regTxName']
         
-        if exportDro:
+        if dro and exportDro:
             # Create directory if it doesn't already exist:
             if not os.path.isdir(exportDir):
                 #os.mkdir(exportDir)
@@ -1224,6 +1230,8 @@ class DroCreator:
         -------
         None.
         """
+        
+        dro = self.dro
         xnatSession = params.xnatSession
         cfgDict = params.cfgDict
         
@@ -1235,7 +1243,7 @@ class DroCreator:
         projID = cfgDict['projID']
         subjLab = cfgDict['subjLab']
         
-        if uploadDro and '5' in useCaseToApply and not useDroForTx:
+        if dro and uploadDro and '5' in useCaseToApply and not useDroForTx:
             if regTxName in ['rigid', 'affine']:
                 droType = 'SRO_DRO'
             else:

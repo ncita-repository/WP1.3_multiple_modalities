@@ -100,6 +100,8 @@ class ConfigFetcher:
 
         fpath = os.path.join(cfgDir, f'{runID}.json')
         
+        print('Fetching parameters from local drive...\n')
+        
         try:
             cfgDict = import_dict_from_json(filepath=fpath)
         

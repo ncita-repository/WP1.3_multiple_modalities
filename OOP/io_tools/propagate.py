@@ -2496,20 +2496,58 @@ class Propagator:
             print('\nNeed to convert from pixel array to contour data...')
         """
     
-    def export_data(self, srcDataset, trgDataset, params):
+    def export_labims(self, srcDataset, trgDataset, params):
+        """ 
+        Export source, target and new label images (for all ROIs/segments).
+        """
         
-        #exportLabim = params.cfgDict['exportLabim']
-        #exportTx = params.cfgDict['exportTx']
+        print('* Exporting label images..\n')
         
-        labimExportDir = params.cfgDict['labimExportDir']
-        txExportDir = params.cfgDict['txExportDir']
+        cfgDict = params.cfgDict
+        
+        labimExportDir = cfgDict['labimExportDir']
+        runID = cfgDict['runID']
+        
+        if not os.path.isdir(labimExportDir):
+            Path(labimExportDir).mkdir(parents=True)
+        
+        dateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+        
+        # List of datasets, names and label images-by-ROI:
+        dsets = [srcDataset, trgDataset, self]
+        
+        dsetNames = ['src', 'trg', 'new']
+        
+        listOfLabimByRoi = [dset.labimByRoi for dset in dsets]
+        
+        for labimByRoi, dsName in zip(listOfLabimByRoi, dsetNames):
+            if labimByRoi:
+                for r in range(len(labimByRoi)):
+                    fname = f'{runID}_{dsName}Labim_{r}_{dateTime}'
+                    
+                    export_im(
+                        labimByRoi[r], filename=f'{fname}{r}',
+                        fileFormat='HDF5ImageIO', exportDir=labimExportDir
+                    )
+    
+    def export_txs_and_params(self, srcDataset, trgDataset, params):
+        
+        print('* Exporting transforms and transform parameters..\n')
+        
+        cfgDict = params.cfgDict
+        
+        txExportDir = cfgDict['txExportDir']
+        runID = cfgDict['runID']
+        useCaseToApply = cfgDict['useCaseToApply']
+        useDroForTx = cfgDict['useDroForTx']
+        regTxName = cfgDict['regTxName']
         
         if not os.path.isdir(txExportDir):
             Path(txExportDir).mkdir(parents=True)
         
-        srcLabimByRoi = srcDataset.labimByRoi
-        trgLabimByRoi = trgDataset.labimByRoi
-        newLabimByRoi = self.labimByRoi
+        #srcLabimByRoi = srcDataset.labimByRoi
+        #trgLabimByRoi = trgDataset.labimByRoi
+        #newLabimByRoi = self.labimByRoi
         
         resTx = self.resTx
         initRegTx = self.initRegTx
@@ -2519,64 +2557,43 @@ class Propagator:
         #initRegTxParams = self.initRegTxParams
         #preRegTxParams = self.preRegTxParams
         
-        useCaseToApply = params.cfgDict['useCaseToApply']
-        useDroForTx = params.cfgDict['useDroForTx']
-        regTxName = params.cfgDict['regTxName']
+        dateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         
-        
-        currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-        
-        """ Export label images """
-        for labimByRoi, ds in zip(
-                [srcLabimByRoi, trgLabimByRoi, newLabimByRoi],
-                ['src', 'trg', 'new']
-                ):
-            if labimByRoi:
-                for r in range(len(labimByRoi)):
-                    fname = f'{currentDateTime}_{ds}Labim_{r}'
-                    
-                    fpath = os.path.join(labimExportDir, fname)
-                    
-                    
-                
-        
-        """ Export transforms """
-        
-        # Beginning of file name will be current datetime:
-        resFname = f'{currentDateTime}_'
-        initRegFname = f'{currentDateTime}_'
-        preRegFname = f'{currentDateTime}_'
-        
+        # Prepare filenames:
         if useCaseToApply in ['3a', '3b', '4a', '4b']:
-            resFname += 'resample_tx'
+            resFname = f'{runID}_resTx'
             
         elif useCaseToApply in ['5a', '5a']:
             if useDroForTx:
-                resFname += f'res_tx_{regTxName}_from_DRO'
+                resFname = f'{runID}_regTx_{regTxName}_from_DRO'
                 
                 if regTxName == 'bspline':
-                    preRegFname += 'pre_reg_tx_from_DRO'
+                    preRegFname = '{runID}_pre_regTx_from_DRO'
                 
             else:
-                resFname += f'reg_tx_{regTxName}'
-                initRegFname += 'reg_init_tx'
+                resFname = f'{runID}_regTx_{regTxName}'
+                initRegFname = 'init_regTx'
         
-        for tx, fname in zip(
-                [resTx, initRegTx, preRegTx], 
-                [resFname, initRegFname, preRegFname]
-                ):
-            if tx:
-                # Write transform in TFM and HDF formats:
+        # List of transforms to export and their names:
+        txs = [resTx, initRegTx, preRegTx]
+        fnames = [resFname, initRegFname, preRegFname]
+        
+        for tx, fname in zip(txs, fnames):
+            if tx: # is not None
+                fname += f'_{dateTime}'
+                
+                # Export tx as a TFM:
                 fpath = os.path.join(txExportDir, fname + '.tfm')
                 sitk.WriteTransform(tx, fpath)
                 
+                # Export tx as HDF:
                 fpath = os.path.join(txExportDir, fname + '.hdf')
                 sitk.WriteTransform(tx, fpath)
                 
-                # Write transform parameters in TXT format:
+                # Export the tx parameters as a TXT:
                 export_list_to_txt(
-                    items=tx.GetParameters(), 
-                    filename=fname+'_params.txt', 
+                    items=tx.GetParameters(),
+                    filename=fname,
                     exportDir=txExportDir
                     )
     
