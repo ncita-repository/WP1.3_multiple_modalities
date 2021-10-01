@@ -42,7 +42,7 @@ from dicom_tools.create_rts import create_rts
 from dicom_tools.error_check_rts import error_check_rts
 from dicom_tools.error_check_seg import error_check_seg
 from xnat_tools.im_sessions_exps import get_exp_id_from_label
-from xnat_tools.im_assessors import upload_roicol
+from xnat_tools.im_assessors import upload_im_asr
 from plotting_tools.general import (
     plot_pixarrs_from_list_of_segs_and_dicom_ims, 
     plot_contours_from_list_of_rtss_and_dicom_ims
@@ -294,7 +294,7 @@ class RoicolCreator:
             session=params.xnatSession
         )
 
-        xnatSession = upload_roicol(
+        xnatSession = upload_im_asr(
             roicol_fpath=roicolFpath, 
             url=url,
             proj_id=projID, 

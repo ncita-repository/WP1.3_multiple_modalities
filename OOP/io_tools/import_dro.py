@@ -429,9 +429,9 @@ class DroImporter:
             vectGridData = None
             
             msg = "* There were no DROs with FrameOfReferenceUIDs matching " +\
-                f"those of the Source ({srcFORuid}) \nand Target " +\
-                f"({trgFORuid}) image series, and whose SOP Class matched " +\
-                f"the desired transform type ({regTxName}).\n"
+                f"those of the Source ({srcFORuid_req}) \nand Target " +\
+                f"({trgFORuid_req}) image series, and whose SOP Class " +\
+                f"matched the desired transform type ({regTxName}).\n"
         print(msg)
         
         self.dro = dro

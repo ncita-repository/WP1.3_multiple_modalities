@@ -752,7 +752,83 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'SEG'
     
-    # TODO Verify the above NCITA_TEST configs and comments
+    
+    """
+    Following are datasets for test runs using the ACRIN collection (brain
+    images) from TCIA, testing how well the algorithm is able to deal with
+    propagating SEG and RTSTRUCT ROI Collections from one imaging perspective 
+    (e.g. sagittal, coronal) to another (e.g. axial):
+    """
+    
+    # Datasets to propagate SEG from sagital view to axial:
+    runID = 'ACRIN_SEG_MR4_SAG_to_MR12_AX'
+    cfg[runID] = {
+        'runID' : runID,
+        # XNAT config settings:
+        'url' : "http://10.1.1.20", 
+        'username': "admin", 
+        'password': password,
+        'projID' : 'ACRIN', 
+        'subjLab' : 'ACRIN-FMISO-Brain-011',
+        'srcExpLab' : 'ACRIN-FMISO-Brain-011_MR_4',
+        'srcScanID' : '11',
+        'srcSlcNum' : None,
+        'srcRoicolName' : 'Tumour SAG',
+        'srcRoiName' : None,
+        'roicolMod' : 'SEG',
+        'trgExpLab' : 'ACRIN-FMISO-Brain-011_MR_12',
+        'trgScanID' : '3',
+        'trgSlcNum' : None,
+        'trgRoicolName' : None,
+        'trgRoiName' : None,
+        # Resampling / Registration / Transformation settings:
+        'srcFidsFpath' : None,
+        'trgFidsFpath' : None, 
+        'forceReg' : False,
+        'regTxName' : 'affine',
+        #'initMethod' : 'moments', # 07/09/21
+        'initMethod' : 'geometry', # 07/09/21
+        'maxIters' : 512,
+        'useDroForTx' : False,
+        'applyPreResBlur' : False,
+        'preResVar' : (1,1,1),
+        'resInterp' : 'BlurThenLinear',
+        'applyPostResBlur' : True,
+        'postResVar' : (1,1,1),
+        'sampleDroDir' : sampleDroDir,
+        'rootExportDir' : rootExportDir,
+        #'cfgExportDir' : cfgExportDir,
+        'rtsExportDir' : rtsExportDir,
+        'segExportDir' : segExportDir,
+        'droExportDir' : droExportDir,
+        'txExportDir' : txExportDir,
+        'imExportDir' : imExportDir,
+        'labimExportDir' : labimExportDir,
+        'logsExportDir' : logsExportDir,
+        'rtsPlotsExportDir' : rtsPlotsExportDir,
+        'segPlotsExportDir' : segPlotsExportDir,
+        'resPlotsExportDir' : resPlotsExportDir,
+        'exportRoicol' : exportRoicol,
+        'exportDro' : exportDro,
+        'exportTx' : exportTx,
+        'exportIm' : exportIm,
+        'exportLabim' : exportLabim,
+        'exportPlots' : exportPlots,
+        'exportLogs' : exportLogs,
+        'whichSrcRoicol' : whichSrcRoicol,
+        'addToRoicolLab' : addToRoicolLab,
+        'uploadDro' : uploadDro,
+        'overwriteDro' : overwriteDro,
+        'p2c' : p2c
+        }
+    
+    # Datasets to propagate RTS from coronal view to axial:
+    runID = 'ACRIN_RTS_MR4_COR_to_MR12_AX'
+    cfg[runID] = dict(cfg['ACRIN_SEG_MR4_SAG_to_MR12_AX'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcScanID'] = '10'
+    cfg[runID]['srcRoicolName'] = 'Tumour COR'
+    cfg[runID]['trgScanID'] = '8'
     
     #export_dict_to_json(dictionary=cfg, filename='main_params.json',
     #                    exportDir=cfgDir)

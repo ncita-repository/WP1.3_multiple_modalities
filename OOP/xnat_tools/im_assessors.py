@@ -1065,12 +1065,12 @@ def download_im_asr_Pre_210810(url, projId, subjLab, expLab, scanId, mod,
     
     return pathsDict, session
 
-def upload_roicol(
+def upload_im_asr(
         roicol_fpath, url, proj_id, session_id, coll_label='',
         session=None, username=None, password=None
     ):
     """
-    Upload a ROI Collection to a particular image session in XNAT.
+    Upload an image assessor (ROI Collection) to XNAT.
     
     Parameters
     ----------
@@ -1099,8 +1099,8 @@ def upload_roicol(
     session : requests session
     """
     
-    overwrite = 'false'
-    #overwrite = 'true'
+    #overwrite = 'false'
+    overwrite = 'true'
     
     if session == None:
         session = create_session(url, username, password)
@@ -1130,7 +1130,9 @@ def upload_roicol(
         uri = f"{url}/xapi/roi/projects/{proj_id}/sessions/{session_id}/" +\
             f"collections/{coll_label}?overwrite={overwrite}&type={mod}"
         
-        #print(f'\nuri = {uri}\n')
+        print(f'\ntype(file) = {type(file)}')
+        print(f'type(buf) = {type(buf)}')
+        print(f'\nuri = {uri}\n')
         
         request = session.put(uri, data=buf)
     
