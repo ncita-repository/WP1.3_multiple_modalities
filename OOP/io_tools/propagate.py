@@ -2458,6 +2458,8 @@ class Propagator:
                           'of using the DRO from XNAT.\n')
                 
                 self.register_image(srcDataset, trgDataset, params)
+                #self.plot_res_results(srcDataset, trgDataset, params)
+                #self.plot_roi_over_dicom_im(srcDataset, trgDataset, params)
             else:
                 # TODO register_image creates self.dcmIm and self.dcmPixarr,
                 # but those attributes aren't created in this case...

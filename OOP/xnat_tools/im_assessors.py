@@ -109,12 +109,15 @@ def download_im_asr(
     
     """ 
     The 'collectionType' key in 'data_fields' is either 'AIM' or 'SEG'. The 
-    required collection type, collType_req, is 'AIM' for roicolMod = 'RTSTRUCT'
-    and 'SEG' for roicolMod = 'SEG'.
+    required collection type, collType_req, is 'SEG' for roicolMod = 'SEG',
+    and 'AIM' or 'RTSTRUCT' for roicolMod = 'RTSTRUCT'.  It seems that
+    'collectionType' can either be 'AIM' or 'RTSTRUCT' and appears to be 
+    random whether it's one or the other.
     """
     if roicolMod == 'RTSTRUCT':
-        #collType_req = 'AIM' # 10/09/21 I can't remember why I made it AIM
-        collType_req = 'RTSTRUCT' # 10/09/21
+        #collType_req = 'AIM'
+        #collType_req = 'RTSTRUCT' # 10/09/21
+        collType_req = 'RTSTRUCT or AIM' # 01/10/21
     else:
         collType_req = 'SEG'
     
@@ -276,7 +279,7 @@ def download_im_asr(
                 #    print(f"   * Matched collType = {collType}")
                 #    print(f"   * Matched roicolName = {roicolName}\n")
             
-            if (seriesUid == seriesUID_req and collType == collType_req and 
+            if (seriesUid == seriesUID_req and collType in collType_req and 
                     roicolName == roicolName_req):
                 
                 asrID = experiment['items'][0]['children'][asrInd]['items'][i]\
@@ -1097,6 +1100,18 @@ def upload_im_asr(
     Returns
     -------
     session : requests session
+    
+    Note
+    ----
+    If the file is read using pydicom.dcmread() within the same "with open() 
+    as file:" command, followed by the conversion to bytes (buf), the 
+    conversion fails since the file is not closed and reading seems to alter 
+    "file".  If "file" is converted to bytes first (buf), reading the DICOM
+    fails since it seems that "file" is apparently changed. I tried making a
+    copy.deepcopy of "file" but that didn't work.  I wasn't able to see how to
+    read the DICOM and close following read, so the file will be opened twice:
+    once to get the modality from the pydicom object, and a second time to 
+    convert to bytes.
     """
     
     #overwrite = 'false'
@@ -1119,20 +1134,22 @@ def upload_im_asr(
     
     #print(f'coll_label = {coll_label}')
     
-    # Upload the ROI Collection:
+    # Get the modality from the pydicom object:
     with open(roicol_fpath, 'rb') as file:
         ds = dcmread(file)
-        
         mod = ds.Modality
-        
+    
+    # Upload the ROI Collection:
+    with open(roicol_fpath, 'rb') as file:
         buf = BytesIO(file.read())
         
         uri = f"{url}/xapi/roi/projects/{proj_id}/sessions/{session_id}/" +\
             f"collections/{coll_label}?overwrite={overwrite}&type={mod}"
         
-        print(f'\ntype(file) = {type(file)}')
-        print(f'type(buf) = {type(buf)}')
-        print(f'\nuri = {uri}\n')
+        #print(f'\nmod = {mod}')
+        #print(f'type(file) = {type(file)}')
+        #print(f'type(buf) = {type(buf)}')
+        #print(f'\nuri = {uri}\n')
         
         request = session.put(uri, data=buf)
     

@@ -189,7 +189,7 @@ def create_config_files(cfgDir, password=""):
     cfg = {}
     
     # Datasets to propagate a SEG using affine registration of soft tissue:
-    runID = 'Soft_tissue_seg_aff'
+    runID = 'Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'
     cfg[runID] = {
         'runID' : runID,
         # XNAT config settings:
@@ -253,22 +253,54 @@ def create_config_files(cfgDir, password=""):
     
     # Datasets to propagate a RTS using affine registration of soft tissue 
     # (start with copy of 'Soft_tissue_seg_aff' since nearly identical):
-    runID = 'Soft_tissue_rts_aff'
-    cfg[runID] = dict(cfg['Soft_tissue_seg_aff'])
+    runID = 'Soft_tissue_RTS_CT_to_MR_aff_using_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'])
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'RTSTRUCT'
     #cfg[runID]['srcRoicolName'] = 'CT_Ser2_tumour'
     
     # Datasets to propagate SEG using bspine registration of soft tissue:
-    runID = 'Soft_tissue_seg_def'
-    cfg[runID] = dict(cfg['Soft_tissue_seg_aff'])
+    runID = 'Soft_tissue_SEG_CT_to_MR_def_using_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'])
     cfg[runID]['runID'] = runID
     cfg[runID]['regTxName'] = 'bspline'
     cfg[runID]['maxIters'] = 100
     
     # Datasets to propagate RTS using bspine registration of soft tissue:
-    runID = 'Soft_tissue_rts_def'
-    cfg[runID] = dict(cfg['Soft_tissue_seg_aff'])
+    runID = 'Soft_tissue_RTS_CT_to_MR_def_using_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_def_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['roicolMod'] = 'RTSTRUCT'
+    
+    """ 
+    As above but without using fiducials.
+    
+    Note 01/10/21:
+        These runs fail to execute to completion since the registrations go
+        uttery awry, resulting in empty resampled label images.
+    """
+    
+    runID = 'Soft_tissue_SEG_CT_to_MR_aff_no_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcFidsFpath'] = ''
+    cfg[runID]['trgFidsFpath'] = ''
+    cfg[runID]['initMethod'] = 'geometry'
+    #cfg[runID]['initMethod'] = 'moments'
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_aff_no_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['roicolMod'] = 'RTSTRUCT'
+    
+    runID = 'Soft_tissue_SEG_CT_to_MR_def_no_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['regTxName'] = 'bspline'
+    cfg[runID]['maxIters'] = 100
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_def_no_fiducials'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_def_no_fiducials'])
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'RTSTRUCT'
     
@@ -828,6 +860,7 @@ def create_config_files(cfgDir, password=""):
     cfg[runID]['runID'] = runID
     cfg[runID]['srcScanID'] = '10'
     cfg[runID]['srcRoicolName'] = 'Tumour COR'
+    cfg[runID]['roicolMod'] = 'RTSTRUCT'
     cfg[runID]['trgScanID'] = '8'
     
     #export_dict_to_json(dictionary=cfg, filename='main_params.json',

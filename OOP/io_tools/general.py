@@ -24,8 +24,9 @@ def delete_dir(dirpath):
         print(error)
         print(f'{dirpath} cannot be deleted\n')
 
-def get_user_input_as_int(message="Enter an integer", minVal=None, 
-                          maxVal=None):
+def get_user_input_as_int(
+        message="Enter an integer", minVal=-10**6, maxVal=10**6
+        ):
     """
     Get user to input an integer.
     
@@ -37,9 +38,9 @@ def get_user_input_as_int(message="Enter an integer", minVal=None,
     message : str, optional
         Message to present to user. The default is "Enter an integer: ".
     minVal : int, optional
-        Minimum allowable value. The default is None.
+        Minimum allowable value. The default is -10**6.
     maxVal : int, optional
-        Maximum allowable value. The default is None.
+        Maximum allowable value. The default is 10**6.
         
     Returns
     -------
@@ -71,7 +72,7 @@ def get_user_input_as_int(message="Enter an integer", minVal=None,
             
             continue
         else:
-            # userInput was string of int...
+            # userInput was int string...
             if minVal <= choice <= maxVal:
                 # ...and is within the allowed range so exit the loop
                 break

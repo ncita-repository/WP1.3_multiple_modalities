@@ -845,7 +845,7 @@ def register_im(
         if p2c:
             print('Running bspline_reg()...\n')
             
-        initialTx, alignedIm, regIm, finalTx, metricValues,\
+        initialTx, alignedIm, finalTx, regIm, metricValues,\
             multiresIters = bspline_reg_im(
                 fixIm=fixIm, movIm=movIm,
                 fixFidsFpath=fixFidsFpath, 
