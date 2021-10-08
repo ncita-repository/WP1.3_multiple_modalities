@@ -40,7 +40,7 @@ from dicom_tools.create_roicol import RoicolCreator
 from dro_tools.create_dro import DroCreator
 
 
-code_root = r'C:\Code\WP1.3_multiple_modalities\OOP\io_tools'
+code_root = r'C:\Code\WP1.3_multiple_modalities\OOP'
 
 # Add code_root to the system path so packages can be run from it:
 sys.path.append(code_root)
@@ -72,6 +72,9 @@ def main(
     -------
     None.
     """
+    
+    cfgDir = r'' + cfgDir # convert to an r path
+    print(f'\ncfgDir = {cfgDir}\n')
     
     # Store time stamps for various steps:
     times = [time.time()]
@@ -142,17 +145,41 @@ def main(
     newDroObj.upload_dro(params)
 
 if __name__ == '__main__':
+    """
+    Run app.py as a script.
+    
+    Example usage in a console:
+    
+    python app.py C:\Code\WP1.3_multiple_modalities\OOP\configs NCITA_TEST_RR2
+    """
+    
     parser = argparse.ArgumentParser(description='Arguments for main()')
+    
     parser.add_argument(
-        "--cfgDir", help="The directory containing config files"
+        "cfgDir", 
+        help="The directory containing config files"
         )
-    parser.add_argument("--runID", help="The run ID to execute")
+    
     parser.add_argument(
-        "--printSummary", action="store_true", help="Print summary if True"
+        "runID", 
+        help="The run ID to execute"
         )
+    
     parser.add_argument(
-        "--plotResults", action="store_true", help="Plot results if True"
+        "--printSummary", 
+        action="store_true",
+        #type=bool,
+        help="Print summary if True"
         )
+    
+    parser.add_argument(
+        "--plotResults", 
+        action="store_true",
+        #type=bool,
+        help="Plot results if True"
+        )
+    
     args = parser.parse_args()
     
-    main(args.name)
+    # Run main():
+    main(args.cfgDir, args.runID, args.printSummary, args.plotResults)
