@@ -387,6 +387,10 @@ class RoicolCreator:
         fname = fname.replace('(', '').replace(')', '').replace('\n', '')
         fname += f'_{currentDateTime}'
         
+        #fontSize = 11
+        #fontSize = 10
+        fontSize = 8
+        
         if roicolMod == 'RTSTRUCT':
             plot_contours_from_list_of_rtss_and_dicom_ims(
                 listOfRoicol, listOfImages, listOfDicomDirs, listOfPlotTitles, 
@@ -394,7 +398,7 @@ class RoicolCreator:
                 runID=runID, useCaseToApply=useCaseToApply,
                 forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
                 initMethod=initMethod, resInterp=resInterp, 
-                fname=fname, fontSize=12, p2c=p2c
+                fname=fname, fontSize=fontSize, p2c=p2c
                 #fname='', p2c=p2c
             )
         else:
@@ -404,6 +408,6 @@ class RoicolCreator:
                 runID=runID, useCaseToApply=useCaseToApply,
                 forceReg=forceReg, useDroForTx=useDroForTx, regTxName=regTxName,
                 initMethod=initMethod, resInterp=resInterp, 
-                fname=fname, fontSize=12, p2c=p2c
+                fname=fname, fontSize=fontSize, p2c=p2c
                 #fname='', p2c=p2c
             )

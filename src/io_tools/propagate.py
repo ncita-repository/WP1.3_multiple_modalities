@@ -45,9 +45,9 @@ from general_tools.general import (
     get_unique_items, are_items_equal_to_within_eps, generate_reg_fname
     #does_instance_variable_exist
     )
-from conversion_tools.pixarrs_ims import pixarr_to_im
+#from conversion_tools.pixarrs_ims import pixarr_to_im
 from conversion_tools.inds_pts_pixarrs import pixarrBySeg_to_ptsByCntByRoi
-from image_tools.attrs_info import get_im_info
+#from image_tools.attrs_info import get_im_info
 from image_tools.resampling import resample_im, resample_labimBySeg
 from image_tools.registering import register_im
 from dro_tools.create_tx_from_dro import (
@@ -64,7 +64,7 @@ from general_tools.console_printing import (
     print_indsByRoi, print_ptsByCntByRoi, print_pixarrBySeg, print_labimBySeg
     )
 from plotting_tools.general import (
-    plot_pixarrBySeg, plot_pixarrs_from_list_of_segs_and_dicom_ims
+    plot_pixarrBySeg#, plot_pixarrs_from_list_of_segs_and_dicom_ims
     )
 from plotting_tools.res_reg_results import(
     plot_metricValues_v_iters, compare_res_results 
@@ -2264,7 +2264,8 @@ class Propagator:
         
         #resExportDir = cfgDict['resPlotsExportDir']
         
-        fontSize = 11
+        #fontSize = 11
+        fontSize = 10
         
         # Prepare plot title for overlays over trgDataset.dcmIm and over 
         # self.dcmIm (= the new dataset):

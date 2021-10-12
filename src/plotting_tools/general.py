@@ -83,7 +83,8 @@ def plot_two_ims(
     useCentre = False
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
     
@@ -202,7 +203,8 @@ def plot_two_ims_and_diff(
     useCentre = False
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
     
@@ -450,20 +452,21 @@ def plot_pixarrs_from_list_of_segs_and_dicomPixarrs(
     segAlpha = 0.2
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
         
     n = 1 # initialised sub-plot number
     
     if Ncols < 3:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(7*Ncols, 11*Nrows), dpi=dpi
-            )
+        #figSize = (7*Ncols, 11*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     else:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), dpi=dpi
-            )
+        #figSize = (4*Ncols, 6.5*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice number (i.e. each row in the plot):
     for rowNum in range(maxNumSlices):
@@ -822,20 +825,21 @@ def plot_list_of_labimByRoi_overlaid_on_dicom_ims_v1(
     #segAlpha = 0.2
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
         
     n = 1 # initialised sub-plot number
     
     if Ncols < 3:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(7*Ncols, 9*Nrows), dpi=dpi
-            )
+        #figSize = (7*Ncols, 9*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     else:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), dpi=dpi
-            )
+        #figSize = (4*Ncols, 6.5*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice/frame number (i.e. each row in the plot):
     for rowNum in range(maxNumSlices):
@@ -1050,20 +1054,21 @@ def plot_list_of_pixarrBySeg_overlaid_on_dicom_ims(
     #segAlpha = 0.2
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
         
     n = 1 # initialised sub-plot number
     
     if Ncols < 3:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(7*Ncols, 9*Nrows), dpi=dpi
-            )
+        #figSize = (7*Ncols, 11*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     else:
-        fig, ax = plt.subplots(
-            Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), dpi=dpi
-            )
+        #figSize = (4*Ncols, 6.5*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice/frame number (i.e. each row in the plot):
     for rowNum in range(maxNumSlices):
@@ -1393,18 +1398,21 @@ def plot_contours_from_list_of_rtss_and_dicom_ims(
     dcmAlpha = 0.7
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
     
     n = 1 # initialised sub-plot number
     
     if Ncols < 3:
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(7*Ncols, 11*Nrows), 
-                               dpi=dpi)
+        #figSize = (7*Ncols, 11*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     else:
-        fig, ax = plt.subplots(Nrows, Ncols, figsize=(4*Ncols, 7.5*Nrows), 
-                               dpi=dpi)
+        #figSize = (4*Ncols, 6.5*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
+    
+    fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice/frame number (i.e. each row in the plot):
     for rowNum in range(maxNumSlices):

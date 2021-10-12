@@ -127,7 +127,8 @@ def plot_pts_and_pixarr(
     segAlpha = 0.2
     
     if exportPlot:
-        dpi = 120
+        #dpi = 120
+        dpi = 100
     else:
         dpi = 80
         
@@ -135,10 +136,10 @@ def plot_pts_and_pixarr(
     
     if Ncols < 3:
         #figSize = (7*Ncols, 9*Nrows)
-        figSize = (4*Ncols, 7*Nrows)
+        figSize = (4*Ncols, 6.5*Nrows)
     else:
         #figSize = (4*Ncols, 8*Nrows)
-        figSize = (4*Ncols, 7*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     fig, ax = plt.subplots(Nrows, Ncols, figsize=figSize, dpi=dpi)
     
     # Loop through each slice/frame number (i.e. each row in the plot):
