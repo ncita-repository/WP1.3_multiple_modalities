@@ -33,5 +33,9 @@ Python_code/
 *.xlsx
 
 
-# Re-include the .dcm files in sample_DROs:
+# Re-include .dcm files in sample_DROs:
 !sample_DROs/*.dcm
+
+
+# Re-include .txt files in src:
+!src/*.txt

@@ -1,0 +1,15 @@
+The following packages are standard built-in Python packages and should not require installing:
+
+sys
+os
+time
+datetime
+itertools
+copy
+importlib
+winsound
+zipfile
+tarfile
+shutil
+getpass
+io
