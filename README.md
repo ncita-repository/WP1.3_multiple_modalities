@@ -10,7 +10,7 @@ The aim of this work package of the NCITA Repository Unit will be to develop app
 
 The NCITA Repository Unit site as a whole is at an early stage of the life cycle and does not currently have a formal structure of documentation releases. Please bear with us: things will become more organised as the NCITA project gets into gear! Note that the ICR also releases code related to the XNAT-OHIF image viewer at https://bitbucket.org/icrimaginginformatics/. 
 
-#### Basic instructions on running the code
+### Basic instructions on running the code
 
 A *source* ROI Collection (RTSTRUCT or SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
 
@@ -18,7 +18,7 @@ A *source* ROI Collection (RTSTRUCT or SEG) is copied (or propagated) to a *targ
 
 2. Run the code on each run, providing a `runID` and `cfgDir`.
 
-##### 1. Creating a configuration file
+#### 1. Creating a configuration file
 
 The package [*config.py*](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/config.py) is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT used to develop the code. You can use the pre-populated code as a template for your own XNAT.
 
@@ -30,7 +30,7 @@ There are several variables to be defined, including:
 - Whether or not to export various data (e.g. `exportRoicol`)
 - Whether or not to print verbose results to the console (`p2c`)
 
-A dictionary `cfg` is initialised containing the above variables across the board, but there are additional variables that are set within the dictionary elements themselves.  The key-value pairs that are defined within the dictionary include:
+A dictionary `cfg` is initialised containing the above variables across the board, but there are additional variables that are set within the dictionary elements themselves.  The key-dictionary pairs that are defined within the dictionary include:
 
 - `url`           : XNAT address
 - `username`      : XNAT username
@@ -67,28 +67,34 @@ Once the dictionaries have been defined, the configuration files can be created 
 
 1. In a command shell, enter (change path to *src* directory accordingly):
 
+	```
 	cd C:\Code\WP1.3_multiple_modalities\src
 	python config.py configs
+	```
 
 2. Import the module and execute the function:
-
+	
+	```
 	from config import create_config_files
 	config_files("C:\Code\WP1.3_multiple_modalities\src\config")
+	```
 
-A list of .json files should be generated in the config directory.
+A list of .json files should be generated in the config directory - one file for each key-dictionary pair within `cfg`.
 
-##### 2. Performing a run
+#### 2. Performing a run
 
 The main script for performing a run is contained in the module *app.py* in the *src* directory.  The run can be executed either as a function within a python environment, i.e.
 
+	```
 	from app import main
 	main("C:\Code\WP1.3_multiple_modalities\src\configs", "NCITA_TEST_RR2")
+	```
 
 or within a command shell as a script:
 
-	python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2
+	`python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2`
 
-#### Relationship-preserving v Non-relationship-preserving, and copies v propagations
+### Relationship-preserving v Non-relationship-preserving, and copies v propagations
 
 A *non-relationship preserving* copy is analogous to a copy-and-paste function - e.g. "Copy the *source* contour/segmentation corresponding to slice `srcSlcNum` in ROI/segment `srcRoiName` in ROI Collection `srcRoicol` to a contour/segmentation that will overlay onto *target* slice `trgSlcNum`".  This "direct" copy does not maintain spatial relationships between the *source* contour/segmentation and the *target* contour/segmentation's location in space.  One might want to perform a "direct" copy to use an existing contour/segmentation as a "starting point" for a new one that can sculpted to match the anatomical features on the *target* scan.  By contrast, a *relationship-preserving* does respect spatial relationships and hence the contour(s)/segmentation(s) end up where they "should".
 
@@ -98,7 +104,7 @@ A *non-relationship preserving* copy is analogous to a copy-and-paste function -
 
 When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
 
-The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of *SimpleITK* [1-3].
+The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [*SimpleITK*](https://simpleitk.org/) [1-3].
 
 [1]: R. Beare, B. C. Lowekamp, Z. Yaniv, “Image Segmentation, Registration and Characterization in R with SimpleITK”, J Stat Softw, 86(8), https://doi.org/10.18637/jss.v086.i08, 2018.
 
