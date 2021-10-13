@@ -75,7 +75,7 @@ def create_config_files(cfgDir, password=""):
     #cwd = os.getcwd()
     
     # Default download directory for XNAT data:
-    ddd = os.path.join(Path.home(), "Downloads", "xnat_downloads")
+    rootDownloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
     
     # Current date:
     currentDate = time.strftime("%Y-%m-%d", time.gmtime())
@@ -83,9 +83,9 @@ def create_config_files(cfgDir, password=""):
     """ 
     Select one of the following suggested download directories for XNAT data:
     """
-    #rootExportDir = ddd
-    rootExportDir = os.path.join(ddd, currentDate)
-    #rootExportDir = os.path.join(ddd, '2021-07-12') # change accordingly
+    #rootExportDir = rootDownloadDir
+    rootExportDir = os.path.join(rootDownloadDir, currentDate)
+    #rootExportDir = os.path.join(rootDownloadDir, '2021-07-12') # change accordingly
     
     """
     Define the export directories for the (new) target ROI Collections, 
@@ -1072,9 +1072,11 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    python config.py C:\Code\WP1.3_multiple_modalities\src\configs [password]
+    cd C:\Code\WP1.3_multiple_modalities\src
+    python config.py configs --password=xnat_password
     
-    where password is optional.
+    The password argument is optional.  If not provided the user will be 
+    prompted during the running of the main ROI Collection copying module.
     """
     
     parser = argparse.ArgumentParser(
