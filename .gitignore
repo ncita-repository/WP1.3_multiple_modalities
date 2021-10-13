@@ -1,13 +1,13 @@
 # Ignore any files in any directory called:
 .ipynb_checkpoints/
 __pycache__/
-archive
-data
-notebooks
-Python_code
-sample_DROs
-src/configs/old
-src/outputs
+archive/
+data/
+notebooks/
+Python_code/
+sample_DROs/
+src/configs/old/
+src/outputs/
 *.log
 *.txt
 *.[0-9].txt
