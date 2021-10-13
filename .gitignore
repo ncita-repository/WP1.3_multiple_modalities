@@ -1,13 +1,13 @@
 # Ignore the following directories:
 .ipynb_checkpoints/
 **/__pycache__/
-archive/
+#archive/
 data/
 docs/
 notebooks/
 outputs/
 Python_code/
-sample_DROs/
+#sample_DROs/
 
 
 # Ignore the following files:
@@ -31,3 +31,7 @@ sample_DROs/
 *.png
 *.jpg
 *.xlsx
+
+
+# Re-include the .dcm files in sample_DROs:
+!sample_DROs/*.dcm
