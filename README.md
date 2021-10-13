@@ -67,17 +67,13 @@ Once the dictionaries have been defined, the configuration files can be created 
 
 1. In a command shell, enter (change path to *src* directory accordingly):
 
-	```
 	cd C:\Code\WP1.3_multiple_modalities\src
 	python config.py configs
-	```
 
 2. Import the module and execute the function:
 	
-	```
 	from config import create_config_files
 	config_files("C:\Code\WP1.3_multiple_modalities\src\config")
-	```
 
 A list of .json files should be generated in the config directory - one file for each key-dictionary pair within `cfg`.
 
@@ -85,10 +81,8 @@ A list of .json files should be generated in the config directory - one file for
 
 The main script for performing a run is contained in the module *app.py* in the *src* directory.  The run can be executed either as a function within a python environment, i.e.
 
-	```
 	from app import main
 	main("C:\Code\WP1.3_multiple_modalities\src\configs", "NCITA_TEST_RR2")
-	```
 
 or within a command shell as a script:
 
