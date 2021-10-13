@@ -3,10 +3,10 @@
 __pycache__/
 archive
 data
+notebooks
 Python_code
 sample_DROs
 src/configs/old
-src/notebooks
 src/outputs
 *.log
 *.txt
