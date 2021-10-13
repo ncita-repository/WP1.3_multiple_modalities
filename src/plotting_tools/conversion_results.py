@@ -136,7 +136,8 @@ def plot_pts_and_pixarr(
     
     if Ncols < 3:
         #figSize = (7*Ncols, 9*Nrows)
-        figSize = (4*Ncols, 6.5*Nrows)
+        #figSize = (4*Ncols, 6.5*Nrows)
+        figSize = (3*Ncols, 5*Nrows)
     else:
         #figSize = (4*Ncols, 8*Nrows)
         figSize = (3*Ncols, 5*Nrows)

@@ -113,8 +113,8 @@ def create_config_files(cfgDir, password=""):
     """
     Define the directory path of the sample DROs and fiducials:
     """
-    sampleDroDir = r'C:\Code\WP1.3_multiple_modalities\sample_DROs'
-    fidsDir = r'C:\Code\WP1.3_multiple_modalities\OOP\fiducials'
+    sampleDroDir = r'C:\Code\WP1.3_multiple_modalities\src\sample_DROs'
+    fidsDir = r'C:\Code\WP1.3_multiple_modalities\src\fiducials'
     
     """
     Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
@@ -183,8 +183,8 @@ def create_config_files(cfgDir, password=""):
     """
     Chose whether or not to print results to console (e.g. for debugging):
     """
-    #p2c = False
-    p2c = True
+    p2c = False
+    #p2c = True
     
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}
@@ -1075,8 +1075,15 @@ if __name__ == '__main__':
     cd C:\Code\WP1.3_multiple_modalities\src
     python config.py configs --password=xnat_password
     
-    The password argument is optional.  If not provided the user will be 
-    prompted during the running of the main ROI Collection copying module.
+    Note
+    ----
+    The password argument is optional and generally should not be used for
+    security reasons. This optional argument was included for development and
+    testing within a virtual XNAT, and if provided allows for the possibility
+    of looping through multiple runIDs without needing to re-enter the password.
+    This can be circumvented by using a JSession:
+    https://wiki.xnat.org/documentation/how-to-use-xnat/generating-and-reusing-a-jsession-id-for-scripted-interactions
+    This has not yet been implemented. 
     """
     
     parser = argparse.ArgumentParser(
