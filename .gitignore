@@ -3,6 +3,7 @@
 **/__pycache__/
 archive/
 data/
+docs/
 notebooks/
 outputs/
 Python_code/
