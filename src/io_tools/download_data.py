@@ -13,6 +13,8 @@ import xnat_tools.im_assessors
 reload(xnat_tools.im_assessors)
 import xnat_tools.format_pathsDict
 reload(xnat_tools.format_pathsDict)
+import xnat_tools.alias_tokens
+reload(xnat_tools.alias_tokens)
 #import io_tools.inputs_checker
 #reload(io_tools.inputs_checker)
 #import xnat_tools.dros
@@ -21,24 +23,31 @@ reload(xnat_tools.format_pathsDict)
 #reload(io_tools.fetch_config)
 
 import time
+#import requests
 #from io_tools.inputs_checker import which_use_case
 from xnat_tools.sessions import create_session
 from xnat_tools.scans import download_scan
 from xnat_tools.im_assessors import download_im_asr
 from xnat_tools.format_pathsDict import get_scan_asr_fname_and_id
+from xnat_tools.alias_tokens import (
+    import_alias_token, is_alias_token_valid, generate_alias_token,
+    export_alias_token
+    )
 #from xnat_tools.dros import search_dro
 
 
 class DataDownloader:
+    # TODO! Update docstrings
     """
     This class downloads data from XNAT and creates stores the file paths in a 
     dictionary.
     
     Parameters
     ----------
-    cfgDict : dict
-        A dictionary containing configuration settings (parameters) for the run
-        to be performed.
+    cfgObj : ConfigFetcher Object
+        An object containing various parameters for a specified runID (stored 
+        in the dictionary self.cfgDict), and an XNAT alias token (stored in the 
+        dictionary self.aliasToken).
     xnatSession : Requests Object, optional
         A Requests Object for an existing XNAT session. The default is None.
     
@@ -55,20 +64,79 @@ class DataDownloader:
     variable name 'params'.
     """
     
-    def __init__(self, cfgDict, xnatSession=None):
+    #def __init__(self, cfgObj, xnatSession=None):
+    def __init__(self, cfgObj):
         
-        self.cfgDict = cfgDict
+        self.cfgDir = cfgObj.cfgDir
+        self.cfgDict = cfgObj.cfgDict
+        #self.aliasToken = cfgObj.aliasToken
+        self.aliasToken = {} # initial value
         
+        """
         if xnatSession == None:
             # Establish XNAT connection:
             xnatSession = create_session(xnatCfg=cfgDict)
             
         self.xnatSession = xnatSession
+        """
+        
+        self.establish_xnat_connection()
         
         # Initialise list of timestamps and timing messages to be stored:
         self.timings = [time.time()]
         self.timingMsgs = []
-    
+        
+    def establish_xnat_connection(self):
+        """
+        Establish XNAT connection.
+        
+        Parameters
+        ----------
+        self.cfgDir : str
+            The path to the directory containing config files.
+        self.cfgDict : dict
+            Dictionary containing the parameters for the desired run.
+        self.aliasToken : dict
+            Dictionary containing an XNAT alias token. The dictionary may be
+            empty, and if not empty, the token may be valid or invalid.
+        
+        Returns
+        -------
+        self.xnatSession : requests.models.Response
+            A requests session containing the url (xnatSession.url) and 
+            authentication details (xnatSession.auth = ('username', 'password')).
+        """
+        
+        cfgDir = self.cfgDir
+        url = self.cfgDict['url']
+        username = self.cfgDict['username']
+        aliasToken = self.aliasToken
+        
+        if aliasToken == {}:
+            print(f'Searching for an XNAT alias token in {cfgDir}\n')
+            
+            # Import an XNAT alias token:
+            aliasToken = import_alias_token(cfgDir)
+        
+        # Is the alias token valid?
+        if is_alias_token_valid(aliasToken, url):
+            print('Using XNAT alias token to establish XNAT connection.\n')
+            
+            xnatSession = create_session(url=url, aliasToken=aliasToken)
+        else:
+            print('Establishing XNAT connection without XNAT alias token.\n')
+            
+            xnatSession = create_session(url=url, username=username)
+        
+        # Generate an XNAT alias token to avoid making a new authenticated
+        # user session:
+        aliasToken = generate_alias_token(xnatSession)
+        
+        export_alias_token(aliasToken, cfgDir)
+        
+        self.xnatSession = xnatSession
+        self.aliasToken = aliasToken
+        
     def add_dirs_and_fpaths(self):
         """
         Add directories and filepaths to params.srcXnatParams and 

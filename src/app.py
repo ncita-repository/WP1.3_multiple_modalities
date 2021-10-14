@@ -81,13 +81,15 @@ def main(
     # Store time stamps for various steps:
     times = [time.time()]
     
-    # Instanstantiate a ConfigFetcher object and get the config settings:
-    cfgObj = ConfigFetcher(cfgDir=cfgDir, runID=runID)
+    # Instanstantiate a ConfigFetcher object, get the config settings, and 
+    # get the alias token (which may or may not exist):
+    cfgObj = ConfigFetcher(cfgDir, runID)
     cfgObj.get_config()
+    #cfgObj.get_alias_token()
     
     # Instantiate a DataDownloader object, download the data and create
     # pathsDict:
-    params = DataDownloader(cfgDict=cfgObj.cfgDict)
+    params = DataDownloader(cfgObj)
     params.download_and_get_pathsDict()
     
     # Instantiate a DataImporter object for source and import the data:

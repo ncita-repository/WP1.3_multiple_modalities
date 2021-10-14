@@ -220,11 +220,13 @@ def export_dict_to_json(dictionary, filename=None, exportDir='cwd'):
         If provided the directory to which the file will be exported to. If not
         provided the file will be exported to the current working directory.
         If the directory doesn't exist it will be created.
+    
+    Returns
+    -------
+    None.
     """
     
     if filename == None:
-        import time
-        
         currentDateTime = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
             
         filename = currentDateTime + '_Dict2Json.json'
