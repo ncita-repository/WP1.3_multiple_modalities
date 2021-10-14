@@ -41,5 +41,9 @@ Python_code/
 !src/fiducials/*.txt
 
 
-# Re-include .txt files in src:
+# Re-include .json files in src/configs (to track config files):
+!src/configs/*.json
+
+
+# Re-include .txt files in src (to track requirements.txt):
 !src/*.txt

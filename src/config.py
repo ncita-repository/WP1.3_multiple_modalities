@@ -14,7 +14,7 @@ from io_tools.exports import export_dict_to_json
 #from io_tools.imports import import_dict_from_json
 
 
-def create_config_files(cfgDir, password=""):
+def create_config_files(cfgDir):
     """
     Generate a JSON files for all run configurations.
     
@@ -22,8 +22,6 @@ def create_config_files(cfgDir, password=""):
     ----------
     cfgDir : str
         The path to the directory to export the JSON files.
-    password : str, optional
-        Password for XNAT connection. Default value is "".
     
     Returns
     -------
@@ -195,8 +193,7 @@ def create_config_files(cfgDir, password=""):
         'runID' : runID,
         # XNAT config settings:
         'url' : "http://10.1.1.20", 
-        'username': "admin", 
-        'password': password,
+        'username': "admin",
         'projID' : 'Soft-tissue-Sarcoma', 
         'subjLab' : 'STS_004',
         'srcExpLab' : 'STS_004_PETCT',
@@ -322,7 +319,6 @@ def create_config_files(cfgDir, password=""):
         # XNAT config settings:
         'url' : "http://10.1.1.20", 
         'username': "admin", 
-        'password': password,
         'projID' : 'NCITA_TEST', 
         'subjLab' : 'TCGA-BB-A5HY',
         'srcExpLab' : 'Session2',
@@ -799,8 +795,7 @@ def create_config_files(cfgDir, password=""):
         'runID' : runID,
         # XNAT config settings:
         'url' : "http://10.1.1.20", 
-        'username': "admin", 
-        'password': password,
+        'username': "admin",
         'projID' : 'ACRIN', 
         'subjLab' : 'ACRIN-FMISO-Brain-011',
         'srcExpLab' : 'ACRIN-FMISO-Brain-011_MR_4',
@@ -880,8 +875,7 @@ def create_config_files(cfgDir, password=""):
         'runID' : runID,
         # XNAT config settings:
         'url' : "http://10.1.1.21", 
-        'username': "admin", 
-        'password': password,
+        'username': "admin",
         'projID' : 'COVID_19_AR', 
         'subjLab' : 'COVID-19-AR-16406488',
         'srcExpLab' : 'CT-PE-CHEST-63916',
@@ -974,7 +968,6 @@ def create_config_files(cfgDir, password=""):
         # XNAT config settings:
         'url' : "http://10.1.1.21", 
         'username': "admin", 
-        'password': password,
         'projID' : 'COVID_19_AR', 
         'subjLab' : 'COVID-19-AR-16406502',
         'srcExpLab' : 'CT-PE-CHEST-28055',
@@ -1073,7 +1066,7 @@ if __name__ == '__main__':
     Example usage in a console:
     
     cd C:\Code\WP1.3_multiple_modalities\src
-    python config.py configs --password=xnat_password
+    python config.py configs
     
     Note
     ----
@@ -1095,14 +1088,16 @@ if __name__ == '__main__':
         help="The directory to export config files"
         )
     
+    """
     parser.add_argument(
         "--password", 
         default="",
         help="Entering of password is optional. If entered you will not be "+\
             "prompted to enter it later."
         )
+    """
     
     args = parser.parse_args()
     
     # Run create_config_files():
-    create_config_files(args.cfgDir, args.password)
+    create_config_files(args.cfgDir)

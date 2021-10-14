@@ -34,7 +34,6 @@ A dictionary `cfg` is initialised containing the above variables across the boar
 
 - `url`           : XNAT address
 - `username`      : XNAT username
-- `password`      : XNAT password
 - `proID`         : XNAT Project ID
 - `subjLab`       : XNAT Subject Label
 - `srcExpLab`     : Source dataset's XNAT Experiment Label

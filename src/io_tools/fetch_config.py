@@ -68,13 +68,22 @@ class ConfigFetcher:
         
         keys = ['url', 'username', 'password']
         
-        prompts = ['Enter XNAT url: ', 'Enter user name: ', 'Enter password: ']
+        prompts = [
+            'Enter XNAT url: ', 'Enter XNAT user name: ',
+            'Enter XNAT password: '
+            ]
         
         for i in range(len(keys)):
-            if self.cfgDict[keys[i]] == '':
-                entry = getpass(prompts[i])
-                
-                self.cfgDict[keys[i]] = entry
+            try:
+                value = self.cfgDict[keys[i]]
+            except KeyError:
+                # The key doesn't exist, arbitrarily set to '':
+                value = ''
+            
+            if value == '':
+                value = getpass(prompts[i])
+            
+                self.cfgDict[keys[i]] = value
     
     def get_config(self):
         """
