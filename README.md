@@ -20,7 +20,7 @@ A *source* ROI Collection (RTSTRUCT or SEG) is copied (or propagated) to a *targ
 
 #### 1. Creating a configuration file
 
-The package [*config.py*](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/config.py) is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT used to develop the code. You can use the pre-populated code as a template for your own XNAT.
+The package [*config.py*](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/config.py) is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT that was used to develop the code. You can use the pre-populated code as a template for your own XNAT.
 
 There are several variables to be defined, including:
 
@@ -62,30 +62,54 @@ A dictionary `cfg` is initialised containing the above variables across the boar
 
 The remaining keys are simply the variables that were assigned at the top of the module (e.g. `sampleDroDir`).
 
+There are a few ways to go about creating a configuration file(s):
+
+##### Option 1 - Copy and modify an existing configuration file
+
+This is by far the quickest way to go about implementing your first run of the code.  Simply copy an existing configuration file from within the *.../src/configs* directory (e.g. *NCITA_test_RD1.json*), rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
+
+##### Option 2 - Define a new dictionary within the function *create_config_files()* in *config.py*
+
+This option is more suitable if you wish to run the code on multiple datasets and you don't wish to manually create confguration files one by one.  Within the function *create_config_files()* there are cases where a dictionary has been fully defined (by scratch) - see for example the definition of the dictionary with key *NCITA_test_RR1* (lines 317-374).  In this case a `runID` is assigned (line 316), and a dictionary is appended to the dictionary `cfg` with that `runID`.  Further down on line 379, a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 378), and the previously defined dictionary is copied (line 379).  Then the `runID` (line 380) and other selected keys are modified (lines 381-385).
+
+Create a new fully definied dictionary and use that as a template for new dictionaries as you go along.  Remember to re-run the command *create_config_files()* to update your list of config files.
+
 Once the dictionaries have been defined, the configuration files can be created in one of two ways:
 
-1. In a command shell, enter (change path to *src* directory accordingly):
+###### Option 2a - Run *config.py* as a script in a command shell
 
-		cd C:\Code\WP1.3_multiple_modalities\src
-		python config.py configs
+In a command shell enter (change path to *src* directory accordingly):
 
-2. Import the module and execute the function:
+	cd C:\Code\WP1.3_multiple_modalities\src
+	python config.py configs
+
+###### Option 2b - Run *create_config_files()* as a function within a Python shell
+
+In a Python shell enter:
 	
-		from config import create_config_files
-		config_files("C:\Code\WP1.3_multiple_modalities\src\config")
+	import sys
+	sys.path.append("C:\Code\WP1.3_multiple_modalities\src")
+	from config import create_config_files
+	create_config_files("C:\Code\WP1.3_multiple_modalities\src\configs")
 
-A list of .json files should be generated in the config directory - one file for each key-dictionary pair within `cfg`.
+A list of .json files should be generated and/or overwritten in the configs directory - one file for each key-dictionary pair within the dictionary `cfg`.  
 
 #### 2. Performing a run
 
-The main script for performing a run is contained in the module *app.py* in the *src* directory.  The run can be executed either as a function within a python environment, i.e.
+Now that the configuration file has been created it's time to run the code.  As before you have two options - you can execute it in a command shell, or in a Python shell.
+
+##### Option 1 - Run *app.py* as a script in a command shell
+
+In a command shell enter:
+
+	python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2
+	
+##### Option 2 - Run the function *main()* in a Python shell
+
+In a Python shell enter:
 
 	from app import main
 	main("C:\Code\WP1.3_multiple_modalities\src\configs", "NCITA_TEST_RR2")
-
-or within a command shell as a script:
-
-	python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2
 
 ### Relationship-preserving v Non-relationship-preserving, and Copies v Propagations
 
@@ -97,7 +121,7 @@ A *non-relationship preserving* copy (also referred to as a "direct" copy) is an
 
 When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
 
-The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [*SimpleITK*](https://simpleitk.org/) [1-3].
+The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
 
 [1]: R. Beare, B. C. Lowekamp, Z. Yaniv, “Image Segmentation, Registration and Characterization in R with SimpleITK”, J Stat Softw, 86(8), https://doi.org/10.18637/jss.v086.i08, 2018.
 
