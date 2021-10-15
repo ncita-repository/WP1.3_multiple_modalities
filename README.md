@@ -30,7 +30,7 @@ There are several variables to be defined, including:
 - Whether or not to export various data (e.g. `exportRoicol`)
 - Whether or not to print verbose results to the console (`p2c`)
 
-A dictionary `cfg` is initialised containing the above variables across the board, but there are additional variables that are set within the dictionary elements themselves.  The key-dictionary pairs that are defined within the dictionary include:
+A dictionary of dictionaries, `cfg`, is populated with dictionaries that containing the above variables across the board, since they are variables that are less likely to be modified from run to run.  Each sub-dictionary in `cfg` has a `runID` that matches the key of the sub-dictionary within the `cfg` dictionary.  In addition to the above variables there are additional variables that are set within each sub-dictionary.  The key-value pairs that define each sub-dictionary includes:
 
 - `url`           : XNAT address
 - `username`      : XNAT username
@@ -66,26 +66,32 @@ There are a few ways to go about creating a configuration file(s):
 
 ##### Option 1 - Copy and modify an existing configuration file
 
-This is by far the quickest way to go about implementing your first run of the code.  Simply copy an existing configuration file from within the *.../src/configs* directory (e.g. *NCITA_test_RD1.json*), rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
+This is by far the quickest way to go about implementing your first run of the code.  
+
+Simply copy an existing configuration file from within the *.../src/configs* directory (e.g. *NCITA_test_RD1.json*), rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
 
 ##### Option 2 - Define a new dictionary within the function *create_config_files()* in *config.py*
 
-This option is more suitable if you wish to run the code on multiple datasets and you don't wish to manually create confguration files one by one.  Within the function *create_config_files()* there are cases where a dictionary has been fully defined (by scratch) - see for example the definition of the dictionary with key *NCITA_test_RR1* (lines 317-374).  In this case a `runID` is assigned (line 316), and a dictionary is appended to the dictionary `cfg` with that `runID`.  Further down on line 379, a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 378), and the previously defined dictionary is copied (line 379).  Then the `runID` (line 380) and other selected keys are modified (lines 381-385).
+This option is more suitable if you wish to run the code on multiple datasets and you don't want to manually create confguration files one by one.  
 
-Create a new fully definied dictionary and use that as a template for new dictionaries as you go along.  Remember to re-run the command *create_config_files()* to update your list of config files.
+Within the function *create_config_files()* there are cases where a dictionary has been fully defined (by scratch) - see for example the definition of the dictionary with key *NCITA_test_RR1* (lines 317-374).  In this case a `runID` is assigned (line 316), and a dictionary is appended to the dictionary `cfg` with that `runID`.  
+
+Further down on line 379, a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 378), and the previously defined dictionary is copied (line 379).  Then the `runID` (line 380) and other selected keys are modified (lines 381-385).
+
+Use a previously fully-defined dictionary as a template for new dictionaries as you go along.  Remember to re-run the command *create_config_files()* to update your list of config files.
 
 Once the dictionaries have been defined, the configuration files can be created in one of two ways:
 
 ###### Option 2a - Run *config.py* as a script in a command shell
 
-In a command shell enter (change path to *src* directory accordingly):
+In a command shell, cd to the *src* directory and run the Python module and provide the (relative or absolute) directory path containing the configuration file (change path to *src* directory accordingly):
 
 	cd C:\Code\WP1.3_multiple_modalities\src
 	python config.py configs
 
 ###### Option 2b - Run *create_config_files()* as a function within a Python shell
 
-In a Python shell enter:
+In a Python shell, import the function and provide the (absolute) directory path:
 	
 	import sys
 	sys.path.append("C:\Code\WP1.3_multiple_modalities\src")
@@ -100,16 +106,18 @@ Now that the configuration file has been created it's time to run the code.  As 
 
 ##### Option 1 - Run *app.py* as a script in a command shell
 
-In a command shell enter:
+In a command shell, run the Python module and provide the (relative or absolute) directory path containing the configuration file and the `runID`:
 
-	python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2
+	python app.py configs NCITA_TEST_RR2
 	
 ##### Option 2 - Run the function *main()* in a Python shell
 
-In a Python shell enter:
+In a Python shell, run *main()* providing as input arguments the (absolute) directory path containing the configuration file and the `runID`:
 
 	from app import main
 	main("C:\Code\WP1.3_multiple_modalities\src\configs", "NCITA_TEST_RR2")
+
+Regardless of which option you take, you should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to the same *configs* directory.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the alias token, the token will be used, avoiding the need to re-enter your password.  
 
 ### Relationship-preserving v Non-relationship-preserving, and Copies v Propagations
 
