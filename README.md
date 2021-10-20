@@ -28,7 +28,9 @@ There are several variables to be defined, including:
 - Where any outputs should be exported (e.g. `rtsExportDir`)
 - Where to find sample DROs and fiducials (e.g. `sampleDroDir` and `fidsDir`)
 - Whether or not to export various data (e.g. `exportRoicol`)
-- Whether or not to print verbose results to the console (`p2c`)
+- Whether or not to print (highly) verbose results to the console (`p2c`) 
+
+*Note: Some comments/results will be printed to the console even if `p2c = False`.*
 
 A dictionary of dictionaries, `cfg`, is populated with dictionaries that containing the above variables across the board, since they are variables that are less likely to be modified from run to run.  Each sub-dictionary in `cfg` has a `runID` that matches the key of the sub-dictionary within the `cfg` dictionary.  In addition to the above variables there are additional variables that are set within each sub-dictionary.  The key-value pairs that define each sub-dictionary includes:
 

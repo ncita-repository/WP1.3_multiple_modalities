@@ -232,8 +232,40 @@ class DroCreator:
             sampleDroFname = 'sample_deformable_dro.dcm'
         else:
             sampleDroFname = 'sample_spatial_dro.dcm'
-            
+        
         sampleDroFpath = os.path.join(sampleDroDir, sampleDroFname)
+        
+        """
+        I get a mixture of '\\' (in the path from sampleDroDir) and '/'
+        (between sampleDroDir and sampleDroFname) in sampleDroFpath when 
+        running the code in a Docker container:
+        
+        FileNotFoundError: [Errno 2] No such file or directory: 
+        'C:\\Code\\WP1.3_multiple_modalities\\src\\sample_DROs/sample_spatial_dro.dcm'
+        
+        Following were attempts make it consistent (none of which worked):
+            
+        print(f'\nsampleDroDir = {sampleDroDir}')
+        print(f'sampleDroFpath using os.path.join = {sampleDroFpath}')
+        
+        sampleDroFpath = os.path.normpath(sampleDroFpath)
+        print(f'sampleDroFpath using os.normpath = {sampleDroFpath}')
+        
+        sampleDroFpath = os.sep.join([sampleDroDir, sampleDroFname])
+        print(f'sampleDroFpath using os.sep.join = {sampleDroFpath}')
+        
+        sampleDroFpath = Path(sampleDroDir).joinpath(sampleDroFname)
+        print(f'sampleDroFpath using Path.joinpath = {sampleDroFpath}\n')
+        
+        sampleDroFpath = Path(sampleDroDir) / sampleDroFname
+        print(f'sampleDroFpath using Path / = {sampleDroFpath}\n')
+        
+        In any case the filepaths and directory paths will need to be
+        changed from absolute filepaths (that point to my system) to 
+        environment variables (relative to the container's root?) for 
+        the code to work in a container..
+        """
+        
         # Read in the DRO template:
         sampleDro = dcmread(sampleDroFpath)
         

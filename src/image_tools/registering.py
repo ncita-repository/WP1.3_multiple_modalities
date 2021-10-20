@@ -11,7 +11,7 @@ Created on Thu Jul  8 09:18:36 2021
 import SimpleITK as sitk
 import numpy as np
 import time
-import winsound
+#import winsound # this is only available for windows!
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from ipywidgets import interact, fixed
@@ -485,9 +485,9 @@ def rigid_reg_im(
         print(f'*Took {dTime:.1f} s ({dTime/60:.1f} min) to perform image',
               'registration.\n')
     
-    frequency = 2500  # Hz
-    duration = 1500  # ms
-    winsound.Beep(frequency, duration)
+    #frequency = 2500  # Hz
+    #duration = 1500  # ms
+    #winsound.Beep(frequency, duration)
     
     # Resample movIm using intialTx to get the pre-registration aligned image 
     # (for info only - not required):
@@ -730,9 +730,9 @@ def bspline_reg_im(
     print("Optimizer stopping condition:",
           f"{regMethod.GetOptimizerStopConditionDescription()}")
     
-    frequency = 2500  # Hz
-    duration = 1500  # ms
-    winsound.Beep(frequency, duration)
+    #frequency = 2500  # Hz
+    #duration = 1500  # ms
+    #winsound.Beep(frequency, duration)
     
     # Resample movIm using intialTx to get the pre-registration aligned image 
     # (for info only - not required):

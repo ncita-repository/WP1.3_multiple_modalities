@@ -5,11 +5,14 @@
 #FROM python:3.7-buster
 FROM python:3.8-slim-buster
 
+# Assign environment variables
+#ENV runID
+
 # Set the working directory in the container
 WORKDIR C:/Code/WP1.3_multiple_modalities/src
 
 # Add the app module
-ADD app.py .
+#ADD app.py .
 
 # Copy the dependencies file to the working directory
 #COPY requirements.txt ./
@@ -42,10 +45,15 @@ COPY . .
 #COPY . app.py
 
 
-
 # Command to run on container start
 #CMD [ "python3", "./app.py C:/Code/WP1.3_multiple_modalities/src/configs NCITA_TEST_RR2" ]
 #CMD [ "python3", "./app.py ./configs NCITA_TEST_RR2" ]
 #CMD [ "python3", "app.py /configs NCITA_TEST_RR2" ]
 #CMD [ "python3", "C:/Code/WP1.3_multiple_modalities/src/app.py C:/Code/WP1.3_multiple_modalities/src/configs NCITA_TEST_RR2" ]
 #CMD [ "python3", ".app.py ./configs NCITA_TEST_RR2" ]
+#CMD [ "python3", ".app.py ./configs NCITA_TEST_RR2" ]
+#CMD ["app.py ./configs NCITA_TEST_RR2"]
+
+CMD ["app.py"]
+
+ENTRYPOINT ["python3"]
