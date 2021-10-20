@@ -58,7 +58,7 @@ def download_scan(config, srcORtrg, xnatSession=None, pathsDict=None):
     
     url = xnatSession.url
     
-    rootExportDir = config['rootExportDir']
+    downloadDir = config['downloadDir']
     
     projID = config['projID']
     subjLab = config['subjLab']
@@ -79,15 +79,17 @@ def download_scan(config, srcORtrg, xnatSession=None, pathsDict=None):
     if request.raise_for_status() != None:
         print(request.raise_for_status())
     
-    exportDir = os.path.join(rootExportDir, 'projects', projID, 
-                             'subjects', subjLab, 'experiments')
+    exportDir = os.path.join(
+        downloadDir, 'projects', projID, 'subjects', subjLab, 'experiments'
+        )
 
     if not os.path.isdir(exportDir):
         Path(exportDir).mkdir(parents=True)
         print(f'Created directory:\n {exportDir}\n')
     
-    filepath = os.path.join(exportDir,
-                            f'Experiment_{expLab}__Scan_{scanID}.zip')
+    filepath = os.path.join(
+        exportDir, f'Experiment_{expLab}__Scan_{scanID}.zip'
+        )
     
     if not os.path.exists(filepath) or OVERWRITE_ZIP:
         with open(filepath, 'wb') as file:
@@ -197,10 +199,10 @@ def download_scan(config, srcORtrg, xnatSession=None, pathsDict=None):
         ##DirName = f'{scanID}-{seriesDesc}'.replace(' ', '_').replace('.', '_') # 01/06/21
         #DirName = f'{scanID}-{seriesDesc}'.replace(' ', '_').replace('.', '_').replace('-', '_') # 01/06/21
         #
-        ##ResourceDir = os.path.join(rootExportDir, expLab, 'scans', DirName,
+        ##ResourceDir = os.path.join(downloadDir, expLab, 'scans', DirName,
         ##                           'resources')
         #
-        #ResourceDir = os.path.join(rootExportDir, 'projects', projID, 
+        #ResourceDir = os.path.join(downloadDir, 'projects', projID, 
         #                           'subjects', subjLab, 'experiments', 
         #                           expLab, 'scans', DirName, 'resources')
         #

@@ -273,8 +273,17 @@ def rigid_reg_im(
     """
     
     # Print simple metric values to console or plot of metric value v iteration?
+    """ Note:
+        This is useful for displaying in a Jupyter notebook but when run within
+        a command shell results in a figure being launched at every iteration,
+        and the user must close each figure for the next to be created. Need
+        some sort of flag that sets this to False if in a command line 
+        environment, or other way of dealing with this. For now setting to
+        False.
+    """
+    # TODO! Deal with this in a better way
     plotToConsole = False # simple text only
-    plotToConsole = True # plots
+    #plotToConsole = True # plots
     
     """ metric values and multiresIters don't return expected values when
     plotToConsole = False!
@@ -426,6 +435,9 @@ def rigid_reg_im(
         regMethod.AddCommand(sitk.sitkMultiResolutionIterationEvent,
                              lambda: command_multi_iteration(regMethod))
     
+    """ The calculation of the percentage of valid points yields a nonsensical
+    value. Commenting this out.
+    
     # Get the number of valid points:
     numOfValidPts = regMethod.GetMetricNumberOfValidPoints()
     
@@ -434,8 +446,10 @@ def rigid_reg_im(
     
     # The % of valid points:
     percentageValidPts = 100*numOfValidPts/numOfPtsInFixIm
-    
     print(f'numOfValidPts = {numOfValidPts} = {percentageValidPts}%\n')
+    """
+    # TODO! Correct above code, if number of valid points below sensible 
+    # threshold may need to abort operation?
     
     #finalTx = regMethod.Execute(sitk.Cast(fixIm, sitk.sitkFloat32), 
     #                            sitk.Cast(movIm, sitk.sitkFloat32))

@@ -7,7 +7,7 @@ Created on Mon Jul 12 13:58:18 2021
 
 
 import os
-from pathlib import Path
+#from pathlib import Path
 import time
 import argparse
 from io_tools.exports import export_dict_to_json
@@ -69,50 +69,47 @@ def create_config_files(cfgDir):
             3. 'BlurThenLinear'
     """
     
-    # Current working directory:
-    #cwd = os.getcwd()
-    
-    # Default download directory for XNAT data:
-    rootDownloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
-    
     # Current date:
     currentDate = time.strftime("%Y-%m-%d", time.gmtime())
     
-    """ 
-    Select one of the following suggested download directories for XNAT data:
+    # Current working directory:
+    cwd = os.getcwd()
+    #print(f'cwd = {cwd}')
+    
+    # Default download directory for XNAT data:
+    #downloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
+    downloadDir = os.path.join(cwd, "xnat_downloads", currentDate)
+    
+    # Root input and output directories:
+    rootInputDir = os.path.join(cwd, r'inputs')
+    rootOutputDir = os.path.join(cwd, r'outputs')
+    
     """
-    #rootExportDir = rootDownloadDir
-    rootExportDir = os.path.join(rootDownloadDir, currentDate)
-    #rootExportDir = os.path.join(rootDownloadDir, '2021-07-12') # change accordingly
+    Define the directory path of the sample DROs and fiducials:
+    """
+    sampleDroDir = os.path.join(rootInputDir, r'sample_DROs')
+    fidsDir = os.path.join(rootInputDir, r'fiducials')
+    
     
     """
     Define the export directories for the (new) target ROI Collections, 
     DRO, plots, transforms, binary label maps, logs and configuration files:
     """
-    rtsExportDir = os.path.join(rootExportDir, 'new_RTS')
-    segExportDir = os.path.join(rootExportDir, 'new_SEG')
+    rtsExportDir = os.path.join(rootOutputDir, r'new_RTS')
+    segExportDir = os.path.join(rootOutputDir, r'new_SEG')
+    droExportDir = os.path.join(rootOutputDir, r'new_DRO')
     
-    droExportDir = os.path.join(rootExportDir, 'new_DRO')
-    
-    rtsPlotsExportDir = os.path.join(rootExportDir, 'plots_RTS')
-    segPlotsExportDir = os.path.join(rootExportDir, 'plots_SEG')
+    rtsPlotsExportDir = os.path.join(rootOutputDir, 'plots_RTS')
+    segPlotsExportDir = os.path.join(rootOutputDir, 'plots_SEG')
     
     # Location where resampled/transformed/registered plots will be saved:
-    resPlotsExportDir = os.path.join(rootExportDir, 'plots_res')
+    resPlotsExportDir = os.path.join(rootOutputDir, r'plots_res')
     
-    txExportDir = os.path.join(rootExportDir, 'transforms')
-    imExportDir = os.path.join(rootExportDir, 'images')
-    labimExportDir = os.path.join(rootExportDir, 'label_images')
+    txExportDir = os.path.join(rootOutputDir, r'transforms')
+    imExportDir = os.path.join(rootOutputDir, r'images')
+    labimExportDir = os.path.join(rootOutputDir, r'label_images')
+    logsExportDir = os.path.join(rootOutputDir, r'logs')
     
-    logsExportDir = os.path.join(rootExportDir, 'logs')
-    
-    #cfgExportDir = os.path.join(rootExportDir, 'configs')
-    
-    """
-    Define the directory path of the sample DROs and fiducials:
-    """
-    sampleDroDir = r'C:\Code\WP1.3_multiple_modalities\src\sample_DROs'
-    fidsDir = r'C:\Code\WP1.3_multiple_modalities\src\fiducials'
     
     """
     Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
@@ -222,8 +219,8 @@ def create_config_files(cfgDir):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'downloadDir' : downloadDir,
         'sampleDroDir' : sampleDroDir,
-        'rootExportDir' : rootExportDir,
         #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
@@ -346,8 +343,8 @@ def create_config_files(cfgDir):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'downloadDir' : downloadDir,
         'sampleDroDir' : sampleDroDir,
-        'rootExportDir' : rootExportDir,
         #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
@@ -823,9 +820,8 @@ def create_config_files(cfgDir):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'downloadDir' : downloadDir,
         'sampleDroDir' : sampleDroDir,
-        'rootExportDir' : rootExportDir,
-        #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
@@ -903,9 +899,8 @@ def create_config_files(cfgDir):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'downloadDir' : downloadDir,
         'sampleDroDir' : sampleDroDir,
-        'rootExportDir' : rootExportDir,
-        #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,
@@ -995,9 +990,8 @@ def create_config_files(cfgDir):
         'resInterp' : 'BlurThenLinear',
         'applyPostResBlur' : True,
         'postResVar' : (1,1,1),
+        'downloadDir' : downloadDir,
         'sampleDroDir' : sampleDroDir,
-        'rootExportDir' : rootExportDir,
-        #'cfgExportDir' : cfgExportDir,
         'rtsExportDir' : rtsExportDir,
         'segExportDir' : segExportDir,
         'droExportDir' : droExportDir,

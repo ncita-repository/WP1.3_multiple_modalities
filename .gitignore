@@ -8,6 +8,7 @@ notebooks/
 outputs/
 Python_code/
 #sample_DROs/
+xnat_downloads/
 
 
 # Ignore the following files:

@@ -80,7 +80,7 @@ def download_im_asr(
     
     url = xnatSession.url
     
-    rootExportDir = config['rootExportDir']
+    downloadDir = config['downloadDir']
     
     projID = config['projID']
     subjLab = config['subjLab']
@@ -414,7 +414,7 @@ def download_im_asr(
         print(request.raise_for_status())
     
     exportDir = os.path.join(
-        rootExportDir, 'projects', projID, 'subjects', subjLab,
+        downloadDir, 'projects', projID, 'subjects', subjLab,
         'experiments', expLab, 'assessors', asrID, 'resources', roicolMod,
         'files'
         )
