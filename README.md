@@ -10,6 +10,14 @@ The aim of this work package of the NCITA Repository Unit will be to develop app
 
 The NCITA Repository Unit site as a whole is at an early stage of the life cycle and does not currently have a formal structure of documentation releases. Please bear with us: things will become more organised as the NCITA project gets into gear! Note that the ICR also releases code related to the XNAT-OHIF image viewer at https://bitbucket.org/icrimaginginformatics/. 
 
+
+### Install required packages
+
+After cloning the repository, *pip* install the required packages listed in the *requirements.txt* file:
+
+    pip3 install -r requirements.txt
+
+
 ### Basic instructions on running the code
 
 A *source* ROI Collection (RTSTRUCT or SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
