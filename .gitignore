@@ -1,7 +1,7 @@
 # Ignore the following directories:
 .ipynb_checkpoints/
 **/__pycache__/
-#archive/
+archive/
 data/
 docs/
 notebooks/

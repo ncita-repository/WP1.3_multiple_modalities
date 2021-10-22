@@ -6,10 +6,26 @@
 FROM python:3.8-slim-buster
 
 # Assign environment variables
-#ENV runID
+#ENV PYTHONPATH "${PYTHONPATH}:C:\Code\WP1.3_multiple_modalities\src"
+#ENV PYTHONPATH "${PYTHONPATH}:/"
+ENV workdir /
+ENV cfgDir /configs
+#ENV runID # expects a value -- not required for build?
+
+# Print some info to the console as a check
+RUN echo "workdir = ${workdir}"
+RUN echo "cfgDir = ${cfgDir}"
+
 
 # Set the working directory in the container
-WORKDIR C:/Code/WP1.3_multiple_modalities/src
+#WORKDIR C:/Code/WP1.3_multiple_modalities/src
+#WORKDIR /
+WORKDIR workdir
+
+
+# Copy the content of the local src directory to the working directory
+COPY . .
+
 
 # Add the app module
 #ADD app.py .
@@ -17,15 +33,17 @@ WORKDIR C:/Code/WP1.3_multiple_modalities/src
 # Copy the dependencies file to the working directory
 #COPY requirements.txt ./
 #COPY requirements.txt requirements.txt
-COPY requirements.txt .
+#COPY requirements.txt .
 
 # Install dependencies
+RUN pip3 install --upgrade pip
 #RUN pip3 install --no-cache-dir -r requirements.txt # The command '/bin/sh -c pip install --no-cache-dir -r requirements.txt' returned a non-zero code: 2
 #RUN pip3 install -r requirements.txt # times out when pip installing SimpleITK
 RUN pip3 install --default-timeout=900 -r requirements.txt
 
-# Copy the content of the local src directory to the working directory
-COPY . .
+
+# Copy the cfgDir (which may or may not be /configs
+#COPY . $cfgDir
 
 # Copy the directories containing the required modules
 #COPY . /configs
@@ -54,6 +72,21 @@ COPY . .
 #CMD [ "python3", ".app.py ./configs NCITA_TEST_RR2" ]
 #CMD ["app.py ./configs NCITA_TEST_RR2"]
 
-CMD ["app.py"]
+#CMD ["app.py"]
 
-ENTRYPOINT ["python3"]
+# Update the configuration files (so that the ENV workdir can be used in directory paths):
+#CMD ["config.py ./configs"] # python3: can't open file 'config.py ./configs': [Errno 2] No such file or directory
+#CMD ["config.py ${cfgDir}"] # try this?
+#CMD ["./config.py ./configs"] 
+
+ENTRYPOINT ["python3"] # usage: docker run copy-roi:0.0.21 -it app.py ./configs NCITA_test_RR2
+# FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Code\\WP1.3_multiple_modalities\\src\\inputs\\sample_DROs/sample_spatial_dro.dcm'
+
+#ENTRYPOINT ["python3", ".app.py"] # usage: docker run --rm copy-roi:0.0.22 ./configs NCITA_test_RR2
+# python3: can't open file '.app.py': [Errno 2] No such file or directory
+
+#ENTRYPOINT ["python3", "./app.py"] # usage: docker run --rm copy-roi:0.0.22 ./configs NCITA_test_RR2
+# FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Code\\WP1.3_multiple_modalities\\src\\inputs\\sample_DROs/sample_spatial_dro.dcm'
+
+
+#CMD echo docker ps

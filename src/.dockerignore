@@ -2,5 +2,5 @@
 
 #**/__pycache__
 **/__pycache__/
-/outputs/
-/xnat_downloads/
+/outputs
+/xnat_downloads

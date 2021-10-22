@@ -73,8 +73,12 @@ def create_config_files(cfgDir):
     currentDate = time.strftime("%Y-%m-%d", time.gmtime())
     
     # Current working directory:
-    cwd = os.getcwd()
-    #print(f'cwd = {cwd}')
+    #cwd = os.getcwd()
+    cwd = os.getenv('workdir')
+    print(f'cwd from os.getenv = {cwd}')
+    if cwd == None:
+        cwd = os.getcwd()
+    print(f'cwd = {cwd}')
     
     # Default download directory for XNAT data:
     #downloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
