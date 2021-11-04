@@ -112,3 +112,65 @@ class ConfigFetcher:
             cfgDict = import_dict_from_json(filepath=fpath)
             
         self.cfgDict = cfgDict
+    
+    def update_cfgDict(self):
+        """
+        Update the current working directory (and subsequent child directories)
+        in the configuration dictionary to reflect the 'workdir' set as an 
+        environmental variable (if applicable).
+        
+        Parameters
+        ----------
+        cfgDict : dict
+            Dictionary containing the parameters for the desired run.
+        
+        Returns
+        -------
+        cfgDict : dict
+            Updated dictionary.
+        """
+        
+        cfgDict = self.cfgDict
+        
+        # Try to get the current working directory from an environmnt variable:
+        cwd = os.getenv('workdir')
+        print(f'os.getenv (in fetch_config.py) = {cwd}')
+        if cwd == None:
+            cwd = os.getcwd()
+        print(f'cwd (in fetch_config.py) = {cwd}')
+        
+        # Lines below added 03/11/21
+        inputsDir = os.path.join(cwd, r'inputs')
+        outputsDir = os.path.join(cwd, r'outputs')
+        sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
+        fidsDir = os.path.join(inputsDir, r'fiducials')
+        rtsExportDir = os.path.join(outputsDir, r'new_RTS')
+        segExportDir = os.path.join(outputsDir, r'new_SEG')
+        droExportDir = os.path.join(outputsDir, r'new_DRO')
+        rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
+        segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
+        resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
+        txExportDir = os.path.join(outputsDir, r'transforms')
+        imExportDir = os.path.join(outputsDir, r'images')
+        labimExportDir = os.path.join(outputsDir, r'label_images')
+        logsExportDir = os.path.join(outputsDir, r'logs')
+    
+        
+        cfgDict['cwd'] = cwd
+        # Lines below added 03/11/21
+        cfgDict['inputsDir'] = inputsDir
+        cfgDict['outputsDir'] = outputsDir
+        cfgDict['sampleDroDir'] = sampleDroDir
+        cfgDict['fidsDir'] = fidsDir
+        cfgDict['rtsExportDir'] = rtsExportDir
+        cfgDict['segExportDir'] = segExportDir
+        cfgDict['droExportDir'] = droExportDir
+        cfgDict['rtsPlotsExportDir'] = rtsPlotsExportDir
+        cfgDict['segPlotsExportDir'] = segPlotsExportDir
+        cfgDict['resPlotsExportDir'] = resPlotsExportDir
+        cfgDict['txExportDir'] = txExportDir
+        cfgDict['imExportDir'] = imExportDir
+        cfgDict['labimExportDir'] = labimExportDir
+        cfgDict['logsExportDir'] = logsExportDir
+        
+        self.cfgDict = cfgDict

@@ -20,7 +20,7 @@ After cloning the repository, *pip* install the required packages listed in the 
 
 ### Basic instructions on running the code
 
-A *source* ROI Collection (RTSTRUCT or SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
+A *source* ROI Collection (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
 
 1. Create a configuration file(s) for the run(s) you wish to carry out.
 

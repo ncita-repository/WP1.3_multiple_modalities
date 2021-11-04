@@ -8,19 +8,25 @@ FROM python:3.8-slim-buster
 # Assign environment variables
 #ENV PYTHONPATH "${PYTHONPATH}:C:\Code\WP1.3_multiple_modalities\src"
 #ENV PYTHONPATH "${PYTHONPATH}:/"
-ENV workdir /
-ENV cfgDir /configs
+#ENV workdir /src
+#ENV workdir ./src
+ENV workdir ./
+#ENV cfgDir $workdir/configs
 #ENV runID # expects a value -- not required for build?
 
 # Print some info to the console as a check
-RUN echo "workdir = ${workdir}"
-RUN echo "cfgDir = ${cfgDir}"
+#RUN echo "workdir = ${workdir}" # wrong?
+#RUN echo "cfgDir = ${cfgDir}" # wrong?
+RUN echo "workdir = $workdir" # ok
+#RUN echo "cfgDir = $cfgDir" # ok
+#RUN echo "workdir = "$workdir # ok
+#RUN echo "cfgDir = "$cfgDir # ok
 
 
 # Set the working directory in the container
 #WORKDIR C:/Code/WP1.3_multiple_modalities/src
 #WORKDIR /
-WORKDIR workdir
+WORKDIR $workdir
 
 
 # Copy the content of the local src directory to the working directory

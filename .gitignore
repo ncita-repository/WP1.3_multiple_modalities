@@ -32,6 +32,7 @@ xnat_downloads/
 *.png
 *.jpg
 *.xlsx
+*.tar
 
 
 # Re-include .dcm files in src/sample_DROs:

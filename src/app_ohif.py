@@ -11,27 +11,23 @@ Created on Thu Sep 30 11:24:09 2021
 Batch script for running the ROI Collection propagation.
 
 Note:
-This is intended for running in a Python console/IDE or in a command shell,
-and relies on parameters stored in a configuration file. Based on the 
-parameters the necessary data is fetched from XNAT using REST APIs and 
-downloaded locally.  If image registration is required, a search for a 
-suitable Spatial Registration Object (for rigid including affine registrations)
-or Deformable Registration Object (for deformable/bspline registrations) and if
-found it will be downloaded locally, unless the variable useDroForTx in the
-config file is set to False.
+This is intended as a backend script working alongside frontend work in the
+OHIF-Viewer.
 
-Once the copy/propagation is complete, the new ROI Collection will be uploaded
-to XNAT (via the REST API), as too will a DRO (if image registration was 
-performed) unless the variable uploadDro is set to False.
+As opposed to the stand-alone version (app.py) this will not fetch data from
+XNAT but instead will work on the basis that the data has been stored in a
+temporary folder on the localhost.
 
-Other outputs (useful for debugging) will be exported to the local drive (e.g.
-transforms, images, label images, log files, plots, etc.) unless the relevant
-variables (exportTx, exportIm, exportLabim, etc.) are set to False.
+Hence for development the ROI Collections and scans have been stored in the
+inputs directory.
 
-This implementation should cover all use case scenarios defined.
+This implementation will only need to perform ROI propagations (i.e. those
+involving relationship-preserving that require resampling or image registrtion
+to account for different voxel resolutions and/or frames of reference), since
+simple ("direct") copying of ROIs will be handled exclusively in the frontend.
 
-See app_ohif.py for a newer version intended for use as a backend script for
-the OHIF-Viewer (still in development as of Nov 4, 2021).
+That said, none of the code that handles the simple cases (use cases 1-2) will
+be removed.
 """ 
 
 
@@ -44,10 +40,6 @@ sys.path.append(code_root)
 
 
 from importlib import reload
-import io_tools.fetch_config
-reload(io_tools.fetch_config)
-import io_tools.download_data
-reload(io_tools.download_data)
 import io_tools.import_data
 reload(io_tools.import_data)
 import io_tools.import_dro
@@ -62,8 +54,6 @@ reload(dro_tools.create_dro)
 
 import time
 import argparse
-from io_tools.fetch_config import ConfigFetcher
-from io_tools.download_data import DataDownloader
 from io_tools.import_data import DataImporter
 from io_tools.import_dro import DroImporter
 from io_tools.propagate import Propagator
