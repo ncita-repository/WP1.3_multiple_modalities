@@ -11,7 +11,6 @@ Python_code/
 xnat_downloads/
 xnat_snapshots/
 
-
 # Ignore the following files:
 *.log
 *.txt
@@ -35,18 +34,17 @@ xnat_snapshots/
 *.xlsx
 *.tar
 
-
-# Re-include .dcm files in src/sample_DROs:
+# Re-include DCM files in src/sample_DROs:
 !src/inputs/sample_DROs/*.dcm
 
-
-# Re-include .txt files in src/fiducials:
+# Re-include TXT files in src/fiducials:
 !src/inputs/fiducials/*.txt
 
-
-# Re-include .json files in src/configs (to track config files):
+# Re-include JSON files in src/configs (to track config files):
 !src/configs/*.json
 
-
-# Re-include .txt files in src (to track requirements.txt):
+# Re-include TXT files in src (to track requirements.txt):
 !src/*.txt
+
+# Re-include XLSX files in src/xnat_snapshots_examples:
+!src/xnat_snapshots_examples/*.xlsx

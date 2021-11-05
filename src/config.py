@@ -195,6 +195,17 @@ def create_config_files(cfgDir):
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}
     
+    """
+    Datasets that involve affine or bspline registration with or without
+    fiducials.
+    
+    Data source:
+    https://wiki.cancerimagingarchive.net/display/Public/Soft-tissue-Sarcoma
+    
+    Collection ID = Soft-tissue-Sarcoma
+    Subject ID = STS_004
+    """
+    
     # Datasets to propagate a SEG using affine registration of soft tissue:
     runID = 'Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'
     cfg[runID] = {
@@ -800,7 +811,13 @@ def create_config_files(cfgDir):
     Following are datasets for test runs using the ACRIN collection (brain
     images) from TCIA, testing how well the algorithm is able to deal with
     propagating SEG and RTSTRUCT ROI Collections from one imaging perspective 
-    (e.g. sagittal, coronal) to another (e.g. axial):
+    (e.g. sagittal, coronal) to another (e.g. axial).
+    
+    Data source:
+    https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=33948305#4613f7d5a2514c2195445afde60ce068
+    
+    Collection ID = ACRIN-FMISO-Brain
+    Subject ID = ACRIN-FMISO-Brain-011
     """
     
     # Datasets to propagate SEG from sagital view to axial:
@@ -883,7 +900,13 @@ def create_config_files(cfgDir):
     collection from TCIA, testing how well the algorithm is able to deal with
     propagating SEG and RTSTRUCT ROI Collections from one imaging perspective 
     (e.g. sagittal, coronal) to another (e.g. axial) within the same imaging
-    session:
+    session.
+    
+    Data source:
+    https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=70226443
+    
+    Collection ID = COVID-19-AR
+    Subject ID = COVID-19-AR-16406488
     """
     
     # Datasets to propagate SEG from axial view to coronal:
@@ -978,7 +1001,13 @@ def create_config_files(cfgDir):
     collection from TCIA, testing how well the algorithm is able to deal with
     propagating SEG and RTSTRUCT ROI Collections from one imaging perspective 
     (e.g. sagittal, coronal) to another (e.g. axial) across different imaging
-    sessions:
+    sessions.
+    
+    Data source:
+    https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=70226443
+    
+    Collection ID = COVID-19-AR
+    Subject ID = COVID-19-AR-16406488
     """
     
     # Datasets to propagate SEG from axial view to coronal:
