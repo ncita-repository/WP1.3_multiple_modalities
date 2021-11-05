@@ -134,10 +134,10 @@ class ConfigFetcher:
         
         # Try to get the current working directory from an environmnt variable:
         cwd = os.getenv('workdir')
-        print(f'os.getenv (in fetch_config.py) = {cwd}')
+        #print(f'os.getenv (in fetch_config.py) = {cwd}')
         if cwd == None:
             cwd = os.getcwd()
-        print(f'cwd (in fetch_config.py) = {cwd}')
+        #print(f'cwd (in fetch_config.py) = {cwd}')
         
         # Lines below added 03/11/21
         inputsDir = os.path.join(cwd, r'inputs')
