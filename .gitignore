@@ -36,11 +36,11 @@ xnat_downloads/
 
 
 # Re-include .dcm files in src/sample_DROs:
-!src/sample_DROs/*.dcm
+!src/inputs/sample_DROs/*.dcm
 
 
 # Re-include .txt files in src/fiducials:
-!src/fiducials/*.txt
+!src/inputs/fiducials/*.txt
 
 
 # Re-include .json files in src/configs (to track config files):
