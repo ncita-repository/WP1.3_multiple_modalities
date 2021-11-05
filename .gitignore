@@ -46,5 +46,39 @@ xnat_snapshots/
 # Re-include TXT files in src (to track requirements.txt):
 !src/*.txt
 
-# Re-include XLSX files in src/xnat_snapshots_examples:
+# Re-include XLSX and PNG files in src/xnat_snapshots_examples:
 !src/xnat_snapshots_examples/*.xlsx
+*.ipynb
+*.docx
+*.pptx
+*.pdf
+*.nii
+*.csv
+*.mat
+*.npy
+*.json
+*.cfg
+*.nii
+*.tfm
+*.dcm
+*.avi
+*.png
+*.jpg
+*.xlsx
+*.tar
+
+# Re-include DCM files in src/sample_DROs:
+!src/inputs/sample_DROs/*.dcm
+
+# Re-include TXT files in src/fiducials:
+!src/inputs/fiducials/*.txt
+
+# Re-include JSON files in src/configs (to track config files):
+!src/configs/*.json
+
+# Re-include TXT files in src (to track requirements.txt):
+!src/*.txt
+
+# Re-include XLSX and PNG files in src/xnat_snapshots_examples:
+!src/xnat_snapshots_examples/*.xlsx
+!src/xnat_snapshots_examples/*.png
