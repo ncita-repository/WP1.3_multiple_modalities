@@ -34,10 +34,12 @@ See app_ohif.py for a newer version intended for use as a backend script for
 the OHIF-Viewer (still in development as of Nov 4, 2021).
 """ 
 
-
+import os
 import sys
 
-code_root = r'C:\Code\WP1.3_multiple_modalities\src'
+#code_root = r'C:\Code\WP1.3_multiple_modalities\src'
+code_root = os.getcwd()
+#print(f'code_root = {code_root}\n')
 
 # Add code_root to the system path so packages can be imported from it:
 sys.path.append(code_root)
@@ -98,7 +100,7 @@ def main(
     None.
     """
     
-    cfgDir = r'' + cfgDir # convert to an r path
+    #cfgDir = r'' + cfgDir # convert to an r path
     #print(f'\ncfgDir = {cfgDir}\n')
     
     # Store time stamps for various steps:
@@ -178,7 +180,7 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    python app.py C:\Code\WP1.3_multiple_modalities\src\configs NCITA_TEST_RR2
+    python app.py configs NCITA_TEST_RR2
     """
     
     parser = argparse.ArgumentParser(description='Arguments for main()')

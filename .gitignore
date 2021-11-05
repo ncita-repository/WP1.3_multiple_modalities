@@ -9,6 +9,7 @@ outputs/
 Python_code/
 #sample_DROs/
 xnat_downloads/
+xnat_snapshots/
 
 
 # Ignore the following files:

@@ -162,8 +162,9 @@ def export_dict_to_xlsx(dictionary, filename, exportDir='cwd'):
     
     return
 
-def export_dict_of_dicts_to_xlsx(dictionary, filename, exportDir='cwd', 
-                                 nameOfFirstCol=''):
+def export_dict_of_dicts_to_xlsx(
+        dictionary, filename, exportDir='cwd', nameOfFirstCol=''
+        ):
     """
     Export a dictionary of dictionaries to a .xlsx file.  
     

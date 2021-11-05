@@ -22,6 +22,7 @@ reload(xnat_tools.alias_tokens)
 #import io_tools.fetch_config
 #reload(io_tools.fetch_config)
 
+import os
 import time
 #import requests
 #from io_tools.inputs_checker import which_use_case
@@ -107,32 +108,37 @@ class DataDownloader:
             authentication details (xnatSession.auth = ('username', 'password')).
         """
         
-        cfgDir = self.cfgDir
+        #cfgDir = self.cfgDir
+        cwd = self.cfgDict['cwd']
         url = self.cfgDict['url']
         username = self.cfgDict['username']
         aliasToken = self.aliasToken
         
+        # Assumed directory that may contain an XNAT alias token:
+        tokenDir = os.path.join(cwd, 'tokens')
+        
         if aliasToken == {}:
-            print(f'Searching for an XNAT alias token in {cfgDir}\n')
+            #print(f'Searching for an XNAT alias token in {cfgDir}')
+            print(f'Searching for an XNAT alias token in {tokenDir}')
             
             # Import an XNAT alias token:
-            aliasToken = import_alias_token(cfgDir)
+            #aliasToken = import_alias_token(cfgDir)
+            aliasToken = import_alias_token(tokenDir)
         
         # Is the alias token valid?
         if is_alias_token_valid(aliasToken, url):
-            print('Using XNAT alias token to establish XNAT connection.\n')
-            
+            print('Using XNAT alias token to establish XNAT connection.')
             xnatSession = create_session(url=url, aliasToken=aliasToken)
         else:
-            print('Establishing XNAT connection without XNAT alias token.\n')
-            
+            print('Establishing XNAT connection without XNAT alias token.')
             xnatSession = create_session(url=url, username=username)
         
         # Generate an XNAT alias token to avoid making a new authenticated
         # user session:
         aliasToken = generate_alias_token(xnatSession)
         
-        export_alias_token(aliasToken, cfgDir)
+        #export_alias_token(aliasToken, cfgDir)
+        export_alias_token(aliasToken, tokenDir)
         
         self.xnatSession = xnatSession
         self.aliasToken = aliasToken

@@ -6,8 +6,83 @@ Created on Mon Jul  5 16:52:35 2021
 """
 
 
-def get_xnat_snapshot(url, username=None, password=None, session=None,
-                      export_xlsx=False, log_to_console=False):
+""" 
+Functions that create a "snapshot" of an XNAT and will export it to an
+XLSX file.
+
+Example usage as a module (run in a command shell)
+--------------------------------------------------
+
+python snapshots.py http://10.1.1.20
+
+
+Example usage as a function (run in a Python command shell)
+-----------------------------------------------------------
+
+from xnat_tools.snapshots import get_xnat_snapshot
+
+get_xnat_snapshot('http://10.1.1.20')
+"""
+
+import os
+import sys
+
+#code_root = r'C:\Code\WP1.3_multiple_modalities\src'
+code_root = os.getcwd()
+
+# Add code_root to the system path so packages can be imported from it:
+sys.path.append(code_root)
+
+import time
+#from getpass import getpass
+#import requests
+#from pathlib import Path
+import datetime
+import argparse
+
+import xnat_tools.sessions
+import xnat_tools.invs_subjs_users
+import xnat_tools.file_count_size
+import xnat_tools.projects
+import xnat_tools.dates_times
+import xnat_tools.format_pathsDict
+import xnat_tools.alias_tokens
+import io_tools.exports
+
+from importlib import reload
+reload(xnat_tools.sessions)
+reload(xnat_tools.invs_subjs_users)
+reload(xnat_tools.file_count_size)
+reload(xnat_tools.projects)
+reload(xnat_tools.dates_times)
+reload(xnat_tools.format_pathsDict)
+reload(xnat_tools.alias_tokens)
+reload(io_tools.exports)
+
+from xnat_tools.sessions import create_session
+from xnat_tools.invs_subjs_users import get_invs_by_proj, get_subjs_by_proj
+from xnat_tools.invs_subjs_users import get_users_by_project
+#from xnat_tools.experiments import get_num_exps_by_proj
+#from xnat_tools.im_sessions_exps import get_im_sessions_by_type_by_proj
+from xnat_tools.file_count_size import get_file_count_size_by_type_by_proj
+from xnat_tools.projects import get_proj_desc_by_proj
+#from xnat_tools.dates_times import get_start_date_by_proj
+from xnat_tools.dates_times import get_first_last_im_session_uploads_by_proj
+from xnat_tools.format_pathsDict import reorder_keys_and_fill_zeros
+from xnat_tools.alias_tokens import (
+    import_alias_token, is_alias_token_valid, generate_alias_token,
+    export_alias_token
+    )
+from io_tools.exports import (
+    export_dict_to_xlsx, export_dict_of_dicts_to_xlsx
+    )
+
+
+
+def get_xnat_snapshot(
+        url, username="", password="", session=None,
+        export_xlsx=True, log_to_console=False
+        ):
     """
     Get a "snapshot" of info from an XNAT broken down by projects, and 
     XNAT-wide.
@@ -17,16 +92,22 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     url : str
         URL of XNAT (e.g. 'http://10.1.1.20').
     username : str, optional
-        The username for XNAT log-in.  If not provided (i.e. username = None)
-        the user will be prompted to enter a user name.
+        The username for XNAT log-in.  If not provided (i.e. username = "")
+        the user will be prompted to enter a user name. The default value is
+        "".
     password : str, optional
-        The password for XNAT log-in.  If not provided (i.e. password = None)
-        the user will be prompted to enter a password.
+        The password for XNAT log-in.  If not provided (i.e. password = "")
+        the user will be prompted to enter a password. The default value is
+        "".
     session : requests session, optional
-        If provided a multiple XNAT session requests will be avoided.
+        If provided a multiple XNAT session requests will be avoided. The 
+        default value is None.
     export_xlsx : bool, optional
+        If True the "snapshot" will be exported to an XLSX file. The default
+        value is True.
     log_to_console : bool, optional
-        If True some results will be printed to the console.
+        If True some results will be printed to the console. The default value
+        is False.
     
     Returns
     -------
@@ -71,39 +152,30 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
         *Took 3.26 s to get all snapshots.
     """
     
-    import time
-    #from getpass import getpass
-    #import requests
-    #import os
-    #from pathlib import Path
-    #import datetime
-    
-    import xnat_tools.invs_subjs_users
-    import xnat_tools.file_count_size
-    import xnat_tools.projects
-    import xnat_tools.dates_times
-    import xnat_tools.format_paths_dict
-    
-    from importlib import reload
-    reload(xnat_tools.invs_subjs_users)
-    reload(xnat_tools.file_count_size)
-    reload(xnat_tools.projects)
-    reload(xnat_tools.dates_times)
-    reload(xnat_tools.format_paths_dict)
-    
-    from xnat_tools.session import create_session
-    from xnat_tools.invs_subjs_users import get_invs_by_proj, get_subjs_by_proj
-    from xnat_tools.invs_subjs_users import get_users_by_project
-    #from xnat_tools.experiments import get_num_exps_by_proj
-    #from xnat_tools.im_sessions_exps import get_im_sessions_by_type_by_proj
-    from xnat_tools.file_count_size import get_file_count_size_by_type_by_proj
-    from xnat_tools.projects import get_proj_desc_by_proj
-    #from xnat_tools.dates_times import get_start_date_by_proj
-    from xnat_tools.dates_times import get_first_last_im_session_uploads_by_proj
-    from xnat_tools.format_paths_dict import reorder_keys_and_fill_zeros
-    
     if session == None:
-        session = create_session(url, username, password)
+        # Get current working directory:
+        cwd = os.getcwd()
+        
+        # Assumed directory that may contain an XNAT alias token:
+        tokenDir = os.path.join(cwd, 'tokens')
+        
+        print(f'Searching for an XNAT alias token in {tokenDir}')
+        # Import an XNAT alias token:
+        aliasToken = import_alias_token(tokenDir)
+        
+        # Is the alias token valid?
+        if is_alias_token_valid(aliasToken, url):
+            print('Using XNAT alias token to establish XNAT connection.')
+            session = create_session(url=url, aliasToken=aliasToken)
+        else:
+            print('Establishing XNAT connection without XNAT alias token.')
+            session = create_session(url=url, username=username)
+    
+    # Generate an XNAT alias token to avoid making a new authenticated
+    # user session:
+    aliasToken = generate_alias_token(session)
+    
+    export_alias_token(aliasToken, tokenDir)
     
     """ Start timing: """
     times = []
@@ -152,8 +224,9 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     image scans by modality, ave. scans/session, ave. image scans/session,
     no. of DICOM/RTSTRUCT/AIM/SEG files, total size of DICOM/RTSTRUCT/SEG files,
     etc, all organised by project: """
-    data_by_proj = get_file_count_size_by_type_by_proj(url, session,
-                                                       data_by_proj)
+    data_by_proj = get_file_count_size_by_type_by_proj(
+        url, session, data_by_proj
+        )
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 2)
@@ -182,8 +255,9 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
         print(f'*Took {Dtime} s to fetch users.\n')
     
     """ Get the first and last upload dates by project: """
-    data_by_proj = get_first_last_im_session_uploads_by_proj(url, session, 
-                                                             data_by_proj)
+    data_by_proj = get_first_last_im_session_uploads_by_proj(
+        url, session, data_by_proj
+        )
     
     times.append(time.time())
     Dtime = round(times[-1] - times[-2], 2)
@@ -220,12 +294,8 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
     
     """ Export the dictionary: """
     if export_xlsx:
-        import datetime
-        from importlib import reload
-        import GeneralTools
-        reload(GeneralTools)
-        from GeneralTools import ExportDictionaryToXlsx
-        from GeneralTools import ExportDictionaryOfDictionariesToXlsx
+        # Directory where snapshots will be exported to:
+        exportDir = os.path.join(cwd, 'xnat_snapshots')
         
         time_now = datetime.datetime.now()
         date_time = time_now.strftime('%Y%m%d_%H%M%S')
@@ -233,15 +303,21 @@ def get_xnat_snapshot(url, username=None, password=None, session=None,
         file_name = date_time + '_XNAT_by_project_snapshot.xlsx'
         
         # Export the by-project snapshot:
-        ExportDictionaryOfDictionariesToXlsx(data_by_proj, file_name, 
-                                             ExportDir='cwd',
-                                             NameOfFirstColumn='Project')
+        export_dict_of_dicts_to_xlsx(
+            data_by_proj, file_name, exportDir=exportDir, 
+            nameOfFirstCol='Project'
+            )
+        
+        file_path = os.path.join(exportDir, file_name)
+        print(f'XNAT-by-project snapshot exported to {file_path}\n')
         
         file_name = date_time + '_XNAT_wide_snapshot.xlsx'
         
         # Export the XNAT-wide snapshot:
-        ExportDictionaryToXlsx(data_xnat_wide, file_name, ExportDir='cwd')
+        export_dict_to_xlsx(data_xnat_wide, file_name, exportDir=exportDir)
         
+        file_path = os.path.join(exportDir, file_name)
+        print(f'XNAT-wide snapshot exported to {file_path}\n')
         
         times.append(time.time())
         Dtime = round(times[-1] - times[-2], 1)
@@ -358,3 +434,69 @@ def get_xnat_wide_snapshot(data_by_proj):
         }
     
     return data_xnat_wide
+
+if __name__ == '__main__':
+    """
+    Run snapshots.py as a script.
+    
+    Example usage in a console:
+    
+    python snapshots.py http://10.1.1.20
+    """
+    
+    parser = argparse.ArgumentParser(
+        description='Arguments for get_xnat_snapshot()'
+        )
+    
+    parser.add_argument(
+        'url', 
+        help='The XNAT url'
+        )
+    
+    parser.add_argument(
+        '--username', '-u',
+        nargs='?',
+        default='',
+        const='',
+        help='The XNAT user name'
+        )
+    
+    parser.add_argument(
+        '--password', '-p',
+        nargs='?',
+        default='',
+        const='',
+        help='The XNAT password'
+        )
+    
+    parser.add_argument(
+        '--session', '-s',
+        nargs='?',
+        default=None,
+        const=None,
+        help='An existing XNAT Requests session'
+        )
+    
+    parser.add_argument(
+        '--export_xlsx', '-e',
+        nargs='?',
+        default=True,
+        const=True,
+        help='Export to XLSX files?'
+        )
+    
+    parser.add_argument(
+        '--log_to_console', '-l',
+        nargs='?',
+        default=False,
+        const=False,
+        help='Log output to the console?'
+        )
+    
+    args = parser.parse_args()
+    
+    # Run get_xnat_snapshot():
+    get_xnat_snapshot(
+        args.url, args.username, args.password, args.session, args.export_xlsx,
+        args.log_to_console
+        )

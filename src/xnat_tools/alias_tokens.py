@@ -58,7 +58,7 @@ def export_alias_token(aliasToken, exportDir):
     
     export_dict_to_json(aliasToken, 'XNAT_alias_token', exportDir)
     
-    print(f'XNAT alias token exported to {exportDir}.\n')
+    print(f'XNAT alias token exported to {exportDir}\n')
 
 def import_alias_token(exportDir):
     """

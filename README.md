@@ -1,6 +1,6 @@
 # WP1.3_multiple_modalities
 
-### NCITA Repository Unit Work Package 1.3: XNAT-OHIF viewer - multiple modalities
+## NCITA Repository Unit Work Package 1.3: XNAT-OHIF viewer - multiple modalities
 Specific repositories and projects of the form WP1.x-y are for specific second-level, viewer-related work packages in the NCITA Repository Unit strategy.
 
 The aim of this work package of the NCITA Repository Unit will be to develop approaches within the OHIF viewer and XNAT to work with images from connected studies. The initial focus will be on image registration and the copying of regions-of-interest between:
@@ -140,6 +140,31 @@ A *non-relationship preserving* copy (also referred to as a "direct" copy) is an
 When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
 
 The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
+
+
+## XNAT Snapshots
+
+A basic tool that fetches high-level metadata from an XNAT and produces a "snapshot", exported as an XLSX file is a stand-alone feature separate from the business of copying/propagating ROIs.
+
+At present two XLSX files are exported - one that provides a snapshot broken down by projects, and one that is XNAT-wide.  The former includes the principle investigator, project description, a list of investigators, number of subjects, experiments, MR/CT/PET sessions, etc.  The XNAT-wide table includes totals and averages per project of subjects, experiments, image sessions, DICOM image files, etc.
+
+The tool can either be run as a module in a command shell or as a Python function.
+
+##### Option 1 - Run *snapshots.py* as a script in a command shell
+
+In a command shell, run the Python module providing the XNAT url:
+
+	python snapshots.py configs http://10.1.1.20
+	
+##### Option 2 - Run the function *get_xnat_snapshot()* in a Python shell
+
+In a Python shell, run *get_xnat_snapshot()* providing the XNAT url as an input argument:
+
+	from snapshots import get_xnat_snapshot
+	get_xnat_snapshot("http://10.1.1.20")
+
+
+
 
 [1]: R. Beare, B. C. Lowekamp, Z. Yaniv, “Image Segmentation, Registration and Characterization in R with SimpleITK”, J Stat Softw, 86(8), https://doi.org/10.18637/jss.v086.i08, 2018.
 
