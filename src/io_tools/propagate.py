@@ -2425,8 +2425,6 @@ class Propagator:
         of resampling/registering.
         """
         
-        print('* Plotting resampled/registered results..\n')
-        
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
         #roicolMod = cfgDict['roicolMod']
@@ -2452,6 +2450,8 @@ class Propagator:
         
         # Prepare plot title for the resampled/registered image:
         if useCaseToApply in ['3a', '3b', '4a', '4b', '5a', '5b']:
+            print('* Plotting resampled/registered results..\n')
+            
             resTitle = 'Src '
             if useCaseToApply in ['3a', '3b', '4a', '4b']:
                 resTitle += f'res to Trg \n({resInterp})'

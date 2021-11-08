@@ -165,7 +165,9 @@ def main(
     roicolObj.export_roicol(params)
     roicolObj.upload_roicol(params)
     if plotResults:
-        roicolObj.plot_roi_over_dicoms(srcDataset, trgDataset, newDataset, params)
+        roicolObj.plot_roi_over_dicoms(
+            srcDataset, trgDataset, newDataset, params
+            )
     
     # Instantiate a DroCreator object, create a new DRO, export it to
     # disk, and upload to XNAT:

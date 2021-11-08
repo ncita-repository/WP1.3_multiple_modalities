@@ -126,16 +126,12 @@ def create_config_files(cfgDir):
     Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
     DRO, transforms, label images, plots and logs:
     """
-    #exportRoicol = False
     exportRoicol = True
-    exportIm = False # 3D DICOM images
-    #exportDro = False
     exportDro = True
     exportTx = True
-    exportLabim = True
-    #exportPlots = False
+    exportIm = True # 3D DICOM images
+    exportLabim = True # 3D binary label images
     exportPlots = True
-    #exportLogs = False
     exportLogs = True
     
     
