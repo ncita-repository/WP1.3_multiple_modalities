@@ -13,7 +13,7 @@ xnat_snapshots/
 
 # Ignore the following files:
 *.log
-*.txt
+#*.txt
 *.[0-9].txt
 *.ipynb
 *.docx
