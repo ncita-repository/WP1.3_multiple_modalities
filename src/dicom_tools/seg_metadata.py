@@ -208,8 +208,7 @@ def get_f2sIndsBySeg(seg, sopuids):
     
     divs = get_DIVs(seg)
     
-    f2sIndsBySeg = group_list_by_seg(listToGroup=f2sInds, 
-                                           divs=divs)
+    f2sIndsBySeg = group_list_by_seg(listToGroup=f2sInds, divs=divs)
     
     return f2sIndsBySeg
 

@@ -1,31 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 15 10:31:20 2021
+Created on Mon Nov  8 18:39:02 2021
 
 @author: ctorti
 """
+
 
 from importlib import reload
 import io_tools.general
 reload(io_tools.general)
 
 import os
-#from getpass import getpass
-from io_tools.general import get_fpaths, get_user_input_as_int
+import time
 from io_tools.imports import import_dict_from_json
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
 from general_tools.general import are_items_equal_to_within_eps
 
-class ConfigFetcher:
+class ConfigFromOhif:
     # TODO! Update docstrings
     """
-    This class fetches parameters from a local file and returns an
-    object containing various parameters for a specified runID (stored in the 
-    dictionary self.cfgDict).
+    This class replaces the ConfigFetcher class (used to fetch parameters from 
+    a local file) and returns an object containing various parameters for a 
+    specified runID (stored in the dictionary self.cfgDict).
     
-    The parameters are imported from a JSON file for the desired run.
+    The parameters are imported from a JSON file for the desired run. The
+    metadata and paths to src and trg data will need to be provided from the
+    front-end. For the time being it was added manually.
     
     Parameters
     ----------
@@ -52,6 +54,10 @@ class ConfigFetcher:
         self.cfgDir = cfgDir
         self.runID = runID
         self.cfgDict = {} # will update later
+        
+        # Initialise list of timestamps and timing messages to be stored:
+        self.timings = [time.time()]
+        self.timingMsgs = []
     
     def get_config(self):
         """
@@ -62,7 +68,8 @@ class ConfigFetcher:
         Parameters
         ----------
         self.cfgDir : str
-            The path to the directory containing config files.
+            The path to the directory containing cfgDict_ohif.json (which
+            should be the src directory).
         self.runID : str
             The ID that determines the main configuration parameters to use for
             the run, and should match with a file name of a JSON.
@@ -77,101 +84,16 @@ class ConfigFetcher:
         #print(f'cfgDir = {cfgDir}\n')
         runID = self.runID
 
-        fpath = os.path.join(cfgDir, f'{runID}.json')
+        fpath = os.path.join(cfgDir, 'cfgDict_ohif.json')
         
-        print(f'Fetching parameters from {cfgDir}\n')
+        print(f'Fetching parameters from {fpath}\n')
         
         try:
-            cfgDict = import_dict_from_json(filepath=fpath)
-        
+            cfgDict = import_dict_from_json(filepath=fpath)[runID]
         except FileNotFoundError:
-            # Get a list of JSONs in cfgDir:
-            fpaths = get_fpaths(dpath=cfgDir, ext='json')
+            msg = f"The file {fpath} was not found in {cfgDir}."
+            raise Exception(msg)
             
-            F = len(fpaths)
-            
-            if F == 0:
-                msg = f"There were no JSON files found in {cfgDir}.\nPlease "\
-                      + "check the input 'cfgDir' and try again."
-            else:
-                msg = f"There were no JSON files found in {cfgDir} whose file"\
-                    + f" name matches '{runID}'.\nPlease select from one of "\
-                    + f"the {F} files below or try a different 'cfgDir':"
-                
-                for i in range(len(fpaths)):
-                    msg += f'\n{i + 1}.  {fpaths[i]}'
-                
-                msg += "Enter an integer"
-            
-            #raise Exception(msg)
-            choice = get_user_input_as_int(message=msg, minVal=1, maxVal=F)
-            
-            fpath = fpaths[choice - 1] # choice is 1-indexed
-            
-            cfgDict = import_dict_from_json(filepath=fpath)
-            
-        self.cfgDict = cfgDict
-    
-    def update_cfgDict(self):
-        """
-        Update the current working directory (and subsequent child directories)
-        in the configuration dictionary to reflect the 'workdir' set as an 
-        environmental variable (if applicable).
-        
-        Parameters
-        ----------
-        cfgDict : dict
-            Dictionary containing the parameters for the desired run.
-        
-        Returns
-        -------
-        cfgDict : dict
-            Updated dictionary.
-        """
-        
-        cfgDict = self.cfgDict
-        
-        # Try to get the current working directory from an environmnt variable:
-        cwd = os.getenv('workdir')
-        #print(f'os.getenv (in fetch_config.py) = {cwd}')
-        if cwd == None:
-            cwd = os.getcwd()
-        #print(f'cwd (in fetch_config.py) = {cwd}')
-        
-        # Lines below added 03/11/21
-        inputsDir = os.path.join(cwd, r'inputs')
-        outputsDir = os.path.join(cwd, r'outputs')
-        sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
-        fidsDir = os.path.join(inputsDir, r'fiducials')
-        rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-        segExportDir = os.path.join(outputsDir, r'new_SEG')
-        droExportDir = os.path.join(outputsDir, r'new_DRO')
-        rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-        segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
-        resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
-        txExportDir = os.path.join(outputsDir, r'transforms')
-        imExportDir = os.path.join(outputsDir, r'images')
-        labimExportDir = os.path.join(outputsDir, r'label_images')
-        logsExportDir = os.path.join(outputsDir, r'logs')
-    
-        
-        cfgDict['cwd'] = cwd
-        # Lines below added 03/11/21
-        cfgDict['inputsDir'] = inputsDir
-        cfgDict['outputsDir'] = outputsDir
-        cfgDict['sampleDroDir'] = sampleDroDir
-        cfgDict['fidsDir'] = fidsDir
-        cfgDict['rtsExportDir'] = rtsExportDir
-        cfgDict['segExportDir'] = segExportDir
-        cfgDict['droExportDir'] = droExportDir
-        cfgDict['rtsPlotsExportDir'] = rtsPlotsExportDir
-        cfgDict['segPlotsExportDir'] = segPlotsExportDir
-        cfgDict['resPlotsExportDir'] = resPlotsExportDir
-        cfgDict['txExportDir'] = txExportDir
-        cfgDict['imExportDir'] = imExportDir
-        cfgDict['labimExportDir'] = labimExportDir
-        cfgDict['logsExportDir'] = logsExportDir
-        
         self.cfgDict = cfgDict
     
     def get_intersection_of_roi_and_trgIm(
@@ -453,3 +375,19 @@ class ConfigFetcher:
         
         params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
         params.cfgDict['useCaseToApply'] = useCaseToApply
+    
+    def add_timestamp(self, timingMsg):
+        # TODO update docstrings
+        """
+        Add timestamp and timing message. Replace the "keyword" '[*]' in
+        timingMsg with the time difference dTime calculated below. If the
+        keywork doesn't exist it's not a time-related message but just info.
+        """
+        self.timings.append(time.time())
+        
+        dTime = self.timings[-1] - self.timings[-2]
+        
+        if '[*]' in timingMsg:
+            timingMsg = timingMsg.replace('[*]', f'{dTime:.2f}')
+        self.timingMsgs.append(timingMsg)
+        print(f'*{timingMsg}')

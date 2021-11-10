@@ -106,14 +106,14 @@ def main(
     # Store time stamps for various steps:
     times = [time.time()]
     
-    # Instanstantiate a ConfigFetcher object, get the config settings, and 
-    # get the alias token (which may or may not exist):
+    # Instanstantiate a ConfigFetcher object, get the config settings:
     cfgObj = ConfigFetcher(cfgDir, runID)
     cfgObj.get_config()
     cfgObj.update_cfgDict()
     #cfgObj.get_alias_token()
     
-    # Instantiate a DataDownloader object, download the data and create
+    # Instantiate a DataDownloader object, establish a connection to XNAT
+    # (use or creating an XNAT Alias Token), download the data and create
     # pathsDict:
     params = DataDownloader(cfgObj)
     params.download_and_get_pathsDict()
@@ -125,6 +125,18 @@ def main(
     # Instantiate a DataImporter object for target and import the data:
     trgDataset = DataImporter(params, 'trg')
     trgDataset.import_data(params)
+    
+    # Check whether the RTS/SEG of interest intersects the target image's
+    # extent:
+    cfgObj.get_intersection_of_roi_and_trgIm(srcDataset, trgDataset, params)
+    
+    # Determine which use case applies (and will be applied):
+    cfgObj.which_use_case(srcDataset, trgDataset, params)
+    
+    if params.cfgDict['p2c']:
+        print(f"runID = {params.cfgDict['runID']}")
+        print(f"useCaseThatApplies = {params.cfgDict['useCaseThatApplies']}")
+        print(f"useCaseToApply = {params.cfgDict['useCaseToApply']}\n")
     
     # Instantiate a DROImporter object and fetch the DRO (if applicable):
     droObj = DroImporter()
