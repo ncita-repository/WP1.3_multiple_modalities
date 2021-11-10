@@ -9,7 +9,7 @@ Created on Thu Jul  8 09:18:36 2021
 """ Registering functions for SimpleITK images. """
 
 import SimpleITK as sitk
-import numpy as np
+#import numpy as np
 import time
 #import winsound # this is only available for windows!
 import matplotlib.pyplot as plt

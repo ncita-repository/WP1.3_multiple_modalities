@@ -95,7 +95,6 @@ def main(
     None.
     """
     
-    cfgDir = r'' + cfgDir # convert to an r path
     #print(f'\ncfgDir = {cfgDir}\n')
     
     # Store time stamps for various steps:

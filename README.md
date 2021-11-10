@@ -14,25 +14,53 @@ This repository contains three main tools:
 
 1. A "stand-alone" *ROI copy/propagation* tool
 
-2. The "back-end" of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer
+2. The "OHIF-integration" version (i.e. "back-end" of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer)
 
 3. An XNAT "snapshot" tool
 
-All code is written in Python 3.  The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, and is not to be confused with a collection of contours within an RTSTRUCT-based *ROI Collection*.  The definitions at the end of this page will be useful in understanding the terminology used to describe the tools.  In brief, a "copy" will refer to an operation that does not preserve the spatial coordinates of the contour or segmentation, whereas a "propagation" implies that the resulting contour or segmentation upon pasting maintains spatial coordinates.
+All code is written in Python 3.  
+
+The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, which may refer to any "entity" within, or the entire *ROI Collection* with either *RTSTRUCT* or *SEG* modalities, and is not to be confused with a collection of contours within an *RTSTRUCT*-based *ROI Collection*.
+
+The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an "entity" may refer to single *contour*, a single *segmentation*, a collection of *contour*s (= "ROI") or *segmentation*s (= "segment"), or an entire ROI Collection (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
+
+A "copy" will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a "propagation" implies that the propagated entity shares the same spatial coordinates as the original.  Hence a *contour* that segments the ventricle in the brain in the *source* DICOM slice will not necessarily coincide with the ventricle in the *target* slice upon making a *copy*, whereas it will be expected to overlay when performing a *propagation*.
 
 ## "Stand-alone" *ROI copy/propagation* tool
 
-The "stand-alone" ROI copy/propagation tool can be used to make "non-relationship-preserving" copies of a single *contour* or *segmentation* (think copy and paste function), or "relationship-preserving" copies of a single *contour* or *segmentation*, a collection of *contour*s (= "ROI") or *segmentation*s (= "segment"), or an entire ROI Collection (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
+The "stand-alone" ROI copy/propagation tool can be used to make a "non-relationship-preserving copy" of a single *contour* or *segmentation* (think copy and paste function), or a "relationship-preserving propagation" of any entity.
 
-This tool relies on the user providing a configuration JSON file that contains the metadata that identifies the "source" and "target" DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to the local filesystem, import the data and depending on the relationship between the *source* and *target* DICOM series and other user-provided metadata, will either perform a non-relationship-preserving copy or relationship-preserving propagation of the entity of interest - entity here means *contour*, *segmentation*, *ROI*, *segment* or *ROI Collection*.
+This tool relies on the user providing a configuration JSON file that contains the metadata that identifies the "source" and "target" DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads*, import the data and depending on the relationship between the *source* and *target* DICOM series and other user-provided metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
 
-## Back-end of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer
+The configuration file is expected in *src/configs*.  The package *config.py* may be used to create a number of such configuration files.  The "stand-alone" version of the algorithm is run in *app.py*.  Upon the successful copying or propagation of an entity, a new *ROI Collection* will be created and exported to the *src/outputs/new_roicols* directory.  The new *ROI Collection* will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
 
-Current development of the OHIF-Viewer consists of a *contour* copy-and-paste feature (which will be extended to *segmentation* copying).  This is a non-relationship preserving copy in that the contour that is pasted will occupy the same location within the image extent (interpolation will be used in the *source* and *target* DICOM slices have different resolutions), but their coordinates within space will not be preserved.  Hence a *contour* that segmented the ventricle in the brain in the *source* DICOM slice will not necessarily coincide with the ventricle in the *target* slice upon the pasting operation.  Such non-relationship-preserving copies will be handled entirely within the OHIF-Viewer front-end.  Relationship-preserving propagations will be handled by the "back-end" in Python, for example, using image resampling or registration to preserve spatial relationships.
+If an image registration is required to *propagate* the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new DICOM Registration Object (DRO) will be created and exported to *src/outputs/new_DRO*.  A rigid registration will yield a Spatial Registration Object (SRO), while a deformable one will result in the creation of a Deformable Spatial Registration Object (DSRO).  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
 
+Once a suitable DRO exists on XNAT, future *propagation* calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  At present all subject DICOM resources will be parsed and scanned for a match for the run in progress.  Although this isn't a computationally expensive process, in future work the DRO will be stored as a subject assessor with a corresponding XML file so that matches can be made without needing to parse all resource files.
 
+The algorithm makes use of XNAT Alias Tokens to avoid the creation of multiple user sessions.  The alias token is stored in the *src/tokens* directory.
 
+## The OHIF-integration version
 
+Current development of the OHIF-Viewer consists of a *contour* copy-and-paste feature (which will be extended to *segmentation* copying in due course).  Since the front-end will handle *copy* operations, the back-end (in Python) will only need to deal with *propagation*s. This, for example, will use image resampling or registration to preserve spatial relationships.
+
+Since this tool is not yet implemented in the OHIF-Viewer some steps have been taken to make it possible to integrate the Python code.  For this version, the file *global_variables.json* is used to store the variables considered unlikely to be modified frequently.  The package *global_var_file_ohif.py* can be used to generate *global_variables.json*.
+
+The module *paths_from_ohif.py* is a script used to generate *cfgDict_ohif.json*, which contains some pre-populated paths to the *source* and *target* datasets - paths that will need to be provided by the XNAT Container Service in the longer-term, but for the time being has been provided via the JSON file.  The paths lead to select datasets stored within *src/inputs*, which includes *source* and *target* DICOM series (in *src/inputs/scans*), the *source* *ROI Collection* (in *src/inputs/roicols*), an appropriate *DRO* (in *src/inputs/dro*) if applicable, and *source* and *target* fiducials text files (in *src/inputs/fiducials*) if applicable.
+
+The above mentioned deviations from that of the "stand-alone" version in effect replaces the user-generated JSON file with two other JSON files - both of which will likely be replaced with the *command* file of the Container Service.  It is anticipated that the *command* file will also contain paths to the *source* and *target* DICOM series and *source* (and *target* if applicable) *ROI Collection*s on the XNAT archive.
+
+## XNAT "snapshot" tool
+
+This is a basic tool that fetches high-level metadata from an XNAT and produces a "snapshot", exported as an XLSX file to *src/xnat_snapshots*, and is a stand-alone feature completely separate from the business of copying/propagating ROIs.  However this tool does share some common modules used for *ROI* copying/propagating, hence its inclusion here.
+
+At present two XLSX files are exported - one that provides a snapshot broken down by projects, and one that is XNAT-wide.  The former includes the principle investigator, project description, a list of investigators, number of subjects, experiments, MR/CT/PET sessions, etc.  The XNAT-wide table includes totals and averages per project of subjects, experiments, image sessions, DICOM image files, etc.  Examples can be found in *src/xnat_snapshots_examples*.
+
+![An example of an XNAT-by-project snapshot](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/xnat_snapshots_examples/example_XNAT_by_project_snapshot.png "An example of an XNAT-by-project snapshot")
+
+![An example of an XNAT-wide snapshot](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/xnat_snapshots_examples/example_XNAT_wide_snapshot.png "An example of an XNAT-wide snapshot")
+
+# Using the tools
 
 ## Install required packages
 
@@ -41,9 +69,9 @@ After cloning the repository, *pip* install the required packages listed in the 
     pip3 install -r requirements.txt
 
 
-## Basic instructions on running the code
+## Running the "stand-alone" *ROI copy/propagation* tool
 
-A *source* ROI Collection (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
+A *source ROI Collection* (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
 
 1. Create a configuration file(s) for the run(s) you wish to carry out.
 
@@ -153,17 +181,56 @@ In a Python shell, run *main()* providing as input arguments the (absolute) dire
 Regardless of which option you take, you should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to the same *configs* directory.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the alias token, the token will be used, avoiding the need to re-enter your password.  
 
 
+## Running the "OHIF-integration" version
+
+This tool will not be used directly by an end-user but details are provided for posterity.
+
+The choice of which variables to treat as global has been determined in *global_var_file_ohif.py*.  If changes are to be made, the easiest way to do this is:
+
+1. Modify *global_var_file_ohif.py* and save the changes
+
+2. Run in a command shell:
+
+	`python global_var_file_ohif.py`
+
+or in a Python terminal: 
+
+	`from global_var_file_ohif import create_global_var_file`
+	`create_global_var_file()`
+
+This will update *global_variables.json* in *src/*.
+
+Next create a dictionary of dictionaries in *paths_from_ohif.py* that contains the required metadata that fully defines the datasets and their file or directory paths, the resampling/registration parameters, output directory names, etc. As before:
+
+1. Modify *paths_from_ohif.py* and save the changes
+
+2. Run in a command shell:
+
+	`python paths_from_ohif.py`
+
+or in a Python terminal:
+
+	`from paths_from_ohif import create_cfgDict_json`
+	`create_cfgDict_json()`
+
+This will update *cfgDict_ohif.json*.  Ensure that the paths defined in the JSON link to data in *src/inputs/scans*, *src/inputs/roicols*, and *src/inputs/dro* and *src/inputs/fiducials* if applicable.
+
+
+Next run *app_ohif.py* providing as input arguments the location of *cfgDict_ohif.json* (which should be in the *src/* directory) and the key (= `runID`) in *cfgDict_ohif.json* to be run, i.e. run in a command shell:
+
+	`python app_ohif.py . RR3_contour`
+
+or in a Python terminal:
+
+	`import os`
+	`from app_ohif import main`
+	
+	`main(os.getcwd(), 'RR3_contour')`
+
+It should be re-iterated that this is not a tool to be used for end-users, but merely demonstrates that if the metadata, paths to data and other variables are passed in place of *global_variables.json* and *cfgDict_ohif.json*, the code should run as expected.  
 
 
 # XNAT Snapshots
-
-A basic tool that fetches high-level metadata from an XNAT and produces a "snapshot", exported as an XLSX file is a stand-alone feature separate from the business of copying/propagating ROIs.
-
-At present two XLSX files are exported - one that provides a snapshot broken down by projects, and one that is XNAT-wide.  The former includes the principle investigator, project description, a list of investigators, number of subjects, experiments, MR/CT/PET sessions, etc.  The XNAT-wide table includes totals and averages per project of subjects, experiments, image sessions, DICOM image files, etc.
-
-![An example of an XNAT-by-project snapshot](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/xnat_snapshots_examples/example_XNAT_by_project_snapshot.png "An example of an XNAT-by-project snapshot")
-
-![An example of an XNAT-wide snapshot](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/xnat_snapshots_examples/example_XNAT_wide_snapshot.png "An example of an XNAT-wide snapshot")
 
 The tool can either be run as a module in a command shell or as a Python function.
 
