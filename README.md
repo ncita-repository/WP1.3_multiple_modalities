@@ -1,6 +1,4 @@
-# WP1.3_multiple_modalities
-
-## NCITA Repository Unit Work Package 1.3: XNAT-OHIF viewer - multiple modalities
+# NCITA Repository Unit Work Package 1.3: XNAT-OHIF viewer - multiple modalities
 Specific repositories and projects of the form WP1.x-y are for specific second-level, viewer-related work packages in the NCITA Repository Unit strategy.
 
 The aim of this work package of the NCITA Repository Unit will be to develop approaches within the OHIF viewer and XNAT to work with images from connected studies. The initial focus will be on image registration and the copying of regions-of-interest between:
@@ -10,15 +8,40 @@ The aim of this work package of the NCITA Repository Unit will be to develop app
 
 The NCITA Repository Unit site as a whole is at an early stage of the life cycle and does not currently have a formal structure of documentation releases. Please bear with us: things will become more organised as the NCITA project gets into gear! Note that the ICR also releases code related to the XNAT-OHIF image viewer at https://bitbucket.org/icrimaginginformatics/. 
 
+# Tools covered in this repository
 
-### Install required packages
+This repository contains three main tools:
+
+1. A "stand-alone" *ROI copy/propagation* tool
+
+2. The "back-end" of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer
+
+3. An XNAT "snapshot" tool
+
+All code is written in Python 3.  The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, and is not to be confused with a collection of contours within an RTSTRUCT-based *ROI Collection*.  The definitions at the end of this page will be useful in understanding the terminology used to describe the tools.  In brief, a "copy" will refer to an operation that does not preserve the spatial coordinates of the contour or segmentation, whereas a "propagation" implies that the resulting contour or segmentation upon pasting maintains spatial coordinates.
+
+## "Stand-alone" *ROI copy/propagation* tool
+
+The "stand-alone" ROI copy/propagation tool can be used to make "non-relationship-preserving" copies of a single *contour* or *segmentation* (think copy and paste function), or "relationship-preserving" copies of a single *contour* or *segmentation*, a collection of *contour*s (= "ROI") or *segmentation*s (= "segment"), or an entire ROI Collection (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
+
+This tool relies on the user providing a configuration JSON file that contains the metadata that identifies the "source" and "target" DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to the local filesystem, import the data and depending on the relationship between the *source* and *target* DICOM series and other user-provided metadata, will either perform a non-relationship-preserving copy or relationship-preserving propagation of the entity of interest - entity here means *contour*, *segmentation*, *ROI*, *segment* or *ROI Collection*.
+
+## Back-end of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer
+
+Current development of the OHIF-Viewer consists of a *contour* copy-and-paste feature (which will be extended to *segmentation* copying).  This is a non-relationship preserving copy in that the contour that is pasted will occupy the same location within the image extent (interpolation will be used in the *source* and *target* DICOM slices have different resolutions), but their coordinates within space will not be preserved.  Hence a *contour* that segmented the ventricle in the brain in the *source* DICOM slice will not necessarily coincide with the ventricle in the *target* slice upon the pasting operation.  Such non-relationship-preserving copies will be handled entirely within the OHIF-Viewer front-end.  Relationship-preserving propagations will be handled by the "back-end" in Python, for example, using image resampling or registration to preserve spatial relationships.
+
+
+
+
+
+## Install required packages
 
 After cloning the repository, *pip* install the required packages listed in the *requirements.txt* file:
 
     pip3 install -r requirements.txt
 
 
-### Basic instructions on running the code
+## Basic instructions on running the code
 
 A *source* ROI Collection (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
 
@@ -26,7 +49,7 @@ A *source* ROI Collection (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated
 
 2. Run the code on each run, providing a `runID` and `cfgDir`.
 
-#### 1. Creating a configuration file
+### 1. Creating a configuration file
 
 The package [*config.py*](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/config.py) is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT that was used to develop the code. You can use the pre-populated code as a template for your own XNAT.
 
@@ -74,13 +97,13 @@ The remaining keys are simply the variables that were assigned at the top of the
 
 There are a few ways to go about creating a configuration file(s):
 
-##### Option 1 - Copy and modify an existing configuration file
+#### Option 1 - Copy and modify an existing configuration file
 
 This is by far the quickest way to go about implementing your first run of the code.  
 
 Simply copy an existing configuration file from within the *.../src/configs* directory (e.g. *NCITA_test_RD1.json*), rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
 
-##### Option 2 - Define a new dictionary within the function *create_config_files()* in *config.py*
+#### Option 2 - Define a new dictionary within the function *create_config_files()* in *config.py*
 
 This option is more suitable if you wish to run the code on multiple datasets and you don't want to manually create confguration files one by one.  
 
@@ -92,14 +115,14 @@ Use a previously fully-defined dictionary as a template for new dictionaries as 
 
 Once the dictionaries have been defined, the configuration files can be created in one of two ways:
 
-###### Option 2a - Run *config.py* as a script in a command shell
+##### Option 2a - Run *config.py* as a script in a command shell
 
 In a command shell, cd to the *src* directory and run the Python module and provide the (relative or absolute) directory path containing the configuration file (change path to *src* directory accordingly):
 
 	cd C:\Code\WP1.3_multiple_modalities\src
 	python config.py configs
 
-###### Option 2b - Run *create_config_files()* as a function within a Python shell
+##### Option 2b - Run *create_config_files()* as a function within a Python shell
 
 In a Python shell, import the function and provide the (absolute) directory path:
 	
@@ -110,17 +133,17 @@ In a Python shell, import the function and provide the (absolute) directory path
 
 A list of .json files should be generated and/or overwritten in the configs directory - one file for each key-dictionary pair within the dictionary `cfg`.  
 
-#### 2. Performing a run
+### 2. Performing a run
 
 Now that the configuration file has been created it's time to run the code.  As before you have two options - you can execute it in a command shell, or in a Python shell.
 
-##### Option 1 - Run *app.py* as a script in a command shell
+#### Option 1 - Run *app.py* as a script in a command shell
 
 In a command shell, run the Python module and provide the (relative or absolute) directory path containing the configuration file and the `runID`:
 
 	python app.py configs NCITA_TEST_RR2
 	
-##### Option 2 - Run the function *main()* in a Python shell
+#### Option 2 - Run the function *main()* in a Python shell
 
 In a Python shell, run *main()* providing as input arguments the (absolute) directory path containing the configuration file and the `runID`:
 
@@ -129,20 +152,10 @@ In a Python shell, run *main()* providing as input arguments the (absolute) dire
 
 Regardless of which option you take, you should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to the same *configs* directory.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the alias token, the token will be used, avoiding the need to re-enter your password.  
 
-### Relationship-preserving v Non-relationship-preserving, and Copies v Propagations
-
-A *non-relationship preserving* copy (also referred to as a "direct" copy) is analogous to a copy-and-paste function - e.g. "Copy the *source* contour/segmentation corresponding to slice `srcSlcNum` in ROI/segment `srcRoiName` in ROI Collection `srcRoicol` to a contour/segmentation that will overlay onto *target* slice `trgSlcNum`.  "Direct" copies do not maintain spatial relationships between the *source* contour/segmentation and the *target* contour/segmentation's location in space.  One might want to perform a "direct" copy to use an existing contour/segmentation as a "starting point" for a new one that can sculpted to match the anatomical features on the *target* scan.  By contrast, a *relationship-preserving* does respect spatial relationships and hence the contour(s)/segmentation(s) end up where they "should".
-
-*Copies* are made between two 3D images that have the same voxel resolution (*Pixel Spacing* and difference between adjacent *ImagePositionPatient* values along the scan direction), same patient position (*ImagePositionPatient*), orientation (*ImageOrientationPatient*) and frame-of-reference (*FrameOfReferenceUID*).  Propagations require a bit more work - either a resampling is required (if the two 3D images do not have the same voxel spacings, or same extent, but have the same FOR), or image registration (if they do not have the same FOR).  
-
-*Non-relationship preserving* copies/propagations always involve the copy/propagation of a single contour/segmentation to a single contour/segmentation.  If it is the case that resampling/registration of the source contour/segmentation led to multiple contours/segmentations, the ROI/segment is collapsed to a single contour/segmentation to maintain the expected behaviour.  On the contrary, *relationship-preserving* copies/propagations are broader, in that a single contour/segmentation may map to multiple contours/segmentations (depending on the relative voxel spacings and FOR of the two 3D images). 
-
-When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
-
-The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
 
 
-## XNAT Snapshots
+
+# XNAT Snapshots
 
 A basic tool that fetches high-level metadata from an XNAT and produces a "snapshot", exported as an XLSX file is a stand-alone feature separate from the business of copying/propagating ROIs.
 
@@ -154,13 +167,13 @@ At present two XLSX files are exported - one that provides a snapshot broken dow
 
 The tool can either be run as a module in a command shell or as a Python function.
 
-##### Option 1 - Run *snapshots.py* as a script in a command shell
+#### Option 1 - Run *snapshots.py* as a script in a command shell
 
 In a command shell, run the Python module providing the XNAT url:
 
 	python snapshots.py configs http://10.1.1.20
 	
-##### Option 2 - Run the function *get_xnat_snapshot()* in a Python shell
+#### Option 2 - Run the function *get_xnat_snapshot()* in a Python shell
 
 In a Python shell, run *get_xnat_snapshot()* providing the XNAT url as an input argument:
 
@@ -168,6 +181,20 @@ In a Python shell, run *get_xnat_snapshot()* providing the XNAT url as an input 
 	get_xnat_snapshot("http://10.1.1.20")
 
 
+
+# Definitions
+
+## Relationship-preserving v Non-relationship-preserving, and Copies v Propagations
+
+A *non-relationship preserving* copy (also referred to as a "direct" copy) is analogous to a copy-and-paste function - e.g. "Copy the *source* contour/segmentation corresponding to slice `srcSlcNum` in ROI/segment `srcRoiName` in ROI Collection `srcRoicol` to a contour/segmentation that will overlay onto *target* slice `trgSlcNum`.  "Direct" copies do not maintain spatial relationships between the *source* contour/segmentation and the *target* contour/segmentation's location in space.  One might want to perform a "direct" copy to use an existing contour/segmentation as a "starting point" for a new one that can sculpted to match the anatomical features on the *target* scan.  By contrast, a *relationship-preserving* does respect spatial relationships and hence the contour(s)/segmentation(s) end up where they "should".
+
+*Copies* are made between two 3D images that have the same voxel resolution (*Pixel Spacing* and difference between adjacent *ImagePositionPatient* values along the scan direction), same patient position (*ImagePositionPatient*), orientation (*ImageOrientationPatient*) and frame-of-reference (*FrameOfReferenceUID*).  Propagations require a bit more work - either a resampling is required (if the two 3D images do not have the same voxel spacings, or same extent, but have the same FOR), or image registration (if they do not have the same FOR).  
+
+*Non-relationship preserving* copies/propagations always involve the copy/propagation of a single contour/segmentation to a single contour/segmentation.  If it is the case that resampling/registration of the source contour/segmentation led to multiple contours/segmentations, the ROI/segment is collapsed to a single contour/segmentation to maintain the expected behaviour.  On the contrary, *relationship-preserving* copies/propagations are broader, in that a single contour/segmentation may map to multiple contours/segmentations (depending on the relative voxel spacings and FOR of the two 3D images). 
+
+When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
+
+The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
 
 
 [1]: R. Beare, B. C. Lowekamp, Z. Yaniv, “Image Segmentation, Registration and Characterization in R with SimpleITK”, J Stat Softw, 86(8), https://doi.org/10.18637/jss.v086.i08, 2018.
