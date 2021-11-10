@@ -109,8 +109,10 @@ def create_config_files(cfgDir):
     
     # Directories for the (new) target ROI Collections, DRO, plots, transforms,
     # binary label maps, logs and configuration files:
-    rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-    segExportDir = os.path.join(outputsDir, r'new_SEG')
+    #rtsExportDir = os.path.join(outputsDir, r'new_RTS')
+    #segExportDir = os.path.join(outputsDir, r'new_SEG')
+    rtsExportDir = os.path.join(outputsDir, r'new_roicols')
+    segExportDir = os.path.join(outputsDir, r'new_roicols')
     droExportDir = os.path.join(outputsDir, r'new_DRO')
     rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
     segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
