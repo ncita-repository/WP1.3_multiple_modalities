@@ -23,7 +23,7 @@ xnat_snapshots/
 *.csv
 *.mat
 *.npy
-*.json
+#*.json
 *.cfg
 *.nii
 *.tfm
@@ -42,30 +42,13 @@ xnat_snapshots/
 
 # Re-include JSON files in src/configs (to track config files):
 !src/configs/*.json
+!src/*.json
 
 # Re-include TXT files in src (to track requirements.txt):
 !src/*.txt
 
 # Re-include XLSX and PNG files in src/xnat_snapshots_examples:
 !src/xnat_snapshots_examples/*.xlsx
-*.ipynb
-*.docx
-*.pptx
-*.pdf
-*.nii
-*.csv
-*.mat
-*.npy
-*.json
-*.cfg
-*.nii
-*.tfm
-*.dcm
-*.avi
-*.png
-*.jpg
-*.xlsx
-*.tar
 
 # Re-include DCM files in src/sample_DROs:
 !src/inputs/sample_DROs/*.dcm
