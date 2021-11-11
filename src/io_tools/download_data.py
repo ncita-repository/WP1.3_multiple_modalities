@@ -45,10 +45,12 @@ class DataDownloader:
     
     Parameters
     ----------
-    cfgObj : ConfigFetcher Object
-        An object containing various parameters for a specified runID (stored 
-        in the dictionary self.cfgDict), and an XNAT alias token (stored in the 
-        dictionary self.aliasToken).
+    #cfgObj : ConfigFetcher Object
+    #    An object containing various parameters for a specified runID (stored 
+    #    in the dictionary self.cfgDict), and an XNAT alias token (stored in the 
+    #    dictionary self.aliasToken).
+    self.cfgDict : dict
+        Dictionary containing the parameters for the desired run.
     xnatSession : Requests Object, optional
         A Requests Object for an existing XNAT session. The default is None.
     
@@ -66,10 +68,12 @@ class DataDownloader:
     """
     
     #def __init__(self, cfgObj, xnatSession=None):
-    def __init__(self, cfgObj):
+    #def __init__(self, cfgObj):
+    def __init__(self, cfgDict):
         
-        self.cfgDir = cfgObj.cfgDir
-        self.cfgDict = cfgObj.cfgDict
+        #self.cfgDir = cfgObj.cfgDir
+        #self.cfgDict = cfgObj.cfgDict
+        self.cfgDict = cfgDict
         #self.aliasToken = cfgObj.aliasToken
         self.aliasToken = {} # initial value
         

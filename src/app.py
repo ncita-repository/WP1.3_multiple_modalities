@@ -64,7 +64,8 @@ reload(dro_tools.create_dro)
 
 import time
 import argparse
-from io_tools.fetch_config import ConfigFetcher
+#from io_tools.fetch_config import ConfigFetcher
+from io_tools.imports import import_dict_from_json
 from io_tools.download_data import DataDownloader
 from io_tools.import_data import DataImporter
 from io_tools.import_dro import DroImporter
@@ -74,7 +75,7 @@ from dro_tools.create_dro import DroCreator
 
 
 def main(
-        cfgDir, runID, printSummary=False, plotResults=False):
+        runID, printSummary=False, plotResults=False):
     """
     Main script for fetching the config settings, downloading data from XNAT,
     importing of source ROI Collection and source and target DICOM series, 
@@ -84,8 +85,8 @@ def main(
     
     Parameters
     ----------
-    cfgDir : str
-        The path to the directory containing config files.
+    #cfgDir : str
+    #    The path to the directory containing config files.
     runID : str
         The ID that determines the main configuration parameters to use for the
         run (i.e. the key in the base level dictionary contained in 
@@ -105,16 +106,21 @@ def main(
     # Store time stamps for various steps:
     times = [time.time()]
     
-    # Instanstantiate a ConfigFetcher object, get the config settings:
-    cfgObj = ConfigFetcher(cfgDir, runID)
-    cfgObj.get_config()
-    cfgObj.update_cfgDict()
-    #cfgObj.get_alias_token()
+    # Instanstantiate a ConfigFetcher object, get the config settings and
+    # export it to src/cfgDict.json:
+    #cfgObj = ConfigFetcher(runID)
+    ##cfgObj.get_config()
+    ##cfgObj.update_cfgDict()
+    ##cfgObj.get_alias_token()
+    
+    # Read in the config file:
+    cfgDict = import_dict_from_json('cfgDict.json')
     
     # Instantiate a DataDownloader object, establish a connection to XNAT
     # (use or creating an XNAT Alias Token), download the data and create
     # pathsDict:
-    params = DataDownloader(cfgObj)
+    #params = DataDownloader(cfgObj)
+    params = DataDownloader(cfgDict)
     params.download_and_get_pathsDict()
     
     # Instantiate a DataImporter object for source and import the data:

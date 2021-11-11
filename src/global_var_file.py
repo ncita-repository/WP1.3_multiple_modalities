@@ -81,7 +81,9 @@ def create_global_var_file():
     inputsDir = r'inputs' # 03/11/21
     outputsDir = r'outputs' # 03/11/21
     
-    # Directories containing sample DROs and fiducials:
+    # Directories containing configuration files (for various runIDs), sample 
+    # DROs and fiducials:
+    xnatCfgDir = os.path.join(cwd, r'xnat_configs')
     sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
     fidsDir = os.path.join(inputsDir, r'fiducials')
     
@@ -166,6 +168,18 @@ def create_global_var_file():
     """
     addToRoicolLab = '' # the current timestamp will be added
     
+    """ 
+    When searching XNAT for the source ROI Collection that matches the required
+    metadata multiple hits may arise. Chose how to proceed from the following
+    3 options:
+        1. Select the oldest ROI Collection (whichSrcRoicol = 'oldest')
+        2. Select the newest ROI Collection (whichSrcRoicol = 'newest')
+        3. Allow the user to decide (whichSrcRoicol = 'user')
+    """
+    whichSrcRoicol = 'oldest'
+    #whichSrcRoicol = 'newest'
+    #whichSrcRoicol = 'user'
+    
     """
     Chose whether or not to print results to console (e.g. for debugging):
     """
@@ -178,6 +192,8 @@ def create_global_var_file():
         'useDroForTx' : useDroForTx,
         'regTxName' : regTxName,
         'initMethod' : initMethod,
+        'srcFidsFpath' : '',
+        'trgFidsFpath' : '',
         'maxIters' : maxIters,
         'applyPreResBlur' : applyPreResBlur,
         'preResVar' : preResVar,
@@ -193,9 +209,11 @@ def create_global_var_file():
         'exportLogs' : exportLogs,
         'uploadDro' : uploadDro,
         'overwriteDro' : overwriteDro,
+        'whichSrcRoicol' : whichSrcRoicol,
         'addToRoicolLab': addToRoicolLab,
         'p2c' : p2c,
         'cwd' : cwd, # this will be updated later
+        'xnatCfgDir' : xnatCfgDir,
         'inputsDir' : inputsDir,
         'outputsDir' : outputsDir,
         'sampleDroDir' : sampleDroDir,
@@ -225,12 +243,12 @@ def create_global_var_file():
 
 if __name__ == '__main__':
     """
-    Run global_var_file_ohif.py as a script.
+    Run global_var_file.py as a script.
     
     Example usage in a console:
     
     cd C:\Code\WP1.3_multiple_modalities\src
-    python global_var_file_ohif.py
+    python global_var_file.py
     """
     
     # Run create_global_var_file():

@@ -14,14 +14,16 @@ from io_tools.exports import export_dict_to_json
 #from io_tools.imports import import_dict_from_json
 
 
-def create_config_files(cfgDir):
+def create_xnat_config_files():
     """
-    Generate a JSON files for all run configurations.
+    Generate a JSON files for various XNAT configurations.
+    
+    Files will be exported to src/xnat_configs/
     
     Parameters
     ----------
-    cfgDir : str
-        The path to the directory to export the JSON files.
+    #cfgDir : str
+    #    The path to the directory to export the JSON files.
     
     Returns
     -------
@@ -70,7 +72,7 @@ def create_config_files(cfgDir):
     """
     
     # Current date:
-    currentDate = time.strftime("%Y-%m-%d", time.gmtime())
+    #currentDate = time.strftime("%Y-%m-%d", time.gmtime())
     
     # Try to get current working directory from an environment variable - this 
     # will be updated by running update_cfgDict() in io_tools.fetch_config.py:
@@ -81,60 +83,66 @@ def create_config_files(cfgDir):
         cwd = os.getcwd()
     print(f'cwd (in config.py) = {cwd}')
     """
-    cwd = "" # this will be updated later
-    #cwd = "src"  # 03/11/21
+    #cwd = "" # this will be updated later
+    ##cwd = "src"  # 03/11/21
+    
+    # Get current working directory:
+    cwd = os.getcwd()
+    
+    # Directory where XNAT config files will be exported to:
+    cfgDir = os.path.join(cwd, 'xnat_configs')
     
     # Default download directory for XNAT data:
     #downloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
     #downloadDir = os.path.join(cwd, "xnat_downloads", currentDate)
-    # Default download directory for XNAT data within cwd:
-    downloadDir = os.path.join(r"xnat_downloads", currentDate)
+    # Default download directory for XNAT data relative to cwd:
+    #downloadDir = os.path.join(r"xnat_downloads", currentDate)
     
     # Root input and output directories:
     #rootInputDir = os.path.join(cwd, r'inputs')
     #rootOutputDir = os.path.join(cwd, r'outputs')
-    # Inputs and outputs directories within cwd:
-    inputsDir = r'inputs' # 03/11/21
-    outputsDir = r'outputs' # 03/11/21
-    #inputsDir = os.path.join(cwd, r'inputs') # 03/11/21
-    #outputsDir = os.path.join(cwd, r'outputs') # 03/11/21
+    # Inputs and outputs directories relative to cwd:
+    #inputsDir = r'inputs' # 03/11/21
+    #outputsDir = r'outputs' # 03/11/21
+    ##inputsDir = os.path.join(cwd, r'inputs') # 03/11/21
+    ##outputsDir = os.path.join(cwd, r'outputs') # 03/11/21
     
     # Directories containing sample DROs and fiducials:
     #sampleDroDir = os.path.join(rootInputDir, r'sample_DROs')
     #fidsDir = os.path.join(rootInputDir, r'fiducials')
-    # Directories containing sample DROs and fiducials within cwd:
-    sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
-    #fidsDir = os.path.join(outputsDir, r'fiducials') # 03/11/21
-    fidsDir = os.path.join(inputsDir, r'fiducials') # 03/11/21
+    # Directories containing sample DROs and fiducials relative to cwd:
+    #sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
+    ##fidsDir = os.path.join(outputsDir, r'fiducials') # 03/11/21
+    #fidsDir = os.path.join(inputsDir, r'fiducials') # 03/11/21
     
     # Directories for the (new) target ROI Collections, DRO, plots, transforms,
-    # binary label maps, logs and configuration files:
-    #rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-    #segExportDir = os.path.join(outputsDir, r'new_SEG')
-    rtsExportDir = os.path.join(outputsDir, r'new_roicols')
-    segExportDir = os.path.join(outputsDir, r'new_roicols')
-    droExportDir = os.path.join(outputsDir, r'new_DRO')
-    rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-    segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
+    # binary label maps, logs and configuration files relative to cwd:
+    ##rtsExportDir = os.path.join(outputsDir, r'new_RTS')
+    ##segExportDir = os.path.join(outputsDir, r'new_SEG')
+    #rtsExportDir = os.path.join(outputsDir, r'new_roicols')
+    #segExportDir = os.path.join(outputsDir, r'new_roicols')
+    #droExportDir = os.path.join(outputsDir, r'new_DRO')
+    #rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
+    #segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
     # resampled/transformed/registered plots
-    resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
-    txExportDir = os.path.join(outputsDir, r'transforms')
-    imExportDir = os.path.join(outputsDir, r'images')
-    labimExportDir = os.path.join(outputsDir, r'label_images')
-    logsExportDir = os.path.join(outputsDir, r'logs')
+    #resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
+    #txExportDir = os.path.join(outputsDir, r'transforms')
+    #imExportDir = os.path.join(outputsDir, r'images')
+    #labimExportDir = os.path.join(outputsDir, r'label_images')
+    #logsExportDir = os.path.join(outputsDir, r'logs')
     
     
     """
     Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
     DRO, transforms, label images, plots and logs:
     """
-    exportRoicol = True
-    exportDro = True
-    exportTx = True
-    exportIm = True # 3D DICOM images
-    exportLabim = True # 3D binary label images
-    exportPlots = True
-    exportLogs = True
+    #exportRoicol = True
+    #exportDro = True
+    #exportTx = True
+    #exportIm = True # 3D DICOM images
+    #exportLabim = True # 3D binary label images
+    #exportPlots = True
+    #exportLogs = True
     
     
     """
@@ -146,7 +154,7 @@ def create_config_files(cfgDir):
     result in the addition of the timestamp of the file creation,
     e.g. "{copied SSL/SD} 20210323 101748".
     """
-    addToRoicolLab = '' # the current timestamp will be added
+    #addToRoicolLab = '' # the current timestamp will be added
     
     """ 
     When searching XNAT for the source ROI Collection that matches the required
@@ -156,9 +164,9 @@ def create_config_files(cfgDir):
         2. Select the newest ROI Collection (whichSrcRoicol = 'newest')
         3. Allow the user to decide (whichSrcRoicol = 'user')
     """
-    whichSrcRoicol = 'oldest'
-    #whichSrcRoicol = 'newest'
-    #whichSrcRoicol = 'user'
+    #whichSrcRoicol = 'oldest'
+    ##whichSrcRoicol = 'newest'
+    ##whichSrcRoicol = 'user'
     
     
     """
@@ -175,20 +183,20 @@ def create_config_files(cfgDir):
     """
     Chose whether or not to upload the (new) target DRO to XNAT:
     """
-    #uploadDro = False
-    uploadDro = True # see Notes
+    ##uploadDro = False
+    #uploadDro = True # see Notes
     
     """
     Chose whether or not to overwrite an existing DRO to XNAT:
     """
-    overwriteDro = False
-    #overwriteDro = True # see Notes
+    #overwriteDro = False
+    ##overwriteDro = True # see Notes
     
     """
     Chose whether or not to print results to console (e.g. for debugging):
     """
-    p2c = False
-    #p2c = True
+    #p2c = False
+    ##p2c = True
     
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}
@@ -226,47 +234,49 @@ def create_config_files(cfgDir):
         'trgRoicolName' : None,
         'trgRoiName' : None,
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : os.path.join(fidsDir, r'STS_004_CT_fiducials.txt'),
-        'trgFidsFpath' : os.path.join(fidsDir, r'STS_004_MR_fiducials.txt'), 
-        'forceReg' : False,
-        'regTxName' : 'affine',
-        'initMethod' : 'landmarks',
-        'maxIters' : 512,
+        #'srcFidsFpath' : os.path.join(fidsDir, r'STS_004_CT_fiducials.txt'),
+        #'trgFidsFpath' : os.path.join(fidsDir, r'STS_004_MR_fiducials.txt'),
+        'srcFidsFname' : 'STS_004_CT_fiducials.txt',
+        'trgFidsFname' : 'STS_004_MR_fiducials.txt',
+        #'forceReg' : False,
+        #'regTxName' : 'affine',
+        'initMethod' : 'landmarks'
+        #'maxIters' : 512,
         #'useDroForTx' : True,
-        'useDroForTx' : False,
-        'applyPreResBlur' : False,
-        'preResVar' : (1,1,1),
-        'resInterp' : 'BlurThenLinear',
-        'applyPostResBlur' : True,
-        'postResVar' : (1,1,1),
-        'exportRoicol' : exportRoicol,
-        'exportDro' : exportDro,
-        'exportTx' : exportTx,
-        'exportIm' : exportIm,
-        'exportLabim' : exportLabim,
-        'exportPlots' : exportPlots,
-        'exportLogs' : exportLogs,
-        'whichSrcRoicol' : whichSrcRoicol,
-        'addToRoicolLab' : addToRoicolLab,
-        'uploadDro' : uploadDro,
-        'overwriteDro' : overwriteDro,
-        'p2c' : p2c,
-        'cwd' : cwd,
-        'downloadDir' : downloadDir,
-        'inputsDir' : inputsDir,
-        'outputsDir' : outputsDir,
-        'sampleDroDir' : sampleDroDir,
-        'fidsDir' : fidsDir,
-        'rtsExportDir' : rtsExportDir,
-        'segExportDir' : segExportDir,
-        'droExportDir' : droExportDir,
-        'txExportDir' : txExportDir,
-        'imExportDir' : imExportDir,
-        'labimExportDir' : labimExportDir,
-        'logsExportDir' : logsExportDir,
-        'rtsPlotsExportDir' : rtsPlotsExportDir,
-        'segPlotsExportDir' : segPlotsExportDir,
-        'resPlotsExportDir' : resPlotsExportDir
+        #'useDroForTx' : False,
+        #'applyPreResBlur' : False,
+        #'preResVar' : (1,1,1),
+        #'resInterp' : 'BlurThenLinear',
+        #'applyPostResBlur' : True,
+        #'postResVar' : (1,1,1),
+        #'exportRoicol' : exportRoicol,
+        #'exportDro' : exportDro,
+        #'exportTx' : exportTx,
+        #'exportIm' : exportIm,
+        #'exportLabim' : exportLabim,
+        #'exportPlots' : exportPlots,
+        #'exportLogs' : exportLogs,
+        #'whichSrcRoicol' : whichSrcRoicol,
+        #'addToRoicolLab' : addToRoicolLab,
+        #'uploadDro' : uploadDro,
+        #'overwriteDro' : overwriteDro,
+        #'p2c' : p2c,
+        #'cwd' : cwd,
+        #'downloadDir' : downloadDir,
+        #'inputsDir' : inputsDir,
+        #'outputsDir' : outputsDir,
+        #'sampleDroDir' : sampleDroDir,
+        #'fidsDir' : fidsDir,
+        #'rtsExportDir' : rtsExportDir,
+        #'segExportDir' : segExportDir,
+        #'droExportDir' : droExportDir,
+        #'txExportDir' : txExportDir,
+        #'imExportDir' : imExportDir,
+        #'labimExportDir' : labimExportDir,
+        #'logsExportDir' : logsExportDir,
+        #'rtsPlotsExportDir' : rtsPlotsExportDir,
+        #'segPlotsExportDir' : segPlotsExportDir,
+        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate a RTS using affine registration of soft tissue 
@@ -351,49 +361,49 @@ def create_config_files(cfgDir):
         'trgScanID' : '4',
         'trgSlcNum' : None,
         'trgRoicolName' : None,
-        'trgRoiName' : None,
+        'trgRoiName' : None
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : None,
-        'trgFidsFpath' : None, 
-        'forceReg' : False,
-        'regTxName' : 'affine',
+        #'srcFidsFpath' : None,
+        #'trgFidsFpath' : None, 
+        #'forceReg' : False,
+        #'regTxName' : 'affine',
         #'initMethod' : 'moments', # 07/09/21
-        'initMethod' : 'geometry', # 07/09/21
-        'maxIters' : 512,
-        'useDroForTx' : False,
-        'applyPreResBlur' : False,
-        'preResVar' : (1,1,1),
-        'resInterp' : 'BlurThenLinear',
-        'applyPostResBlur' : True,
-        'postResVar' : (1,1,1),
-        'exportRoicol' : exportRoicol,
-        'exportDro' : exportDro,
-        'exportTx' : exportTx,
-        'exportIm' : exportIm,
-        'exportLabim' : exportLabim,
-        'exportPlots' : exportPlots,
-        'exportLogs' : exportLogs,
-        'whichSrcRoicol' : whichSrcRoicol,
-        'addToRoicolLab' : addToRoicolLab,
-        'uploadDro' : uploadDro,
-        'overwriteDro' : overwriteDro,
-        'p2c' : p2c,
-        'cwd' : cwd,
-        'downloadDir' : downloadDir,
-        'inputsDir' : inputsDir,
-        'outputsDir' : outputsDir,
-        'sampleDroDir' : sampleDroDir,
-        'fidsDir' : fidsDir,
-        'rtsExportDir' : rtsExportDir,
-        'segExportDir' : segExportDir,
-        'droExportDir' : droExportDir,
-        'txExportDir' : txExportDir,
-        'imExportDir' : imExportDir,
-        'labimExportDir' : labimExportDir,
-        'logsExportDir' : logsExportDir,
-        'rtsPlotsExportDir' : rtsPlotsExportDir,
-        'segPlotsExportDir' : segPlotsExportDir,
-        'resPlotsExportDir' : resPlotsExportDir
+        #'initMethod' : 'geometry', # 07/09/21
+        #'maxIters' : 512,
+        #'useDroForTx' : False,
+        #'applyPreResBlur' : False,
+        #'preResVar' : (1,1,1),
+        #'resInterp' : 'BlurThenLinear',
+        #'applyPostResBlur' : True,
+        #'postResVar' : (1,1,1),
+        #'exportRoicol' : exportRoicol,
+        #'exportDro' : exportDro,
+        #'exportTx' : exportTx,
+        #'exportIm' : exportIm,
+        #'exportLabim' : exportLabim,
+        #'exportPlots' : exportPlots,
+        #'exportLogs' : exportLogs,
+        #'whichSrcRoicol' : whichSrcRoicol,
+        #'addToRoicolLab' : addToRoicolLab,
+        #'uploadDro' : uploadDro,
+        #'overwriteDro' : overwriteDro,
+        #'p2c' : p2c,
+        #'cwd' : cwd,
+        #'downloadDir' : downloadDir,
+        #'inputsDir' : inputsDir,
+        #'outputsDir' : outputsDir,
+        #'sampleDroDir' : sampleDroDir,
+        #'fidsDir' : fidsDir,
+        #'rtsExportDir' : rtsExportDir,
+        #'segExportDir' : segExportDir,
+        #'droExportDir' : droExportDir,
+        #'txExportDir' : txExportDir,
+        #'imExportDir' : imExportDir,
+        #'labimExportDir' : labimExportDir,
+        #'logsExportDir' : logsExportDir,
+        #'rtsPlotsExportDir' : rtsPlotsExportDir,
+        #'segPlotsExportDir' : segPlotsExportDir,
+        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS across two DICOM series with the same slice
@@ -806,6 +816,147 @@ def create_config_files(cfgDir):
     
     
     """
+    Following are tests from the same collection but covering only two pairs of
+    DICOM scans - one that requires resampling, and the other image 
+    registration to propagate the entity.
+    
+    For each pair, 3 entities are considered - the contour/segmentation, an
+    entire ROI/segment, and an entire ROI Collection.
+    """
+    
+    """ Runs that use image resampling """
+    
+    """ RTSTRUCTs """
+    
+    # Propagate the contour on slice 7 from ROI 'Left eye CT"' in ROI Collection
+    # 'Left eye CT' from 'Session2', scan 2 to scan 5.
+    runID = 'RR3_contour'
+    cfg[runID] = {
+        'runID' : runID,
+        'srcExpLab' : 'Session2',
+        'srcScanID' : '2',
+        'srcSlcNum' : 7,
+        'srcRoicolName' : 'Left eye CT',
+        'srcRoiName' : 'Left eye CT',
+        'roicolMod' : 'RTSTRUCT',
+        'trgExpLab' : 'Session2',
+        'trgScanID' : '4',
+        'trgSlcNum' : None,
+        'trgRoicolName' : None,
+        'trgRoiName' : None
+        }
+    
+    # Propagate the entire ROI 'Left eye CT' in ROI Collection 'Left eye CT'
+    # from 'Session2', scan 2 to scan 5.
+    runID = 'RR3_roi'
+    cfg[runID] = dict(cfg['RR3_contour']) # copy existing and modify:
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcSlcNum'] = None
+    
+    # Propagate the entire ROI Collection 'Left eye CT' from 'Session2', scan 2 
+    # to scan 5.
+    """
+    Note:
+        This should yield the same results as 'RR3_roi' since there is only 1
+        ROI in this ROI Collection.
+    """
+    runID = 'RR3_roicol'
+    cfg[runID] = dict(cfg['RR3_roi'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcRoiName'] = None
+    
+    
+    """ SEGs """
+    
+    # Propagate the segmentation on slice 7 from segment 'Left eye CT' in ROI 
+    # Collection 'Left eye CT' from 'Session2', scan 2 to scan 5.
+    runID = 'SR3_segmentation'
+    cfg[runID] = dict(cfg['RR3_contour'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['roicolMod'] = 'SEG'
+    
+     
+    # Propagate the entire segment 'Left eye CT' in ROI Collection 'Left eye CT'
+    # from 'Session2', scan 2 to scan 5.
+    runID = 'SR3_segment'
+    cfg[runID] = dict(cfg['SR3_segmentation'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcSlcNum'] = None
+    
+    # Propagate the entire ROI Collection 'Left eye CT' from 'Session2', scan 2 
+    # to scan 5.
+    """
+    Note:
+        This should yield the same results as 'RR3_segment' since there is only
+        1 ROI in this ROI Collection.
+    """
+    runID = 'SR3_roicol'
+    cfg[runID] = dict(cfg['SR3_segment'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcRoiName'] = None
+                        
+    
+    
+    """ Runs that use image registration """
+    
+    """ RTSTRUCTs """
+    
+    # Propagate the contour on slice 18 from ROI 'Nasal cavity (right)' in 
+    # ROI Collection 'Nasal cavity' from 'Session4', scan 13 to 'Session3', 
+    # scan 6.
+    runID = 'RR11_contour'
+    cfg[runID] = dict(cfg['RR3_contour'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcExpLab'] = 'Session4'
+    cfg[runID]['srcScanID'] = '13'
+    cfg[runID]['srcSlcNum'] = 18
+    cfg[runID]['srcRoicolName'] = 'Nasal cavity'
+    cfg[runID]['srcRoiName'] = 'Nasal cavity (right)'
+    cfg[runID]['trgExpLab'] = 'Session3'
+    cfg[runID]['trgScanID'] = '6'
+    
+    # Propagate the entire ROI 'Nasal cavity (right)' in ROI Collection 
+    # 'Nasal cavity' from 'Session4', scan 13 to 'Session3', scan 6.
+    runID = 'RR11_roi'
+    cfg[runID] = dict(cfg['RR11_contour'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcSlcNum'] = None
+    
+    # Propagate the entire ROI Collection 'Nasal cavity' from 'Session4', scan 13
+    # to 'Session3', scan 6.
+    runID = 'RR11_roicol'
+    cfg[runID] = dict(cfg['RR11_roi'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcRoiName'] = None
+    
+    
+    """ SEGs """
+    
+    # Propagate the segmentation on slice 18 from ROI 'Nasal cavity (right)' in 
+    # ROI Collection 'Nasal cavity' from 'Session4', scan 13 to 'Session3', 
+    # scan 6.
+    runID = 'SR11_segmentation'
+    cfg[runID] = dict(cfg['RR11_contour'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['roicolMod'] = 'SEG'
+    
+    # Propagate the entire segment 'Nasal cavity (right)' in ROI Collection 
+    # 'Nasal cavity' from 'Session4', scan 13 to 'Session3', scan 6.
+    runID = 'SR11_segment'
+    cfg[runID] = dict(cfg['SR11_segmentation'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcSlcNum'] = None
+     
+    # Propagate the entire ROI Collection 'Nasal cavity' from 'Session4', scan 13
+    # to 'Session3', scan 6.
+    runID = 'SR11_roicol'
+    cfg[runID] = dict(cfg['SR11_segment'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['srcRoiName'] = None
+    
+    
+    
+    """
     Following are datasets for test runs using the ACRIN collection (brain
     images) from TCIA, testing how well the algorithm is able to deal with
     propagating SEG and RTSTRUCT ROI Collections from one imaging perspective 
@@ -837,49 +988,49 @@ def create_config_files(cfgDir):
         'trgScanID' : '3',
         'trgSlcNum' : None,
         'trgRoicolName' : None,
-        'trgRoiName' : None,
+        'trgRoiName' : None
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : None,
-        'trgFidsFpath' : None, 
-        'forceReg' : False,
-        'regTxName' : 'affine',
+        #'srcFidsFpath' : None,
+        #'trgFidsFpath' : None, 
+        #'forceReg' : False,
+        #'regTxName' : 'affine',
         #'initMethod' : 'moments', # 07/09/21
-        'initMethod' : 'geometry', # 07/09/21
-        'maxIters' : 512,
-        'useDroForTx' : False,
-        'applyPreResBlur' : False,
-        'preResVar' : (1,1,1),
-        'resInterp' : 'BlurThenLinear',
-        'applyPostResBlur' : True,
-        'postResVar' : (1,1,1),
-        'exportRoicol' : exportRoicol,
-        'exportDro' : exportDro,
-        'exportTx' : exportTx,
-        'exportIm' : exportIm,
-        'exportLabim' : exportLabim,
-        'exportPlots' : exportPlots,
-        'exportLogs' : exportLogs,
-        'whichSrcRoicol' : whichSrcRoicol,
-        'addToRoicolLab' : addToRoicolLab,
-        'uploadDro' : uploadDro,
-        'overwriteDro' : overwriteDro,
-        'p2c' : p2c,
-        'cwd' : cwd,
-        'downloadDir' : downloadDir,
-        'inputsDir' : inputsDir,
-        'outputsDir' : outputsDir,
-        'sampleDroDir' : sampleDroDir,
-        'fidsDir' : fidsDir,
-        'rtsExportDir' : rtsExportDir,
-        'segExportDir' : segExportDir,
-        'droExportDir' : droExportDir,
-        'txExportDir' : txExportDir,
-        'imExportDir' : imExportDir,
-        'labimExportDir' : labimExportDir,
-        'logsExportDir' : logsExportDir,
-        'rtsPlotsExportDir' : rtsPlotsExportDir,
-        'segPlotsExportDir' : segPlotsExportDir,
-        'resPlotsExportDir' : resPlotsExportDir
+        #'initMethod' : 'geometry', # 07/09/21
+        #'maxIters' : 512,
+        #'useDroForTx' : False,
+        #'applyPreResBlur' : False,
+        #'preResVar' : (1,1,1),
+        #'resInterp' : 'BlurThenLinear',
+        #'applyPostResBlur' : True,
+        #'postResVar' : (1,1,1),
+        #'exportRoicol' : exportRoicol,
+        #'exportDro' : exportDro,
+        #'exportTx' : exportTx,
+        #'exportIm' : exportIm,
+        #'exportLabim' : exportLabim,
+        #'exportPlots' : exportPlots,
+        #'exportLogs' : exportLogs,
+        #'whichSrcRoicol' : whichSrcRoicol,
+        #'addToRoicolLab' : addToRoicolLab,
+        #'uploadDro' : uploadDro,
+        #'overwriteDro' : overwriteDro,
+        #'p2c' : p2c,
+        #'cwd' : cwd,
+        #'downloadDir' : downloadDir,
+        #'inputsDir' : inputsDir,
+        #'outputsDir' : outputsDir,
+        #'sampleDroDir' : sampleDroDir,
+        #'fidsDir' : fidsDir,
+        #'rtsExportDir' : rtsExportDir,
+        #'segExportDir' : segExportDir,
+        #'droExportDir' : droExportDir,
+        #'txExportDir' : txExportDir,
+        #'imExportDir' : imExportDir,
+        #'labimExportDir' : labimExportDir,
+        #'logsExportDir' : logsExportDir,
+        #'rtsPlotsExportDir' : rtsPlotsExportDir,
+        #'segPlotsExportDir' : segPlotsExportDir,
+        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from coronal view to axial:
@@ -926,49 +1077,49 @@ def create_config_files(cfgDir):
         'trgScanID' : '80642',
         'trgSlcNum' : None,
         'trgRoicolName' : None,
-        'trgRoiName' : None,
+        'trgRoiName' : None
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : None,
-        'trgFidsFpath' : None, 
-        'forceReg' : False,
-        'regTxName' : 'affine',
+        #'srcFidsFpath' : None,
+        #'trgFidsFpath' : None, 
+        #'forceReg' : False,
+        #'regTxName' : 'affine',
         #'initMethod' : 'moments', # 07/09/21
-        'initMethod' : 'geometry', # 07/09/21
-        'maxIters' : 512,
-        'useDroForTx' : False,
-        'applyPreResBlur' : False,
-        'preResVar' : (1,1,1),
-        'resInterp' : 'BlurThenLinear',
-        'applyPostResBlur' : True,
-        'postResVar' : (1,1,1),
-        'exportRoicol' : exportRoicol,
-        'exportDro' : exportDro,
-        'exportTx' : exportTx,
-        'exportIm' : exportIm,
-        'exportLabim' : exportLabim,
-        'exportPlots' : exportPlots,
-        'exportLogs' : exportLogs,
-        'whichSrcRoicol' : whichSrcRoicol,
-        'addToRoicolLab' : addToRoicolLab,
-        'uploadDro' : uploadDro,
-        'overwriteDro' : overwriteDro,
-        'p2c' : p2c,
-        'cwd' : cwd,
-        'downloadDir' : downloadDir,
-        'inputsDir' : inputsDir,
-        'outputsDir' : outputsDir,
-        'sampleDroDir' : sampleDroDir,
-        'fidsDir' : fidsDir,
-        'rtsExportDir' : rtsExportDir,
-        'segExportDir' : segExportDir,
-        'droExportDir' : droExportDir,
-        'txExportDir' : txExportDir,
-        'imExportDir' : imExportDir,
-        'labimExportDir' : labimExportDir,
-        'logsExportDir' : logsExportDir,
-        'rtsPlotsExportDir' : rtsPlotsExportDir,
-        'segPlotsExportDir' : segPlotsExportDir,
-        'resPlotsExportDir' : resPlotsExportDir
+        #'initMethod' : 'geometry', # 07/09/21
+        #'maxIters' : 512,
+        #'useDroForTx' : False,
+        #'applyPreResBlur' : False,
+        #'preResVar' : (1,1,1),
+        #'resInterp' : 'BlurThenLinear',
+        #'applyPostResBlur' : True,
+        #'postResVar' : (1,1,1),
+        #'exportRoicol' : exportRoicol,
+        #'exportDro' : exportDro,
+        #'exportTx' : exportTx,
+        #'exportIm' : exportIm,
+        #'exportLabim' : exportLabim,
+        #'exportPlots' : exportPlots,
+        #'exportLogs' : exportLogs,
+        #'whichSrcRoicol' : whichSrcRoicol,
+        #'addToRoicolLab' : addToRoicolLab,
+        #'uploadDro' : uploadDro,
+        #'overwriteDro' : overwriteDro,
+        #'p2c' : p2c,
+        #'cwd' : cwd,
+        #'downloadDir' : downloadDir,
+        #'inputsDir' : inputsDir,
+        #'outputsDir' : outputsDir,
+        #'sampleDroDir' : sampleDroDir,
+        #'fidsDir' : fidsDir,
+        #'rtsExportDir' : rtsExportDir,
+        #'segExportDir' : segExportDir,
+        #'droExportDir' : droExportDir,
+        #'txExportDir' : txExportDir,
+        #'imExportDir' : imExportDir,
+        #'labimExportDir' : labimExportDir,
+        #'logsExportDir' : logsExportDir,
+        #'rtsPlotsExportDir' : rtsPlotsExportDir,
+        #'segPlotsExportDir' : segPlotsExportDir,
+        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from axial view to sagittal:
@@ -1027,49 +1178,49 @@ def create_config_files(cfgDir):
         'trgScanID' : '80344',
         'trgSlcNum' : None,
         'trgRoicolName' : None,
-        'trgRoiName' : None,
+        'trgRoiName' : None
         # Resampling / Registration / Transformation settings:
-        'srcFidsFpath' : None,
-        'trgFidsFpath' : None, 
-        'forceReg' : False,
-        'regTxName' : 'affine',
+        #'srcFidsFpath' : None,
+        #'trgFidsFpath' : None, 
+        #'forceReg' : False,
+        #'regTxName' : 'affine',
         #'initMethod' : 'moments', # 07/09/21
-        'initMethod' : 'geometry', # 07/09/21
-        'maxIters' : 512,
-        'useDroForTx' : False,
-        'applyPreResBlur' : False,
-        'preResVar' : (1,1,1),
-        'resInterp' : 'BlurThenLinear',
-        'applyPostResBlur' : True,
-        'postResVar' : (1,1,1),
-        'exportRoicol' : exportRoicol,
-        'exportDro' : exportDro,
-        'exportTx' : exportTx,
-        'exportIm' : exportIm,
-        'exportLabim' : exportLabim,
-        'exportPlots' : exportPlots,
-        'exportLogs' : exportLogs,
-        'whichSrcRoicol' : whichSrcRoicol,
-        'addToRoicolLab' : addToRoicolLab,
-        'uploadDro' : uploadDro,
-        'overwriteDro' : overwriteDro,
-        'p2c' : p2c,
-        'cwd' : cwd,
-        'downloadDir' : downloadDir,
-        'inputsDir' : inputsDir,
-        'outputsDir' : outputsDir,
-        'sampleDroDir' : sampleDroDir,
-        'fidsDir' : fidsDir,
-        'rtsExportDir' : rtsExportDir,
-        'segExportDir' : segExportDir,
-        'droExportDir' : droExportDir,
-        'txExportDir' : txExportDir,
-        'imExportDir' : imExportDir,
-        'labimExportDir' : labimExportDir,
-        'logsExportDir' : logsExportDir,
-        'rtsPlotsExportDir' : rtsPlotsExportDir,
-        'segPlotsExportDir' : segPlotsExportDir,
-        'resPlotsExportDir' : resPlotsExportDir
+        #'initMethod' : 'geometry', # 07/09/21
+        #'maxIters' : 512,
+        #'useDroForTx' : False,
+        #'applyPreResBlur' : False,
+        #'preResVar' : (1,1,1),
+        #'resInterp' : 'BlurThenLinear',
+        #'applyPostResBlur' : True,
+        #'postResVar' : (1,1,1),
+        #'exportRoicol' : exportRoicol,
+        #'exportDro' : exportDro,
+        #'exportTx' : exportTx,
+        #'exportIm' : exportIm,
+        #'exportLabim' : exportLabim,
+        #'exportPlots' : exportPlots,
+        #'exportLogs' : exportLogs,
+        #'whichSrcRoicol' : whichSrcRoicol,
+        #'addToRoicolLab' : addToRoicolLab,
+        #'uploadDro' : uploadDro,
+        #'overwriteDro' : overwriteDro,
+        #'p2c' : p2c,
+        #'cwd' : cwd,
+        #'downloadDir' : downloadDir,
+        #'inputsDir' : inputsDir,
+        #'outputsDir' : outputsDir,
+        #'sampleDroDir' : sampleDroDir,
+        #'fidsDir' : fidsDir,
+        #'rtsExportDir' : rtsExportDir,
+        #'segExportDir' : segExportDir,
+        #'droExportDir' : droExportDir,
+        #'txExportDir' : txExportDir,
+        #'imExportDir' : imExportDir,
+        #'labimExportDir' : labimExportDir,
+        #'logsExportDir' : logsExportDir,
+        #'rtsPlotsExportDir' : rtsPlotsExportDir,
+        #'segPlotsExportDir' : segPlotsExportDir,
+        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from axial view to sagittal:
@@ -1111,14 +1262,15 @@ def create_config_files(cfgDir):
 
 if __name__ == '__main__':
     """
-    Run config.py as a script.
+    Run create_xnat_config_files.py as a script.
     
     Example usage in a console:
     
     cd C:\Code\WP1.3_multiple_modalities\src
-    python config.py configs
+    python xnat_config_files.py configs
     """
     
+    """
     parser = argparse.ArgumentParser(
         description='Arguments for create_config_files()'
         )
@@ -1132,3 +1284,6 @@ if __name__ == '__main__':
     
     # Run create_config_files():
     create_config_files(args.cfgDir)
+    """
+    
+    create_xnat_config_files()
