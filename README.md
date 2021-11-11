@@ -22,7 +22,7 @@ All code is written in Python 3.
 
 The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, which may refer to any "entity" within, or the entire *ROI Collection* with either *RTSTRUCT* or *SEG* modalities, and is not to be confused with a collection of contours within an *RTSTRUCT*-based *ROI Collection*.
 
-The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an "entity" may refer to single *contour*, a single *segmentation*, a collection of *contour*s (= "ROI") or *segmentation*s (= "segment"), or an entire ROI Collection (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
+The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an "entity" may refer to single *contour*, a single *segmentation*, a collection of *contour*s (= "ROI") or *segmentation*s (= "segment"), or an entire *ROI Collection* (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
 
 A "copy" will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a "propagation" implies that the propagated entity shares the same spatial coordinates as the original.  Hence a *contour* that segments the ventricle in the brain in the *source* DICOM slice will not necessarily coincide with the ventricle in the *target* slice upon making a *copy*, whereas it will be expected to overlay when performing a *propagation*.
 
@@ -251,17 +251,25 @@ In a Python shell, run *get_xnat_snapshot()* providing the XNAT url as an input 
 
 # Definitions
 
-## Relationship-preserving v Non-relationship-preserving, and Copies v Propagations
+## 3D images
 
-A *non-relationship preserving* copy (also referred to as a "direct" copy) is analogous to a copy-and-paste function - e.g. "Copy the *source* contour/segmentation corresponding to slice `srcSlcNum` in ROI/segment `srcRoiName` in ROI Collection `srcRoicol` to a contour/segmentation that will overlay onto *target* slice `trgSlcNum`.  "Direct" copies do not maintain spatial relationships between the *source* contour/segmentation and the *target* contour/segmentation's location in space.  One might want to perform a "direct" copy to use an existing contour/segmentation as a "starting point" for a new one that can sculpted to match the anatomical features on the *target* scan.  By contrast, a *relationship-preserving* does respect spatial relationships and hence the contour(s)/segmentation(s) end up where they "should".
+Every DICOM series (or "scan") consists of any number of 2D pixel arrays - i.e. 2D images.  The entire series or scan make up a 3D image.  When referring to 3D images, this will usually imply the DICOM series/scan.  3D images also crop up when referring to 3D "label images".  These are a collection of binary masks (i.e. segmentations) that occupy the same extent, voxel resolution, origin and direction as the 3D image representation of the DICOM series.
+
+## Entities
+
+The term *entity* is used to refer to a region-of-interest in the most general sense, and may refer to single contour, a collection of contours (= "ROI"), or an entire ROI Collection consisting of any number of contours within any number of ROIs, all originating from a DICOM-RTSTRUCT ROI Collection.  Likewise, *entity* may also refer to a single segmentation, a collection of segmentations (= "segment"), or an entire ROI Collection consisting of any number of segmentations within any number of segments, all originating from a DICOM-SEG ROI Collection.
+ 
+## Relationship-preserving propagations v Non-relationship-preserving copies
+
+A *non-relationship preserving copy* (sometimes referred to as a "direct" copy) is analogous to a copy-and-paste function - e.g. "Copy the *source* contour/segmentation corresponding to slice `srcSlcNum` in ROI/segment `srcRoiName` in ROI Collection `srcRoicol` to a contour/segmentation that will overlay onto *target* slice `trgSlcNum`.  "Direct" copies do not maintain spatial relationships between the *source* contour/segmentation and the *target* contour/segmentation's location in space.  One might want to perform a "direct" copy to use an existing contour/segmentation as a template for a new one that can sculpted to match the anatomical features on the *target* scan.  By contrast, a *relationship-preserving propagation* does respect spatial relationships and hence the contour(s)/segmentation(s) end up where they "should anatomically".
 
 *Copies* are made between two 3D images that have the same voxel resolution (*Pixel Spacing* and difference between adjacent *ImagePositionPatient* values along the scan direction), same patient position (*ImagePositionPatient*), orientation (*ImageOrientationPatient*) and frame-of-reference (*FrameOfReferenceUID*).  Propagations require a bit more work - either a resampling is required (if the two 3D images do not have the same voxel spacings, or same extent, but have the same FOR), or image registration (if they do not have the same FOR).  
 
-*Non-relationship preserving* copies/propagations always involve the copy/propagation of a single contour/segmentation to a single contour/segmentation.  If it is the case that resampling/registration of the source contour/segmentation led to multiple contours/segmentations, the ROI/segment is collapsed to a single contour/segmentation to maintain the expected behaviour.  On the contrary, *relationship-preserving* copies/propagations are broader, in that a single contour/segmentation may map to multiple contours/segmentations (depending on the relative voxel spacings and FOR of the two 3D images). 
+A *non-relationship preserving copy* always involves the copying of a single contour/segmentation to a single contour/segmentation.  If the *source* and *target* 3D images have different voxel resolutions the copied entity will be interpolated (i.e. image resampling).  If resampling of the *source* contour/segmentation led to multiple contours/segmentations, the *ROI/segment* is collapsed to a single *contour/segmentation* to maintain the expected behaviour.  On the contrary, a *relationship-preserving propagation* are broader, in that a single contour/segmentation may map to multiple contours/segmentations (depending on the relative voxel spacings and FOR of the two 3D images). 
 
-When making relationship-preserving copies/propagations, in addition to copies/propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be copied, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two image domains.
+When making a *relationship-preserving propagation*, in addition to propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be propagated, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two 3D image domains.
 
-The code used to copy or propagate an ROI Collection for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
+The code used to copy or propagate an entity for one image session to another relies heavily on the use of [SimpleITK](https://simpleitk.org/) [1-3].
 
 
 [1]: R. Beare, B. C. Lowekamp, Z. Yaniv, “Image Segmentation, Registration and Characterization in R with SimpleITK”, J Stat Softw, 86(8), https://doi.org/10.18637/jss.v086.i08, 2018.
