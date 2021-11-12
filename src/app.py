@@ -46,8 +46,8 @@ sys.path.append(code_root)
 
 
 from importlib import reload
-import io_tools.fetch_config
-reload(io_tools.fetch_config)
+import io_tools.fetch_cfgDict
+reload(io_tools.fetch_cfgDict)
 import io_tools.download_data
 reload(io_tools.download_data)
 import io_tools.import_data
@@ -64,8 +64,8 @@ reload(dro_tools.create_dro)
 
 import time
 import argparse
-#from io_tools.fetch_config import ConfigFetcher
-from io_tools.imports import import_dict_from_json
+from io_tools.fetch_cfgDict import ConfigFetcher
+#from io_tools.imports import import_dict_from_json
 from io_tools.download_data import DataDownloader
 from io_tools.import_data import DataImporter
 from io_tools.import_dro import DroImporter
@@ -108,19 +108,13 @@ def main(
     
     # Instanstantiate a ConfigFetcher object, get the config settings and
     # export it to src/cfgDict.json:
-    #cfgObj = ConfigFetcher(runID)
-    ##cfgObj.get_config()
-    ##cfgObj.update_cfgDict()
-    ##cfgObj.get_alias_token()
-    
-    # Read in the config file:
-    cfgDict = import_dict_from_json('cfgDict.json')
+    cfgObj = ConfigFetcher()
     
     # Instantiate a DataDownloader object, establish a connection to XNAT
     # (use or creating an XNAT Alias Token), download the data and create
     # pathsDict:
     #params = DataDownloader(cfgObj)
-    params = DataDownloader(cfgDict)
+    params = DataDownloader(cfgObj)
     params.download_and_get_pathsDict()
     
     # Instantiate a DataImporter object for source and import the data:
@@ -199,11 +193,13 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    python app.py configs NCITA_TEST_RR2
+    #python app.py configs NCITA_TEST_RR2
+    python app.py
     """
     
     parser = argparse.ArgumentParser(description='Arguments for main()')
     
+    """
     parser.add_argument(
         "cfgDir", 
         help="The directory containing config files"
@@ -213,6 +209,7 @@ if __name__ == '__main__':
         "runID", 
         help="The run ID to execute"
         )
+    """
     
     parser.add_argument(
         "--printSummary", 
@@ -230,5 +227,5 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    # Run main():
-    main(args.cfgDir, args.runID, args.printSummary, args.plotResults)
+    #main(args.cfgDir, args.runID, args.printSummary, args.plotResults)
+    main(args.printSummary, args.plotResults)

@@ -5,8 +5,8 @@ Created on Mon Jul  5 10:31:59 2021
 @author: ctorti
 """
 
-from importlib import reload
-import xnat_tools.format_pathsDict
+#from importlib import reload
+#import xnat_tools.format_pathsDict
 
 import os
 from pathlib import Path
@@ -58,7 +58,9 @@ def download_scan(config, srcORtrg, xnatSession=None, pathsDict=None):
     
     url = xnatSession.url
     
-    downloadDir = config['downloadDir']
+    #downloadDir = config['downloadDir']
+    cwd = config['cwd']
+    downloadDir = os.path.join(cwd, 'xnat_downloads')
     
     projID = config['projID']
     subjLab = config['subjLab']

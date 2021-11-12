@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 15 10:31:20 2021
+Created on Fri Nov 12 11:04:23 2021
 
 @author: ctorti
 """
 
-from importlib import reload
-import io_tools.general
-reload(io_tools.general)
+#from importlib import reload
+#import io_tools.general
+#reload(io_tools.general)
 
-import os
-import argparse
-from io_tools.general import get_fpaths, get_user_input_as_int
+#import os
+#import argparse
+#from io_tools.general import get_fpaths, get_user_input_as_int
 from io_tools.imports import import_dict_from_json
-from io_tools.exports import export_dict_to_json
+#from io_tools.exports import export_dict_to_json
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
@@ -22,54 +22,54 @@ from general_tools.general import are_items_equal_to_within_eps
 class ConfigFetcher:
     # TODO! Update docstrings
     """
-    This class fetches parameters from a local file and returns an
-    object containing various parameters for a specified runID (stored in the 
-    dictionary self.cfgDict).
+    This class imports a dictionary from src/cfgDict.json containing parameters 
+    for the desired run and stores it as an attribute.
     
-    The parameters are imported from a JSON file for the desired run.
+    It also contains methods that add parameters to cfgDict once other data
+    have been fetched.
     
     Parameters
     ----------
-    #cfgDir : str
-    #    The path to the directory containing config files.
-    runID : str
-        The ID that determines the main configuration parameters to use for the
-        run (i.e. the key in the base level dictionary contained in 
-        main_params.json).
+    cfgDict_fname : str, optional
+        The file name of the config file (in src/) containing the parameters to
+        be run. The default value is 'cfgDict'.
     
     Returns
     -------
-    #self.cfgDir : str
-    #    The path to the directory containing config files.
+    self.cfgDict_fname : str
+        Same as input argument cfgDict_fname. 
     self.runID : str
         The ID that determines the main configuration parameters to use for the
         run (i.e. the key in the base level dictionary contained in 
         main_params.json).
-    self.globalVars : dict
-        Dictionary containing the global variables.
     self.cfgDict : dict
         Dictionary containing the parameters for the desired run.
+    self.fracProp : float
+        The fractional proportion (normalised to 1) of the points or voxels
+        that define the contour(s)/segmentation(s) to be copied/propagated
+        intersect the extent of trgIm.
+    
+    Note
+    ----
+    The optional argument cfgDict_fname allows for the possibility of scaling
+    up for multiple runs concurrently. Each run can generate a unique cfgDict
+    with unique file name, e.g. cfgDict_34j2cf.json, that can be passed to
+    ConfigFetcher.
     """
     
-    def __init__(self, runID):
-        self.runID = runID
-        #self.cfgDir = cfgDir
-        #self.cfgDict = {} # will update later
+    def __init__(self, cfgDict_fname='cfgDict'):
+        self.cfgDict_fname = cfgDict_fname
         
-        self.get_global_vars()
-        #print(f"Global variables:\n\n {self.globalVars}\n\n")
-        # Get XNAT config for chosen runID:
-        self.get_xnat_config()
-        #print(f"XNAT config:\n\n {self.cfgDict}\n\n")
-        self.add_global_vars()
-        #print(f"XNAT config with added global vars:\n\n {self.cfgDict}\n\n")
-        self.update_paths()
-        #print(f"XNAT config with updated paths:\n\n {self.cfgDict}\n\n")
-        self.export_cfgDict()
+        self.import_cfgDict()
         
-    def get_global_vars(self):
+        # runID is already in cfgDict but copy value to self.runID for 
+        # convenience:
+        self.runID = self.cfgDict['runID']
+        
+    def import_cfgDict(self):
         """
-        Fetches the global variables from src/global_variables.json.
+        Imports the dictionary stored in src/cfgDict.json (or other file name
+        provided when instantiating ConfigFetcher).
         
         Parameters
         ----------
@@ -77,206 +77,25 @@ class ConfigFetcher:
         
         Returns
         -------
-        self.globalVars : dict
-            Dictionary containing the global variables.
-        self.xnatCfgDir : str
-            The XNAT configurations directory.
+        self.cfgDict : dict
+            Dictionary containing the parameters for the desired run.
         """
         
-        fname = 'global_variables.json'
+        fname = self.cfgDict_fname
         
-        print(f'Fetching global variables from {fname}\n')
+        print(f'Fetching cfgDict from {fname}\n')
         
         try:
-            self.globalVars = import_dict_from_json(fname)
-            self.xnatCfgDir = self.globalVars['xnatCfgDir']
+            self.cfgDict = import_dict_from_json(fname)
         except FileNotFoundError:
             print(f'File {fname} not found')
-        
-    def get_xnat_config(self):
-        """
-        Fetches the XNAT configuration parameters from a JSON in 
-        src/xnat_configs with filename that matches self.runID.
-        
-        Parameters
-        ----------
-        self.runID : str
-            The ID that determines the main configuration parameters to use for
-            the run, and should match with a file name of a JSON.
-        
-        Returns
-        -------
-        self.cfgDict : dict
-            Dictionary containing the XNAT parameters for the desired run.
-        """
-        
-        #cfgDir = self.cfgDir
-        #print(f'cfgDir = {cfgDir}\n')
-        runID = self.runID
-        xnatCfgDir = self.xnatCfgDir
-
-        cfgFpath = os.path.join(xnatCfgDir, f'{runID}.json')
-        
-        print(f"Fetching parameters for runID '{runID}' from {cfgFpath}\n")
-        
-        try:
-            cfgDict = import_dict_from_json(cfgFpath)
-        
-        except FileNotFoundError:
-            # Get a list of JSONs in xnatCfgDir:
-            fpaths = get_fpaths(dpath=xnatCfgDir, ext='json')
-            
-            F = len(fpaths)
-            
-            if F == 0:
-                msg = f"There were no JSON files found in {xnatCfgDir}.\n"\
-                      + "Please check the input 'cfgDir' and try again."
-            else:
-                msg = f"There were no JSON files found in {xnatCfgDir} with "\
-                    + f"file name matching '{runID}'.\nPlease select from one"\
-                    + f" of the {F} files below:"
-                
-                for i in range(len(fpaths)):
-                    msg += f'\n{i + 1}.  {fpaths[i]}'
-                
-                msg += "Enter an integer"
-            
-            #raise Exception(msg)
-            choice = get_user_input_as_int(message=msg, minVal=1, maxVal=F)
-            
-            fpath = fpaths[choice - 1] # choice is 1-indexed
-            
-            cfgDict = import_dict_from_json(filepath=fpath)
-            
-        self.cfgDict = cfgDict
-    
-    def add_global_vars(self):
-        """
-        Add global variables to cfgDict that are not already defined in the
-        dictionary.
-        
-        Any variables already defined in cfgDict will take priority over the 
-        values in globalVars.
-        
-        Parameters
-        ----------
-        self.globalVars : dict
-            Dictionary containing the global variables.
-        self.cfgDict : dict
-            Dictionary containing the parameters for the desired run.
-        
-        Returns
-        -------
-        self.cfgDict : dict
-            Updated dictionary containing additional parameters from 
-            self.globalVars.
-        """
-        
-        globalVars = self.globalVars
-        cfgDict = self.cfgDict
-        
-        for key, value in globalVars.items():
-            if not key in cfgDict.keys():
-                cfgDict[key] = value
-        
-        print('Global variables added to cfgDict\n')
-        
-        self.cfgDict = cfgDict
-        
-    def update_paths(self):
-        """
-        Update the current working directory (and subsequent child directories)
-        in the configuration dictionary to reflect the 'workdir' set as an 
-        environmental variable (if applicable).
-        
-        Parameters
-        ----------
-        self.cfgDict : dict
-            Dictionary containing the parameters for the desired run.
-        
-        Returns
-        -------
-        self.cfgDict : dict
-            Updated dictionary.
-        """
-        
-        cfgDict = self.cfgDict
-        
-        # Try to get the current working directory from an environmnt variable:
-        cwd = os.getenv('workdir')
-        #print(f'os.getenv (in fetch_config.py) = {cwd}')
-        if cwd == None:
-            cwd = os.getcwd()
-        #print(f'cwd (in fetch_config.py) = {cwd}')
-        
-        # Lines below added 03/11/21
-        inputsDir = os.path.join(cwd, r'inputs')
-        outputsDir = os.path.join(cwd, r'outputs')
-        sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
-        fidsDir = os.path.join(inputsDir, r'fiducials')
-        rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-        segExportDir = os.path.join(outputsDir, r'new_SEG')
-        droExportDir = os.path.join(outputsDir, r'new_DRO')
-        rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-        segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
-        resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
-        txExportDir = os.path.join(outputsDir, r'transforms')
-        imExportDir = os.path.join(outputsDir, r'images')
-        labimExportDir = os.path.join(outputsDir, r'label_images')
-        logsExportDir = os.path.join(outputsDir, r'logs')
-    
-        
-        cfgDict['cwd'] = cwd
-        # Lines below added 03/11/21
-        cfgDict['inputsDir'] = inputsDir
-        cfgDict['outputsDir'] = outputsDir
-        cfgDict['sampleDroDir'] = sampleDroDir
-        cfgDict['fidsDir'] = fidsDir
-        cfgDict['rtsExportDir'] = rtsExportDir
-        cfgDict['segExportDir'] = segExportDir
-        cfgDict['droExportDir'] = droExportDir
-        cfgDict['rtsPlotsExportDir'] = rtsPlotsExportDir
-        cfgDict['segPlotsExportDir'] = segPlotsExportDir
-        cfgDict['resPlotsExportDir'] = resPlotsExportDir
-        cfgDict['txExportDir'] = txExportDir
-        cfgDict['imExportDir'] = imExportDir
-        cfgDict['labimExportDir'] = labimExportDir
-        cfgDict['logsExportDir'] = logsExportDir
-        
-        print('Paths updated in cfgDict\n')
-        
-        self.cfgDict = cfgDict
-    
-    def export_cfgDict(self):
-        """
-        Export the final configuration dictionary to disk.
-        
-        Parameters
-        ----------
-        self.cfgDict : dict
-            Dictionary containing the parameters for the desired run.
-        
-        Returns
-        -------
-        None.
-        """
-        
-        cfgDict = self.cfgDict
-        cwd = cfgDict['cwd']
-        
-        fname = 'cfgDict.json'
-        
-        export_dict_to_json(
-            dictionary=cfgDict, filename=fname, exportDir=cwd
-            )
-        
-        print(f'cfgDict exported to {os.path.join(cwd, fname)}\n')
     
     def get_intersection_of_roi_and_trgIm(
             self, srcDataset, trgDataset, params
             ):
         """
-        Get the intersection of the ROI and target image domain as a fraction.
+        Get the intersection of the entity (contour/segmentation/ROI/segment/
+        ROI Collection) to be copied and target image domain as a fraction.
         
         This method requires objects that won't exist at the time the class is
         instantiated, but has been placed in this class because it builds up
@@ -346,10 +165,9 @@ class ConfigFetcher:
             
         Returns
         -------
-        params.cfgDict['useCaseThatApplies'] : str
-            The use case that applies.
-        params.cfgDict['useCaseToApply'] : str
-            The use case that will be applied.
+        self.cfgDict : dict
+            Dictionary containing the parameters for the desired run, updated
+            with additional keys 'useCaseThatApplies' and 'useCaseToApply'.
         
         Note
         ----
@@ -559,29 +377,3 @@ class ConfigFetcher:
         
         params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
         params.cfgDict['useCaseToApply'] = useCaseToApply
-
-
-if __name__ == '__main__':
-    """
-    Run fetch_config.py as a script.
-    
-    Example usage in a console:
-    
-    cd C:\Code\WP1.3_multiple_modalities\src
-    python fetch_config.py runID
-    """
-    
-    
-    parser = argparse.ArgumentParser(
-        description='Arguments for fetch_config()'
-        )
-    
-    parser.add_argument(
-        "runID", 
-        help="The run ID to execute (name of file in src/xnat_configs/)"
-        )
-    
-    args = parser.parse_args()
-    
-    # Instantiate ConfigFetcher object:
-    cfgObj = ConfigFetcher(args.runID)

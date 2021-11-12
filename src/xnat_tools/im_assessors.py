@@ -80,7 +80,9 @@ def download_im_asr(
     
     url = xnatSession.url
     
-    downloadDir = config['downloadDir']
+    #downloadDir = config['downloadDir']
+    cwd = config['cwd']
+    downloadDir = os.path.join(cwd, 'xnat_downloads')
     
     projID = config['projID']
     subjLab = config['subjLab']

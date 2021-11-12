@@ -68,12 +68,12 @@ class DataDownloader:
     """
     
     #def __init__(self, cfgObj, xnatSession=None):
-    #def __init__(self, cfgObj):
-    def __init__(self, cfgDict):
+    def __init__(self, cfgObj):
+    #def __init__(self, cfgDict):
         
         #self.cfgDir = cfgObj.cfgDir
-        #self.cfgDict = cfgObj.cfgDict
-        self.cfgDict = cfgDict
+        self.cfgDict = cfgObj.cfgDict
+        #self.cfgDict = cfgDict
         #self.aliasToken = cfgObj.aliasToken
         self.aliasToken = {} # initial value
         
