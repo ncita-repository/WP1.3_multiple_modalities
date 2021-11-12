@@ -41,7 +41,7 @@ def create_session(url='', username='', aliasToken={}):
         if username == '':
             username = input('Enter XNAT user name: ')
             
-        password = getpass('Enter XNAT password: ')
+        password = getpass(f"Enter XNAT password for user '{username}': ")
     
     with requests.Session() as xnatSession:
         xnatSession.url = url

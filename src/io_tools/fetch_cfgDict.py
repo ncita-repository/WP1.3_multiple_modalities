@@ -5,15 +5,7 @@ Created on Fri Nov 12 11:04:23 2021
 @author: ctorti
 """
 
-#from importlib import reload
-#import io_tools.general
-#reload(io_tools.general)
-
-#import os
-#import argparse
-#from io_tools.general import get_fpaths, get_user_input_as_int
 from io_tools.imports import import_dict_from_json
-#from io_tools.exports import export_dict_to_json
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
@@ -30,14 +22,14 @@ class ConfigFetcher:
     
     Parameters
     ----------
-    cfgDict_fname : str, optional
+    cfgFname : str, optional
         The file name of the config file (in src/) containing the parameters to
         be run. The default value is 'cfgDict'.
     
     Returns
     -------
-    self.cfgDict_fname : str
-        Same as input argument cfgDict_fname. 
+    self.cfgFname : str
+        Same as input argument cfgFname. 
     self.runID : str
         The ID that determines the main configuration parameters to use for the
         run (i.e. the key in the base level dictionary contained in 
@@ -51,14 +43,14 @@ class ConfigFetcher:
     
     Note
     ----
-    The optional argument cfgDict_fname allows for the possibility of scaling
+    The optional argument cfgFname allows for the possibility of scaling
     up for multiple runs concurrently. Each run can generate a unique cfgDict
     with unique file name, e.g. cfgDict_34j2cf.json, that can be passed to
     ConfigFetcher.
     """
     
-    def __init__(self, cfgDict_fname='cfgDict'):
-        self.cfgDict_fname = cfgDict_fname
+    def __init__(self, cfgFname='cfgDict'):
+        self.cfgFname = cfgFname
         
         self.import_cfgDict()
         
@@ -81,7 +73,7 @@ class ConfigFetcher:
             Dictionary containing the parameters for the desired run.
         """
         
-        fname = self.cfgDict_fname
+        fname = self.cfgFname
         
         print(f'Fetching cfgDict from {fname}\n')
         
@@ -118,7 +110,11 @@ class ConfigFetcher:
             that define the contour(s)/segmentation(s) to be copied/propagated
             intersect the extent of trgIm.
         """
-    
+        
+        timingMsg = "* Calculating the intersection between the entity to " +\
+            "be copied and the target image extent...\n"
+        params.add_timestamp(timingMsg)
+        
         cfgDict = params.cfgDict
         roicolMod = cfgDict['roicolMod']
         p2c = cfgDict['p2c']
@@ -137,6 +133,10 @@ class ConfigFetcher:
                 trgIm=trgDataset.dcmIm, 
                 p2c=p2c
                 )
+        
+        timingMsg = "Took [*] to calculate the intersection between the " +\
+            "entity to be copied and the target image extent.\n"
+        params.add_timestamp(timingMsg)
         
         if p2c:
             print(f'{100*fracProp:.2f}% of the Source ROI Collection '
@@ -177,6 +177,10 @@ class ConfigFetcher:
         data already imported via the DataImporter Objects srcDataset and
         trgDataset.
         """
+        
+        timingMsg = "* Determining which use case applies and is to be " +\
+            "applied...\n"
+        params.add_timestamp(timingMsg)
         
         trgSlcNum = params.cfgDict['trgSlcNum']
         forceReg = params.cfgDict['forceReg']
@@ -374,6 +378,10 @@ class ConfigFetcher:
                 print(f'\n*UseCase {useCaseThatApplies} applies.')
                 
             print('-'*120)
+        
+        timingMsg = "Took [*] to determine which use case applies and is " +\
+            "to be applied.\n"
+        params.add_timestamp(timingMsg)
         
         params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
         params.cfgDict['useCaseToApply'] = useCaseToApply

@@ -14,14 +14,10 @@ run the app_ohif.py.
 
 
 import os
-#from pathlib import Path
-#import time
-#import argparse
 from io_tools.exports import export_dict_to_json
-#from io_tools.imports import import_dict_from_json
 
 
-def create_global_var_file():
+def create_global_vars():
     """
     Generate a JSON file containing global variables that will the user will
     not need to modify (assumed).
@@ -66,6 +62,14 @@ def create_global_var_file():
             1. 'NearestNeighbor'
             2. 'LabelGaussian'
             3. 'BlurThenLinear'
+    
+    With the exception of cwd (current working directory), all directory paths
+    are deliberately defined relative to the root directory (i.e. src/) so that 
+    the local filesystem used to generate the paths is not present. Instead, at 
+    the point at which global_variables.json is imported, the paths will be 
+    modified by adding the relative paths to the current working directory to 
+    make the paths absolute and relevant to the local filesystem that is 
+    importing it.
     """
     
     # Get the current working directory:
@@ -82,20 +86,18 @@ def create_global_var_file():
     outputsDir = r'outputs' # 03/11/21
     
     # Directories containing configuration files (for various runIDs), sample 
-    # DROs and fiducials:
-    xnatCfgDir = os.path.join(cwd, r'xnat_configs')
-    sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
+    # DROs and fiducials relative to src/:
+    xnatCfgDir = os.path.join(r'xnat_configs')
+    sampleDroDir = os.path.join(inputsDir, r'sample_dros')
     fidsDir = os.path.join(inputsDir, r'fiducials')
     
     # Directories for the (new) target ROI Collections, DRO, plots, transforms,
     # binary label maps, logs and configuration files:
-    #rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-    #segExportDir = os.path.join(outputsDir, r'new_SEG')
-    rtsExportDir = os.path.join(outputsDir, r'new_roicols')
-    segExportDir = os.path.join(outputsDir, r'new_roicols')
-    droExportDir = os.path.join(outputsDir, r'new_DRO')
-    rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-    segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
+    rtsExportDir = os.path.join(outputsDir, r'roicols')
+    segExportDir = os.path.join(outputsDir, r'roicols')
+    droExportDir = os.path.join(outputsDir, r'dros')
+    rtsPlotsExportDir = os.path.join(outputsDir, 'plots_rts')
+    segPlotsExportDir = os.path.join(outputsDir, 'plots_seg')
     # resampled/transformed/registered plots
     resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
     txExportDir = os.path.join(outputsDir, r'transforms')
@@ -192,8 +194,6 @@ def create_global_var_file():
         'useDroForTx' : useDroForTx,
         'regTxName' : regTxName,
         'initMethod' : initMethod,
-        'srcFidsFpath' : '',
-        'trgFidsFpath' : '',
         'maxIters' : maxIters,
         'applyPreResBlur' : applyPreResBlur,
         'preResVar' : preResVar,
@@ -240,16 +240,13 @@ def create_global_var_file():
     print(f"\nGlobal variables file has been exported to {filepath}")
 
 
-
 if __name__ == '__main__':
     """
-    Run global_var_file.py as a script.
+    Run create_global_file.py as a script.
     
     Example usage in a console:
     
-    cd C:\Code\WP1.3_multiple_modalities\src
-    python global_var_file.py
+    python create_global_file.py
     """
     
-    # Run create_global_var_file():
-    create_global_var_file()
+    create_global_vars()

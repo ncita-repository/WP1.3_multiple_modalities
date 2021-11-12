@@ -5,6 +5,7 @@ Created on Mon Aug 23 19:07:06 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
 import dro_tools.matrices
 reload(dro_tools.matrices)
@@ -12,16 +13,15 @@ import general_tools.general
 reload(general_tools.general)
 import xnat_tools.subject_assessors
 reload(xnat_tools.subject_assessors)
+"""
 
 import os
 from pathlib import Path
-#import time
 from datetime import datetime
 from pydicom import dcmread
 from pydicom.uid import generate_uid
 import SimpleITK as sitk
 import numpy as np
-
 from dro_tools.general import (
     modify_ref_ser_seq, modify_stu_con_oth_ref_ins_seq, modify_ref_im_seq
     )
@@ -31,9 +31,6 @@ from general_tools.general import (
     reduce_list_of_str_floats_to_16, generate_reg_fname
     )
 from xnat_tools.subject_assessors import upload_subj_asr
-
-#from dro_tools.create_spa_dro import create_spa_dro_from_tx
-#from dro_tools.create_def_dro import create_def_dro_from_tx
 
 
 class DroCreator:
@@ -479,12 +476,18 @@ class DroCreator:
             None otherwise.
         """
         
+        timingMsg = "* Parsing the DRO...\n"
+        params.add_timestamp(timingMsg)
+        
         regTxName = params.cfgDict['regTxName']
         
         if regTxName == 'bspline':
             self.get_data_from_bspline_tx(newDataset, params)
         else:
             self.get_data_from_rigid_tx(newDataset, params)
+        
+        timingMsg = "Took [*] to parse the DRO.\n"
+        params.add_timestamp(timingMsg)
     
     def create_spa_dro(self, srcDataset, trgDataset, newDataset, params):
         # TODO update docstrings
@@ -748,7 +751,7 @@ class DroCreator:
         #if p2c:
         #    print(f'\n   *Took a total of {dtime} s to create the DRO.')
         
-        #timingMsg = "Took [*] s to create the DICOM Spatial Registration "\
+        #timingMsg = "Took [*] to create the DICOM Spatial Registration "\
         #    + "Object.\n"
         #params.add_timestamp(timingMsg)
         
@@ -1157,7 +1160,7 @@ class DroCreator:
         #if p2c:
         #    print(f'\n   *Took a total of {dtime} s to create the DRO.')
         
-        #timingMsg = "Took [*] s to create the DICOM Deformable Spatial "\
+        #timingMsg = "Took [*] to create the DICOM Deformable Spatial "\
         #    + "Registration Object.\n"
         #params.add_timestamp(timingMsg)
         
@@ -1200,7 +1203,7 @@ class DroCreator:
             else:
                 self.create_spa_dro(srcDataset, trgDataset, newDataset, params)
             
-            timingMsg = "Took [*] s to create the DICOM Registration Object.\n"
+            timingMsg = "Took [*] to create the DICOM Registration Object.\n"
             params.add_timestamp(timingMsg)
     
     def export_dro(self, params):
@@ -1256,6 +1259,9 @@ class DroCreator:
         None.
         """
         
+        timingMsg = "* Uploading the DRO to XNAT...\n"
+        params.add_timestamp(timingMsg)
+        
         dro = self.dro
         xnatSession = params.xnatSession
         cfgDict = params.cfgDict
@@ -1279,3 +1285,6 @@ class DroCreator:
                 url=url, proj_id=projID, subj_label=subjLab, 
                 content_label=droType, session=xnatSession
                 )
+        
+        timingMsg = "Took [*] to upload the DRO.\n"
+        params.add_timestamp(timingMsg)

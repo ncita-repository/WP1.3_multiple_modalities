@@ -5,8 +5,8 @@ Created on Tue Aug 10 17:05:12 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
-
 import general_tools.shifting
 reload(general_tools.shifting)
 import general_tools.pixarr_ops
@@ -29,14 +29,13 @@ import general_tools.geometry
 reload(general_tools.geometry)
 import general_tools.console_printing
 reload(general_tools.console_printing)
-
+"""
 
 import time
 import os
 from pathlib import Path
 #from copy import deepcopy
 import SimpleITK as sitk
-
 from general_tools.shifting import (
     get_voxel_shift_bt_slices, shift_frame, replace_ind_in_C2SindsByRoi,
     z_shift_ptsByCntByRoi, shift_ptsByCntByRoi
@@ -89,6 +88,39 @@ class Propagator:
     
     Returns
     -------
+    self.dcmIm 
+    self.dcmPixarr
+    self.imSize 
+    self.imSpacings 
+    self.imSlcThick 
+    self.imPositions 
+    self.imDirections 
+    self.foruid 
+    self.studyuid
+    self.f2sIndsBySeg
+    self.pixarrBySeg
+    self.labimBySeg
+    self.c2sIndsByRoi 
+    self.ptsByCntByRoi 
+    self.cntdataByCntByRoi
+    self.f2sIndsByRoi
+    self.pixarrByRoi
+    self.labimByRoi
+    self.voxShift
+    self.resTx
+    self.resTxParams
+    self.resIm = None
+    self.resDcmPixarr
+    self.initRegTx
+    self.initRegTxParams 
+    self.alignedIm
+    self.preRegTx 
+    self.preRegTxParams
+    self.metricValues
+    self.multiresIters
+    
+    
+    
     
     
     Note
@@ -235,8 +267,8 @@ class Propagator:
         """
         
         # Initialise list of timestamps and timing messages to be stored:
-        self.timings = [time.time()]
-        self.timingMsgs = []
+        #self.timings = [time.time()]
+        #self.timingMsgs = []
         
         #print(f'srcIm direction:\n{srcDataset.dcmIm.GetDirection()}\n')
         #print(f'trgIm direction:\n{trgDataset.dcmIm.GetDirection()}\n')
@@ -260,9 +292,6 @@ class Propagator:
         params : DataDownloader Object
             Contains parameters (cfgDict), file paths (pathsDict), timestamps
             (timings) and timing messages (timingMsgs).
-        #isSrcResampled : bool
-        #    True if the source pixel arrays have been resampled (i.e.
-        #    srcPixarrByRoi --> resSrcPixarrByRoi), and False otherwise.
         
         Returns
         -------
@@ -455,9 +484,6 @@ class Propagator:
         params : DataDownloader Object
             Contains parameters (cfgDict), file paths (pathsDict), timestamps
             (timings) and timing messages (timingMsgs).
-        #isSrcResampled : bool
-        #    True if the source pixel arrays have been resampled (i.e.
-        #    srcPixarrByRoi --> resSrcPixarrByRoi), and False otherwise.
         
         Returns
         -------
@@ -900,7 +926,7 @@ class Propagator:
         # that may be present in trgDataset:
         self.add_modified_data_to_existing_trgDataset(trgDataset, params)
         
-        timingMsg = "Took [*] s to make a non-relationship-preserving "\
+        timingMsg = "Took [*] to make a non-relationship-preserving "\
                 + "copy of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
     
@@ -1053,7 +1079,7 @@ class Propagator:
         #self.pixarrByRoi = deepcopy(srcDataset.pixarrByRoi)
         #self.pixarrBySeg = list(srcDataset.pixarrBySeg) # this is in __init__
         
-        timingMsg = "Took [*] s to make a relationship-preserving "\
+        timingMsg = "Took [*] to make a relationship-preserving "\
                 + "copy of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
     
@@ -1137,7 +1163,7 @@ class Propagator:
                   labimBy_[0].GetMetaDataKeys(), '\n')
         """
         
-        timingMsg = "Took [*] s to resample source label images.\n"
+        timingMsg = "Took [*] to resample source label images.\n"
         params.add_timestamp(timingMsg)
         print(timingMsg) # 27/09/21
         
@@ -1167,12 +1193,25 @@ class Propagator:
             
         Returns
         -------
-        self.dcmIm : SimpleITK Image
-            The source image registered to the target image.
-        self.initialTx : SimpleITK Transform
+        self.initRegTx : SimpleITK Transform
             The transform used during initialisation of the registration.
+        self.initRegTxParams : list of floats
+            List of the parameters for self.initRegTx.
+        self.alignedIm : SimpleITK Image
+            The source image aligned to the target image using initRegTx.
         self.resTx : list of floats
             The transform that registers source image to target image.
+        self.resTxParams : list of floats
+            List of the parameters for self.resTx.
+        self.resIm : SimpleITK Image
+            The source image registered to the target image.
+        self.resDcmPixarr : Numpy data array
+            The pixel representation of self.resIm
+        self.metricValues : list of floats
+            The metric value at each iteration during optimisation.
+        self.multiresIters : list of floats
+            The iteration number at each step change of resolution during
+            optimisation.
         params.timings : list of Time timestamps
             Additional timestamp appended.
         params.timingMsgs : list of strs
@@ -1181,18 +1220,31 @@ class Propagator:
         
         fixIm = trgDataset.dcmIm
         movIm = srcDataset.dcmIm
-        regTxName = params.cfgDict['regTxName']
-        initMethod = params.cfgDict['initMethod']
-        fixFidsFpath = params.cfgDict['trgFidsFpath']
-        movFidsFpath = params.cfgDict['srcFidsFpath']
-        p2c = params.cfgDict['p2c']
+        
+        cfgDict = params.cfgDict
+        
+        regTxName = cfgDict['regTxName']
+        initMethod = cfgDict['initMethod']
+        fidsDir = cfgDict['fidsDir']
+        fixFidsFname = cfgDict['trgFidsFname']
+        movFidsFname = cfgDict['srcFidsFname']
+        p2c = cfgDict['p2c']
         
         # Required for generating a file path for exported registeration plot:
-        resPlotsExportDir = params.cfgDict['resPlotsExportDir']
-        srcExpLab = params.cfgDict['srcExpLab']
-        srcScanID = params.cfgDict['srcScanID']
-        trgExpLab = params.cfgDict['trgExpLab']
-        trgScanID = params.cfgDict['trgScanID']
+        resPlotsExportDir = cfgDict['resPlotsExportDir']
+        srcExpLab = cfgDict['srcExpLab']
+        srcScanID = cfgDict['srcScanID']
+        trgExpLab = cfgDict['trgExpLab']
+        trgScanID = cfgDict['trgScanID']
+        
+        if fixFidsFname:
+            fixFidsFpath = os.path.join(fidsDir, fixFidsFname)
+        else:
+            fixFidsFpath = ''
+        if movFidsFname:
+            movFidsFpath = os.path.join(fidsDir, movFidsFname)
+        else:
+            movFidsFpath = ''
         
         #initMethod = 'geometry'
         #print('\n* On 06/09 changed initMethod from "moments" to "geometry"\n\n')
@@ -1247,7 +1299,7 @@ class Propagator:
         self.resTxParams = self.resTx.GetParameters() # 03/09/21
         self.initRegTxParams = self.initRegTx.GetParameters() # 03/09/21
         
-        timingMsg = "Took [*] s to register the source to target DICOM scans.\n"
+        timingMsg = "Took [*] to register the source to target DICOM scans.\n"
         params.add_timestamp(timingMsg)
     
     def create_tx_from_dro(self, srcDataset, trgDataset, dro, params):
@@ -1355,7 +1407,7 @@ class Propagator:
                 self.resTx = compTx
                 self.resTxParams = list(compTx.GetParameters())
         
-        timingMsg = "Took [*] s to create the transform.\n"
+        timingMsg = "Took [*] to create the transform.\n"
         params.add_timestamp(timingMsg)
         
         #self.dcmIm = resIm 
@@ -1504,9 +1556,7 @@ class Propagator:
             
         Returns
         -------
-        
-        Note
-        ----
+        ...
         
         """
         
@@ -1535,7 +1585,7 @@ class Propagator:
         if roicolMod == 'RTSTRUCT':
             self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
         
-        timingMsg = "Took [*] s to make a non-relationship-preserving "\
+        timingMsg = "Took [*] to make a non-relationship-preserving "\
                 + "propagation of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
     
@@ -1594,6 +1644,7 @@ class Propagator:
             
         Returns
         -------
+        ...
         
         Note
         ----
@@ -1615,7 +1666,7 @@ class Propagator:
         if roicolMod == 'RTSTRUCT':
             self.convert_pixarr_to_cntdata(srcDataset, trgDataset, params)
         
-        timingMsg = "Took [*] s to make a relationship-preserving "\
+        timingMsg = "Took [*] to make a relationship-preserving "\
                 + "propagation of the source ROI Collection.\n"
         params.add_timestamp(timingMsg)
         
@@ -1639,7 +1690,7 @@ class Propagator:
         
         Returns
         -------
-        self....
+        ...
         
         Notes
         -----
@@ -1669,6 +1720,10 @@ class Propagator:
         hence it's useful for instance attribute names to be consistent. 
         """
         
+        timingMsg = "* Copying/propagating the entity from the source to " +\
+            "target image domain...\n"
+        params.add_timestamp(timingMsg)
+        
         cfgDict = params.cfgDict
         
         useCase = cfgDict['useCaseToApply']
@@ -1687,9 +1742,6 @@ class Propagator:
         #srcIm = srcDataset.image
         #trgIm = trgDataset.image
         
-        
-        # TODO where to import DRO?
-        #dro = None # for now
         
         if p2c:
             print(f"params.cfgDict['runID'] = {params.cfgDict['runID']}")
@@ -1718,25 +1770,6 @@ class Propagator:
             self.make_relationship_preserving_copy(
                 params, srcDataset, trgDataset
                 )
-        
-        #if useCase in ['3a', '3b', '4a', '4b', '5a', '5b']:
-        #    doesExist = does_instance_variable_exist(
-        #        instanceObj=srcDataset, varName='labimByRoi', p2c=p2c
-        #        )
-        #    
-        #    # Get a list of label images-by-ROI for source:
-        #    #srcDataset.get_labimByRoi(params, srcDataset)
-        #    
-        #    """ 
-        #    Above line doesn't work since srcDataset -> DataImporter object,
-        #    does not have method get)labimByRoi. This has been moved to
-        #    get_seg_metadata() in io_tools.import_data, even though it's not
-        #    needed for use cases 1-2. 
-        #    """
-        #    
-        #    doesExist = does_instance_variable_exist(
-        #        instanceObj=srcDataset, varName='labimByRoi', p2c=p2c
-        #        )
         
         if useCase in ['3a', '3b', '4a', '4b']:
             """
@@ -1830,6 +1863,10 @@ class Propagator:
             # Convert from pixel array data to contour data:
             print('\nNeed to convert from pixel array to contour data...')
         """
+        
+        #timingMsg = "Took [*] to copy/propagate the source entity to the "+\
+        #    "target image domain.\n"
+        #params.add_timestamp(timingMsg)
     
     def export_labims(self, srcDataset, trgDataset, params):
         """ 
@@ -1837,6 +1874,8 @@ class Propagator:
         """
         
         print('* Exporting label images..\n')
+        timingMsg = "* Exporting the label images...\n"
+        params.add_timestamp(timingMsg)
         
         cfgDict = params.cfgDict
         
@@ -1864,10 +1903,15 @@ class Propagator:
                         labimByRoi[r], filename=f'{fname}{r}',
                         fileFormat='HDF5ImageIO', exportDir=labimExportDir
                     )
+        
+        timingMsg = "Took [*] to export the label images.\n"
+        params.add_timestamp(timingMsg)
     
     def export_txs_and_params(self, srcDataset, trgDataset, params):
         
         print('* Exporting transforms and transform parameters..\n')
+        timingMsg = "* Exporting transforms and transform parameters...\n"
+        params.add_timestamp(timingMsg)
         
         cfgDict = params.cfgDict
         
@@ -1931,6 +1975,9 @@ class Propagator:
                     filename=fname,
                     exportDir=txExportDir
                     )
+        
+        timingMsg = "Took [*] to export transforms and transform parameters.\n"
+        params.add_timestamp(timingMsg)
     
     def plot_roi_over_dicom_im(self, srcDataset, trgDataset, params):
         """ 
@@ -1969,7 +2016,10 @@ class Propagator:
         plotMasksForRts = False
         plotMasksForRts = True
         
-        print('* Plotting ROI over DICOM images..\n')
+        print('* Plotting the source and target entities over DICOM images..\n')
+        timingMsg = "* Plotting the source and target entities over DICOM " +\
+            "images...\n"
+        params.add_timestamp(timingMsg)
         
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
@@ -2094,6 +2144,10 @@ class Propagator:
             fontSize=fontSize, exportPlot=exportPlot, exportDir=roiExportDir, 
             exportFname=fname, p2c=p2c
         )
+        
+        timingMsg = "Took [*] to plot the source and target entities " +\
+            "over the DICOM images.\n"
+        params.add_timestamp(timingMsg)
         
     def plot_metric_v_iters(self, params):
         """ 

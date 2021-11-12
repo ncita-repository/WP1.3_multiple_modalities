@@ -5,6 +5,7 @@ Created on Mon Aug 23 19:07:06 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
 import dicom_tools.create_rts
 reload(dicom_tools.create_rts)
@@ -20,6 +21,7 @@ import xnat_tools.im_assessors
 reload(xnat_tools.im_assessors)
 import plotting_tools.general
 reload(plotting_tools.general)
+"""
 
 import os
 from pathlib import Path
@@ -39,7 +41,6 @@ from plotting_tools.general import (
     plot_pixarrs_from_list_of_segs_and_dicom_ims, 
     plot_contours_from_list_of_rtss_and_dicom_ims
     )
-
 #from general_tools.general import (
 #    reduce_list_of_str_floats_to_16, generate_reg_fname
 #    )
@@ -68,45 +69,6 @@ class RoicolCreator:
     -------
     self.roicol : Pydicom Object
         The new RTS or SEG object.
-        
-    Note
-    ----
-    
-    """
-    
-    """
-    def __init__(self, srcDataset, trgDataset, newDataset, params):
-        # TODO update docstrings
-        
-        Initialise the object.
-        
-        Parameters
-        ----------
-        newDataset : Propagator Object
-            Object containing various data for the source-to-target propagated (or 
-            copied) dataset.
-        trgDataset : Importer Object
-            Object containing various data for the target DICOM series.
-        newDataset : Propagator Object
-            Object containing various data for the source-to-target propagated (or 
-            copied) dataset.
-        params : DataDownloader Object
-            Contains parameters (cfgDict), file paths (pathsDict), timestamps
-            (timings) and timing messages (timingMsgs).
-        
-        Returns
-        -------
-        self.srcDataset : Propagator Object
-            Object containing various data for the source-to-target propagated (or 
-            copied) dataset.
-        self.trgDataset : Importer Object
-            Object containing various data for the target DICOM series.
-        self.newDataset : Propagator Object
-            Object containing various data for the source-to-target propagated (or 
-            copied) dataset.
-        self.params : DataDownloader Object
-            Contains parameters (cfgDict), file paths (pathsDict), timestamps
-            (timings) and timing messages (timingMsgs).
     """
     
     def create_roicol(self, srcDataset, trgDataset, newDataset, params):
@@ -134,6 +96,9 @@ class RoicolCreator:
             New ROI Collection (RTS/SEG).
         """
         
+        timingMsg = "* Creating the new target ROI Collection...\n"
+        params.add_timestamp(timingMsg)
+        
         roicolMod = params.cfgDict['roicolMod']
         
         if roicolMod == 'RTSTRUCT':
@@ -144,6 +109,9 @@ class RoicolCreator:
             self.roicol = create_seg(
                 srcDataset, trgDataset, newDataset, params
                 )
+        
+        timingMsg = "Took [*] to create the target ROI Collection.\n"
+        params.add_timestamp(timingMsg)
     
     def error_check_roicol(self, srcDataset, trgDataset, newDataset, params):
         # TODO update docstrings
@@ -173,6 +141,9 @@ class RoicolCreator:
             The number of errors found.
         """
         
+        timingMsg = "* Error checking the new target ROI Collection...\n"
+        params.add_timestamp(timingMsg)
+        
         roicolMod = params.cfgDict['roicolMod']
         
         if roicolMod == 'RTSTRUCT':
@@ -183,6 +154,9 @@ class RoicolCreator:
             self.logList, self.Nerrors = error_check_seg(
                 self.roicol, trgDataset, params
                 )
+        
+        timingMsg = "Took [*] to error check the target ROI Collection.\n"
+        params.add_timestamp(timingMsg)
     
     def export_roicol(self, params, fname=''):
         """
@@ -268,6 +242,9 @@ class RoicolCreator:
         None.
         """
         
+        timingMsg = "* Uploading the new target ROI Collection to XNAT...\n"
+        params.add_timestamp(timingMsg)
+        
         roicolFpath = self.roicolFpath
         
         xnatSession = params.xnatSession
@@ -295,6 +272,9 @@ class RoicolCreator:
             session=xnatSession
         )
         
+        timingMsg = "Took [*] to upload the target ROI Collection.\n"
+        params.add_timestamp(timingMsg)
+        
     def plot_roi_over_dicoms(
             self, srcDataset, trgDataset, newDataset, params
             ):
@@ -303,6 +283,9 @@ class RoicolCreator:
         """
         
         print('* Plotting ROI over DICOMs..\n')
+        timingMsg = "* Overlaying the entities in the new target ROI " +\
+            "Collection over the DICOM images...\n"
+        params.add_timestamp(timingMsg)
         
         cfgDict = params.cfgDict
         runID = cfgDict['runID']
@@ -411,3 +394,7 @@ class RoicolCreator:
                 fname=fname, fontSize=fontSize, p2c=p2c
                 #fname='', p2c=p2c
             )
+        
+        timingMsg = "Took [*] to overlay the content of the target ROI " +\
+            "Collection over the DICOMs.\n"
+        params.add_timestamp(timingMsg)

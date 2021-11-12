@@ -5,9 +5,11 @@ Created on Fri Jul 16 12:33:15 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
 import xnat_tools.dicom_metadata
 reload(xnat_tools.dicom_metadata)
+"""
 
 from pydicom.filebase import DicomBytesIO
 from pydicom import dcmread
@@ -53,27 +55,25 @@ class DroImporter:
         DRO (as a subject assessor) that matches the requirements); None if not.
     """
     
-    """
+    
     def __init__(self, params):
-        useCaseToApply = params.useCaseToApply
+        cfgDict = params.cfgDict
         
-        # The following were moved to fetch_dro:
-        ## Initialise values:
-        #self.dro = None
-        #self.txMatrix = None
-        #self.gridDims = None
-        #self.gridRes = None
-        #self.vectGridData = None
+        useCase = cfgDict['useCaseToApply']
+        forceReg = cfgDict['forceReg']
         
-        #useCaseToApply = params.useCaseToApply
-        
-        # If image registration is required (useCaseToApply = '5a' or '5b')
-        # search XNAT for a suitable DRO for this set of Source and Target:
-        if '5' in useCaseToApply:
+        # Only proceed with searching for a suitable DRO and downloding it if
+        # image registration would be required:
+        if useCase in ['5a', '5b'] and not forceReg:
             self.fetch_dro(params)
+        else:
+            self.dro = None
+            self.txMatrix = None
+            self.gridDims = None
+            self.gridRes = None
+            self.vectGridData = None
             
-        print(f'type(self.dro) = {type(self.dro)}\n')
-    """
+        #print(f'type(self.dro) = {type(self.dro)}\n')
     
     def fetch_dro(self, params):
         """
@@ -110,6 +110,9 @@ class DroImporter:
         ----
         Modified from xnat_tools.dros.search_dro().
         """
+        
+        timingMsg = "* Searching for a suitable DRO on XNAT...\n"
+        params.add_timestamp(timingMsg)
         
         xnatSession = params.xnatSession
         url = xnatSession.url
@@ -421,6 +424,8 @@ class DroImporter:
                     "Source and Target image series, matching the transform "+\
                     f"'{regTxName}', \n  the most recent of which contains " +\
                     f"the transformation matrix: \n  {txMatrixRounded}\n"
+            
+            timingMsg = "Took [*] to search and download a suitable DRO.\n"
         else:
             dro = None
             txMatrix = None
@@ -432,7 +437,11 @@ class DroImporter:
                 f"those of the Source ({srcFORuid_req}) \nand Target " +\
                 f"({trgFORuid_req}) image series, and whose SOP Class " +\
                 f"matched the desired transform type ({regTxName}).\n"
+            
+            timingMsg = "Took [*] to search for a suitable DRO. None found.\n"
+        
         print(msg)
+        params.add_timestamp(timingMsg)
         
         self.dro = dro
         self.txMatrix = txMatrix

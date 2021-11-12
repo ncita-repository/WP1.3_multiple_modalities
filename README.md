@@ -10,43 +10,104 @@ The NCITA Repository Unit site as a whole is at an early stage of the life cycle
 
 # Tools covered in this repository
 
-This repository contains three main tools:
+This repository contains two tools:
 
-1. A "stand-alone" *ROI copy/propagation* tool
+1. A *ROI copy/propagation* tool
 
-2. The "OHIF-integration" version (i.e. "back-end" of the *ROI propagation* portion of a wider *ROI copy/propagation* tool to be run in the OHIF-Viewer)
-
-3. An XNAT "snapshot" tool
+2. An XNAT "snapshot" tool
 
 All code is written in Python 3.  
 
 The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, which may refer to any "entity-of-interest", or simply "entity", within a *DICOM-RTSTRUCT* or *DICOM-SEG* *ROI Collection*, and is not to be confused with a collection of contours within an *RTSTRUCT*-based ROI Collection.  The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an *entity* may refer to single *contour*, a single *segmentation*, a collection of *contour*s (= *ROI*) or *segmentation*s (= *segment*), or an entire *ROI Collection* (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
 
-A *copy* will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a *propagation* implies that the propagated entity shares the same spatial coordinates as the original.  Hence a contour that segments the ventricle in the brain in the *source* DICOM slice will not necessarily coincide with the ventricle in the *target* slice upon making a copy, whereas it will be expected to overlay when performing a propagation.
+A *copy* will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a *propagation* implies that the propagated entity shares the same spatial coordinates as the original.  Hence a contour that segments the ventricle in the brain in a *source* DICOM slice will not necessarily coincide with the ventricle in a *target* slice upon making the *copy*, whereas it will be expected to overlay when performing a *propagation*.
 
-## "Stand-alone" *ROI copy/propagation* tool
+## *ROI copy/propagation* tool
 
-The "stand-alone" ROI copy/propagation tool can be used to make a "non-relationship-preserving copy" of a single contour or segmentation (think copy and paste function), or a "relationship-preserving propagation" of any entity.
+The purpose of this tool is to make a "copy" of, or to "propagate" an entity from a *source* ROI Collection so that the entity overlays onto a *target* DICOM series.  The copy may be a "non-relationship-preserving copy" (think copy and paste function) or a "relationship-preserving propagation" of the entity.
 
 This tool relies on the user providing a configuration JSON file that contains the metadata that identifies the *source* and *target* DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads*, import the data and depending on the relationship between the *source* and *target* DICOM series and other user-provided metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
 
-The configuration file is expected in *src/configs*.  The package *config.py* may be used to create a number of such configuration files.  The "stand-alone" version of the algorithm is run in *app.py*.  Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
+The configuration file that is imported upon executing the code is *src/cfgDict.json*. The JSON contains the dictionary *cfgDict*, that contains the above-mentioned parameters and meta-data.  This is the file that will need to be modified every time a new run of the code is to be made using different datasets and/or other parameters. The contents of *cfgDict* are a combination of global and run-specific variables.
+
+The reason for splitting the variables in this way was to differentiate between variables that will not need/expected to be readily modified by the end-user and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will arise from user-inputs.
+
+The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*. 
+
+The *key:default value* pairs that define *global_variables.json* are as follows:
+
+- `forceReg`      : Set to `True` if you wish to apply image registration on a run for which the Source and Target scans have the same *FrameOfReferenceUID*.
+- `useDroForTx`   : If `True` and a suitable DRO is found on XNAT, the transformation parameters stored in the DRO will be used, by-passing image registration.
+- `regTxName`     : Defines the transformation to apply during registration. Acceptable values include "rigid", "affine" and "bspline".
+- `initMethod`    : Defines how a registration is initialised.  Acceptable values include "geometry" (aligning to image centres), "moments" (align to centre-of-mass of image intensity), and "landmarks" (`srcFidsFpath` and `trgFidsFpath` must be defined, otherwise will default to "geometry").
+- `maxIters`      : The maximum number of iterations to allow during optimisation for image registation.
+
+- `applyPreResBlur` : If `True` the Source label image will be Gaussian blurred prior to resampling or registration. Doing so helps to avoid aliasing effects.
+- `preResVar`       : The variance of the Gaussian blur that will be applied if `applyPreResBlur` is `True`.
+- `resInterp`       : Defines the interpolation to use when resampling label images.  Acceptable values include "NearestNeighbor", "LabelGaussian" and `BlurThenLinear`.  *NearestNeighbor* and *LabelGaussian* are binary interpolators, whereas *BlurThenLinear* applies a Gaussian blur (defined by `preResVar`), followed by linear resampling, then binary thresholding to retain a binary label image. This option helps to avoid aliasing effects.
+- `applyPostResBlur` : If `True` the resampled label image will be Gaussian blurred.
+- `postResVar`       : The variance of the Gaussian blur that will be applied if `applyPostResBlur` is `True`. 
+
+- 'forceReg' : forceReg,
+- 'useDroForTx' : useDroForTx,
+- 'regTxName' : regTxName,
+- 'initMethod' : initMethod,
+- 'srcFidsFpath' : '',
+- 'trgFidsFpath' : '',
+- 'maxIters' : maxIters,
+- 'applyPreResBlur' : applyPreResBlur,
+- 'preResVar' : preResVar,
+- 'resInterp' : resInterp,
+- 'applyPostResBlur' : applyPostResBlur,
+- 'postResVar' : postResVar,
+- 'exportRoicol' : exportRoicol,
+- 'exportDro' : exportDro,
+- 'exportTx' : exportTx,
+- 'exportIm' : exportIm,
+- 'exportLabim' : exportLabim,
+- 'exportPlots' : exportPlots,
+- 'exportLogs' : exportLogs,
+- 'uploadDro' : uploadDro,
+- 'overwriteDro' : overwriteDro,
+- 'whichSrcRoicol' : whichSrcRoicol,
+- 'addToRoicolLab': addToRoicolLab,
+- 'p2c' : p2c,
+- 'cwd' : cwd, # this will be updated later
+- 'xnatCfgDir' : xnatCfgDir,
+- 'inputsDir' : inputsDir,
+- 'outputsDir' : outputsDir,
+- 'sampleDroDir' : sampleDroDir,
+- 'fidsDir' : fidsDir,
+- 'rtsExportDir' : rtsExportDir,
+- 'segExportDir' : segExportDir,
+- 'droExportDir' : droExportDir,
+- 'txExportDir' : txExportDir,
+- 'imExportDir' : imExportDir,
+- 'labimExportDir' : labimExportDir,
+- 'logsExportDir' : logsExportDir,
+- 'rtsPlotsExportDir' : rtsPlotsExportDir,
+- 'segPlotsExportDir' : segPlotsExportDir,
+- 'resPlotsExportDir' : resPlotsExportDir
+
+The run-specific variables are stored in unique JSON files in *src/configs*.  The parameters relate to the XNAT metadata that identifies the *source* and *target* DICOM series, the *source* ROI Collection, and the presence of some of the parameters dictate how the copy/propagation will proceed.  The module used to generate the config files is *src/xnat_config_files.py*.  Each config file in *src/configs* contains the run-specific parameters required for a unique run.  The "runID" is the file name of config file.
+
+Hence *cfgDict.json* = *global_varibles.json* + *runID.json*
+
+where *runID.json* is one of the files in *src/configs*.
+
+Everytime a change is made to *global_variables.json*, or to *runID.json*, or if a different *runID* config file is to be used, *create_cfgDict.py* must be re-run to refresh *cfgDict.json*.
+
+When *create_cfgDict.py* is run there is the option to assign a different file name (other than "cfgDict.json"), e.g. "cfgDict_241js23.json", so that when *app.py* is run the optional input argument *--cfgFname=cfgDict_241js23*, the desired config file will be imported, allowing for the possibility of concurrent calls to *app.py* with unique config file names. This feature was added in anticipation of the need for a scalable solution within XNAT.
+
+Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
 
 If an image registration is required to propagate the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new *DICOM Registration Object (DRO)* will be created and exported to *src/outputs/new_DRO*.  A rigid registration will yield a *Spatial Registration Object (SRO)*, while a deformable one will result in the creation of a *Deformable Spatial Registration Object (DSRO)*.  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
 
-Once a suitable DRO exists on XNAT, future propagation calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  At present all subject DICOM resources will be parsed and scanned for a match for the run in progress.  Although this isn't a computationally expensive process, in future work the DRO will be stored as a subject assessor with a corresponding XML file so that matches can be made without needing to parse all resource files.
+Once a suitable DRO exists on XNAT, future propagation calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  While a run using image registration might take over 200 s, use of a DRO will reduce the execution time to 30 s, for example.  
+
+At present all subject DICOM resources are parsed and scanned for a match for the run in progress.  Since this is not an efficient way of doing things in future work the DRO will be stored as a subject assessor with a corresponding XML file so that matches can be made without needing to parse all resource files.  This should shave on the order of 10 s for parsing of ~30 DICOM resources, for example.
 
 The algorithm makes use of XNAT Alias Tokens to avoid the creation of multiple user sessions.  The alias token is stored in the *src/tokens* directory.
-
-## The OHIF-integration version
-
-Current development of the OHIF-Viewer consists of a contour copy-and-paste feature (which will be extended to segmentation copying in due course).  Since the front-end will handle *copy* operations, the back-end (in Python) will only need to deal with *propagation*s. This, for example, will use image resampling or registration to preserve spatial relationships.
-
-Since this tool is not yet implemented in the OHIF-Viewer some steps have been taken to make it possible to integrate the Python code.  For this version, the file *global_variables.json* is used to store the variables considered unlikely to be modified frequently.  The package *global_var_file_ohif.py* can be used to generate *global_variables.json*.
-
-The module *paths_from_ohif.py* is a script used to generate *cfgDict_ohif.json*, which contains some pre-populated paths to the *source* and *target* datasets - paths that will need to be provided by the XNAT Container Service in the longer-term, but for the time being has been provided via the JSON file.  The paths lead to select datasets stored within *src/inputs*, which includes *source* and *target* DICOM series (in *src/inputs/scans*), the *source* *ROI Collection* (in *src/inputs/roicols*), an appropriate *DRO* (in *src/inputs/dro*) if applicable, and *source* and *target* fiducials text files (in *src/inputs/fiducials*) if applicable.
-
-The above mentioned deviations from that of the "stand-alone" version in effect replaces the user-generated JSON file with two other JSON files - both of which will likely be replaced with the *command* file of the Container Service.  It is anticipated that the *command* file will also contain paths to the *source* and *target* DICOM series and *source* and *target* (if applicable) *ROI Collection*s on the XNAT archive.
 
 ## XNAT "snapshot" tool
 
@@ -67,9 +128,9 @@ After cloning the repository, *pip* install the required packages listed in the 
     pip3 install -r requirements.txt
 
 
-## Running the "stand-alone" *ROI copy/propagation* tool
+## Running the *ROI copy/propagation* tool
 
-A *source ROI Collection* (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  When executing the code, a `runID` must be provided, and the directory path of the configuration file that contains the metadata attributed to that run, `cfgDir`.  The steps required to perform a run are as follows:
+A *source ROI Collection* (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  As described above, running of the tool requires there to be a config JSON file (with default file name *cfgDict.json*).  Hence a bit of prep work is required before trying to run the code:
 
 1. Create a configuration file(s) for the run(s) you wish to carry out.
 

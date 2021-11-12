@@ -62,7 +62,7 @@ import dro_tools.create_dro
 reload(dro_tools.create_dro)
 
 
-import time
+#import time
 import argparse
 from io_tools.fetch_cfgDict import ConfigFetcher
 #from io_tools.imports import import_dict_from_json
@@ -75,7 +75,7 @@ from dro_tools.create_dro import DroCreator
 
 
 def main(
-        runID, printSummary=False, plotResults=False):
+        cfgFname='cfgDict', printSummary=False, plotResults=False):
     """
     Main script for fetching the config settings, downloading data from XNAT,
     importing of source ROI Collection and source and target DICOM series, 
@@ -85,12 +85,9 @@ def main(
     
     Parameters
     ----------
-    #cfgDir : str
-    #    The path to the directory containing config files.
-    runID : str
-        The ID that determines the main configuration parameters to use for the
-        run (i.e. the key in the base level dictionary contained in 
-        main_params.json).
+    cfgFname : str, optional
+        The file name of the config file (in src/) containing the parameters to
+        be run. The default value is 'cfgDict'.
     printSummary : bool, optional
         If True, summarising results will be printed. The default is False.
     plotResults : bool, optional
@@ -104,16 +101,15 @@ def main(
     #print(f'\ncfgDir = {cfgDir}\n')
     
     # Store time stamps for various steps:
-    times = [time.time()]
+    #times = [time.time()]
     
     # Instanstantiate a ConfigFetcher object, get the config settings and
     # export it to src/cfgDict.json:
-    cfgObj = ConfigFetcher()
+    cfgObj = ConfigFetcher(cfgFname)
     
     # Instantiate a DataDownloader object, establish a connection to XNAT
     # (use or creating an XNAT Alias Token), download the data and create
     # pathsDict:
-    #params = DataDownloader(cfgObj)
     params = DataDownloader(cfgObj)
     params.download_and_get_pathsDict()
     
@@ -138,24 +134,18 @@ def main(
         print(f"useCaseToApply = {params.cfgDict['useCaseToApply']}\n")
     
     # Instantiate a DROImporter object and fetch the DRO (if applicable):
-    droObj = DroImporter()
-    droObj.fetch_dro(params)
+    droObj = DroImporter(params)
     
-    times.append(time.time())
-    dTime = times[-1] - times[-2]
+    #times.append(time.time())
+    #dTime = times[-1] - times[-2]
     
     # Instantiate a Propagator object and copy/propagate the source ROI
     # Collection to the target dataset:
     newDataset = Propagator(srcDataset, trgDataset, params)
     newDataset.execute(srcDataset, trgDataset, params, droObj.dro)
     
-    times.append(time.time())
-    dTime = times[-1] - times[-2]
-    
-    print('\n\n\n*** TIMINGS ***')
-    [print(msg) for msg in params.timingMsgs if 'Took' in msg]
-    print(f'Total time {dTime:.1f} s ({dTime/60:.1f} min) to',
-          f'execute runID {runID}.\n\n\n')
+    #times.append(time.time())
+    #dTime = times[-1] - times[-2]
     
     if printSummary:
         newDataset.print_summary_of_results(srcDataset, trgDataset)
@@ -186,6 +176,17 @@ def main(
     newDroObj.create_dro(srcDataset, trgDataset, newDataset, params)
     newDroObj.export_dro(params)
     newDroObj.upload_dro(params)
+    
+    timingMsg = "Took total of [*] to execute the run.\n"
+    params.add_timestamp(timingMsg)
+    
+    print('\n\nSUMMARY\n*******')
+    [print(msg) for msg in params.timingMsgs if 'Took' in msg]
+    
+    #dTime = params.timings[-1] - params.timings[0]
+    #timingMsg = f"Took {dTime:.1f} s ({dTime/60:.1f} min) to execute runID " +\
+    #    f"{cfgObj.cfgDict['runID']}.\n"
+    #print(timingMsg)
 
 if __name__ == '__main__':
     """
@@ -193,23 +194,20 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    #python app.py configs NCITA_TEST_RR2
     python app.py
+    
+    or 
+    
+    python app.py --cfgFname=cfgDict_42md31
     """
     
     parser = argparse.ArgumentParser(description='Arguments for main()')
     
-    """
     parser.add_argument(
-        "cfgDir", 
-        help="The directory containing config files"
+        "--cfgFname",
+        nargs='?', default='cfgDict', const='cfgDict',
+        help="Optional file name of cfgDict file (default is cfgDict)"
         )
-    
-    parser.add_argument(
-        "runID", 
-        help="The run ID to execute"
-        )
-    """
     
     parser.add_argument(
         "--printSummary", 
@@ -228,4 +226,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     #main(args.cfgDir, args.runID, args.printSummary, args.plotResults)
-    main(args.printSummary, args.plotResults)
+    main(args.cfgFname, args.printSummary, args.plotResults)

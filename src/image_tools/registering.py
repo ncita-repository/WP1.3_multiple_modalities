@@ -8,6 +8,13 @@ Created on Thu Jul  8 09:18:36 2021
 
 """ Registering functions for SimpleITK images. """
 
+
+"""
+from importlib import reload
+import image_tools.operations
+reload(image_tools.operations)
+"""
+
 import SimpleITK as sitk
 #import numpy as np
 import time
@@ -15,11 +22,6 @@ import time
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from ipywidgets import interact, fixed
-
-from importlib import reload
-import image_tools.operations
-reload(image_tools.operations)
-
 #from general_tools.general import check_file_ext
 from general_tools.fiducials import get_landmark_tx
 #import image_tools.registration_utilities as ru

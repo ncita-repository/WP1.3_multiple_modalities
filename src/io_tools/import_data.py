@@ -5,17 +5,12 @@ Created on Tue Jul 13 17:47:21 2021
 @author: ctorti
 """
 
-
+"""
 from importlib import reload
-
 #import xnat_tools.dros
 #reload(xnat_tools.dros)
-
 #import io_tools.fetch_params_and_data
 #reload(io_tools.fetch_params_and_data)
-
-#import time
-
 import io_tools.download_data
 reload(io_tools.download_data)
 import io_tools.imports
@@ -42,7 +37,7 @@ import conversion_tools.inds_pts_pixarrs
 reload(conversion_tools.inds_pts_pixarrs)
 #import conversion_tools.inds_pts_cntdata
 #reload(conversion_tools.inds_pts_cntdata)
-
+"""
 
 #from xnat_tools.sessions import create_session
 #from io_tools.fetch_params_and_data import Params
@@ -727,30 +722,11 @@ class DataImporter:
             self.get_rts_metadata()
             
             self.convert_rts_to_seg_metadata()
-            
-        """
-        Determining of the use case has been moved to image_tools.propagate.py
-        since import_data is applied separately to Source and Target, hence
-        which_use_case has to follow after both datasets have been imported.
-        
-        # Determine which use case applies and which to apply:
-        useCaseThatApplies, useCaseToApply\
-            = which_use_case(config=self.cfgDict)
-        
-        # Update cfgDict:
-        params.cfgDict['useCaseThatApplies'] = useCaseThatApplies
-        params.cfgDict['useCaseToApply'] = useCaseToApply
-        
-        if 'p2c':
-            print(f"cfgDict['runID'] = {params.cfgDict['runID']}")
-            print(f"useCaseThatApplies = {params.cfgDict['useCaseThatApplies']}")
-            print(f"useCaseToApply = {params.cfgDict['useCaseToApply']}")
-        """
         
         #print(f'type(self.labimByRoi) = {type(self.labimByRoi)}')
         #if not self.labimByRoi is None:
         #    print(f'type(self.labimByRoi[0]) = {type(self.labimByRoi[0])}')
         
-        timingMsg = f"Took [*] s to import the {toImport} DICOM scans and "\
+        timingMsg = f"Took [*] to import the {toImport} DICOM scans and "\
                 + "ROI Collection.\n"
         params.add_timestamp(timingMsg)

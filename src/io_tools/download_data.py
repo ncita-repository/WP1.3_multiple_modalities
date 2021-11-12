@@ -5,8 +5,8 @@ Created on Thu Jul 15 10:31:20 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
-
 import xnat_tools.scans
 reload(xnat_tools.scans)
 import xnat_tools.im_assessors
@@ -15,17 +15,10 @@ import xnat_tools.format_pathsDict
 reload(xnat_tools.format_pathsDict)
 import xnat_tools.alias_tokens
 reload(xnat_tools.alias_tokens)
-#import io_tools.inputs_checker
-#reload(io_tools.inputs_checker)
-#import xnat_tools.dros
-#reload(xnat_tools.dros)
-#import io_tools.fetch_config
-#reload(io_tools.fetch_config)
+"""
 
 import os
 import time
-#import requests
-#from io_tools.inputs_checker import which_use_case
 from xnat_tools.sessions import create_session
 from xnat_tools.scans import download_scan
 from xnat_tools.im_assessors import download_im_asr
@@ -34,7 +27,6 @@ from xnat_tools.alias_tokens import (
     import_alias_token, is_alias_token_valid, generate_alias_token,
     export_alias_token
     )
-#from xnat_tools.dros import search_dro
 
 
 class DataDownloader:
@@ -45,10 +37,6 @@ class DataDownloader:
     
     Parameters
     ----------
-    #cfgObj : ConfigFetcher Object
-    #    An object containing various parameters for a specified runID (stored 
-    #    in the dictionary self.cfgDict), and an XNAT alias token (stored in the 
-    #    dictionary self.aliasToken).
     self.cfgDict : dict
         Dictionary containing the parameters for the desired run.
     xnatSession : Requests Object, optional
@@ -67,14 +55,8 @@ class DataDownloader:
     variable name 'params'.
     """
     
-    #def __init__(self, cfgObj, xnatSession=None):
     def __init__(self, cfgObj):
-    #def __init__(self, cfgDict):
-        
-        #self.cfgDir = cfgObj.cfgDir
         self.cfgDict = cfgObj.cfgDict
-        #self.cfgDict = cfgDict
-        #self.aliasToken = cfgObj.aliasToken
         self.aliasToken = {} # initial value
         
         """
@@ -134,7 +116,9 @@ class DataDownloader:
             print('Using XNAT alias token to establish XNAT connection.')
             xnatSession = create_session(url=url, aliasToken=aliasToken)
         else:
-            print('Establishing XNAT connection without XNAT alias token.')
+            if aliasToken:
+                print('The XNAT alias token is invalid.')
+            print('Establishing XNAT connection without an XNAT alias token.')
             xnatSession = create_session(url=url, username=username)
         
         # Generate an XNAT alias token to avoid making a new authenticated
@@ -231,10 +215,18 @@ class DataDownloader:
         """
         self.timings.append(time.time())
         
-        dTime = self.timings[-1] - self.timings[-2]
+        if 'total' in timingMsg:
+            dTime = self.timings[-1] - self.timings[0]
+        else:
+            dTime = self.timings[-1] - self.timings[-2]
         
         if '[*]' in timingMsg:
-            timingMsg = timingMsg.replace('[*]', f'{dTime:.2f}')
+            if 'total' in timingMsg:
+                timingMsg = timingMsg.replace(
+                    '[*]', f'{dTime:.2f} s ({dTime/60:.1f} min)'
+                    )
+            else:
+                timingMsg = timingMsg.replace('[*]', f'{dTime:.2f} s')
         self.timingMsgs.append(timingMsg)
         print(f'*{timingMsg}')
     
@@ -290,8 +282,6 @@ class DataDownloader:
     def download_and_get_pathsDict(self):
         # TODO update docstrings
         """
-        17/08: xnatSession was input.
-        
         Downloads scans and ROI Collections and creates a dictionary containing
         filepaths.
         
@@ -300,10 +290,6 @@ class DataDownloader:
         self.pathsDict : dict
             Dictionary containing paths of data downloaded.
         """
-        
-        #xnatSession = self.xnatSession
-        #cfgDict = self.cfgDict
-        #p2c = cfgDict['p2c']
         
         self.print_cfg_params_to_console()
         
@@ -337,35 +323,13 @@ class DataDownloader:
                 xnatSession=self.xnatSession, pathsDict=self.pathsDict
                 )
         
-        #self.pathsDict = pathsDict
-        #self.cfgDict = cfgDict
-        
         if trgRoicolName == None:
-            timingMsg = "Took [*] s to download the source and target DICOM"\
+            timingMsg = "Took [*] to download the source and target DICOM"\
                 + " scans and the source ROI Collection.\n"
         else:
-            timingMsg = "Took [*] s to download the source and target DICOM"\
+            timingMsg = "Took [*] to download the source and target DICOM"\
                 + " scans and the source and target ROI Collections.\n"
         self.add_timestamp(timingMsg)
         
         # Modify Source and Target XNAT parameters:
         self.add_dirs_and_fpaths()
-        
-        """
-        Moved to image_tools.propagate.py:
-        
-        # Determine which use case applies and which to apply:
-        useCaseThatApplies, useCaseToApply\
-            = which_use_case(config=self.cfgDict)
-        
-        # Update cfgDict:
-        self.cfgDict['useCaseThatApplies'] = useCaseThatApplies
-        self.cfgDict['useCaseToApply'] = useCaseToApply
-        
-        
-        if self.cfgDict['p2c']:
-            print(f"cfgDict['runID'] = {self.cfgDict['runID']}")
-            print(f'useCaseThatApplies = {useCaseThatApplies}')
-            print(f'useCaseToApply = {useCaseToApply}')
-            #print(f"cfgDict = {self.cfgDict}")
-        """

@@ -81,12 +81,12 @@ def import_alias_token(exportDir):
     try:
         aliasToken = import_dict_from_json(filepath=fpath)
         
-        print('An XNAT alias token was found.\n')
+        print('An XNAT alias token was found.')
     
     except FileNotFoundError:
         aliasToken = {}
         
-        print('An XNAT alias token was not found.\n')
+        print('An XNAT alias token was not found.')
     
     return aliasToken
 

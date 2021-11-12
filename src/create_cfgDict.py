@@ -5,16 +5,12 @@ Created on Fri Nov 12 11:04:47 2021
 @author: ctorti
 """
 
-#from importlib import reload
-#import io_tools.general
-#reload(io_tools.general)
 
 import os
 import argparse
 from io_tools.general import get_fpaths, get_user_input_as_int
 from io_tools.imports import import_dict_from_json
 from io_tools.exports import export_dict_to_json
-#from general_tools.general import are_items_equal_to_within_eps
 
 class ConfigCreator:
     # TODO! Update docstrings
@@ -24,13 +20,11 @@ class ConfigCreator:
     
     Parameters
     ----------
-    #cfgDir : str
-    #    The path to the directory containing config files.
     runID : str
         The ID that determines the main configuration parameters to use for the
         run (i.e. the key in the base level dictionary contained in 
         main_params.json).
-    cfgDict_fname : str, optional
+    cfgFname : str, optional
         The file name to assign to the config file (in src/) containing the 
         parameters to be run. The default value is 'cfgDict'.
     
@@ -52,20 +46,21 @@ class ConfigCreator:
     (from src/global_variables.json) and a JSON config file from src/configs
     that are specific to the run to be executed.
     
-    The optional argument cfgDict_fname allows for the possibility of scaling
+    The optional argument cfgFname allows for the possibility of scaling
     up for multiple runs concurrently. Each run can generate a unique cfgDict
     with unique file name, e.g. cfgDict_34j2cf.json, that can be passed to
     ConfigFetcher.
     """
     
-    def __init__(self, runID, cfgDict_fname='cfgDict'):
-        self.runID = runID
-        self.cfgDict_fname = cfgDict_fname
-        #self.cfgDir = cfgDir
-        #self.cfgDict = {} # will update later
+    def __init__(self, runID, cfgFname='cfgDict'):
+        if not '.json' in cfgFname:
+            cfgFname += '.json'
         
+        self.runID = runID
+        self.cfgFname = cfgFname
+        
+        # Get the global variables:
         self.get_global_vars()
-        #print(f"Global variables:\n\n {self.globalVars}\n\n")
         # Get XNAT config for chosen runID:
         self.get_xnat_config()
         #print(f"XNAT config:\n\n {self.cfgDict}\n\n")
@@ -93,11 +88,12 @@ class ConfigCreator:
         
         fname = 'global_variables.json'
         
-        print(f'Fetching global variables from {fname}\n')
+        print(f'\nFetching global variables from {fname}\n')
         
         try:
             self.globalVars = import_dict_from_json(fname)
             self.xnatCfgDir = self.globalVars['xnatCfgDir']
+            #print(f"Global variables:\n\n {self.globalVars}\n\n")
         except FileNotFoundError:
             print(f'File {fname} not found')
         
@@ -118,10 +114,9 @@ class ConfigCreator:
             Dictionary containing the XNAT parameters for the desired run.
         """
         
-        #cfgDir = self.cfgDir
-        #print(f'cfgDir = {cfgDir}\n')
         runID = self.runID
         xnatCfgDir = self.xnatCfgDir
+        
 
         cfgFpath = os.path.join(xnatCfgDir, f'{runID}.json')
         
@@ -209,6 +204,7 @@ class ConfigCreator:
         """
         
         cfgDict = self.cfgDict
+        globalVars = self.globalVars
         
         # Try to get the current working directory from an environmnt variable:
         cwd = os.getenv('workdir')
@@ -217,39 +213,15 @@ class ConfigCreator:
             cwd = os.getcwd()
         #print(f'cwd (in fetch_config.py) = {cwd}')
         
-        # Lines below added 03/11/21
-        inputsDir = os.path.join(cwd, r'inputs')
-        outputsDir = os.path.join(cwd, r'outputs')
-        sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
-        fidsDir = os.path.join(inputsDir, r'fiducials')
-        rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-        segExportDir = os.path.join(outputsDir, r'new_SEG')
-        droExportDir = os.path.join(outputsDir, r'new_DRO')
-        rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-        segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
-        resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
-        txExportDir = os.path.join(outputsDir, r'transforms')
-        imExportDir = os.path.join(outputsDir, r'images')
-        labimExportDir = os.path.join(outputsDir, r'label_images')
-        logsExportDir = os.path.join(outputsDir, r'logs')
-    
-        
         cfgDict['cwd'] = cwd
-        # Lines below added 03/11/21
-        cfgDict['inputsDir'] = inputsDir
-        cfgDict['outputsDir'] = outputsDir
-        cfgDict['sampleDroDir'] = sampleDroDir
-        cfgDict['fidsDir'] = fidsDir
-        cfgDict['rtsExportDir'] = rtsExportDir
-        cfgDict['segExportDir'] = segExportDir
-        cfgDict['droExportDir'] = droExportDir
-        cfgDict['rtsPlotsExportDir'] = rtsPlotsExportDir
-        cfgDict['segPlotsExportDir'] = segPlotsExportDir
-        cfgDict['resPlotsExportDir'] = resPlotsExportDir
-        cfgDict['txExportDir'] = txExportDir
-        cfgDict['imExportDir'] = imExportDir
-        cfgDict['labimExportDir'] = labimExportDir
-        cfgDict['logsExportDir'] = logsExportDir
+        
+        print(f"cfgDict['cwd'] = {cfgDict['cwd']}")
+        
+        # Change all directory paths (other than cwd) from relative (to cwd)
+        # to absolute paths:
+        for key in cfgDict.keys():
+            if 'Dir' in key:
+                cfgDict[key] = os.path.join(cwd, globalVars[key])
         
         print('Paths updated in cfgDict\n')
         
@@ -272,7 +244,7 @@ class ConfigCreator:
         cfgDict = self.cfgDict
         cwd = cfgDict['cwd']
         
-        fname = self.cfgDict_fname
+        fname = self.cfgFname
         
         export_dict_to_json(
             dictionary=cfgDict, filename=fname, exportDir=cwd
@@ -286,8 +258,11 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    cd C:\Code\WP1.3_multiple_modalities\src
     python create_cfgDict.py runID
+    
+    or
+    
+    python create_cfgDict.py runID --cfgFname=cfgDict_42md31
     """
     
     parser = argparse.ArgumentParser(
@@ -300,11 +275,11 @@ if __name__ == '__main__':
         )
     
     parser.add_argument(
-        "--cfgDict_fname",
+        "--cfgFname",
         nargs='?', default='cfgDict', const='cfgDict',
         help="Optional file name of cfgDict file (default is cfgDict)"
         )
     
     args = parser.parse_args()
     
-    cfgObj = ConfigCreator(args.runID, args.cfgDict_fname)
+    cfgObj = ConfigCreator(args.runID, args.cfgFname)

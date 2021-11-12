@@ -22,8 +22,7 @@ def create_xnat_config_files():
     
     Parameters
     ----------
-    #cfgDir : str
-    #    The path to the directory to export the JSON files.
+    None.
     
     Returns
     -------
@@ -74,129 +73,11 @@ def create_xnat_config_files():
     # Current date:
     #currentDate = time.strftime("%Y-%m-%d", time.gmtime())
     
-    # Try to get current working directory from an environment variable - this 
-    # will be updated by running update_cfgDict() in io_tools.fetch_config.py:
-    """
-    cwd = os.getenv('workdir')
-    print(f'os.getenv (in config.py) = {cwd}')
-    if cwd == None:
-        cwd = os.getcwd()
-    print(f'cwd (in config.py) = {cwd}')
-    """
-    #cwd = "" # this will be updated later
-    ##cwd = "src"  # 03/11/21
-    
     # Get current working directory:
     cwd = os.getcwd()
     
     # Directory where XNAT config files will be exported to:
     cfgDir = os.path.join(cwd, 'xnat_configs')
-    
-    # Default download directory for XNAT data:
-    #downloadDir = os.path.join(Path.home(), "Downloads", "xnat_downloads")
-    #downloadDir = os.path.join(cwd, "xnat_downloads", currentDate)
-    # Default download directory for XNAT data relative to cwd:
-    #downloadDir = os.path.join(r"xnat_downloads", currentDate)
-    
-    # Root input and output directories:
-    #rootInputDir = os.path.join(cwd, r'inputs')
-    #rootOutputDir = os.path.join(cwd, r'outputs')
-    # Inputs and outputs directories relative to cwd:
-    #inputsDir = r'inputs' # 03/11/21
-    #outputsDir = r'outputs' # 03/11/21
-    ##inputsDir = os.path.join(cwd, r'inputs') # 03/11/21
-    ##outputsDir = os.path.join(cwd, r'outputs') # 03/11/21
-    
-    # Directories containing sample DROs and fiducials:
-    #sampleDroDir = os.path.join(rootInputDir, r'sample_DROs')
-    #fidsDir = os.path.join(rootInputDir, r'fiducials')
-    # Directories containing sample DROs and fiducials relative to cwd:
-    #sampleDroDir = os.path.join(inputsDir, r'sample_DROs')
-    ##fidsDir = os.path.join(outputsDir, r'fiducials') # 03/11/21
-    #fidsDir = os.path.join(inputsDir, r'fiducials') # 03/11/21
-    
-    # Directories for the (new) target ROI Collections, DRO, plots, transforms,
-    # binary label maps, logs and configuration files relative to cwd:
-    ##rtsExportDir = os.path.join(outputsDir, r'new_RTS')
-    ##segExportDir = os.path.join(outputsDir, r'new_SEG')
-    #rtsExportDir = os.path.join(outputsDir, r'new_roicols')
-    #segExportDir = os.path.join(outputsDir, r'new_roicols')
-    #droExportDir = os.path.join(outputsDir, r'new_DRO')
-    #rtsPlotsExportDir = os.path.join(outputsDir, 'plots_RTS')
-    #segPlotsExportDir = os.path.join(outputsDir, 'plots_SEG')
-    # resampled/transformed/registered plots
-    #resPlotsExportDir = os.path.join(outputsDir, r'plots_res')
-    #txExportDir = os.path.join(outputsDir, r'transforms')
-    #imExportDir = os.path.join(outputsDir, r'images')
-    #labimExportDir = os.path.join(outputsDir, r'label_images')
-    #logsExportDir = os.path.join(outputsDir, r'logs')
-    
-    
-    """
-    Chose whether or not to export the new ROI Collection (i.e. RTS or SEG),
-    DRO, transforms, label images, plots and logs:
-    """
-    #exportRoicol = True
-    #exportDro = True
-    #exportTx = True
-    #exportIm = True # 3D DICOM images
-    #exportLabim = True # 3D binary label images
-    #exportPlots = True
-    #exportLogs = True
-    
-    
-    """
-    The parameter addToRoicolLabel allows for adding text to the 
-    StructureSetLab (SSL) of the new DICOM-RTSTRUCT or SeriesDescription (SD)
-    of the new DICOM-SEG file, 
-    e.g. New SSL/SD = SSD/SD copied from the Source RTS/SEG + addToRoicolLabel
-    The default value of addToRoicolLab will the empty string, which will
-    result in the addition of the timestamp of the file creation,
-    e.g. "{copied SSL/SD} 20210323 101748".
-    """
-    #addToRoicolLab = '' # the current timestamp will be added
-    
-    """ 
-    When searching XNAT for the source ROI Collection that matches the required
-    metadata multiple hits may arise. Chose how to proceed from the following
-    3 options:
-        1. Select the oldest ROI Collection (whichSrcRoicol = 'oldest')
-        2. Select the newest ROI Collection (whichSrcRoicol = 'newest')
-        3. Allow the user to decide (whichSrcRoicol = 'user')
-    """
-    #whichSrcRoicol = 'oldest'
-    ##whichSrcRoicol = 'newest'
-    ##whichSrcRoicol = 'user'
-    
-    
-    """
-    Choose whether or not to use a valid DRO to transform (propagate) the 
-    source ROI Collection to the target domain or to perform image registration
-    irrespective of a valid DRO:
-    
-    Update: Rather than defining the value here it is defined in the definition
-    of the dictionaries (see below).
-    """
-    #useDroForTx = True # use transform in DRO, by-passing image registration
-    #useDroForTx = False # apply image registration even if DRO is available
-    
-    """
-    Chose whether or not to upload the (new) target DRO to XNAT:
-    """
-    ##uploadDro = False
-    #uploadDro = True # see Notes
-    
-    """
-    Chose whether or not to overwrite an existing DRO to XNAT:
-    """
-    #overwriteDro = False
-    ##overwriteDro = True # see Notes
-    
-    """
-    Chose whether or not to print results to console (e.g. for debugging):
-    """
-    #p2c = False
-    ##p2c = True
     
     # Initialise dictionary (of dictionaries) to store all configurations:
     cfg = {}
@@ -216,7 +97,7 @@ def create_xnat_config_files():
     runID = 'Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'
     cfg[runID] = {
         'runID' : runID,
-        # XNAT config settings:
+        # XNAT parameters:
         'url' : "http://10.1.1.20", 
         'username': "admin",
         'projID' : 'Soft-tissue-Sarcoma', 
@@ -225,7 +106,6 @@ def create_xnat_config_files():
         'srcScanID' : '2',
         'srcSlcNum' : None,
         'srcRoicolName' : 'CT_Ser2_tumour',
-        #'srcRoicolName' : 'Left_thigh_tumour',
         'srcRoiName' : None,
         'roicolMod' : 'SEG',
         'trgExpLab' : 'STS_004_MR',
@@ -234,49 +114,9 @@ def create_xnat_config_files():
         'trgRoicolName' : None,
         'trgRoiName' : None,
         # Resampling / Registration / Transformation settings:
-        #'srcFidsFpath' : os.path.join(fidsDir, r'STS_004_CT_fiducials.txt'),
-        #'trgFidsFpath' : os.path.join(fidsDir, r'STS_004_MR_fiducials.txt'),
         'srcFidsFname' : 'STS_004_CT_fiducials.txt',
         'trgFidsFname' : 'STS_004_MR_fiducials.txt',
-        #'forceReg' : False,
-        #'regTxName' : 'affine',
         'initMethod' : 'landmarks'
-        #'maxIters' : 512,
-        #'useDroForTx' : True,
-        #'useDroForTx' : False,
-        #'applyPreResBlur' : False,
-        #'preResVar' : (1,1,1),
-        #'resInterp' : 'BlurThenLinear',
-        #'applyPostResBlur' : True,
-        #'postResVar' : (1,1,1),
-        #'exportRoicol' : exportRoicol,
-        #'exportDro' : exportDro,
-        #'exportTx' : exportTx,
-        #'exportIm' : exportIm,
-        #'exportLabim' : exportLabim,
-        #'exportPlots' : exportPlots,
-        #'exportLogs' : exportLogs,
-        #'whichSrcRoicol' : whichSrcRoicol,
-        #'addToRoicolLab' : addToRoicolLab,
-        #'uploadDro' : uploadDro,
-        #'overwriteDro' : overwriteDro,
-        #'p2c' : p2c,
-        #'cwd' : cwd,
-        #'downloadDir' : downloadDir,
-        #'inputsDir' : inputsDir,
-        #'outputsDir' : outputsDir,
-        #'sampleDroDir' : sampleDroDir,
-        #'fidsDir' : fidsDir,
-        #'rtsExportDir' : rtsExportDir,
-        #'segExportDir' : segExportDir,
-        #'droExportDir' : droExportDir,
-        #'txExportDir' : txExportDir,
-        #'imExportDir' : imExportDir,
-        #'labimExportDir' : labimExportDir,
-        #'logsExportDir' : logsExportDir,
-        #'rtsPlotsExportDir' : rtsPlotsExportDir,
-        #'segPlotsExportDir' : segPlotsExportDir,
-        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate a RTS using affine registration of soft tissue 
@@ -301,6 +141,30 @@ def create_xnat_config_files():
     cfg[runID]['roicolMod'] = 'RTSTRUCT'
     
     """ 
+    As above but forcing registration.
+    """
+    runID = 'Soft_tissue_SEG_CT_to_MR_aff_using_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_aff_using_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_RTS_CT_to_MR_aff_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_SEG_CT_to_MR_def_using_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_def_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_def_using_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_RTS_CT_to_MR_def_using_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    
+    """ 
     As above but without using fiducials.
     
     Note 01/10/21:
@@ -311,8 +175,6 @@ def create_xnat_config_files():
     runID = 'Soft_tissue_SEG_CT_to_MR_aff_no_fiducials'
     cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_using_fiducials'])
     cfg[runID]['runID'] = runID
-    cfg[runID]['srcFidsFpath'] = ''
-    cfg[runID]['trgFidsFpath'] = ''
     cfg[runID]['initMethod'] = 'geometry'
     #cfg[runID]['initMethod'] = 'moments'
     
@@ -332,6 +194,30 @@ def create_xnat_config_files():
     cfg[runID]['runID'] = runID
     cfg[runID]['roicolMod'] = 'RTSTRUCT'
     
+    """ 
+    As above but forcing registration.
+    """
+    
+    runID = 'Soft_tissue_SEG_CT_to_MR_aff_no_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_aff_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_aff_no_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_RTS_CT_to_MR_aff_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_SEG_CT_to_MR_def_no_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_SEG_CT_to_MR_def_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
+    runID = 'Soft_tissue_RTS_CT_to_MR_def_no_fiducials_force_reg'
+    cfg[runID] = dict(cfg['Soft_tissue_RTS_CT_to_MR_def_no_fiducials'])
+    cfg[runID]['runID'] = runID
+    cfg[runID]['forceReg'] = True
+    
     
     
     """
@@ -346,7 +232,7 @@ def create_xnat_config_files():
     runID = 'NCITA_test_RR1'
     cfg[runID] = {
         'runID' : runID,
-        # XNAT config settings:
+        # XNAT parameters:
         'url' : "http://10.1.1.20", 
         'username': "admin", 
         'projID' : 'NCITA_TEST', 
@@ -362,48 +248,6 @@ def create_xnat_config_files():
         'trgSlcNum' : None,
         'trgRoicolName' : None,
         'trgRoiName' : None
-        # Resampling / Registration / Transformation settings:
-        #'srcFidsFpath' : None,
-        #'trgFidsFpath' : None, 
-        #'forceReg' : False,
-        #'regTxName' : 'affine',
-        #'initMethod' : 'moments', # 07/09/21
-        #'initMethod' : 'geometry', # 07/09/21
-        #'maxIters' : 512,
-        #'useDroForTx' : False,
-        #'applyPreResBlur' : False,
-        #'preResVar' : (1,1,1),
-        #'resInterp' : 'BlurThenLinear',
-        #'applyPostResBlur' : True,
-        #'postResVar' : (1,1,1),
-        #'exportRoicol' : exportRoicol,
-        #'exportDro' : exportDro,
-        #'exportTx' : exportTx,
-        #'exportIm' : exportIm,
-        #'exportLabim' : exportLabim,
-        #'exportPlots' : exportPlots,
-        #'exportLogs' : exportLogs,
-        #'whichSrcRoicol' : whichSrcRoicol,
-        #'addToRoicolLab' : addToRoicolLab,
-        #'uploadDro' : uploadDro,
-        #'overwriteDro' : overwriteDro,
-        #'p2c' : p2c,
-        #'cwd' : cwd,
-        #'downloadDir' : downloadDir,
-        #'inputsDir' : inputsDir,
-        #'outputsDir' : outputsDir,
-        #'sampleDroDir' : sampleDroDir,
-        #'fidsDir' : fidsDir,
-        #'rtsExportDir' : rtsExportDir,
-        #'segExportDir' : segExportDir,
-        #'droExportDir' : droExportDir,
-        #'txExportDir' : txExportDir,
-        #'imExportDir' : imExportDir,
-        #'labimExportDir' : labimExportDir,
-        #'logsExportDir' : logsExportDir,
-        #'rtsPlotsExportDir' : rtsPlotsExportDir,
-        #'segPlotsExportDir' : segPlotsExportDir,
-        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS across two DICOM series with the same slice
@@ -833,6 +677,11 @@ def create_xnat_config_files():
     runID = 'RR3_contour'
     cfg[runID] = {
         'runID' : runID,
+        # XNAT parameters:
+        'url' : 'http://10.1.1.20', 
+        'username': 'admin',
+        'projID' : 'NCITA_TEST', 
+        'subjLab' : 'TCGA-BB-A5HY',
         'srcExpLab' : 'Session2',
         'srcScanID' : '2',
         'srcSlcNum' : 7,
@@ -955,7 +804,6 @@ def create_xnat_config_files():
     cfg[runID]['srcRoiName'] = None
     
     
-    
     """
     Following are datasets for test runs using the ACRIN collection (brain
     images) from TCIA, testing how well the algorithm is able to deal with
@@ -973,7 +821,7 @@ def create_xnat_config_files():
     runID = 'ACRIN_SEG_MR4_SAG_to_MR12_AX'
     cfg[runID] = {
         'runID' : runID,
-        # XNAT config settings:
+        # XNAT parameters:
         'url' : "http://10.1.1.20", 
         'username': "admin",
         'projID' : 'ACRIN', 
@@ -989,48 +837,6 @@ def create_xnat_config_files():
         'trgSlcNum' : None,
         'trgRoicolName' : None,
         'trgRoiName' : None
-        # Resampling / Registration / Transformation settings:
-        #'srcFidsFpath' : None,
-        #'trgFidsFpath' : None, 
-        #'forceReg' : False,
-        #'regTxName' : 'affine',
-        #'initMethod' : 'moments', # 07/09/21
-        #'initMethod' : 'geometry', # 07/09/21
-        #'maxIters' : 512,
-        #'useDroForTx' : False,
-        #'applyPreResBlur' : False,
-        #'preResVar' : (1,1,1),
-        #'resInterp' : 'BlurThenLinear',
-        #'applyPostResBlur' : True,
-        #'postResVar' : (1,1,1),
-        #'exportRoicol' : exportRoicol,
-        #'exportDro' : exportDro,
-        #'exportTx' : exportTx,
-        #'exportIm' : exportIm,
-        #'exportLabim' : exportLabim,
-        #'exportPlots' : exportPlots,
-        #'exportLogs' : exportLogs,
-        #'whichSrcRoicol' : whichSrcRoicol,
-        #'addToRoicolLab' : addToRoicolLab,
-        #'uploadDro' : uploadDro,
-        #'overwriteDro' : overwriteDro,
-        #'p2c' : p2c,
-        #'cwd' : cwd,
-        #'downloadDir' : downloadDir,
-        #'inputsDir' : inputsDir,
-        #'outputsDir' : outputsDir,
-        #'sampleDroDir' : sampleDroDir,
-        #'fidsDir' : fidsDir,
-        #'rtsExportDir' : rtsExportDir,
-        #'segExportDir' : segExportDir,
-        #'droExportDir' : droExportDir,
-        #'txExportDir' : txExportDir,
-        #'imExportDir' : imExportDir,
-        #'labimExportDir' : labimExportDir,
-        #'logsExportDir' : logsExportDir,
-        #'rtsPlotsExportDir' : rtsPlotsExportDir,
-        #'segPlotsExportDir' : segPlotsExportDir,
-        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from coronal view to axial:
@@ -1062,7 +868,7 @@ def create_xnat_config_files():
     runID = 'COVID_RTS_4_AX_to_80642_COR'
     cfg[runID] = {
         'runID' : runID,
-        # XNAT config settings:
+        # XNAT parameters:
         'url' : "http://10.1.1.21", 
         'username': "admin",
         'projID' : 'COVID_19_AR', 
@@ -1078,48 +884,6 @@ def create_xnat_config_files():
         'trgSlcNum' : None,
         'trgRoicolName' : None,
         'trgRoiName' : None
-        # Resampling / Registration / Transformation settings:
-        #'srcFidsFpath' : None,
-        #'trgFidsFpath' : None, 
-        #'forceReg' : False,
-        #'regTxName' : 'affine',
-        #'initMethod' : 'moments', # 07/09/21
-        #'initMethod' : 'geometry', # 07/09/21
-        #'maxIters' : 512,
-        #'useDroForTx' : False,
-        #'applyPreResBlur' : False,
-        #'preResVar' : (1,1,1),
-        #'resInterp' : 'BlurThenLinear',
-        #'applyPostResBlur' : True,
-        #'postResVar' : (1,1,1),
-        #'exportRoicol' : exportRoicol,
-        #'exportDro' : exportDro,
-        #'exportTx' : exportTx,
-        #'exportIm' : exportIm,
-        #'exportLabim' : exportLabim,
-        #'exportPlots' : exportPlots,
-        #'exportLogs' : exportLogs,
-        #'whichSrcRoicol' : whichSrcRoicol,
-        #'addToRoicolLab' : addToRoicolLab,
-        #'uploadDro' : uploadDro,
-        #'overwriteDro' : overwriteDro,
-        #'p2c' : p2c,
-        #'cwd' : cwd,
-        #'downloadDir' : downloadDir,
-        #'inputsDir' : inputsDir,
-        #'outputsDir' : outputsDir,
-        #'sampleDroDir' : sampleDroDir,
-        #'fidsDir' : fidsDir,
-        #'rtsExportDir' : rtsExportDir,
-        #'segExportDir' : segExportDir,
-        #'droExportDir' : droExportDir,
-        #'txExportDir' : txExportDir,
-        #'imExportDir' : imExportDir,
-        #'labimExportDir' : labimExportDir,
-        #'logsExportDir' : logsExportDir,
-        #'rtsPlotsExportDir' : rtsPlotsExportDir,
-        #'segPlotsExportDir' : segPlotsExportDir,
-        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from axial view to sagittal:
@@ -1163,9 +927,9 @@ def create_xnat_config_files():
     runID = 'COVID_RTS_5_AX_to_80344_COR'
     cfg[runID] = {
         'runID' : runID,
-        # XNAT config settings:
+        # XNAT parameters:
         'url' : "http://10.1.1.21", 
-        'username': "admin", 
+        'username': "admin",
         'projID' : 'COVID_19_AR', 
         'subjLab' : 'COVID-19-AR-16406502',
         'srcExpLab' : 'CT-PE-CHEST-28055',
@@ -1179,48 +943,6 @@ def create_xnat_config_files():
         'trgSlcNum' : None,
         'trgRoicolName' : None,
         'trgRoiName' : None
-        # Resampling / Registration / Transformation settings:
-        #'srcFidsFpath' : None,
-        #'trgFidsFpath' : None, 
-        #'forceReg' : False,
-        #'regTxName' : 'affine',
-        #'initMethod' : 'moments', # 07/09/21
-        #'initMethod' : 'geometry', # 07/09/21
-        #'maxIters' : 512,
-        #'useDroForTx' : False,
-        #'applyPreResBlur' : False,
-        #'preResVar' : (1,1,1),
-        #'resInterp' : 'BlurThenLinear',
-        #'applyPostResBlur' : True,
-        #'postResVar' : (1,1,1),
-        #'exportRoicol' : exportRoicol,
-        #'exportDro' : exportDro,
-        #'exportTx' : exportTx,
-        #'exportIm' : exportIm,
-        #'exportLabim' : exportLabim,
-        #'exportPlots' : exportPlots,
-        #'exportLogs' : exportLogs,
-        #'whichSrcRoicol' : whichSrcRoicol,
-        #'addToRoicolLab' : addToRoicolLab,
-        #'uploadDro' : uploadDro,
-        #'overwriteDro' : overwriteDro,
-        #'p2c' : p2c,
-        #'cwd' : cwd,
-        #'downloadDir' : downloadDir,
-        #'inputsDir' : inputsDir,
-        #'outputsDir' : outputsDir,
-        #'sampleDroDir' : sampleDroDir,
-        #'fidsDir' : fidsDir,
-        #'rtsExportDir' : rtsExportDir,
-        #'segExportDir' : segExportDir,
-        #'droExportDir' : droExportDir,
-        #'txExportDir' : txExportDir,
-        #'imExportDir' : imExportDir,
-        #'labimExportDir' : labimExportDir,
-        #'logsExportDir' : logsExportDir,
-        #'rtsPlotsExportDir' : rtsPlotsExportDir,
-        #'segPlotsExportDir' : segPlotsExportDir,
-        #'resPlotsExportDir' : resPlotsExportDir
         }
     
     # Datasets to propagate RTS from axial view to sagittal:
@@ -1246,18 +968,13 @@ def create_xnat_config_files():
     cfg[runID]['runID'] = runID
     cfg[runID]['trgScanID'] = '8040'
     
-    #export_dict_to_json(dictionary=cfg, filename='main_params.json',
-    #                    exportDir=cfgDir)
-    
     # Export each sub-dictionary to a unique JSON file:
     for runID in cfg.keys():
-        
         export_dict_to_json(
             dictionary=cfg[runID], filename=f'{runID}.json', exportDir=cfgDir
             )
         
     print(f"\nConfiguration files have been exported to {cfgDir}")
-
 
 
 if __name__ == '__main__':
@@ -1266,24 +983,7 @@ if __name__ == '__main__':
     
     Example usage in a console:
     
-    cd C:\Code\WP1.3_multiple_modalities\src
-    python xnat_config_files.py configs
-    """
-    
-    """
-    parser = argparse.ArgumentParser(
-        description='Arguments for create_config_files()'
-        )
-    
-    parser.add_argument(
-        "cfgDir", 
-        help="The directory to export config files"
-        )
-    
-    args = parser.parse_args()
-    
-    # Run create_config_files():
-    create_config_files(args.cfgDir)
+    python xnat_config_files.py
     """
     
     create_xnat_config_files()
