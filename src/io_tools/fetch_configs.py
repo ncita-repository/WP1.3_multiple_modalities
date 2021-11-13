@@ -5,37 +5,75 @@ Created on Fri Nov 12 11:04:23 2021
 @author: ctorti
 """
 
+import os
 from io_tools.imports import import_dict_from_json
+#from select_xnat_config import get_global_vars, get_xnat_config
 from general_tools.geometry import (
     prop_of_segs_in_extent, prop_of_rois_in_extent
     )
 from general_tools.general import are_items_equal_to_within_eps
 
-class ConfigFetcher:
-    # TODO! Update docstrings
+
+def get_global_vars():
     """
-    This class imports a dictionary from src/cfgDict.json containing parameters 
-    for the desired run and stores it as an attribute.
-    
-    It also contains methods that add parameters to cfgDict once other data
-    have been fetched.
+    Fetches the global variables from global_variables.json in the current
+    working directory.
     
     Parameters
     ----------
-    cfgFname : str, optional
-        The file name of the config file (in src/) containing the parameters to
-        be run. The default value is 'cfgDict'.
+    None.
     
     Returns
     -------
-    self.cfgFname : str
-        Same as input argument cfgFname. 
-    self.runID : str
-        The ID that determines the main configuration parameters to use for the
-        run (i.e. the key in the base level dictionary contained in 
-        main_params.json).
+    globalVars : dict
+        Dictionary containing the global variables.
+    """
+    
+    globalVars = {}
+    
+    fname = 'global_variables.json'
+    
+    print(f'\nFetching global variables from {fname}\n')
+    
+    try:
+        globalVars = import_dict_from_json(fname)
+        #print(f"Global variables:\n\n {globalVars}\n\n")
+    except FileNotFoundError:
+        print(f'File {fname} not found')
+    
+    return globalVars
+
+
+class ConfigFetcher:
+    # TODO! Update docstrings
+    """
+    This class imports two dictionaries from JSON files: global_variables.json
+    (containing global variables) and xnatCfg.json (containing XNAT parameters
+    specific to the run) from src/, and combines them to a new dictionary
+    (cfgDict).
+    
+    The class also contains methods that add parameters to cfgDict once other 
+    data are available.
+    
+    Parameters
+    ----------
+    xnatCfgFname : str, optional
+        The file name of the XNAT config file (in src/configs) containing the 
+        XNAT-related parameters for the run. The default value is 'xnatCfg'.
+    
+    Returns
+    -------
+    self.globalVars : dict
+        Dictionary containing the global variables.
+    self.xnatCfgFname : str
+        Same as input argument xnatCfgFname.
+    self.xnatCfg : dict
+        Dictionary containing the XNAT config parameters for the desired run.
     self.cfgDict : dict
-        Dictionary containing the parameters for the desired run.
+        Dictionary containing the XNAT config parameters for the desired run
+        and the global variables.
+    self.runID : str
+        The ID for the run.
     self.fracProp : float
         The fractional proportion (normalised to 1) of the points or voxels
         that define the contour(s)/segmentation(s) to be copied/propagated
@@ -43,25 +81,28 @@ class ConfigFetcher:
     
     Note
     ----
-    The optional argument cfgFname allows for the possibility of scaling
-    up for multiple runs concurrently. Each run can generate a unique cfgDict
-    with unique file name, e.g. cfgDict_34j2cf.json, that can be passed to
-    ConfigFetcher.
+    The optional argument xnatCfgFname allows for the possibility of scaling
+    up for multiple runs concurrently. Each run can import a unique XNAT config
+    file (default name 'xnatCfg'), e.g. 'xnatCfg_34j2cf'.
     """
     
-    def __init__(self, cfgFname='cfgDict'):
-        self.cfgFname = cfgFname
+    def __init__(self, xnatCfgFname='xnatCfg'):
+        self.globalVars = get_global_vars()
         
-        self.import_cfgDict()
+        self.xnatCfgFname = xnatCfgFname
+        self.import_xnatCfg()
         
-        # runID is already in cfgDict but copy value to self.runID for 
+        self.add_global_vars()
+        self.update_paths()
+        
+        # runID is already in xnatCfg but copy value to self.runID for 
         # convenience:
-        self.runID = self.cfgDict['runID']
+        self.runID = self.xnatCfg['runID']
         
-    def import_cfgDict(self):
+    def import_xnatCfg(self):
         """
-        Imports the dictionary stored in src/cfgDict.json (or other file name
-        provided when instantiating ConfigFetcher).
+        Imports the JSON file containing XNAT config parameters, stored in 
+        src/ with filename self.xnatCfgFname.
         
         Parameters
         ----------
@@ -69,18 +110,100 @@ class ConfigFetcher:
         
         Returns
         -------
-        self.cfgDict : dict
-            Dictionary containing the parameters for the desired run.
+        self.xnatCfg : dict
+            Dictionary containing the XNAT config parameters for the desired 
+            run.
         """
         
-        fname = self.cfgFname
+        cwd = self.globalVars['cwd']
+        fname = self.xnatCfgFname + '.json'
         
-        print(f'Fetching cfgDict from {fname}\n')
+        print(f'Fetching XNAT config from {os.path.join(cwd, fname)}\n')
         
         try:
-            self.cfgDict = import_dict_from_json(fname)
+            self.xnatCfg = import_dict_from_json(fname)
         except FileNotFoundError:
             print(f'File {fname} not found')
+    
+    def add_global_vars(self):
+        """
+        Add global variables to cfgDict that are not already defined in the
+        dictionary.
+        
+        Any variables already defined in cfgDict will take priority over the 
+        values in globalVars.
+        
+        Parameters
+        ----------
+        self.globalVars : dict
+            Dictionary containing the global variables.
+        self.xnatCfg : dict
+            Dictionary containing the XNAT config parameters for the desired 
+            run.
+        
+        Returns
+        -------
+        self.cfgDict : dict
+            Dictionary containing the items in self.xnatCfg and all items in
+            self.globalVars not already present in self.xnatCfg.
+        """
+        
+        globalVars = self.globalVars
+        xnatCfg = self.xnatCfg
+        
+        # Initialise cfgDict by copying xnatCfg:
+        cfgDict = dict(xnatCfg)
+        
+        # Add the key-values in globalVars for keys not already in cfgDict:
+        for key, value in globalVars.items():
+            if not key in cfgDict.keys():
+                cfgDict[key] = value
+        
+        print('Global variables added to XNAT config\n')
+        
+        self.cfgDict = cfgDict
+    
+    def update_paths(self):
+        """
+        Update the current working directory (and subsequent child directories)
+        in the configuration dictionary to reflect the 'workdir' set as an 
+        environmental variable (if applicable).
+        
+        Parameters
+        ----------
+        self.cfgDict : dict
+            Dictionary containing the XNAT config parameters for the desired 
+            run and the global variables.
+        
+        Returns
+        -------
+        self.cfgDict : dict
+            As above but with updated paths.
+        """
+        
+        cfgDict = self.cfgDict
+        globalVars = self.globalVars
+        
+        # Try to get the current working directory from an environmnt variable:
+        cwd = os.getenv('workdir')
+        #print(f'os.getenv (in fetch_config.py) = {cwd}')
+        if cwd == None:
+            cwd = os.getcwd()
+        #print(f'cwd (in fetch_config.py) = {cwd}')
+        
+        cfgDict['cwd'] = cwd
+        
+        print(f"cfgDict['cwd'] = {cfgDict['cwd']}")
+        
+        # Change all directory paths (other than cwd) from relative (to cwd)
+        # to absolute paths:
+        for key in cfgDict.keys():
+            if 'Dir' in key:
+                cfgDict[key] = os.path.join(cwd, globalVars[key])
+        
+        print('Paths updated in cfgDict\n')
+        
+        self.cfgDict = cfgDict
     
     def get_intersection_of_roi_and_trgIm(
             self, srcDataset, trgDataset, params

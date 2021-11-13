@@ -26,82 +26,20 @@ A *copy* will refer to an operation that does not preserve the spatial coordinat
 
 The purpose of this tool is to make a "copy" of, or to "propagate" an entity from a *source* ROI Collection so that the entity overlays onto a *target* DICOM series.  The copy may be a "non-relationship-preserving copy" (think copy and paste function) or a "relationship-preserving propagation" of the entity.
 
-This tool relies on the user providing a configuration JSON file that contains the metadata that identifies the *source* and *target* DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads*, import the data and depending on the relationship between the *source* and *target* DICOM series and other user-provided metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
+This tool requires two JSON files to run:  a JSON containing global variables and a JSON containing XNAT configuration parameters.  The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*.  See the *Definitions* section for a listing of all parameters.
 
-The configuration file that is imported upon executing the code is *src/cfgDict.json*. The JSON contains the dictionary *cfgDict*, that contains the above-mentioned parameters and meta-data.  This is the file that will need to be modified every time a new run of the code is to be made using different datasets and/or other parameters. The contents of *cfgDict* are a combination of global and run-specific variables.
 
-The reason for splitting the variables in this way was to differentiate between variables that will not need/expected to be readily modified by the end-user and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will arise from user-inputs.
+The XNAT config file contains the metadata that identifies the *source* and *target* DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  See the *Definitions* section for a listing of all parameters.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads* (by default), import the data and depending on the relationship between the *source* and *target* DICOM series and other metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
 
-The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*. 
+By default the XNAT config JSON file has the filename *xnatCfg*, but the user can define an alternative file name. The configuration file that is imported upon executing the code is *src/cfgDict.json*.  Ultimately this file will be provided by the XNAT Container Service.  Since a container does not yet exist for this tool, the following work-around exists:  The user selects an XNAT config file (e.g. *src/xnat_configs/runID.json*), and the file is copied to *src/xnatCfg.json* (file name by default). That way when the tool is run *xnatCfg.json* is imported along with *global_variables.json*.
 
-The *key:default value* pairs that define *global_variables.json* are as follows:
+The reason for splitting the variables in this way was to differentiate between variables that the user is not expected to need to modify readily and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will be provided by the XNAT Container Service.
 
-- `forceReg`      : Set to `True` if you wish to apply image registration on a run for which the Source and Target scans have the same *FrameOfReferenceUID*.
-- `useDroForTx`   : If `True` and a suitable DRO is found on XNAT, the transformation parameters stored in the DRO will be used, by-passing image registration.
-- `regTxName`     : Defines the transformation to apply during registration. Acceptable values include "rigid", "affine" and "bspline".
-- `initMethod`    : Defines how a registration is initialised.  Acceptable values include "geometry" (aligning to image centres), "moments" (align to centre-of-mass of image intensity), and "landmarks" (`srcFidsFpath` and `trgFidsFpath` must be defined, otherwise will default to "geometry").
-- `maxIters`      : The maximum number of iterations to allow during optimisation for image registation.
+The option to assign a different file name (other than "xnatCfg.json"), e.g. "xnatCfg_241js23.json", is so that when *app.py* is run with the optional input argument *--xnatCfgFname=cfgDict_241js23*, the desired XNAT config file will be imported, allowing for the possibility of concurrent calls to *app.py* with unique XNAT config files. This feature was added in anticipation of the need for a scalable solution within XNAT.
 
-- `applyPreResBlur` : If `True` the Source label image will be Gaussian blurred prior to resampling or registration. Doing so helps to avoid aliasing effects.
-- `preResVar`       : The variance of the Gaussian blur that will be applied if `applyPreResBlur` is `True`.
-- `resInterp`       : Defines the interpolation to use when resampling label images.  Acceptable values include "NearestNeighbor", "LabelGaussian" and `BlurThenLinear`.  *NearestNeighbor* and *LabelGaussian* are binary interpolators, whereas *BlurThenLinear* applies a Gaussian blur (defined by `preResVar`), followed by linear resampling, then binary thresholding to retain a binary label image. This option helps to avoid aliasing effects.
-- `applyPostResBlur` : If `True` the resampled label image will be Gaussian blurred.
-- `postResVar`       : The variance of the Gaussian blur that will be applied if `applyPostResBlur` is `True`. 
+Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported (by default) to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
 
-- 'forceReg' : forceReg,
-- 'useDroForTx' : useDroForTx,
-- 'regTxName' : regTxName,
-- 'initMethod' : initMethod,
-- 'srcFidsFpath' : '',
-- 'trgFidsFpath' : '',
-- 'maxIters' : maxIters,
-- 'applyPreResBlur' : applyPreResBlur,
-- 'preResVar' : preResVar,
-- 'resInterp' : resInterp,
-- 'applyPostResBlur' : applyPostResBlur,
-- 'postResVar' : postResVar,
-- 'exportRoicol' : exportRoicol,
-- 'exportDro' : exportDro,
-- 'exportTx' : exportTx,
-- 'exportIm' : exportIm,
-- 'exportLabim' : exportLabim,
-- 'exportPlots' : exportPlots,
-- 'exportLogs' : exportLogs,
-- 'uploadDro' : uploadDro,
-- 'overwriteDro' : overwriteDro,
-- 'whichSrcRoicol' : whichSrcRoicol,
-- 'addToRoicolLab': addToRoicolLab,
-- 'p2c' : p2c,
-- 'cwd' : cwd, # this will be updated later
-- 'xnatCfgDir' : xnatCfgDir,
-- 'inputsDir' : inputsDir,
-- 'outputsDir' : outputsDir,
-- 'sampleDroDir' : sampleDroDir,
-- 'fidsDir' : fidsDir,
-- 'rtsExportDir' : rtsExportDir,
-- 'segExportDir' : segExportDir,
-- 'droExportDir' : droExportDir,
-- 'txExportDir' : txExportDir,
-- 'imExportDir' : imExportDir,
-- 'labimExportDir' : labimExportDir,
-- 'logsExportDir' : logsExportDir,
-- 'rtsPlotsExportDir' : rtsPlotsExportDir,
-- 'segPlotsExportDir' : segPlotsExportDir,
-- 'resPlotsExportDir' : resPlotsExportDir
-
-The run-specific variables are stored in unique JSON files in *src/configs*.  The parameters relate to the XNAT metadata that identifies the *source* and *target* DICOM series, the *source* ROI Collection, and the presence of some of the parameters dictate how the copy/propagation will proceed.  The module used to generate the config files is *src/xnat_config_files.py*.  Each config file in *src/configs* contains the run-specific parameters required for a unique run.  The "runID" is the file name of config file.
-
-Hence *cfgDict.json* = *global_varibles.json* + *runID.json*
-
-where *runID.json* is one of the files in *src/configs*.
-
-Everytime a change is made to *global_variables.json*, or to *runID.json*, or if a different *runID* config file is to be used, *create_cfgDict.py* must be re-run to refresh *cfgDict.json*.
-
-When *create_cfgDict.py* is run there is the option to assign a different file name (other than "cfgDict.json"), e.g. "cfgDict_241js23.json", so that when *app.py* is run the optional input argument *--cfgFname=cfgDict_241js23*, the desired config file will be imported, allowing for the possibility of concurrent calls to *app.py* with unique config file names. This feature was added in anticipation of the need for a scalable solution within XNAT.
-
-Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
-
-If an image registration is required to propagate the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new *DICOM Registration Object (DRO)* will be created and exported to *src/outputs/new_DRO*.  A rigid registration will yield a *Spatial Registration Object (SRO)*, while a deformable one will result in the creation of a *Deformable Spatial Registration Object (DSRO)*.  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
+If an image registration is required to propagate the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new *DICOM Registration Object (DRO)* will be created and exported (by default) to *src/outputs/new_DRO*.  A rigid registration will yield a *Spatial Registration Object (SRO)*, while a deformable one will result in the creation of a *Deformable Spatial Registration Object (DSRO)*.  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
 
 Once a suitable DRO exists on XNAT, future propagation calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  While a run using image registration might take over 200 s, use of a DRO will reduce the execution time to 30 s, for example.  
 
@@ -132,13 +70,20 @@ After cloning the repository, *pip* install the required packages listed in the 
 
 A *source ROI Collection* (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated) to a *target* DICOM series.  One such single operation will be referred to as a *run*.  As described above, running of the tool requires there to be a config JSON file (with default file name *cfgDict.json*).  Hence a bit of prep work is required before trying to run the code:
 
-1. Create a configuration file(s) for the run(s) you wish to carry out.
+0. (Optional) Modify *global_variables.json*.
 
-2. Run the code on each run, providing a `runID` and `cfgDir`.
+1. Create a configuration file(s) for the run(s) you wish to carry out. This only has to be done once, unless you wish to add more XNAT config files or modify existing ones.
 
-### 1. Creating a configuration file
+2. Copy the XNAT config file to be run from *src/xnat_configs/{runID}.json* to *src/xnatCfg.json*. 
 
-The package [*config.py*](https://github.com/ncita-repository/WP1.3_multiple_modalities/blob/master/src/config.py) is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT that was used to develop the code. You can use the pre-populated code as a template for your own XNAT.
+3. Run the code on *src/xnatCfg.json*.
+
+
+### 0. Modify *global_variables.json*
+
+### 1. Creating a configuration file(s)
+
+The package *config.py* is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT that was used to develop the code. You can use the pre-populated code as a template for your own XNAT.
 
 There are several variables to be defined, including:
 
@@ -327,6 +272,48 @@ A *non-relationship preserving copy* (sometimes referred to as a "direct" copy) 
 A *non-relationship preserving copy* always involves the copying of a single contour/segmentation to a single contour/segmentation.  If the *source* and *target* 3D images have different voxel resolutions the copied entity will be interpolated (i.e. image resampling).  If resampling of the *source* contour/segmentation led to multiple contours/segmentations, the *ROI/segment* is collapsed to a single *contour/segmentation* to maintain the expected behaviour.  On the contrary, a *relationship-preserving propagation* are broader, in that a single contour/segmentation may map to multiple contours/segmentations (depending on the relative voxel spacings and FOR of the two 3D images). 
 
 When making a *relationship-preserving propagation*, in addition to propagations of a single contour/segmentation, an entire ROI/segment, consisting of any number of contour(s)/segment(s) may be propagated, or an entire ROI Collection, consisting of any number of ROI(s)/segment(s) containing any number of contour(s)/segmentation(s).  The behaviour entirely depends on the user-defined configuration parameters and relationships between the two 3D image domains.
+
+## The *key:default value* pairs that define *global_variables.json*
+
+- `forceReg` : Set to `True` if you wish to apply image registration on a run for which the source and target scans have the same *FrameOfReferenceUID* (image registration would not normally be used in this case).  The default value is `False`.
+- `useDroForTx` : If `True` and a suitable DRO is found on XNAT, the transformation parameters stored in the DRO will be used, by-passing image registration. The default value is `True`.
+- `regTxName` : Defines the transformation to apply during registration. Acceptable values include `"rigid"`, `"affine"` and `"bspline"`. The default value is `"affine"`.
+- `initMethod` : Defines how a registration is initialised.  Acceptable values include `"geometry"` (aligning to image centres), `"moments"` (align to centre-of-mass of image intensity), and `"landmarks"` (`srcFidsFpath` and `trgFidsFpath` must be defined, otherwise `"geometry"` will be used). The default value is `"geometry"`.
+- `maxIters` : The maximum number of iterations to allow during optimisation for image registation. The default value is `512`.
+- `applyPreResBlur` : If `True` the source label image will be Gaussian blurred prior to resampling or registration. Doing so helps to avoid aliasing effects. The default value is `False` (since pre-registration Gaussian blurring is performed when `resInterp = "BlurThenLinear"` (default value)).
+- `preResVar` : The variance of the Gaussian blur that will be applied if `applyPreResBlur` is `True`. The default value is `(1, 1, 1)`.
+- `resInterp` : Defines the interpolation to use when resampling label images.  Acceptable values include `"NearestNeighbor"`, `"LabelGaussian"` and `"BlurThenLinear"`.  `"NearestNeighbor"` and `"LabelGaussian"` are binary interpolators, whereas `"BlurThenLinear"` applies a Gaussian blur (defined by `preResVar`), followed by linear resampling, then binary thresholding to retain a binary label image. This option helps to avoid aliasing effects.
+- `applyPostResBlur` : If `True` the resampled label image will be Gaussian blurred. The default value is `True`.
+- `postResVar` : The variance of the Gaussian blur that will be applied if `applyPostResBlur` is `True`. The default value is `(1, 1, 1)`.
+- `whichSrcRoicol` : There may be multiple ROI Collection that match the source metadata defined in the XNAT config file. If multiple hits occur, this parameter determines how to proceed.  Acceptable inputs include `"oldest"` (select the oldest file), `"newest"` (select the newest file) and `"user"` (present a list of all matching files and prompt the user for a selection). The default value is `"oldest"`.
+- `addToRoicolLab`: This optional parameter allows for text to be added to the *StructureSetLabel* (for DICOM-RTSTRUCT) or *SeriesDescription* (DICOM-SEG). The default value is `""`.
+- `p2c` : If `True` more verbose output will be printed to the console. The default value is `False`.
+- `cwd` : The current working directory during the time *global_variables.json* was created.
+- `xnatCfgDir` : The name of the directory containing XNAT configuration files (relative to *src/*). The default value is `"xnat_configs"`.
+- `inputsDir` : The name of the directory where data files are to be imported from (relative to *src/*). The default value is `"inputs"`.
+- `outputsDir` : The name of the directory where data files are to be exported to (relative to *src/*). The default value is `"outputs"`.
+- `sampleDroDir` : The name of the directory where sample DRO files are to be imported from (relative to *src/*). The default value is `{inputsDir}"/sample_dros"`.
+- `fidsDir` : The name of the directory where fiducials files (*TXT*) are to be imported from (relative to *src/*). The default value is `{inputsDir}"/fiducials"`.
+- `rtsExportDir` : The name of the directory where DICOM-RTSTRUCT ROI Collection files (*DCM*) are to be exported to (relative to *src/*). The default value is `{outputsDir}"/roicols"`.
+- `segExportDir` : The name of the directory where DICOM-SEG ROI Collection files (*DCM*)are to be exported to (relative to *src/*). The default value is `{outputsDir}"/roicols"`.
+- `droExportDir` : The name of the directory where DICOM-DRO files (*DCM*)are to be exported to (relative to *src/*). The default value is `{outputsDir}"/dros"`.
+- `txExportDir` : The name of the directory where (*SimpleITK Transform*) registration transforms (*TFM* and *HDF*) files are to be exported to (relative to *src/*). The default value is `{outputsDir}"/transforms"`.
+- `imExportDir` : The name of the directory where (*SimpleITK Image*) source and target images (*HDF*) files are to be exported to (relative to *src/*). The default value is `{outputsDir}"/images"`.
+- `labimExportDir` : The name of the directory where (*SimpleITK Image*) source, target and resampled/registered binary label (if applicable) images (*HDF*) files are to be exported to (relative to *src/*). The default value is `{outputsDir}"/label_images"`.
+- `logsExportDir` : The name of the directory where log files (*TXT*) files are to be exported to (relative to *src/*). The default value is `{outputsDir}"/logs"`.
+- `rtsPlotsExportDir` : The name of the directory where figures of DICOM-RTSTRUCT copy/propgation results overlaid onto DICOM images (*JPG*) are to be exported to (relative to *src/*). The default value is `{outputsDir}"/plots_rts"`.
+- `segPlotsExportDir` : The name of the directory where figures of DICOM-SEG copy/propgation results overlaid onto DICOM images (*JPG*) are to be exported to (relative to *src/*). The default value is `{outputsDir}"/plots_seg"`.
+- `resPlotsExportDir` : The name of the directory where figures of resampling/registering (if applicable) results (*JPG*) are to be exported to (relative to *src/*). The default value is `{outputsDir}"/plots_res"`.
+- `exportRoicol` : If `True` a new ROI Collection will be exported to `rtsExportDir` (for DICOM-RTSTRUCTs) or `segExportDir` (for DICOM-SEGs). The default value is `True`.
+- `exportDro` : If `True` a new DICOM-DRO will be exported to `droExportDir`. The default value is `True`.
+- `exportTx` : If `True` the *SimpleITK Transform* will be exported to `txExportDir`. The default value is `False`.
+- `exportIm` : If `True` the *SimpleITK Image*s for source and target will be exported to `imExportDir`. The default value is `False`.
+- `exportLabim` : If `True` the *SimpleITK Image*s for source, target and resampled/registered (if applicable) binary label images will be exported to `labimExportDir`. The default value is `False`.
+- `exportPlots` : If `True` plots will be exported to `rtsPlotsExportDir` or `segPlotsExportDir`. The default value is `False`.
+- `exportLogs` : If `True` logs will be exported to `logsExportDir`. The default value is `False`.
+- `uploadDro` : If `True` the new DICOM-DRO will be uploaded to XNAT. The default value is `True`.
+- `overwriteDro` : If `True` an existing DICOM-DRO on XNAT will be overwritten. The default value is `False`.
+
 
 # Credits
 

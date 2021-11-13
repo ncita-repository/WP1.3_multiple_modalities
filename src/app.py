@@ -46,8 +46,8 @@ sys.path.append(code_root)
 
 
 from importlib import reload
-import io_tools.fetch_cfgDict
-reload(io_tools.fetch_cfgDict)
+import io_tools.fetch_configs
+reload(io_tools.fetch_configs)
 import io_tools.download_data
 reload(io_tools.download_data)
 import io_tools.import_data
@@ -64,7 +64,7 @@ reload(dro_tools.create_dro)
 
 #import time
 import argparse
-from io_tools.fetch_cfgDict import ConfigFetcher
+from io_tools.fetch_configs import ConfigFetcher
 #from io_tools.imports import import_dict_from_json
 from io_tools.download_data import DataDownloader
 from io_tools.import_data import DataImporter
@@ -75,7 +75,7 @@ from dro_tools.create_dro import DroCreator
 
 
 def main(
-        cfgFname='cfgDict', printSummary=False, plotResults=False):
+        xnatCfgFname='xnatCfg', printSummary=False, plotResults=False):
     """
     Main script for fetching the config settings, downloading data from XNAT,
     importing of source ROI Collection and source and target DICOM series, 
@@ -85,9 +85,9 @@ def main(
     
     Parameters
     ----------
-    cfgFname : str, optional
-        The file name of the config file (in src/) containing the parameters to
-        be run. The default value is 'cfgDict'.
+    xnatCfgFname : str, optional
+        The file name of the XNAT config JSON file (in src/) containing the 
+        parameters to be run. The default value is 'xnatCfg'.
     printSummary : bool, optional
         If True, summarising results will be printed. The default is False.
     plotResults : bool, optional
@@ -105,7 +105,7 @@ def main(
     
     # Instanstantiate a ConfigFetcher object, get the config settings and
     # export it to src/cfgDict.json:
-    cfgObj = ConfigFetcher(cfgFname)
+    cfgObj = ConfigFetcher(xnatCfgFname)
     
     # Instantiate a DataDownloader object, establish a connection to XNAT
     # (use or creating an XNAT Alias Token), download the data and create
@@ -198,15 +198,15 @@ if __name__ == '__main__':
     
     or 
     
-    python app.py --cfgFname=cfgDict_42md31
+    python app.py --xnatCfgFname=xnatCfg_34j2cf
     """
     
     parser = argparse.ArgumentParser(description='Arguments for main()')
     
     parser.add_argument(
-        "--cfgFname",
-        nargs='?', default='cfgDict', const='cfgDict',
-        help="Optional file name of cfgDict file (default is cfgDict)"
+        "--xnatCfgFname",
+        nargs='?', default='xnatCfg', const='xnatCfg',
+        help="Optional file name of XNAT config file (default is xnatCfg)"
         )
     
     parser.add_argument(
@@ -226,4 +226,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     #main(args.cfgDir, args.runID, args.printSummary, args.plotResults)
-    main(args.cfgFname, args.printSummary, args.plotResults)
+    main(args.xnatCfgFname, args.printSummary, args.plotResults)
