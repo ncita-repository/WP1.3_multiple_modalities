@@ -292,7 +292,7 @@ For example, many runs will not require the use of fiducials, hence `srcFidsFnam
 
 ## Fiducials
 
-For historical reasons, the TXT file must have the format expected of [*Elastix*](https://elastix.lumc.nl/) or [*SimpleElastix*](https://simpleelastix.readthedocs.io/PointBasedRegistration.html), i.e.:
+For historical reasons the TXT file must have the format expected of [*Elastix*](https://elastix.lumc.nl/) or [*SimpleElastix*](https://simpleelastix.readthedocs.io/PointBasedRegistration.html), i.e.:
         
     <index or point>
     <number of indices/points>
@@ -307,7 +307,9 @@ e.g.
 	184 349 235
 	91 323 235
     
-Fiducials TXT files should be stored in *src/inputs/fiducials/*. At present no such tool exists to easily create a fiducials TXT file. A suggestion is to use the *Probe* tool in the *OHIF-Viewer* to hover over an identifying feature in an image, note the voxel indices, repeating the process for 3 locations, and for both *source* and *target* DICOM scans.  Create a TXT file following the format above and provide a meaningful file name. Remember to set file names for `srcFidsFname` and `trgFidsFname`, and `"landmarks"` for `initMethod` in *xnatCfg.json* (or in *xnat_config_files.py* for the correct `runID`).
+Fiducials TXT files should be stored in *src/inputs/fiducials/*. 
+
+At present no tool exists to easily create a fiducials TXT file. A suggestion is to use the *Probe* tool in the *OHIF-Viewer* to hover over an identifying feature in an image, make note of the voxel indices, and repeat for a minimum of 3 locations, both for the *source* and *target* DICOM scans.  Create a TXT file following the format above and provide a meaningful file name. Remember to set file names for `srcFidsFname` and `trgFidsFname`, and `"landmarks"` for `initMethod` in *xnatCfg.json* (or in *xnat_config_files.py* for the corresponding `runID`).
 
 
 # Credits
