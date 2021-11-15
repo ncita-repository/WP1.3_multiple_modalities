@@ -101,7 +101,7 @@ class DataDownloader:
         aliasToken = self.aliasToken
         
         # Assumed directory that may contain an XNAT alias token:
-        tokenDir = os.path.join(cwd, 'tokens')
+        tokenDir = os.path.join(cwd, 'xnat_tokens')
         
         if aliasToken == {}:
             #print(f'Searching for an XNAT alias token in {cfgDir}')

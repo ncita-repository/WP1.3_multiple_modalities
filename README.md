@@ -26,16 +26,31 @@ A *copy* will refer to an operation that does not preserve the spatial coordinat
 
 The purpose of this tool is to make a "copy" of, or to "propagate" an entity from a *source* ROI Collection so that the entity overlays onto a *target* DICOM series.  The copy may be a "non-relationship-preserving copy" (think copy and paste function) or a "relationship-preserving propagation" of the entity.
 
-This tool requires two JSON files to run:  a JSON containing global variables and a JSON containing XNAT configuration parameters.  The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*.  See the *Definitions* section for a listing of all parameters.
+This tool requires two JSON files to run:  a JSON containing global variables and a JSON containing XNAT configuration parameters.  The reason for splitting the variables in this way was to differentiate between variables that the user is not expected to need to modify readily and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will be provided by the XNAT Container Service.
 
+### Global variables (*global_variables.json*)
+
+The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*.  See the *Definitions* section for a listing of all parameters.
+
+### XNAT configuration file (*xnatCfg.json*)
 
 The XNAT config file contains the metadata that identifies the *source* and *target* DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  See the *Definitions* section for a listing of all parameters.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads* (by default), import the data and depending on the relationship between the *source* and *target* DICOM series and other metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
 
-By default the XNAT config JSON file has the filename *xnatCfg*, but the user can define an alternative file name. The configuration file that is imported upon executing the code is *src/cfgDict.json*.  Ultimately this file will be provided by the XNAT Container Service.  Since a container does not yet exist for this tool, the following work-around exists:  The user selects an XNAT config file (e.g. *src/xnat_configs/runID.json*), and the file is copied to *src/xnatCfg.json* (file name by default). That way when the tool is run *xnatCfg.json* is imported along with *global_variables.json*.
-
-The reason for splitting the variables in this way was to differentiate between variables that the user is not expected to need to modify readily and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will be provided by the XNAT Container Service.
+By default the XNAT config JSON file has the default filename *xnatCfg*, but the user can define an alternative file name. The configuration file that is imported upon executing the code is *src/cfgDict.json*.  Ultimately this file will be provided by the XNAT Container Service.  Since a container does not yet exist for this tool, a work-around exists (covered in the next section).
 
 The option to assign a different file name (other than "xnatCfg.json"), e.g. "xnatCfg_241js23.json", is so that when *app.py* is run with the optional input argument *--xnatCfgFname=cfgDict_241js23*, the desired XNAT config file will be imported, allowing for the possibility of concurrent calls to *app.py* with unique XNAT config files. This feature was added in anticipation of the need for a scalable solution within XNAT.
+
+### XNAT configuration files in *src/xnat_configs/* and *select_xnat_config.py* (work-around)
+
+The user creates any number of run-specific XNAT configuration files stored in *src/xnat_configs/*). The contents of the run-specific XNAT config file *src/xnat_configs/runID.json* is copied to *xnatCfg.json*. That way when the tool is run *xnatCfg.json* is imported along with *global_variables.json*.
+
+The module *config.py* is used to generate configuration files.  Within it is the function *create_config_files()*, which contains pre-populated data specific to the XNAT that was used to develop the code. Hence the contents will only be relevant to you if your XNAT contains the same data and same XNAT metadata.  You can use the pre-populated code as a template for your own XNAT.  Note that the `runID` key in the dictionary is expected to match the file name of the JSON.
+
+Once there exists at least one XNAT configuration file to be run, the next step is to select the desired file and copy the dictionary to *xnatCfg.json*. This is done using *select_xnat_config.py*.
+
+The commands used to execute the above steps are covered in the section *Using the tools*.  Some additional comments about this tool follows.
+
+### Additional comments
 
 Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported (by default) to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
 
@@ -74,184 +89,108 @@ A *source ROI Collection* (DICOM-RTSTRUCT or DICOM-SEG) is copied (or propagated
 
 1. Create a configuration file(s) for the run(s) you wish to carry out. This only has to be done once, unless you wish to add more XNAT config files or modify existing ones.
 
-2. Copy the XNAT config file to be run from *src/xnat_configs/{runID}.json* to *src/xnatCfg.json*. 
+2. Copy the XNAT config file to be run from *src/xnat_configs/* to *src/xnatCfg.json*. 
 
-3. Run the code on *src/xnatCfg.json*.
+3. Run the tool.
+
+All commands below are to be made from the *src* directory.
 
 
-### 0. Modify *global_variables.json*
+### 0. (Optional) Modify *global_variables.json*
 
-### 1. Creating a configuration file(s)
+Modify *global_var_file.py* as desired.  In a command shell run:
 
-The package *config.py* is used to generate configuration files.  Within the *config.py* module is the function *create_config_files()*.  This contains pre-populated data specific to the XNAT that was used to develop the code. You can use the pre-populated code as a template for your own XNAT.
+	`python global_var_file.py`
 
-There are several variables to be defined, including:
+This will refresh *global_variables.json*
 
-- Where the fetched data is to be downloaded to (`rootDownloadDir`)
-- Where any outputs should be exported (e.g. `rtsExportDir`)
-- Where to find sample DROs and fiducials (e.g. `sampleDroDir` and `fidsDir`)
-- Whether or not to export various data (e.g. `exportRoicol`)
-- Whether or not to print (highly) verbose results to the console (`p2c`) 
+(Optional) If running in a Python terminal:
 
-*Note: Some comments/results will be printed to the console even if `p2c = False`.*
+	`from global_var_file import create_global_vars`
+	`create_global_vars()`
 
-A dictionary of dictionaries, `cfg`, is populated with dictionaries that containing the above variables across the board, since they are variables that are less likely to be modified from run to run.  Each sub-dictionary in `cfg` has a `runID` that matches the key of the sub-dictionary within the `cfg` dictionary.  In addition to the above variables there are additional variables that are set within each sub-dictionary.  The key-value pairs that define each sub-dictionary includes:
 
-- `url`           : XNAT address
-- `username`      : XNAT username
-- `proID`         : XNAT Project ID
-- `subjLab`       : XNAT Subject Label
-- `srcExpLab`     : Source dataset's XNAT Experiment Label
-- `srcScanID`     : Source dataset's XNAT Scan ID
-- `srcSlcNum`     : Slice number of the Source ROI Collection to be copied. Leave as `None` if all contours/segmentations are to be copied.
-- `srcRoicolName` : Source ROI Collection's Name
-- `srcRoiName`    : Name of the ROI/segment within `srcRoicolName` to be copied. Leave as `None` if all ROIs/segments are to be copied.
-- `roicolMod`     : Source ROI Collection's Modality
-- `trgExpLab`     : Target dataset's XNAT Experiment Label
-- `trgScanID`     : Target dataset's XNAT Scan ID
-- `trgSlcNum`     : Slice number destination where the contour/segmentation is to be copied to. Leave as `None` if all contours/segmentations are to be copied.
-- `trgRoicolName` : Target ROI Collection's Name. Leave as `None` if one does not exist (i.e. one does not wish to copy a specific contour/segmentation within the Source ROI Collection to an existing Target ROI Collection). Such an operation is only valid for "direct" copies (see below for further details).
-- `trgRoiName`    : Name of the ROI/segment within `trgRoicolName` where a contour/segmentation is to be copied to. Leave as `None` if all ROIs/segments are to be copied.
-- `srcFidsFpath`  : Full filepath to the .txt containing fiducials for the Source DICOM scan.
-- `trgFidsFpath`  : Full filepath to the .txt containing fiducials for the Target DICOM scan.
-- `forceReg`      : Set to `True` if you wish to apply image registration on a run for which the Source and Target scans have the same *FrameOfReferenceUID*.
-- `regTxName`     : Defines the transformation to apply during registration. Acceptable values include "rigid", "affine" and "bspline".
-- `initMethod`    : Defines how a registration is initialised.  Acceptable values include "geometry" (aligning to image centres), "moments" (align to centre-of-mass of image intensity), and "landmarks" (`srcFidsFpath` and `trgFidsFpath` must be defined, otherwise will default to "geometry").
-- `maxIters`      : The maximum number of iterations to allow during optimisation for image registation.
-- `useDroForTx`   : If `True` and a suitable DRO is found on XNAT, the transformation parameters stored in the DRO will be used, by-passing image registration.
-- `applyPreResBlur` : If `True` the Source label image will be Gaussian blurred prior to resampling or registration. Doing so helps to avoid aliasing effects.
-- `preResVar`       : The variance of the Gaussian blur that will be applied if `applyPreResBlur` is `True`.
-- `resInterp`       : Defines the interpolation to use when resampling label images.  Acceptable values include "NearestNeighbor", "LabelGaussian" and `BlurThenLinear`.  *NearestNeighbor* and *LabelGaussian* are binary interpolators, whereas *BlurThenLinear* applies a Gaussian blur (defined by `preResVar`), followed by linear resampling, then binary thresholding to retain a binary label image. This option helps to avoid aliasing effects.
-- `applyPostResBlur` : If `True` the resampled label image will be Gaussian blurred.
-- `postResVar`       : The variance of the Gaussian blur that will be applied if `applyPostResBlur` is `True`. 
+### 1. Creating a XNAT configuration file(s)
 
-The remaining keys are simply the variables that were assigned at the top of the module (e.g. `sampleDroDir`).
+There are a few ways to go about creating an XNAT configuration file(s):
 
-There are a few ways to go about creating a configuration file(s):
-
-#### Option 1 - Copy and modify an existing configuration file
+#### Option 1 - Copy and modify an existing XNAT configuration file
 
 This is by far the quickest way to go about implementing your first run of the code.  
 
-Simply copy an existing configuration file from within the *.../src/configs* directory (e.g. *NCITA_test_RD1.json*), rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
+Simply copy an existing XNAT config file in */src/xnat_configs/*, rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
 
-#### Option 2 - Define a new dictionary within the function *create_config_files()* in *config.py*
+#### Option 2 - Define a new dictionary within the function *create_xnat_config_files()* in *xnat_config_files.py*
 
-This option is more suitable if you wish to run the code on multiple datasets and you don't want to manually create confguration files one by one.  
+This option is more suitable if you wish to run the code on multiple datasets and you don't want to manually create files one at a time.  
 
-Within the function *create_config_files()* there are cases where a dictionary has been fully defined (by scratch) - see for example the definition of the dictionary with key *NCITA_test_RR1* (lines 317-374).  In this case a `runID` is assigned (line 316), and a dictionary is appended to the dictionary `cfg` with that `runID`.  
+Within the function *create_xnat_config_files()* there are cases where a dictionary has been fully defined (by scratch) - see for example the definition of the dictionary with key *NCITA_test_RR1* (lines 97-116).  In this case a `runID` is assigned (line 97), and a dictionary is appended to the dictionary `cfg` with `runID`.  
 
-Further down on line 379, a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 378), and the previously defined dictionary is copied (line 379).  Then the `runID` (line 380) and other selected keys are modified (lines 381-385).
+Further down a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 120), and the previously defined dictionary is copied (line 121).  Then the `runID` (line 122) and other selected keys are modified (lines 123-127).
 
-Use a previously fully-defined dictionary as a template for new dictionaries as you go along.  Remember to re-run the command *create_config_files()* to update your list of config files.
+Use a previously fully-defined dictionary as a template for new dictionaries as you go along.  Remember to re-run the command *create_xnat_config_files()* to update your list of XNAT config files.
 
-Once the dictionaries have been defined, the configuration files can be created in one of two ways:
+Once the dictionaries have been defined in the script, the XNAT config files can be created by running the following in a command shell:
 
-##### Option 2a - Run *config.py* as a script in a command shell
+	`python xnat_config_files.py`
 
-In a command shell, cd to the *src* directory and run the Python module and provide the (relative or absolute) directory path containing the configuration file (change path to *src* directory accordingly):
+This will generate and/or overwrite a list of JSONs in *src/xnat_configs/* - one file for each key-dictionary pair within the dictionary `cfg`.
 
-	cd C:\Code\WP1.3_multiple_modalities\src
-	python config.py configs
+(Optional) If running in a Python terminal:
 
-##### Option 2b - Run *create_config_files()* as a function within a Python shell
+	`from xnat_config_files import create_xnat_config_files`
+	`create_xnat_config_files()`
 
-In a Python shell, import the function and provide the (absolute) directory path:
+### 2. Copy the XNAT config file to be run from *src/xnat_configs/* to *src/xnatCfg.json*
+
+In a command shell run:
+
+	`python select_xnat_config.py runID`
+
+where `runID` is the file name of the XNAT config file in *src/xnat_configs/* you wish to run.
+
+This will copy the dictionary in *src/xnat_configs/runID.json* to *src/xnatCfg.json*.
+
+(Optional) If you wish to assign the XNAT config file a custom name (e.g. to allow for concurrent runs of *app.py* with distinct XNAT config files), use the optional input parameter `xnatCfgFname`:
+
+	`python select_xnat_config.py runID --xnatCfgFname=custom_fname`
+
+(Optional) If running in a Python terminal:
+
+	`from select_xnat_config import create_xnat_config_files`
+	`create_xnat_config_files("runID")` or `create_xnat_config_files("runID", "custom_fname")`
 	
-	import sys
-	sys.path.append("C:\Code\WP1.3_multiple_modalities\src")
-	from config import create_config_files
-	create_config_files("C:\Code\WP1.3_multiple_modalities\src\configs")
 
-A list of .json files should be generated and/or overwritten in the configs directory - one file for each key-dictionary pair within the dictionary `cfg`.  
+### 3. Run the tool
 
-### 2. Performing a run
+In a command shell run:
 
-Now that the configuration file has been created it's time to run the code.  As before you have two options - you can execute it in a command shell, or in a Python shell.
+	`python app.py`
 
-#### Option 1 - Run *app.py* as a script in a command shell
+(Optional) or if running the tool on an XNAT config file with custom file name:
 
-In a command shell, run the Python module and provide the (relative or absolute) directory path containing the configuration file and the `runID`:
+	`python app.py --xnatCfgFname=custom_fname`
 
-	python app.py configs NCITA_TEST_RR2
-	
-#### Option 2 - Run the function *main()* in a Python shell
+(Optional) If running in a Python terminal:
 
-In a Python shell, run *main()* providing as input arguments the (absolute) directory path containing the configuration file and the `runID`:
+	`from app import main`
+	`main()` or `main("custom_fname")`
 
-	from app import main
-	main("C:\Code\WP1.3_multiple_modalities\src\configs", "NCITA_TEST_RR2")
-
-Regardless of which option you take, you should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to the same *configs* directory.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the alias token, the token will be used, avoiding the need to re-enter your password.  
-
-
-## Running the "OHIF-integration" version
-
-This tool will not be used directly by an end-user but details are provided for posterity.
-
-The choice of which variables to treat as global has been determined in *global_var_file_ohif.py*.  If changes are to be made, the easiest way to do this is:
-
-1. Modify *global_var_file_ohif.py* and save the changes
-
-2. Run in a command shell:
-
-	`python global_var_file_ohif.py`
-
-or in a Python terminal: 
-
-	`from global_var_file_ohif import create_global_var_file`
-	`create_global_var_file()`
-
-This will update *global_variables.json* in *src/*.
-
-Next create a dictionary of dictionaries in *paths_from_ohif.py* that contains the required metadata that fully defines the datasets and their file or directory paths, the resampling/registration parameters, output directory names, etc. As before:
-
-1. Modify *paths_from_ohif.py* and save the changes
-
-2. Run in a command shell:
-
-	`python paths_from_ohif.py`
-
-or in a Python terminal:
-
-	`from paths_from_ohif import create_cfgDict_json`
-	`create_cfgDict_json()`
-
-This will update *cfgDict_ohif.json*.  Ensure that the paths defined in the JSON link to data in *src/inputs/scans*, *src/inputs/roicols*, and *src/inputs/dro* and *src/inputs/fiducials* if applicable.
-
-
-Next run *app_ohif.py* providing as input arguments the location of *cfgDict_ohif.json* (which should be in the *src/* directory) and the key (= `runID`) in *cfgDict_ohif.json* to be run, i.e. run in a command shell:
-
-	`python app_ohif.py . RR3_contour`
-
-or in a Python terminal:
-
-	`import os`
-	`from app_ohif import main`
-	
-	`main(os.getcwd(), 'RR3_contour')`
-
-It should be re-iterated that this is not a tool to be used for end-users, but merely demonstrates that if the metadata, paths to data and other variables are passed in place of *global_variables.json* and *cfgDict_ohif.json*, the code should run as expected.  
+You should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to *src/xnat_tokens/*.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the existing alias token, the token will be used, avoiding the need to re-enter your password, and the creation of another XNAT user session.
 
 
 # XNAT Snapshots
 
-The tool can either be run as a module in a command shell or as a Python function.
+The tool can either be run by executing the following in a command shell:
 
-#### Option 1 - Run *snapshots.py* as a script in a command shell
-
-In a command shell, run the Python module providing the XNAT url:
-
-	python snapshots.py configs http://10.1.1.20
+	`python snapshots.py configs http://10.1.1.20 --username --password,`
 	
-#### Option 2 - Run the function *get_xnat_snapshot()* in a Python shell
+(Optional) In a Python terminal run:
 
-In a Python shell, run *get_xnat_snapshot()* providing the XNAT url as an input argument:
+	`from snapshots import get_xnat_snapshot`
+	`get_xnat_snapshot("http://10.1.1.20")` or `get_xnat_snapshot("http://10.1.1.20", "username", "password")`
 
-	from snapshots import get_xnat_snapshot
-	get_xnat_snapshot("http://10.1.1.20")
-
-
+The optional argument `username` can be provided without also providing `password` (the user will be prompted to enter a password).
 
 # Definitions
 
@@ -313,6 +252,33 @@ When making a *relationship-preserving propagation*, in addition to propagations
 - `exportLogs` : If `True` logs will be exported to `logsExportDir`. The default value is `False`.
 - `uploadDro` : If `True` the new DICOM-DRO will be uploaded to XNAT. The default value is `True`.
 - `overwriteDro` : If `True` an existing DICOM-DRO on XNAT will be overwritten. The default value is `False`.
+
+## The minimal *key:value* pairs that define *xnatCfg.json*
+
+- `runID`         : An identifier for the run
+- `url`           : XNAT address
+- `username`      : XNAT username
+- `proID`         : XNAT Project ID
+- `subjLab`       : XNAT Subject Label
+- `srcExpLab`     : XNAT Experiment Label for the *source* dataset
+- `srcScanID`     : XNAT Scan ID for the *source* dataset
+- `srcSlcNum`     : Slice number of the *source* ROI Collection to be copied. Leave as `None` if all contours/segmentations are to be copied.
+- `srcRoicolName` : Name of the *source* ROI Collection
+- `srcRoiName`    : Name of the ROI/segment within `srcRoicolName` to be copied. Leave as `None` if all ROIs/segments are to be copied.
+- `roicolMod`     : Modality of the *source* ROI Collection
+- `trgExpLab`     : Target dataset's XNAT Experiment Label for the *target* dataset
+- `trgScanID`     : XNAT Scan ID for the *target* dataset
+- `trgSlcNum`     : Slice number where the contour/segmentation is to be copied to for the *target* dataset. Leave as `None` if all contours/segmentations are to be copied.
+- `trgRoicolName` : Name of the *target* ROI Collection. Leave as `None` if one does not exist (i.e. one does not wish to copy a specific contour/segmentation within the Source ROI Collection to an existing Target ROI Collection). Such an operation is only valid for "direct" copies (see below for further details).
+- `trgRoiName`    : Name of the ROI/segment within `trgRoicolName` where a contour/segmentation is to be copied to. Leave as `None` if all ROIs/segments are to be copied.
+- `srcFidsFname`  : File name to the .txt containing fiducials for the Source DICOM scan.
+- `trgFidsFname`  : File name to the .txt containing fiducials for the Target DICOM scan.
+
+The above list is of the *minimal* key:value pairs expected in *xnatCfg.json*.  The dictionary may also contain any non-default variable defined in *global_variables.json*, since the value in *xnatCfg.json* will take priority over that in *global_variables.json*.  Hence the global variables will not necessarily need to be changed, as run-specific changes can be made in *xnatCfg.json*.
+
+For example, many runs will not require the use of fiducials, hence `srcFidsFname` and `trgFidsFname` will both be `""`, and by default `initMethod` will be `"geometry"`. If fiducials are to be used, then `srcFidsFname` and `trgFidsFname` will not be empty strings, and `initMethod` should be `"landmarks"`.
+
+## Fiducials
 
 
 # Credits

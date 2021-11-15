@@ -33,13 +33,9 @@ code_root = os.getcwd()
 # Add code_root to the system path so packages can be imported from it:
 sys.path.append(code_root)
 
-import time
-#from getpass import getpass
-#import requests
-#from pathlib import Path
-import datetime
-import argparse
 
+"""
+from importlib import reload
 import xnat_tools.sessions
 import xnat_tools.invs_subjs_users
 import xnat_tools.file_count_size
@@ -49,7 +45,6 @@ import xnat_tools.format_pathsDict
 import xnat_tools.alias_tokens
 import io_tools.exports
 
-from importlib import reload
 reload(xnat_tools.sessions)
 reload(xnat_tools.invs_subjs_users)
 reload(xnat_tools.file_count_size)
@@ -58,7 +53,14 @@ reload(xnat_tools.dates_times)
 reload(xnat_tools.format_pathsDict)
 reload(xnat_tools.alias_tokens)
 reload(io_tools.exports)
+"""
 
+import time
+#from getpass import getpass
+#import requests
+#from pathlib import Path
+import datetime
+import argparse
 from xnat_tools.sessions import create_session
 from xnat_tools.invs_subjs_users import get_invs_by_proj, get_subjs_by_proj
 from xnat_tools.invs_subjs_users import get_users_by_project
@@ -76,7 +78,6 @@ from xnat_tools.alias_tokens import (
 from io_tools.exports import (
     export_dict_to_xlsx, export_dict_of_dicts_to_xlsx
     )
-
 
 
 def get_xnat_snapshot(
@@ -157,7 +158,7 @@ def get_xnat_snapshot(
         cwd = os.getcwd()
         
         # Assumed directory that may contain an XNAT alias token:
-        tokenDir = os.path.join(cwd, 'tokens')
+        tokenDir = os.path.join(cwd, 'xnat_tokens')
         
         print(f'Searching for an XNAT alias token in {tokenDir}')
         # Import an XNAT alias token:
