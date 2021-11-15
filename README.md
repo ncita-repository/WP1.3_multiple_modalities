@@ -116,7 +116,7 @@ This will refresh *global_variables.json*
 	create_global_vars()
 
 
-### 1. Creating a XNAT configuration file(s)
+### 1. Creating an XNAT configuration file(s)
 
 There are a few ways to go about creating an XNAT configuration file(s):
 
@@ -124,7 +124,7 @@ There are a few ways to go about creating an XNAT configuration file(s):
 
 This is by far the quickest way to go about implementing your first run of the code.  
 
-Simply copy an existing XNAT config file in */src/xnat_configs/*, rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the the name you assign to the file must agree with the value given for the `runID` key.  
+Simply copy an existing XNAT config file in */src/xnat_configs/*, rename the file, open it in your preferred text editor and modify the dictionary's values accordingly.  Note that the name you assign to the file must agree with the value given for the `runID` key.  
 
 #### Option 2 - Define a new dictionary within the function *create_xnat_config_files()* in *xnat_config_files.py*
 
@@ -134,13 +134,11 @@ Within the function *create_xnat_config_files()* there are cases where a diction
 
 Further down a new dictionary is added to `cfg` using the key *NCITA_test_RR2* (line 120), and the previously defined dictionary is copied (line 121).  Then the `runID` (line 122) and other selected keys are modified (lines 123-127).
 
-Use a previously fully-defined dictionary as a template for new dictionaries as you go along.  Remember to re-run the command *create_xnat_config_files()* to update your list of XNAT config files.
-
-Once the dictionaries have been defined in the script, the XNAT config files can be created by running the following in a command shell:
+Use a previously fully-defined dictionary as a template for new dictionaries as you go along.  Once the dictionaries have been defined in the script, the XNAT config files can be created by running the following in a command shell:
 
 	python xnat_config_files.py
 
-This will generate and/or overwrite a list of JSONs in *src/xnat_configs/* - one file for each key-dictionary pair within the dictionary `cfg`.
+This will generate and/or overwrite a list of JSONs in *src/xnat_configs/* - one file for each *key-dictionary* pair within the dictionary `cfg`.
 
 (Optional) If running in a Python terminal:
 
@@ -153,9 +151,7 @@ In a command shell run:
 
 	python select_xnat_config.py runID
 
-where `runID` is the file name of the XNAT config file in *src/xnat_configs/* you wish to run.
-
-This will copy the dictionary in *src/xnat_configs/runID.json* to *src/xnatCfg.json*.
+where `runID` is the file name of the XNAT config file in *src/xnat_configs/* you wish to run.  This will copy the dictionary in *src/xnat_configs/runID.json* to *src/xnatCfg.json*.
 
 (Optional) If you wish to assign the XNAT config file a custom name (e.g. to allow for concurrent runs of *app.py* with distinct XNAT config files), use the optional input parameter `xnatCfgFname`:
 
@@ -164,7 +160,7 @@ This will copy the dictionary in *src/xnat_configs/runID.json* to *src/xnatCfg.j
 (Optional) If running in a Python terminal:
 
 	from select_xnat_config import create_xnat_config_files
-	create_xnat_config_files("runID")` or `create_xnat_config_files("runID", "custom_fname")
+	create_xnat_config_files("runID") or create_xnat_config_files("runID", "custom_fname")
 	
 
 ### 3. Run the tool
@@ -173,28 +169,38 @@ In a command shell run:
 
 	python app.py
 
-(Optional) or if running the tool on an XNAT config file with custom file name:
+or if running the tool on an XNAT config file with custom file name:
 
 	python app.py --xnatCfgFname=custom_fname
 
 (Optional) If running in a Python terminal:
 
 	from app import main
-	main()` or `main("custom_fname")
+	main()
 
-You should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to *src/xnat_tokens/*.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the existing alias token, the token will be used, avoiding the need to re-enter your password, and the creation of another XNAT user session.
+or 
+
+	main("custom_fname")
+
+You should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and entered password are correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to *src/xnat_tokens/*.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the existing alias token, the token will be used, avoiding the need to re-enter your password, and the creation of another XNAT user session.
 
 
 # XNAT Snapshots (*snapshots.py*)
 
-The tool can either be run by executing the following in a command shell:
+The tool can be run by executing the following in a command shell:
 
 	python snapshots.py configs http://10.1.1.20 --username --password
 	
+where `--username` and `--password` are optional arguments.
+
 (Optional) In a Python terminal run:
 
 	from snapshots import get_xnat_snapshot
-	get_xnat_snapshot("http://10.1.1.20")` or `get_xnat_snapshot("http://10.1.1.20", "username", "password")
+	get_xnat_snapshot("http://10.1.1.20")
+
+or 
+
+	get_xnat_snapshot("http://10.1.1.20", "username", "password")
 
 The optional argument `username` can be provided without also providing `password` (the user will be prompted to enter a password).
 
@@ -202,7 +208,7 @@ The optional argument `username` can be provided without also providing `passwor
 
 ## 3D images
 
-Every DICOM series (or "scan") consists of any number of 2D pixel arrays - i.e. 2D images.  The entire series or scan make up a 3D image.  When referring to 3D images, this will usually imply the DICOM series/scan.  3D images also crop up when referring to 3D "label images".  These are a collection of binary masks (i.e. segmentations) that occupy the same extent, voxel resolution, origin and direction as the 3D image representation of the DICOM series.
+Every DICOM series (or "scan") consists of any number of 2D pixel arrays - i.e. 2D images.  The entire scan makes up a 3D image.  When referring to 3D images, this will usually imply the DICOM series/scan.  3D images also crop up when referring to 3D "label images".  These are a collection of binary masks (i.e. segmentations) that occupy the same extent, voxel resolution, origin and direction as the 3D image representation of the DICOM series.
 
 ## Entities
 
@@ -285,6 +291,23 @@ The above list is of the *minimal* key:value pairs expected in *xnatCfg.json*.  
 For example, many runs will not require the use of fiducials, hence `srcFidsFname` and `trgFidsFname` will both be `""`, and by default `initMethod` will be `"geometry"`. If fiducials are to be used, then `srcFidsFname` and `trgFidsFname` will not be empty strings, and `initMethod` should be `"landmarks"`.
 
 ## Fiducials
+
+For historical reasons, the TXT file must have the format expected of *Elastix* or [*SimpleElastix*] (https://simpleelastix.readthedocs.io/PointBasedRegistration.html), i.e.:
+        
+    <index or point>
+    <number of indices/points>
+    point1 x point1 y [point1 z]
+    point2 x point2 y [point2 z]
+    
+e.g.
+    
+    point
+    3
+    102.8 -33.4 57.0
+    178.1 -10.9 14.5
+    180.4 -18.1 78.9
+    
+Fiducials TXT files should be stored in *src/inputs/fiducials/*.
 
 
 # Credits
