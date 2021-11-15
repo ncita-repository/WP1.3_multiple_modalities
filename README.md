@@ -138,20 +138,20 @@ Use a previously fully-defined dictionary as a template for new dictionaries as 
 
 Once the dictionaries have been defined in the script, the XNAT config files can be created by running the following in a command shell:
 
-	`python xnat_config_files.py`
+	python xnat_config_files.py
 
 This will generate and/or overwrite a list of JSONs in *src/xnat_configs/* - one file for each key-dictionary pair within the dictionary `cfg`.
 
 (Optional) If running in a Python terminal:
 
-	`from xnat_config_files import create_xnat_config_files`
-	`create_xnat_config_files()`
+	from xnat_config_files import create_xnat_config_files
+	create_xnat_config_files()
 
 ### 2. Copy the XNAT config file to be run from *src/xnat_configs/* to *src/xnatCfg.json*
 
 In a command shell run:
 
-	`python select_xnat_config.py runID`
+	python select_xnat_config.py runID
 
 where `runID` is the file name of the XNAT config file in *src/xnat_configs/* you wish to run.
 
@@ -159,28 +159,28 @@ This will copy the dictionary in *src/xnat_configs/runID.json* to *src/xnatCfg.j
 
 (Optional) If you wish to assign the XNAT config file a custom name (e.g. to allow for concurrent runs of *app.py* with distinct XNAT config files), use the optional input parameter `xnatCfgFname`:
 
-	`python select_xnat_config.py runID --xnatCfgFname=custom_fname`
+	python select_xnat_config.py runID --xnatCfgFname=custom_fname
 
 (Optional) If running in a Python terminal:
 
-	`from select_xnat_config import create_xnat_config_files`
-	`create_xnat_config_files("runID")` or `create_xnat_config_files("runID", "custom_fname")`
+	from select_xnat_config import create_xnat_config_files
+	create_xnat_config_files("runID")` or `create_xnat_config_files("runID", "custom_fname")
 	
 
 ### 3. Run the tool
 
 In a command shell run:
 
-	`python app.py`
+	python app.py
 
 (Optional) or if running the tool on an XNAT config file with custom file name:
 
-	`python app.py --xnatCfgFname=custom_fname`
+	python app.py --xnatCfgFname=custom_fname
 
 (Optional) If running in a Python terminal:
 
-	`from app import main`
-	`main()` or `main("custom_fname")`
+	from app import main
+	main()` or `main("custom_fname")
 
 You should be prompted to enter an XNAT password.  If the XNAT `url`, `username` and password you just entered were correct, an XNAT session will be established and an XNAT alias token generated.  The alias token will be saved to *src/xnat_tokens/*.  If the code is executed again using the same `url` and authentication credentials, and within the lifetime of the existing alias token, the token will be used, avoiding the need to re-enter your password, and the creation of another XNAT user session.
 
@@ -189,12 +189,12 @@ You should be prompted to enter an XNAT password.  If the XNAT `url`, `username`
 
 The tool can either be run by executing the following in a command shell:
 
-	`python snapshots.py configs http://10.1.1.20 --username --password,`
+	python snapshots.py configs http://10.1.1.20 --username --password
 	
 (Optional) In a Python terminal run:
 
-	`from snapshots import get_xnat_snapshot`
-	`get_xnat_snapshot("http://10.1.1.20")` or `get_xnat_snapshot("http://10.1.1.20", "username", "password")`
+	from snapshots import get_xnat_snapshot
+	get_xnat_snapshot("http://10.1.1.20")` or `get_xnat_snapshot("http://10.1.1.20", "username", "password")
 
 The optional argument `username` can be provided without also providing `password` (the user will be prompted to enter a password).
 
