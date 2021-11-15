@@ -292,7 +292,7 @@ For example, many runs will not require the use of fiducials, hence `srcFidsFnam
 
 ## Fiducials
 
-For historical reasons, the TXT file must have the format expected of *Elastix* or [*SimpleElastix*] (https://simpleelastix.readthedocs.io/PointBasedRegistration.html), i.e.:
+For historical reasons, the TXT file must have the format expected of *Elastix* or [*SimpleElastix*](https://simpleelastix.readthedocs.io/PointBasedRegistration.html), i.e.:
         
     <index or point>
     <number of indices/points>
