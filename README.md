@@ -12,19 +12,29 @@ The NCITA Repository Unit site as a whole is at an early stage of the life cycle
 
 This repository contains two tools:
 
-1. A *ROI copy/propagation* tool
+1. *ROI copy/propagation* tool
 
-2. An XNAT "snapshot" tool
+2. *XNAT snapshot* tool
 
 All code is written in Python 3.  
 
-The *ROI* in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, which may refer to any "entity-of-interest", or simply "entity", within a *DICOM-RTSTRUCT* or *DICOM-SEG* *ROI Collection*, and is not to be confused with a collection of contours within an *RTSTRUCT*-based ROI Collection.  The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an *entity* may refer to single *contour*, a single *segmentation*, a collection of *contour*s (= *ROI*) or *segmentation*s (= *segment*), or an entire *ROI Collection* (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
+The "*ROI*" in *ROI copy/propagation* refers to a region-of-interest in the broadest sense, which may refer to any "entity-of-interest" (or simply "entity"), within a *DICOM-RTSTRUCT* or *DICOM-SEG* *ROI Collection*, and is not to be confused with a collection of contours within an *RTSTRUCT*-based ROI Collection.  The definitions at the end of this page will be useful in understanding the terminology used within this *README*.  In brief, an *entity* may refer to a single *contour*, a single *segmentation*, a collection of *contour*s (= *ROI*) or *segmentation*s (= *segment*), or an entire *ROI Collection* (consisting of any number of *contour*s or *segmentation*s within any number of *ROI*s or *segment*s).
 
 A *copy* will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a *propagation* implies that the propagated entity shares the same spatial coordinates as the original.  Hence a contour that segments the ventricle in the brain in a *source* DICOM slice will not necessarily coincide with the ventricle in a *target* slice upon making the *copy*, whereas it will be expected to overlay when performing a *propagation*.
 
 ## *ROI copy/propagation* tool
 
 The purpose of this tool is to make a "copy" of, or to "propagate" an entity from a *source* ROI Collection so that the entity overlays onto a *target* DICOM series.  The copy may be a "non-relationship-preserving copy" (think copy and paste function) or a "relationship-preserving propagation" of the entity.
+
+Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported (by default) to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
+
+If an image registration is required to propagate the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new *DICOM Registration Object (DRO)* will be created and exported (by default) to *src/outputs/new_DRO*.  A rigid registration will yield a *Spatial Registration Object (SRO)*, while a deformable one will result in the creation of a *Deformable Spatial Registration Object (DSRO)*.  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
+
+Once a suitable DRO exists on XNAT, future propagation calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  While a run using image registration might take over 200 s, use of a DRO will reduce the execution time to 30 s, for example (of which ~10 s is spent parsing all subject DICOM resources for a suitable DRO).  
+
+At present all subject DICOM resources are parsed and scanned for a match for the run in progress.  Since this is not an efficient way of doing things in future work the DRO will be stored as a subject assessor with a corresponding XML file so that matches can be made without needing to parse all resource files.  This should shave on the order of 10 s for parsing of ~30 DICOM resources, for example.
+
+The algorithm makes use of XNAT Alias Tokens to avoid the creation of multiple user sessions.  The alias token is stored in *src/xnat_tokens/*.
 
 This tool requires two JSON files to run:  a JSON containing global variables and a JSON containing XNAT configuration parameters.  The reason for splitting the variables in this way was to differentiate between variables that the user is not expected to need to modify readily and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will be provided by the XNAT Container Service.
 
@@ -50,17 +60,6 @@ Once there exists at least one XNAT configuration file to be run, the next step 
 
 The commands used to execute the above steps are covered in the section *Using the tools*.  Some additional comments about this tool follows.
 
-### Additional comments
-
-Upon the successful copying or propagation of an entity, a new ROI Collection will be created and exported (by default) to the *src/outputs/new_roicols* directory.  The new ROI Collection will also be automatically uploaded to XNAT using the same credentials used to fetch the data from XNAT.
-
-If an image registration is required to propagate the entity, a search will be done on XNAT for a suitable DRO to use instead (more on this later).  If one is not found, image registration will be performed and a new *DICOM Registration Object (DRO)* will be created and exported (by default) to *src/outputs/new_DRO*.  A rigid registration will yield a *Spatial Registration Object (SRO)*, while a deformable one will result in the creation of a *Deformable Spatial Registration Object (DSRO)*.  As well as the exported file, the DRO will automatically be uploaded to XNAT as a DICOM resource at the subject level.  A sample SRO and DSRO, stored in *src/inputs/sample_DROs*, are used as templates to generate the new DRO. 
-
-Once a suitable DRO exists on XNAT, future propagation calls that involve the same *source* and *target* DICOM series and the same registration type (i.e. "rigid", "affine" or "bspline"), will result in the use of the transformation matrix stored within the DRO, thus by-passing the computationally expensive registration process.  While a run using image registration might take over 200 s, use of a DRO will reduce the execution time to 30 s, for example.  
-
-At present all subject DICOM resources are parsed and scanned for a match for the run in progress.  Since this is not an efficient way of doing things in future work the DRO will be stored as a subject assessor with a corresponding XML file so that matches can be made without needing to parse all resource files.  This should shave on the order of 10 s for parsing of ~30 DICOM resources, for example.
-
-The algorithm makes use of XNAT Alias Tokens to avoid the creation of multiple user sessions.  The alias token is stored in the *src/tokens* directory.
 
 ## XNAT "snapshot" tool
 
