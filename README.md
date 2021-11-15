@@ -8,7 +8,7 @@ The aim of this work package of the NCITA Repository Unit will be to develop app
 
 The NCITA Repository Unit site as a whole is at an early stage of the life cycle and does not currently have a formal structure of documentation releases. Please bear with us: things will become more organised as the NCITA project gets into gear! Note that the ICR also releases code related to the XNAT-OHIF image viewer at https://bitbucket.org/icrimaginginformatics/. 
 
-# Tools covered in this repository
+## Tools covered in this repository
 
 This repository contains two tools:
 
@@ -22,7 +22,7 @@ The "*ROI*" in *ROI copy/propagation* refers to a region-of-interest in the broa
 
 A *copy* will refer to an operation that does not preserve the spatial coordinates of the entity, whereas a *propagation* implies that the propagated entity shares the same spatial coordinates as the original.  Hence a contour that segments the ventricle in the brain in a *source* DICOM slice will not necessarily coincide with the ventricle in a *target* slice upon making the *copy*, whereas it will be expected to overlay when performing a *propagation*.
 
-## *ROI copy/propagation* tool
+# *ROI copy/propagation* tool
 
 The purpose of this tool is to make a "copy" of, or to "propagate" an entity from a *source* ROI Collection so that the entity overlays onto a *target* DICOM series.  The copy may be a "non-relationship-preserving copy" (think copy and paste function) or a "relationship-preserving propagation" of the entity.
 
@@ -38,11 +38,11 @@ The algorithm makes use of XNAT Alias Tokens to avoid the creation of multiple u
 
 This tool requires two JSON files to run:  a JSON containing global variables and a JSON containing XNAT configuration parameters.  The reason for splitting the variables in this way was to differentiate between variables that the user is not expected to need to modify readily and those that will. The global variables will likely be stored in a (not-yet-existing) XNAT container, whilst the other variables will be provided by the XNAT Container Service.
 
-### Global variables (*global_variables.json*)
+## Global variables (*global_variables.json*)
 
 The global variables are stored *src/global_variables.json* as a dictionary.  The parameters relate to specifics on how image resampling and registration is carried out, as well as default directories amongst other things.  The module used to generate *global_variables.json* is *src/create_global_file.py*.  See the *Definitions* section for a listing of all parameters.
 
-### XNAT configuration file (*xnatCfg.json*)
+## XNAT configuration file (*xnatCfg.json*)
 
 The XNAT config file contains the metadata that identifies the *source* and *target* DICOM series ("scans" in XNAT parlance), *source* ROI Collection, and if applicable, *target* ROI Collection.  See the *Definitions* section for a listing of all parameters.  Based on the user-inputed data, the tool will use XNAT REST API calls to fetch the required data, download it to *src/xnat_downloads* (by default), import the data and depending on the relationship between the *source* and *target* DICOM series and other metadata, will either perform a *non-relationship-preserving copy* or *relationship-preserving propagation* of the entity of interest.
 
@@ -50,7 +50,7 @@ By default the XNAT config JSON file has the default filename *xnatCfg*, but the
 
 The option to assign a different file name (other than "xnatCfg.json"), e.g. "xnatCfg_241js23.json", is so that when *app.py* is run with the optional input argument *--xnatCfgFname=cfgDict_241js23*, the desired XNAT config file will be imported, allowing for the possibility of concurrent calls to *app.py* with unique XNAT config files. This feature was added in anticipation of the need for a scalable solution within XNAT.
 
-### XNAT configuration files in *src/xnat_configs/* and *select_xnat_config.py* (work-around)
+## XNAT configuration files in *src/xnat_configs/* and *select_xnat_config.py* (work-around)
 
 The user creates any number of run-specific XNAT configuration files stored in *src/xnat_configs/*). The contents of the run-specific XNAT config file *src/xnat_configs/runID.json* is copied to *xnatCfg.json*. That way when the tool is run *xnatCfg.json* is imported along with *global_variables.json*.
 
@@ -61,7 +61,7 @@ Once there exists at least one XNAT configuration file to be run, the next step 
 The commands used to execute the above steps are covered in the section *Using the tools*.  Some additional comments about this tool follows.
 
 
-## XNAT "snapshot" tool
+# XNAT "snapshot" tool
 
 This is a basic tool that fetches high-level metadata from an XNAT and produces a "snapshot", exported as an XLSX file to *src/xnat_snapshots*, and is a stand-alone feature completely separate from the business of copying/propagating ROIs.  However this tool does share some common modules used for *ROI* copying/propagating, hence its inclusion here.
 
