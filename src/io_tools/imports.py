@@ -5,9 +5,11 @@ Created on Tue Jul  6 16:12:04 2021
 @author: ctorti
 """
 
+"""
 from importlib import reload
 import dicom_tools.dcm_metadata
 reload(dicom_tools.dcm_metadata)
+"""
 
 import json
 import SimpleITK as sitk

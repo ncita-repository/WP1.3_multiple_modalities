@@ -23,9 +23,12 @@ from xnat_tools.sessions import create_session
 from xnat_tools.scans import download_scan
 from xnat_tools.im_assessors import download_im_asr
 from xnat_tools.format_pathsDict import get_scan_asr_fname_and_id
+#from xnat_tools.alias_tokens import (
+#    import_alias_token, is_alias_token_valid, generate_alias_token,
+#    export_alias_token
+#    )
 from xnat_tools.alias_tokens import (
-    import_alias_token, is_alias_token_valid, generate_alias_token,
-    export_alias_token
+    import_valid_alias_token, generate_alias_token, export_alias_token
     )
 
 
@@ -104,29 +107,23 @@ class DataDownloader:
         tokenDir = os.path.join(cwd, 'xnat_tokens')
         
         if aliasToken == {}:
-            #print(f'Searching for an XNAT alias token in {cfgDir}')
-            print(f'Searching for an XNAT alias token in {tokenDir}')
+            print(f'Searching for a valid XNAT alias token in {tokenDir}')
             
-            # Import an XNAT alias token:
-            #aliasToken = import_alias_token(cfgDir)
-            aliasToken = import_alias_token(tokenDir)
+            # Import a valid XNAT alias token (or return {}):
+            aliasToken = import_valid_alias_token(tokenDir, url)
         
-        # Is the alias token valid?
-        if is_alias_token_valid(aliasToken, url):
+        if aliasToken:
             print('Using XNAT alias token to establish XNAT connection.')
             xnatSession = create_session(url=url, aliasToken=aliasToken)
         else:
-            if aliasToken:
-                print('The XNAT alias token is invalid.')
+            print('No valid XNAT alias token was found.')
             print('Establishing XNAT connection without an XNAT alias token.')
             xnatSession = create_session(url=url, username=username)
         
-        # Generate an XNAT alias token to avoid making a new authenticated
-        # user session:
-        aliasToken = generate_alias_token(xnatSession)
-        
-        #export_alias_token(aliasToken, cfgDir)
-        export_alias_token(aliasToken, tokenDir)
+            # Generate an XNAT alias token to avoid making a new authenticated
+            # user session and export to tokenDir:
+            aliasToken = generate_alias_token(xnatSession)
+            export_alias_token(aliasToken, tokenDir)
         
         self.xnatSession = xnatSession
         self.aliasToken = aliasToken

@@ -107,6 +107,9 @@ def main(
     # export it to src/cfgDict.json:
     cfgObj = ConfigFetcher(xnatCfgFname)
     
+    # Overwrite p2c parameter to True for verbose output to the console:
+    #cfgObj.cfgDict['p2c'] = True
+    
     # Instantiate a DataDownloader object, establish a connection to XNAT
     # (use or creating an XNAT Alias Token), download the data and create
     # pathsDict:

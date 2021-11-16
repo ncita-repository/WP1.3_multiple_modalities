@@ -34,8 +34,12 @@ from io_tools.exports import export_dict_to_json
 from io_tools.fetch_configs import get_global_vars
 
 
+# Import the global variables:
+globalVars = get_global_vars()
+
+#print(f"globalVars['xnatCfgDir'] = {globalVars['xnatCfgDir']}")
     
-def get_xnat_config(runID, xnatCfgDir):
+def get_xnat_config(runID, xnatCfgDir=globalVars['xnatCfgDir']):
     """
     Fetches the XNAT configuration parameters from a JSON with file name runID
     from a directory containing XNAT config files whose path is specified by 
@@ -49,6 +53,9 @@ def get_xnat_config(runID, xnatCfgDir):
     runID : str
         The ID that determines the main configuration parameters to use for
         the run, and should match with a file name of a JSON.
+    xnatCfgDir : str, optional
+        The directory containing the XNAT configuration files. The default
+        value is globalVars['xnatCfgDir'].
     
     Returns
     -------
@@ -98,7 +105,7 @@ def get_xnat_config(runID, xnatCfgDir):
         
     return xnatCfg
 
-def export_xnatCfg(xnatCfg, globalVars, xnatCfgFname='xnatCfg'):
+def export_xnatCfg(xnatCfg, xnatCfgFname='xnatCfg'):
     """
     Export the final configuration dictionary to src/.
     
@@ -106,8 +113,6 @@ def export_xnatCfg(xnatCfg, globalVars, xnatCfgFname='xnatCfg'):
     ----------
     xnatCfg : dict
         Dictionary containing the parameters for the desired run.
-    globalVars : dict
-        Dictionary containing the global variables.
     xnatCfgFname : str, optional
         The filename to assign to the exported JSON file. The default value
         is 'xnatCfg'.
@@ -154,8 +159,6 @@ if __name__ == '__main__':
         )
     
     args = parser.parse_args()
-    
-    globalVars = get_global_vars()
     
     xnatCfg = get_xnat_config(args.runID, xnatCfgDir=globalVars['xnatCfgDir'])
     

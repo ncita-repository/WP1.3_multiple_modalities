@@ -465,3 +465,44 @@ def generate_reg_fname(
         + f'_reg_to_ExpLab_{trgExpLab}_ScanID_{trgScanID}'
     
     return fname
+
+def get_list_of_filePaths(dirPath, fileExt=""):
+    """
+    Return a list of file paths from a chosen directory.
+    
+    Parameters
+    ----------
+    dirPath : str
+        Directory path.
+    fileExt : str, optional
+        File extension to filter by. If "" all file extensions will be 
+        returned. The default is "".
+        
+    Returns
+    -------
+    filePaths : list of strs
+        A list of file paths in dirPath matching file extension fileExt (if not
+        ""). An empty list will be returned if no files are found (or found
+        that match fileExt).
+    """
+    
+    filePaths = []
+    
+    fileList = os.listdir(dirPath)
+    
+    # Convert fileExt to lowercase to allow for user to enter file extension
+    # in uppercase:
+    fileExt = fileExt.lower()
+    
+    for fileName in fileList:
+        if fileExt and "." + fileExt in fileName.lower() or fileExt=="":
+            filePaths.append(os.path.join(dirPath, fileName))
+
+    if filePaths==[]:
+        msg = f'\nNo files were found in {dirPath} '
+        if fileExt:
+            msg += f'with extension {fileExt}'
+            
+        print(msg)
+    
+    return filePaths

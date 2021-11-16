@@ -159,8 +159,14 @@ where `runID` is the file name of the XNAT config file in *src/xnat_configs/* yo
 
 (Optional) If running in a Python terminal:
 
-	from select_xnat_config import create_xnat_config_files
-	create_xnat_config_files("runID") or create_xnat_config_files("runID", "custom_fname")
+	from select_xnat_config import get_xnat_config, export_xnatCfg
+	xnatCfg = get_xnat_config("runID")
+	export_xnatCfg(xnatCfg)
+
+or 
+
+	xnatCfg = get_xnat_config("runID", "custom_fname")
+	export_xnatCfg(xnatCfg)
 	
 
 ### 3. Run the tool
