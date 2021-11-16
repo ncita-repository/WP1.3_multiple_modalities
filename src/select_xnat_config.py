@@ -162,4 +162,4 @@ if __name__ == '__main__':
     
     xnatCfg = get_xnat_config(args.runID, xnatCfgDir=globalVars['xnatCfgDir'])
     
-    export_xnatCfg(xnatCfg, globalVars, xnatCfgFname=args.xnatCfgFname)
+    export_xnatCfg(xnatCfg, xnatCfgFname=args.xnatCfgFname)
